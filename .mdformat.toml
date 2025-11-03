@@ -1,0 +1,6 @@
+wrap = "no"
+number = false
+
+[plugin.mdformat-gfm]
+enabled = true
+

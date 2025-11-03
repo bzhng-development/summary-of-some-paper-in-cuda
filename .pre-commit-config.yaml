@@ -1,0 +1,35 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check (preview only)
+        entry: uv run ruff check --unsafe-fixes --diff
+        language: system
+        types: [python]
+        
+      - id: ruff-format
+        name: ruff format (preview only)
+        entry: uv run ruff format --diff
+        language: system
+        types: [python]
+        
+      # - id: mdformat
+      #   name: mdformat markdown
+      #   entry: uv run mdformat
+      #   language: system
+      #   types: [markdown]
+        
+      - id: ty
+        name: ty type check
+        entry: uv run ty check
+        language: system
+        types: [python]
+        pass_filenames: false
+        
+      - id: pyrefly
+        name: pyrefly type check
+        entry: uv run pyrefly check
+        language: system
+        types: [python]
+        pass_filenames: false
+

@@ -1,0 +1,43 @@
+[project]
+name = "paper-summaries"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "click>=8.3.0",
+    "openai>=2.6.1",
+    "openai-agents>=0.4.2",
+    "pydantic>=2.12.3",
+    "python-dotenv>=1.2.1",
+    "requests>=2.32.5",
+]
+
+[dependency-groups]
+dev = [
+    "mdformat>=0.7.22",
+    "mdformat-admon>=2.1.1",
+    "mdformat-mkdocs>=4.4.2",
+    "mkdocs-git-revision-date-localized-plugin>=1.5.0",
+    "mkdocs-llmstxt>=0.4.0",
+    "mkdocs-material>=9.6.23",
+    "mkdocs-redirects>=1.2.2",
+    "pre-commit>=4.3.0",
+    "pyrefly>=0.39.4",
+    "ruff>=0.14.3",
+    "ty>=0.0.1a25",
+]
+
+[tool.pyrefly]
+project_includes = ["."]
+project_excludes = ["**/.[!/.]*", ".venv/**", "__pycache__/**"]
+search_path = ["."]
+python_version = "3.14"
+
+[tool.ruff]
+line-length = 120
+target-version = "py314"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"

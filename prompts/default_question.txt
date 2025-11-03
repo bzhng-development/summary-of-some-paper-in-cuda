@@ -1,0 +1,64 @@
+# Objective
+Produce a comprehensive deep reading analysis of a research paper that enables a reader who has never seen the paper to fully understand its contributions, methods, results, and implications.
+
+# Hard Requirements
+- Assume zero prior knowledge: the reader has NOT read the paper and may not be familiar with domain-specific terminology.
+- Define technical terms selectively: if a term or concept is uncommon, novel, or paper-specific, define it on first use. Skip definitions for standard field terminology (e.g., "neural network" in ML, "attention mechanism" in NLP, "runtime complexity" in algorithms).
+- Explain mechanisms and approaches, not just what the paper claims—show HOW things work.
+- Ground every claim in the paper's content: cite specific sections, figures, tables, or equations when discussing technical details or results.
+- Do NOT use phrases like "the paper states" or "according to the authors" without explaining the underlying substance.
+- Maintain logical flow: each section should build on previous context.
+
+# Structure (Follow This Exact Order)
+
+## 1. Executive Summary (2-3 sentences)
+State the paper's core contribution and primary significance. Answer: What problem does this solve, and why does it matter?
+
+## 2. Context and Motivation
+- What specific problem or gap does this paper address?
+- Why is this problem important (real-world impact, theoretical significance, or both)?
+- What prior approaches existed, and where do they fall short?
+- How does this paper position itself relative to existing work?
+
+## 3. Technical Approach
+- Break down the methodology, architecture, algorithm, or theoretical framework step-by-step.
+- Explain the design choices: why this approach over alternatives?
+- If mathematical: describe key equations, formulations, or proofs in plain language before showing notation.
+- If empirical: describe the experimental design, data pipeline, model architecture, or system implementation.
+- Use analogies or simplified examples when helpful for clarity.
+
+## 4. Key Insights and Innovations
+- Identify the 2-5 most novel contributions.
+- For each: explain what makes it different from prior work and why it's significant (performance gain, theoretical advance, new capability, etc.).
+- Distinguish between incremental improvements and fundamental innovations.
+
+## 5. Experimental Analysis
+- Describe evaluation methodology: datasets, metrics, baselines, experimental setup.
+- Summarize main quantitative results with specific numbers and comparisons.
+- Assess whether the experiments convincingly support the paper's claims.
+- Note any ablation studies, failure cases, or robustness checks.
+- If results are mixed or conditional, explain the conditions and trade-offs.
+
+## 6. Limitations and Trade-offs
+- What assumptions does the approach rely on?
+- What scenarios, edge cases, or problem settings are NOT addressed?
+- Are there computational, data, or scalability constraints?
+- What weaknesses or open questions remain?
+
+## 7. Implications and Future Directions
+- How does this work change the landscape of the field?
+- What follow-up research does it enable or suggest?
+- What are the practical applications or downstream use cases?
+
+# Output Format
+- Use markdown headers (##) for each of the 7 sections above.
+- Use bulleted lists for multi-point explanations.
+- Use inline code formatting (`term`) for technical terms, variable names, or model names.
+- Use block quotes or indentation when citing specific claims or results from the paper.
+- Include specific figures, tables, or section references when discussing results (e.g., "Table 3 shows...").
+
+# Tone and Style
+- Write in clear, direct prose. Avoid academic jargon unless necessary, and define it when used.
+- Prioritize comprehension over brevity: explain complex ideas fully rather than tersely.
+- Be critical but fair: highlight both strengths and weaknesses.
+- Use present tense for describing the paper's content (e.g., "The authors propose..." not "proposed").

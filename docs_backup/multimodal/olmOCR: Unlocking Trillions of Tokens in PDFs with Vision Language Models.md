@@ -1,0 +1,135 @@
+# olmOCR: Unlocking Trillions of Tokens in PDFs with Vision Language Models
+
+**ArXiv:** [2502.18443](https://arxiv.org/abs/2502.18443)
+**Authors:** Jake Poznanski, Jon Borchardt, Jason Dunkelberger, Regan Huff, Daniel Lin, Aman Rangapur, Christopher Wilhelm, Kyle Lo, Luca Soldaini
+**Institutions:** Allen Institute for AI (AI2)
+
+## 🎯 Pitch
+
+`olmOCR` revolutionizes PDF text extraction by leveraging a fine-tuned vision-language model with the innovative document anchoring method, yielding superior accuracy and preserving complex structures like tables and math at a fraction of the cost of leading commercial tools. This breakthrough unlocks trillions of high-quality tokens from PDFs for language model training, enhancing performance and making large-scale data processing accessible to academia and industry alike.
+
+---
+
+## 1. Executive Summary (2-3 sentences)
+This paper introduces `olmOCR`, an open-source system that converts PDF pages into clean, linear, reading-order text while preserving structure such as tables and math—using a fine-tuned 7B vision-language model (VLM) plus a new prompting method called document anchoring. It also releases a training set (260k pages) and a rigorous, unit-test-based benchmark (`olmOCR-Bench`), showing that `olmOCR` achieves higher accuracy than leading tools and APIs at much lower cost (about $176 per million pages; Figure 1, Table 6), and that its outputs improve language-model pretraining quality (Table 5).
+
+## 2. Context and Motivation
+- Problem addressed
+  - PDF files encode characters and their display metadata, not logical text structure. That makes it hard to extract coherent text in “natural reading order,” especially for layout-rich pages with multi-columns, footers, floating figures, tables, and formulas (Figure 2).
+  - For large language models (LLMs), both training and inference rely on clean textual representations; noisy extractions can harm training stability and downstream performance (§1).
+- Why it matters
+  - There are “trillions of novel, high-quality tokens” trapped in PDFs that could improve LLM training (§Abstract, §1).
+  - Using top commercial VLM APIs at scale is prohibitively expensive (e.g., GPT‑4o ≈ $6,240 per million pages in batch mode; footnote 1 and Table 6), and some PDFs cannot be sent to proprietary services.
+- Prior approaches and their gaps
+  - Pipeline systems (e.g., Grobid, VILA, PaperMage; §5) segment pages and parse components with multiple specialized models. They often sacrifice robustness and reading order fidelity on complex layouts.
+  - End-to-end models (e.g., Nougat, GOT OCR; §5) produce text from images but can omit content, reorder text, or hallucinate, and may not preserve rich structures (tables, math) reliably.
+  - General-purpose VLMs prompted for OCR can be accurate but are costly and sometimes unfaithful without careful prompting (§2.2, Table 4).
+- Positioning
+  - `olmOCR` provides a specialized, open, end-to-end VLM solution fine-tuned for PDF linearization. It introduces document anchoring to reduce hallucinations, a curated dataset for fine-tuning (§2), and a unit-test-style benchmark for objective measurement (§3). It targets both high fidelity and low cost at large scale (Figure 1; Table 6).
+
+## 3. Technical Approach
+At a glance: train a small open VLM to turn a PDF page image plus lightweight “anchors” from the PDF’s internals into structured JSON containing natural-language text in reading order, with optional table/LaTeX formatting.
+
+- Inputs per page
+  - A rasterized image of the PDF page (short edge resized so the longest edge is 1024 px during training; §2.3).
+  - Document-anchoring text: noisy text blocks and image coordinates extracted from the PDF binary using `pypdf`, including positions (Appendix A). When too long, anchors are sampled and truncated with a character budget; blocks near the start/end of the page are prioritized (Appendix A).
+- Document anchoring (how it works and why)
+  - “Anchors” are snippets of the page’s own text and object locations injected into the prompt alongside the page image (Figure 3).
+  - Intuition: the anchors ground the model in what text should be present and where, which reduces omissions, rephrasings, and invented content; without anchors, VLMs tended to complete or caption content unfaithfully (§2.2, Appendix A).
+  - Evidence: adding anchors raises pass rates for GPT‑4o and Gemini Flash 2 on `olmOCR-Bench` (Table 4).
+- Output format (structured JSON; Appendix E.1)
+  - Fields include: `primary_language`, `is_rotation_valid`, `rotation_correction` (0/90/180/270), `is_table`, `is_diagram`, and `natural_text` (the linearized page text). Equations are emitted as LaTeX; tables as Markdown or HTML (§2.2; Appendix E.1).
+- Training data creation (`olmOCR-mix-0225`; §2)
+  - 258,641 pages from 102,825 public PDFs (Table 1); English-only filtering; a mix of born-digital and scanned documents (Table 2).
+  - Supervision is generated by GPT‑4o using document anchoring and a strict JSON schema (Appendix E.1). Anchors proved crucial for faithful page-level text (§2.2, Table 4).
+- Model fine-tuning (`olmOCR-7B-0225-preview`; §2.3)
+  - Base: `Qwen2-VL-7B-Instruct`.
+  - Setup: effective batch size 4, AdamW, lr 1e‑6, cosine schedule, 10k steps (~1.2 epochs) on 8×H100 80GB; a single run took 16 node-hours (§2.3).
+  - Token budgets: prompt capped at 6,000 characters; typical inputs ≈ 3,000 tokens (≈1,000 for image, ≈1,800 for anchors); outputs truncated to 8,192 tokens; loss applied only to response tokens (§2.3).
+- Inference pipeline (Appendix D)
+  - Built on SGLang/vLLM for batched, high-throughput server-side generation.
+  - Practicalities: retries on JSON parse failure; optional re-rotation using predicted `rotation_correction`; temperature increased (up to 0.8) to avoid repetition collapse; fallback to plain PDF-text extraction if repeated failures occur (Appendix D.2).
+  - Costs measured on commodity cloud GPUs (Table 6).
+
+Analogy: think of document anchoring as handing the model a rough, shuffled “parts list” of the page—some words with approximate locations—while also showing the picture of the page. The model then writes a clean, top-to-bottom reading of the page, preserving math and tables, and outputs a small “page report” in JSON.
+
+## 4. Key Insights and Innovations
+- Document anchoring (fundamental)
+  - What is new: combine raster images with lightweight, positional text cues extracted from PDF internals (Appendix A).
+  - Why it matters: reduces hallucinations and improves recall on dense/complex layouts where image-only methods often omit or reorder content. Quantitatively, adding anchors improved general VLM baselines:
+    - GPT‑4o overall +1.0 point (68.9 → 69.9), Gemini Flash 2 +6.0 points (57.8 → 63.8) on `olmOCR-Bench` (Table 4).
+- A unit-test-style benchmark for document OCR (fundamental)
+  - `olmOCR-Bench` tests pass/fail properties: presence/absence, reading order, table cell relationships, and formula accuracy using rendered-symbol layout checks (§3.1). It spans 1,402 documents and 7,010 test cases (Table 3).
+  - Why it matters: avoids fuzzy string matches and LLM-as-judge biases; enables fair comparison across systems that format outputs differently (§3).
+- Teacher-efficient specialization: fine-tuning a 7B open VLM (incremental but impactful)
+  - A small model specialized on the task can beat larger general-purpose VLMs while being far cheaper to run:
+    - `olmOCR` overall 75.5% vs GPT‑4o (69.9%), Gemini Flash 2 (63.8%), Qwen 2.5 VL (65.5%), and the best specialized commercial tool Mistral OCR (72.0%) on `olmOCR-Bench` (Table 4), at ≈$176 per million pages (Table 6).
+- Cost-efficient, production-ready pipeline (incremental but enabling)
+  - A robust batch inference stack with retries, rotation handling, and JSON parsing integrates with SGLang/vLLM (Appendix D). It reaches 5,6xx pages per dollar on L40S (Table 6), making million-page processing practical.
+
+## 5. Experimental Analysis
+- Evaluation setup (§4, §3)
+  - Benchmark: `olmOCR-Bench` with 7,010 unit tests over 1,402 PDFs (Table 3).
+  - Test types: text presence/absence, natural reading order, table cell relationships, math formula correctness (symbol-layout matching via KaTeX), plus baseline sanity checks (§3.1).
+  - Baselines: specialized tools (Marker v1.7.5, MinerU v1.3.10, Mistral OCR API, GOT OCR 2.0), general VLMs (GPT‑4o, Gemini Flash 2, Qwen 2 VL, Qwen 2.5 VL) with and without anchoring where applicable (Table 4).
+- Main quantitative results (Table 4; Figure 1)
+  - Overall pass rate (macro-averaged across sources):
+    > `olmOCR (anchored)` 75.5 ± 1.0 vs `Mistral OCR` 72.0 ± 1.1, `GPT‑4o (anchored)` 69.9 ± 1.1, `Gemini Flash 2 (anchored)` 63.8 ± 1.2, `Qwen 2.5 VL` 65.5 ± 1.2, `Marker` 70.1 ± 1.1, `MinerU` 61.5 ± 1.1, `GOT OCR` 48.3 ± 1.1.
+  - Category highlights:
+    - Math (arXiv): `olmOCR` 74.9 vs GPT‑4o 53.5 and Qwen 2.5 VL 63.1 (Table 4).
+    - Math (Old Scans): GPT‑4o has a slight edge (74.5) over `olmOCR` (71.2) (Table 4).
+    - Tables: `olmOCR` 71.0 vs Marker 57.6, MinerU 60.9, GPT‑4o 70.0, Mistral 60.6 (Table 4).
+    - Multi-column reading order: `olmOCR` 78.3 vs GPT‑4o 69.3, Qwen 2.5 VL 68.3 (Table 4).
+  - Cost vs accuracy (Figure 1; Table 6)
+    > Cost per million pages: `olmOCR` ≈ $176–178; `Gemini Flash 2 (batch)` ≈ $249; `MinerU` ≈ $596; `Mistral OCR` ≈ $1,000; `Marker (force_ocr)` ≈ $1,484; `GPT‑4o (batch)` ≈ $6,240.
+- Human preference study (Appendix C.2, Figure 7; Table 9)
+  - Pairwise comparisons on 2,017 PDFs (452 decisive judgments):
+    > `olmOCR` wins 71.4% vs MinerU (55–22), 61.3% vs Marker (49–31), 58.6% vs GOT-OCR (41–29); ELO > 1800 (Figure 7; Table 9).
+- Teacher alignment (Appendix C.1)
+  > Page-weighted word alignment to GPT‑4o silver labels: `olmOCR` 0.875 vs GPT‑4o mini 0.833; GPT‑4o self-alignment 0.954 (Table 7). Higher temperature widens variance (Table 8).
+- Training diagnostics (Appendix C)
+  - Full fine-tuning outperforms LoRA in validation loss on both web PDFs and Internet Archive books (Figures 4–5).
+- Downstream impact on LM pretraining (§4.2; Table 5)
+  - Continued pretraining of `OLMo‑2‑7B‑1124` for 50B tokens on the same source PDFs but with different linearizations:
+    > Average score improves from 53.9 to 55.2 (+1.3 points). Examples: ARCC 75.0 → 76.4, DROP 42.3 → 43.7, HellaSwag 57.4 → 62.6; small drops on NQ (29.4 → 29.1) and WinoGrande (58.3 → 58.0).
+  - Takeaway: better PDF linearization measurably benefits LM training quality.
+- Do the experiments support the claims?
+  - Yes, on three fronts:
+    - Accuracy: consistent gains across categories versus strong baselines (Table 4) and human preference (Figure 7).
+    - Cost: large advantage per million pages (Table 6; Figure 1).
+    - Utility: downstream LM improvements (Table 5).
+  - Caveats: GPT‑4o slightly leads on Old Scans Math (Table 4), hinting at room for improving robustness on degraded scans.
+
+## 6. Limitations and Trade-offs
+- Reliance on silver labels from GPT‑4o (§2.2)
+  - The training targets are model-generated, not human-verified. Although anchoring and a strict schema improve quality, any systematic teacher errors could be learned by the student (Appendix C.1 reports alignment of 0.875).
+- English-centric data (§2.1)
+  - Non-English documents were filtered out using Lingua; the benchmark also excludes pages with CJK or emoji in baseline tests (§3.1), so multilingual performance is untested.
+- Anchoring dependency and failure modes (Appendix A, D.2)
+  - For born-digital PDFs, anchoring uses PDF internals; for scanned pages (no text layer), the model falls back to image-only, where accuracy can drop (Old Scans Math: GPT‑4o slightly better; Table 4).
+  - If `pypdf` extraction fails or returns noisy text, anchors may be less helpful.
+- Structured content choices
+  - Tables: tests sometimes rely on `rowspan/colspan` preserved in HTML; Markdown may be insufficient in those cases (§3.1).
+  - Equations: correctness is checked via symbol-layout patterns, not semantic equivalence; unusual TeX macros outside KaTeX’s rendering may cause mismatches (§3.2).
+- Decoding stability and throughput (Appendix D.2)
+  - The system combats repetition collapse by retries and higher temperature. High retry rates could reduce throughput; they measured ≈12% retries (Table 6).
+- Cost sensitivity to page complexity
+  - Costs assume ≈1,000 output tokens per page (Appendix B). Very dense pages or heavy HTML/LaTeX could increase tokens and reduce throughput.
+
+## 7. Implications and Future Directions
+- How this work shifts the landscape
+  - It demonstrates that a small, specialized, open VLM can outperform larger general models and commercial OCR APIs on complex PDF linearization at a fraction of the cost (Figure 1, Table 4, Table 6).
+  - The unit-test paradigm (`olmOCR-Bench`) offers a clearer, reproducible way to evaluate OCR/linearization systems across heterogeneous outputs (§3).
+- Follow-up research enabled/suggested
+  - Multilingual expansion: extend `olmOCR-mix` and the benchmark to non-English scripts and right-to-left layouts.
+  - Better scans handling: integrate document enhancement/denoising or add specialized scanned-text pretraining to close the Old Scans Math gap (Table 4).
+  - Richer structure extraction: standardize HTML output with layout spans for tables; add figure-caption linking and reference parsing.
+  - Stronger guarantees: explore constrained decoding that is robust (Appendix D notes schema-enforcement tools were unreliable) or post-hoc validators that detect repetition early and abort decoding.
+  - Teacher diversification: reduce reliance on a single teacher (GPT‑4o) to mitigate bias; mix multiple teachers and human audits for high-value subsets.
+- Practical applications
+  - Large-scale corpus creation for LLM pretraining (e.g., reprocessing peS2o; §4.2).
+  - Enterprise document ingestion where sending PDFs to third-party APIs is infeasible.
+  - Retrieval-augmented generation (RAG) pipelines needing faithful text with preserved formulas/tables.
+  - Accessibility tools and reading assistants that require reliable reading order and structure.
+
+Overall, `olmOCR` combines a pragmatic insight—ground the VLM with the page’s own text metadata—with an open, cost-efficient implementation and a rigorous evaluation suite. The system not only advances state-of-practice PDF linearization but also shows tangible benefits for downstream language model training.

@@ -1,0 +1,11 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+*.pdf
+.DS_Store
+site/
+temp_paper.pdf
+uv.lock
+*.log
+

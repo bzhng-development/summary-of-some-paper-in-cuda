@@ -84,7 +84,7 @@ def encode_pdf(file_path: Path) -> str:
     return base64.b64encode(file_path.read_bytes()).decode("utf-8")
 
 
-def get_openai_config() -> tuple[str, str]:
+def get_openai_config() -> tuple[str, str | None]:
     api_key = os.getenv("OPENAI_API_KEY", "")
     base_url = os.getenv("OPENAI_BASE_URL")
 
@@ -111,7 +111,7 @@ async def generate_full_summary(request: SummarizationRequest, arxiv_url: str | 
 
     # Increase timeout to 15 minutes for flex processing
     timeout = 900.0 if request.service_tier == "flex" else 600.0
-    
+
     client = AsyncOpenAI(
         base_url=base_url,
         api_key=api_key,
@@ -120,32 +120,19 @@ async def generate_full_summary(request: SummarizationRequest, arxiv_url: str | 
 
     set_default_openai_client(client=client, use_for_tracing=False)
 
-    # Build model_settings - try to include service_tier if supported
-    model_settings_kwargs = {
-        "reasoning": Reasoning(
+    # Build model_settings with service_tier in extra_args for flex processing
+    extra_args = {}
+    if request.service_tier:
+        extra_args["service_tier"] = request.service_tier
+
+    model_settings = ModelSettings(
+        reasoning=Reasoning(
             effort=request.reasoning.effort,
             summary=request.reasoning.summary,
         ),
-        "verbosity": request.text.verbosity,
-    }
-    
-    # Try to add service_tier if provided (may not be supported by ModelSettings)
-    # If it fails, we'll catch it and continue without it
-    try:
-        if request.service_tier:
-            model_settings_kwargs["service_tier"] = request.service_tier
-        model_settings = ModelSettings(**model_settings_kwargs)
-    except TypeError:
-        # service_tier not supported in ModelSettings, create without it
-        model_settings = ModelSettings(
-            reasoning=Reasoning(
-                effort=request.reasoning.effort,
-                summary=request.reasoning.summary,
-            ),
-            verbosity=request.text.verbosity,
-        )
-        if request.service_tier:
-            print(f"⚠️  Note: service_tier '{request.service_tier}' may not be supported by ModelSettings")
+        verbosity=request.text.verbosity,
+        extra_args=extra_args if extra_args else None,
+    )
 
     agent = Agent(
         name="Paper Analyzer",
@@ -200,7 +187,9 @@ async def generate_full_summary(request: SummarizationRequest, arxiv_url: str | 
     return result.final_output
 
 
-async def generate_pitch(full_summary: str, arxiv_url: str | None = None, service_tier: str | None = None) -> PitchOutput:
+async def generate_pitch(
+    full_summary: str, arxiv_url: str | None = None, service_tier: str | None = None
+) -> PitchOutput:
     api_key, base_url = get_openai_config()
 
     # Increase timeout for flex processing
@@ -214,14 +203,14 @@ async def generate_pitch(full_summary: str, arxiv_url: str | None = None, servic
 
     set_default_openai_client(client=client, use_for_tracing=False)
 
-    # Build model_settings with optional service_tier
-    pitch_model_settings = None
+    # Build model_settings with service_tier in extra_args for flex processing
+    extra_args = {}
     if service_tier:
-        try:
-            pitch_model_settings = ModelSettings(service_tier=service_tier)
-        except TypeError:
-            # service_tier not supported, skip it
-            pass
+        extra_args["service_tier"] = service_tier
+
+    pitch_model_settings = ModelSettings(
+        extra_args=extra_args if extra_args else None,
+    )
 
     pitch_agent = Agent(
         name="Pitch Generator",
@@ -383,7 +372,11 @@ async def process_multiple_urls(
 @click.option("--pdf", help="Local PDF path to summarize")
 @click.option("--question", help="Custom question prompt file")
 @click.option("--instructions", help="Custom instructions prompt file")
-@click.option("--flex", is_flag=True, help="Use flex processing for lower costs (slower, may have resource unavailability)")
+@click.option(
+    "--flex",
+    is_flag=True,
+    help="Use flex processing for lower costs (slower, may have resource unavailability)",
+)
 def main(
     model: str,
     url: str | None,
@@ -394,7 +387,7 @@ def main(
     flex: bool,
 ):
     service_tier = "flex" if flex else None
-    
+
     if urls:
         # Process multiple URLs from comma-separated string
         url_list = [u.strip() for u in urls.split(",") if u.strip()]

@@ -65,6 +65,7 @@ class SummarizationRequest(BaseModel):
     instructions: str
     reasoning: ReasoningConfig = Field(default_factory=ReasoningConfig)
     text: TextConfig = Field(default_factory=TextConfig)
+    service_tier: str | None = Field(default=None)
 
 
 class PitchOutput(BaseModel):
@@ -108,24 +109,49 @@ def download_arxiv_pdf(url: str, output_path: Path) -> Path:
 async def generate_full_summary(request: SummarizationRequest, arxiv_url: str | None = None) -> str:
     api_key, base_url = get_openai_config()
 
+    # Increase timeout to 15 minutes for flex processing
+    timeout = 900.0 if request.service_tier == "flex" else 600.0
+    
     client = AsyncOpenAI(
         base_url=base_url,
         api_key=api_key,
+        timeout=timeout,
     )
 
     set_default_openai_client(client=client, use_for_tracing=False)
 
-    agent = Agent(
-        name="Paper Analyzer",
-        instructions=request.instructions,
-        model=request.model,
-        model_settings=ModelSettings(
+    # Build model_settings - try to include service_tier if supported
+    model_settings_kwargs = {
+        "reasoning": Reasoning(
+            effort=request.reasoning.effort,
+            summary=request.reasoning.summary,
+        ),
+        "verbosity": request.text.verbosity,
+    }
+    
+    # Try to add service_tier if provided (may not be supported by ModelSettings)
+    # If it fails, we'll catch it and continue without it
+    try:
+        if request.service_tier:
+            model_settings_kwargs["service_tier"] = request.service_tier
+        model_settings = ModelSettings(**model_settings_kwargs)
+    except TypeError:
+        # service_tier not supported in ModelSettings, create without it
+        model_settings = ModelSettings(
             reasoning=Reasoning(
                 effort=request.reasoning.effort,
                 summary=request.reasoning.summary,
             ),
             verbosity=request.text.verbosity,
-        ),
+        )
+        if request.service_tier:
+            print(f"⚠️  Note: service_tier '{request.service_tier}' may not be supported by ModelSettings")
+
+    agent = Agent(
+        name="Paper Analyzer",
+        instructions=request.instructions,
+        model=request.model,
+        model_settings=model_settings,
     )
 
     pdf_path = Path(request.pdf_path)
@@ -174,21 +200,35 @@ async def generate_full_summary(request: SummarizationRequest, arxiv_url: str | 
     return result.final_output
 
 
-async def generate_pitch(full_summary: str, arxiv_url: str | None = None) -> PitchOutput:
+async def generate_pitch(full_summary: str, arxiv_url: str | None = None, service_tier: str | None = None) -> PitchOutput:
     api_key, base_url = get_openai_config()
+
+    # Increase timeout for flex processing
+    timeout = 900.0 if service_tier == "flex" else 600.0
 
     client = AsyncOpenAI(
         base_url=base_url,
         api_key=api_key,
+        timeout=timeout,
     )
 
     set_default_openai_client(client=client, use_for_tracing=False)
+
+    # Build model_settings with optional service_tier
+    pitch_model_settings = None
+    if service_tier:
+        try:
+            pitch_model_settings = ModelSettings(service_tier=service_tier)
+        except TypeError:
+            # service_tier not supported, skip it
+            pass
 
     pitch_agent = Agent(
         name="Pitch Generator",
         instructions="Extract the exact paper title and generate a compelling pitch.",
         model="gpt-4.1",
         output_type=PitchOutput,
+        model_settings=pitch_model_settings,
     )
 
     # the pdf is used for title extraction
@@ -312,9 +352,14 @@ async def process_multiple_urls(
     urls: list[str],
     question: str | None,
     instructions: str | None,
+    service_tier: str | None = None,
 ):
     """Process multiple ArXiv URLs sequentially."""
-    print(f"\n📚 Processing {len(urls)} papers...\n")
+    print(f"\n📚 Processing {len(urls)} papers...")
+    if service_tier:
+        print(f"⚡ Using {service_tier} processing (lower cost, slower responses)\n")
+    else:
+        print()
 
     for i, url in enumerate(urls, 1):
         print(f"\n{'=' * 80}")
@@ -322,7 +367,7 @@ async def process_multiple_urls(
         print(f"{'=' * 80}\n")
 
         try:
-            await async_main(model, url, None, question, instructions)
+            await async_main(model, url, None, question, instructions, service_tier)
         except Exception as e:
             print(f"\n❌ Error processing {url}: {e}")
             print("Continuing to next paper...\n")
@@ -338,6 +383,7 @@ async def process_multiple_urls(
 @click.option("--pdf", help="Local PDF path to summarize")
 @click.option("--question", help="Custom question prompt file")
 @click.option("--instructions", help="Custom instructions prompt file")
+@click.option("--flex", is_flag=True, help="Use flex processing for lower costs (slower, may have resource unavailability)")
 def main(
     model: str,
     url: str | None,
@@ -345,14 +391,17 @@ def main(
     pdf: str | None,
     question: str | None,
     instructions: str | None,
+    flex: bool,
 ):
+    service_tier = "flex" if flex else None
+    
     if urls:
         # Process multiple URLs from comma-separated string
         url_list = [u.strip() for u in urls.split(",") if u.strip()]
-        asyncio.run(process_multiple_urls(model, url_list, question, instructions))
+        asyncio.run(process_multiple_urls(model, url_list, question, instructions, service_tier))
     else:
         # Process single URL or PDF
-        asyncio.run(async_main(model, url, pdf, question, instructions))
+        asyncio.run(async_main(model, url, pdf, question, instructions, service_tier))
 
 
 async def async_main(
@@ -361,6 +410,7 @@ async def async_main(
     pdf: str | None,
     question: str | None,
     instructions: str | None,
+    service_tier: str | None = None,
 ):
     if url:
         pdf_path = download_arxiv_pdf(url, Path("temp_paper.pdf"))
@@ -379,13 +429,14 @@ async def async_main(
         pdf_path=str(pdf_path),
         question=question_text,
         instructions=instructions_text,
+        service_tier=service_tier,
     )
 
     print("\n📊 Step 1/3: Generating full analysis with GPT-5 (high reasoning)...")
     full_summary = await generate_full_summary(request, arxiv_url)
 
     print("📝 Step 2/3: Extracting title and generating pitch with GPT-4.1...")
-    pitch_output = await generate_pitch(full_summary, arxiv_url)
+    pitch_output = await generate_pitch(full_summary, arxiv_url, service_tier)
 
     print("🗂️  Step 3/3: Categorizing paper with GPT-4.1...")
     category = await categorize_paper(pitch_output.title, pitch_output.pitch, full_summary)

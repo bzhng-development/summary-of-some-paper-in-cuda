@@ -41,3 +41,26 @@ uv run python main.py --url https://arxiv.org/abs/XXXX.XXXXX
 ```bash
 uv run python main.py --urls "url1,url2,url3"
 ```
+
+## 📅 Finding Papers
+
+For sources of high-quality papers, check these major conferences and their pages:
+
+### 2025 Conference Calendar
+
+- **COLING 2025** — Jan 19–24, 2025 — Abu Dhabi, UAE
+  - Virtual sessions — Jan 27–28, 2025
+- **AAAI-25** — Feb 25–Mar 4, 2025 — Philadelphia, PA, USA
+- **ICLR 2025** — Apr 24–28, 2025 — Singapore (Singapore EXPO)
+  - Conference sessions: Apr 24–26; Workshops: Apr 27–28
+- **NAACL 2025** — Apr 29–May 4, 2025 — Albuquerque, NM, USA
+- **AISTATS 2025** — May 3–5, 2025 — Mai Khao, Thailand (Splash Beach Resort)
+- **MLSys 2025** — May 12–15, 2025 — Santa Clara, CA, USA (Santa Clara Convention Center)
+- **ICML 2025** — Jul 13–19, 2025 — Vancouver, BC, Canada (Vancouver Convention Center)
+  - Tutorials: Jul 14; Main sessions: Jul 15–17; Workshops: Jul 18–19
+- **ACL 2025** — Jul 27–Aug 1, 2025 — Vienna, Austria
+- **CoNLL 2025** — Jul 31–Aug 1, 2025 — Vienna, Austria (co-located with ACL)
+- **KDD 2025** — Aug 3–7, 2025 — Toronto, ON, Canada (Toronto Convention Centre)
+- **EMNLP 2025** — Nov 4–9, 2025 — Suzhou, China
+- **NeurIPS 2025** — Nov 30–Dec 7, 2025 — San Diego Convention Center + Hilton Reforma (Mexico City)
+  - Tutorials: Dec 2; Main sessions: Dec 3–5; Workshops: Dec 6–7

@@ -27,6 +27,10 @@ else:
 # Disable tracing by default for this CLI tool.
 set_tracing_disabled(True)
 
+# Limit concurrent arXiv PDF downloads to avoid overwhelming arXiv (or your network).
+_ARXIV_DOWNLOAD_CONCURRENCY = int(os.getenv("ARXIV_DOWNLOAD_CONCURRENCY", "5"))
+_ARXIV_DOWNLOAD_SEMAPHORE = asyncio.Semaphore(max(1, _ARXIV_DOWNLOAD_CONCURRENCY))
+
 CATEGORIES = [
     "alignment",
     "architecture",
@@ -173,26 +177,8 @@ async def generate_full_summary(request: SummarizationRequest, arxiv_url: str | 
 
     pdf_path = Path(request.pdf_path)
 
-    if arxiv_url:
-        pdf_url = arxiv_url.replace("/abs/", "/pdf/").removesuffix(".pdf")
-
-        input_items = [
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "input_file",
-                        "file_url": pdf_url,
-                    },
-                ],
-            },
-            {
-                "role": "user",
-                "content": request.question,
-            },
-        ]
-    else:
-        # if no arxiv provided, use a pdf url
+    # Prefer sending the PDF bytes directly to avoid proxy-side URL fetching timeouts/redirects.
+    if pdf_path.exists():
         b64_file = encode_pdf(pdf_path)
         input_items = [
             {
@@ -210,13 +196,33 @@ async def generate_full_summary(request: SummarizationRequest, arxiv_url: str | 
                 "content": request.question,
             },
         ]
+    elif arxiv_url:
+        # Fallback: let the model backend fetch the PDF from arXiv (redirect-free URL).
+        pdf_url = arxiv_url.replace("/abs/", "/pdf/").removesuffix(".pdf")
+        input_items = [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "input_file",
+                        "file_url": pdf_url,
+                    },
+                ],
+            },
+            {
+                "role": "user",
+                "content": request.question,
+            },
+        ]
+    else:
+        raise ValueError("No PDF available: provide a local PDF path or an arXiv URL.")
 
     result = await Runner.run(agent, input_items)  # type: ignore
     return result.final_output
 
 
 async def generate_pitch(
-    full_summary: str, arxiv_url: str | None = None, service_tier: str | None = None
+    full_summary: str, pdf_path: Path, service_tier: str | None = None
 ) -> PitchOutput:
     api_key, base_url = get_openai_config()
 
@@ -253,23 +259,21 @@ async def generate_pitch(
         model_settings=pitch_model_settings,
     )
 
-    # the pdf is used for title extraction
-    if arxiv_url:
-        pdf_url = arxiv_url.replace("/abs/", "/pdf/").removesuffix(".pdf")
-
-        input_items = [
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "input_file",
-                        "file_url": pdf_url,
-                    },
-                ],
-            },
-            {
-                "role": "user",
-                "content": f"""Extract the exact title from the PDF and generate a compelling 2-3 sentence pitch.
+    b64_file = encode_pdf(pdf_path)
+    input_items = [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "input_file",
+                    "file_data": f"data:application/pdf;base64,{b64_file}",
+                    "filename": pdf_path.name,
+                },
+            ],
+        },
+        {
+            "role": "user",
+            "content": f"""Extract the exact title from the PDF and generate a compelling 2-3 sentence pitch.
 
 The pitch should capture:
 1. The core contribution/innovation
@@ -277,12 +281,8 @@ The pitch should capture:
 
 Paper Analysis (for context):
 {full_summary[:2000]}...""",
-            },
-        ]
-    else:
-        input_items = f"""Based on this analysis, extract a title and generate a compelling 2-3 sentence pitch:
-
-{full_summary[:2000]}..."""
+        },
+    ]
 
     result = await Runner.run(pitch_agent, input_items)  # type: ignore
     return result.final_output
@@ -496,11 +496,16 @@ async def async_main(
     instructions: str | None,
     service_tier: str | None = None,
 ):
+    downloaded_pdf_path: Path | None = None
     if url:
         arxiv_url = url
-        # URL mode uses arXiv-hosted PDF via `file_url` inside `generate_full_summary`/`generate_pitch`.
-        # No need to download locally (and it would waste bandwidth / add contention under concurrency).
-        pdf_path = Path("unused.pdf")
+        arxiv_id = arxiv_id_from_url(url)
+        temp_dir = Path("temp_papers")
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        downloaded_pdf_path = temp_dir / f"{arxiv_id}.pdf"
+        async with _ARXIV_DOWNLOAD_SEMAPHORE:
+            # requests is blocking; run it off the event loop so concurrency works.
+            pdf_path = await asyncio.to_thread(download_arxiv_pdf, url, downloaded_pdf_path)
     elif pdf:
         pdf_path = Path(pdf)
         arxiv_url = None
@@ -522,7 +527,7 @@ async def async_main(
     full_summary = await generate_full_summary(request, arxiv_url)
 
     print("📝 Step 2/3: Extracting title and generating pitch with GPT-5-mini...")
-    pitch_output = await generate_pitch(full_summary, arxiv_url, service_tier)
+    pitch_output = await generate_pitch(full_summary, pdf_path, service_tier)
 
     print("🗂️  Step 3/3: Categorizing paper with GPT-5-mini...")
     category = await categorize_paper(pitch_output.title, pitch_output.pitch, full_summary)
@@ -539,6 +544,13 @@ async def async_main(
     print("\n" + "=" * 80)
     print("\n📖 FULL ANALYSIS\n")
     print(full_summary[:500] + "...")
+
+    # Best-effort cleanup for downloaded PDFs.
+    if downloaded_pdf_path and downloaded_pdf_path.exists():
+        try:
+            downloaded_pdf_path.unlink()
+        except OSError:
+            pass
 
 
 if __name__ == "__main__":

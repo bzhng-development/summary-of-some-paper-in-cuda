@@ -109,8 +109,9 @@ def get_openai_config() -> tuple[str, str | None]:
 
 def download_arxiv_pdf(url: str, output_path: Path) -> Path:
     pdf_url = url.replace("/abs/", "/pdf/") if "/abs/" in url else url
-    if not pdf_url.endswith(".pdf"):
-        pdf_url += ".pdf"
+    # Prefer redirect-free arXiv PDF URLs: https://arxiv.org/pdf/<id>
+    # (The .pdf suffix often redirects to the non-suffixed URL.)
+    pdf_url = pdf_url.removesuffix(".pdf")
 
     response = requests.get(pdf_url, stream=True, timeout=30)
     response.raise_for_status()
@@ -126,6 +127,13 @@ def arxiv_id_from_url(url: str) -> str:
     # - https://arxiv.org/pdf/2312.07104.pdf
     last = url.rstrip("/").split("/")[-1]
     return last.replace(".pdf", "")
+
+
+class PaperProcessingError(RuntimeError):
+    def __init__(self, url: str, original: Exception):
+        super().__init__(f"{url}: {original}")
+        self.url = url
+        self.original = original
 
 
 async def generate_full_summary(request: SummarizationRequest, arxiv_url: str | None = None) -> str:
@@ -166,9 +174,7 @@ async def generate_full_summary(request: SummarizationRequest, arxiv_url: str | 
     pdf_path = Path(request.pdf_path)
 
     if arxiv_url:
-        pdf_url = arxiv_url.replace("/abs/", "/pdf/")
-        if not pdf_url.endswith(".pdf"):
-            pdf_url += ".pdf"
+        pdf_url = arxiv_url.replace("/abs/", "/pdf/").removesuffix(".pdf")
 
         input_items = [
             {
@@ -249,9 +255,7 @@ async def generate_pitch(
 
     # the pdf is used for title extraction
     if arxiv_url:
-        pdf_url = arxiv_url.replace("/abs/", "/pdf/")
-        if not pdf_url.endswith(".pdf"):
-            pdf_url += ".pdf"
+        pdf_url = arxiv_url.replace("/abs/", "/pdf/").removesuffix(".pdf")
 
         input_items = [
             {
@@ -340,7 +344,21 @@ def save_summary(pitch_output: PitchOutput, full_summary: str, category: str, ar
 
     # Normalize title for filename
     normalized_title = pitch_output.title.replace(" ", "").replace("/", "-").replace(":", "-")[:60]
-    output_file = category_dir / f"{normalized_title}.md"
+    if arxiv_url:
+        arxiv_id = arxiv_url.split("/")[-1].replace(".pdf", "")
+        base_name = f"{arxiv_id}-{normalized_title}.md"
+    else:
+        base_name = f"{normalized_title}.md"
+
+    output_file = category_dir / base_name
+    if output_file.exists():
+        stem = output_file.stem
+        suffix = output_file.suffix
+        for k in range(2, 1000):
+            candidate = category_dir / f"{stem}-{k}{suffix}"
+            if not candidate.exists():
+                output_file = candidate
+                break
 
     # Format content with metadata header
     formatted_output = f"""# {pitch_output.title}
@@ -402,25 +420,25 @@ async def process_multiple_urls(
 
         async def _run_one(i: int, url: str) -> None:
             async with sem:
-                print(f"\n{'=' * 80}")
-                print(f"Processing paper {i}/{len(urls)}: {url}")
-                print(f"{'=' * 80}\n")
-                await async_main(model, url, None, question, instructions, service_tier)
+                try:
+                    await async_main(model, url, None, question, instructions, service_tier)
+                except Exception as e:
+                    raise PaperProcessingError(url, e) from e
 
         tasks: list[asyncio.Task[None]] = []
-        task_to_url: dict[asyncio.Task[None], str] = {}
         for i, url in enumerate(urls, 1):
             t = asyncio.create_task(_run_one(i, url))
             tasks.append(t)
-            task_to_url[t] = url
 
         errors: list[tuple[str, Exception]] = []
         with tqdm(total=len(tasks), desc="Papers") as pbar:
             for done in asyncio.as_completed(tasks):
                 try:
                     await done
+                except PaperProcessingError as e:
+                    errors.append((e.url, e.original))
                 except Exception as e:
-                    errors.append((task_to_url.get(done, "<unknown>"), e))
+                    errors.append(("<unknown>", e))
                 finally:
                     pbar.update(1)
 
@@ -478,15 +496,11 @@ async def async_main(
     instructions: str | None,
     service_tier: str | None = None,
 ):
-    downloaded_pdf_path: Path | None = None
     if url:
         arxiv_url = url
-        arxiv_id = arxiv_id_from_url(url)
-        temp_dir = Path("temp_papers")
-        temp_dir.mkdir(parents=True, exist_ok=True)
-        downloaded_pdf_path = temp_dir / f"{arxiv_id}.pdf"
-        # requests is blocking; run it off the event loop so concurrency works.
-        pdf_path = await asyncio.to_thread(download_arxiv_pdf, url, downloaded_pdf_path)
+        # URL mode uses arXiv-hosted PDF via `file_url` inside `generate_full_summary`/`generate_pitch`.
+        # No need to download locally (and it would waste bandwidth / add contention under concurrency).
+        pdf_path = Path("unused.pdf")
     elif pdf:
         pdf_path = Path(pdf)
         arxiv_url = None
@@ -525,13 +539,6 @@ async def async_main(
     print("\n" + "=" * 80)
     print("\n📖 FULL ANALYSIS\n")
     print(full_summary[:500] + "...")
-
-    # Best-effort cleanup for downloaded PDFs (avoid accumulating many files in concurrent runs).
-    if downloaded_pdf_path and downloaded_pdf_path.exists():
-        try:
-            downloaded_pdf_path.unlink()
-        except OSError:
-            pass
 
 
 if __name__ == "__main__":

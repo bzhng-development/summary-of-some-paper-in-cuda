@@ -7,12 +7,24 @@ from typing import Literal
 import click
 import requests
 from agents import Agent, ModelSettings, Runner, set_default_openai_client
+from agents.tracing import set_tracing_disabled
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
 from openai.types.shared import Reasoning
 from pydantic import BaseModel, Field, field_validator
 
-load_dotenv()
+# NOTE: On newer Python versions, relying on dotenv's automatic discovery can be fragile in
+# some execution modes. Prefer loading from the repo root deterministically.
+_dotenv_path = Path(__file__).resolve().parent / ".env"
+if _dotenv_path.exists():
+    load_dotenv(dotenv_path=_dotenv_path)
+else:
+    load_dotenv()
+
+# The openai-agents SDK enables a default tracing exporter that talks to OpenAI’s backend.
+# When using a non-OpenAI proxy key (e.g., Shopify proxy), this can generate noisy 401s.
+# Disable tracing by default for this CLI tool.
+set_tracing_disabled(True)
 
 CATEGORIES = [
     "alignment",
@@ -59,7 +71,7 @@ class FileInput(BaseModel):
 
 
 class SummarizationRequest(BaseModel):
-    model: str = Field(default="gpt-5")
+    model: str = Field(default="gpt-5.2")
     pdf_path: str
     question: str
     instructions: str
@@ -209,13 +221,18 @@ async def generate_pitch(
         extra_args["service_tier"] = service_tier
 
     pitch_model_settings = ModelSettings(
+        reasoning=Reasoning(
+            effort="low",
+            summary="auto",
+        ),
+        verbosity="low",
         extra_args=extra_args if extra_args else None,
     )
 
     pitch_agent = Agent(
         name="Pitch Generator",
         instructions="Extract the exact paper title and generate a compelling pitch.",
-        model="gpt-4.1",
+        model="gpt-5-mini-2025-08-07",
         output_type=PitchOutput,
         model_settings=pitch_model_settings,
     )
@@ -258,14 +275,17 @@ Paper Analysis (for context):
 
 
 async def categorize_paper(title: str, pitch: str, full_summary: str) -> str:
-    """Categorize paper using GPT-4.1 based on title, pitch, and full summary."""
+    """Categorize paper using GPT-5-mini based on title, pitch, and full summary."""
     api_key, base_url = get_openai_config()
 
     client = AsyncOpenAI(base_url=base_url, api_key=api_key)
 
-    response = await client.chat.completions.create(
-        model="gpt-4.1",
-        messages=[
+    response = await client.responses.create(
+        model="gpt-5-mini-2025-08-07",
+        reasoning=Reasoning(
+            effort="low",
+        ),
+        input=[
             {
                 "role": "system",
                 "content": f"Categorize the paper into one of these categories: {', '.join(CATEGORIES)}. Respond with ONLY the category name, nothing else.",
@@ -275,11 +295,10 @@ async def categorize_paper(title: str, pitch: str, full_summary: str) -> str:
                 "content": f"Title: {title}\n\nPitch: {pitch}\n\nFull Summary:\n{full_summary}",
             },
         ],
-        temperature=0.0,
     )
 
     # Parse category from response
-    content = response.choices[0].message.content
+    content = response.output_text
     if not content:
         return "stg"  # fallback if no response
 
@@ -329,11 +348,12 @@ def save_summary(pitch_output: PitchOutput, full_summary: str, category: str, ar
     return output_file
 
 
+DEFAULT_QUESTION = "Analyze the attached paper and follow the instructions in the system prompt."
+
+
 def load_prompt(prompt_path: str | None, default_file: str) -> str:
-    if prompt_path:
-        return Path(prompt_path).read_text(encoding="utf-8").strip()
-    default_path = Path("prompts") / default_file
-    return default_path.read_text(encoding="utf-8").strip()
+    path = Path(prompt_path) if prompt_path else Path(default_file)
+    return path.read_text(encoding="utf-8").strip()
 
 
 async def process_multiple_urls(
@@ -366,12 +386,12 @@ async def process_multiple_urls(
 
 
 @click.command()
-@click.option("--model", default="gpt-5", help="Model to use for summarization")
+@click.option("--model", default="gpt-5.2", help="Model to use for summarization")
 @click.option("--url", help="ArXiv URL to download and summarize")
 @click.option("--urls", help="Comma-separated list of ArXiv URLs to process")
 @click.option("--pdf", help="Local PDF path to summarize")
-@click.option("--question", help="Custom question prompt file")
-@click.option("--instructions", help="Custom instructions prompt file")
+@click.option("--question", help="Optional user question prompt file (text). If omitted, uses a short default.")
+@click.option("--instructions", help="System prompt file (text). Defaults to main_prompt.txt.")
 @click.option(
     "--flex",
     is_flag=True,
@@ -414,8 +434,8 @@ async def async_main(
     else:
         raise click.UsageError("Must provide either --url or --pdf")
 
-    question_text = load_prompt(question, "default_question.txt")
-    instructions_text = load_prompt(instructions, "default_instructions.txt")
+    question_text = Path(question).read_text(encoding="utf-8").strip() if question else DEFAULT_QUESTION
+    instructions_text = load_prompt(instructions, "main_prompt.txt")
 
     request = SummarizationRequest(
         model=model,
@@ -425,13 +445,13 @@ async def async_main(
         service_tier=service_tier,
     )
 
-    print("\n📊 Step 1/3: Generating full analysis with GPT-5 (high reasoning)...")
+    print("\n📊 Step 1/3: Generating full analysis with GPT-5.2 (high reasoning)...")
     full_summary = await generate_full_summary(request, arxiv_url)
 
-    print("📝 Step 2/3: Extracting title and generating pitch with GPT-4.1...")
+    print("📝 Step 2/3: Extracting title and generating pitch with GPT-5-mini...")
     pitch_output = await generate_pitch(full_summary, arxiv_url, service_tier)
 
-    print("🗂️  Step 3/3: Categorizing paper with GPT-4.1...")
+    print("🗂️  Step 3/3: Categorizing paper with GPT-5-mini...")
     category = await categorize_paper(pitch_output.title, pitch_output.pitch, full_summary)
     print(f"   → Category: {category}")
 

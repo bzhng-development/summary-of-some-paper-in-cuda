@@ -41,3 +41,15 @@ uv run python main.py --url https://arxiv.org/abs/XXXX.XXXXX
 ```bash
 uv run python main.py --urls "url1,url2,url3"
 ```
+
+### Model
+- Default model is **`gpt-5.2`**.
+- Override with `--model`, e.g.:
+
+```bash
+uv run python main.py --model gpt-5.2 --url https://arxiv.org/abs/XXXX.XXXXX
+```
+
+### Prompt
+- Default system prompt is **`main_prompt.txt`**.
+- Override with `--instructions /path/to/prompt.txt`.

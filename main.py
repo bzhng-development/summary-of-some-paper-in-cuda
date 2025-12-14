@@ -2,6 +2,7 @@ import asyncio
 import base64
 import os
 from pathlib import Path
+import re
 from typing import Literal
 
 import click
@@ -368,13 +369,16 @@ def save_summary(pitch_output: PitchOutput, full_summary: str, category: str, ar
         arxiv_id = arxiv_url.split("/")[-1].replace(".pdf", "")
         arxiv_link = f"\n**ArXiv:** [{arxiv_id}](https://arxiv.org/abs/{arxiv_id})\n"
 
-    # Normalize title for filename
-    normalized_title = pitch_output.title.replace(" ", "").replace("/", "-").replace(":", "-")[:60]
+    # Normalize title for filename (strip control chars, whitespace, and punctuation that break paths)
+    title = pitch_output.title
+    title = "".join(ch for ch in title if ord(ch) >= 32)  # drop control chars (e.g. \n, \a)
+    title = re.sub(r"\s+", " ", title).strip()
+    normalized_title = re.sub(r"[^A-Za-z0-9._-]+", "-", title).strip("-")[:80]
     if arxiv_url:
         arxiv_id = arxiv_url.split("/")[-1].replace(".pdf", "")
-        base_name = f"{arxiv_id}-{normalized_title}.md"
+        base_name = f"{arxiv_id}-{normalized_title}.md" if normalized_title else f"{arxiv_id}.md"
     else:
-        base_name = f"{normalized_title}.md"
+        base_name = f"{normalized_title}.md" if normalized_title else "paper.md"
 
     output_file = category_dir / base_name
     if output_file.exists():

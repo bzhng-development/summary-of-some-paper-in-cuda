@@ -6,6 +6,7 @@ from typing import Literal
 
 import click
 import requests
+from tqdm import tqdm
 from agents import Agent, ModelSettings, Runner, set_default_openai_client
 from agents.tracing import set_tracing_disabled
 from dotenv import load_dotenv
@@ -385,7 +386,7 @@ async def process_multiple_urls(
         print()
 
     if concurrency == 1:
-        for i, url in enumerate(urls, 1):
+        for i, url in tqdm(list(enumerate(urls, 1)), total=len(urls), desc="Papers"):
             print(f"\n{'=' * 80}")
             print(f"Processing paper {i}/{len(urls)}: {url}")
             print(f"{'=' * 80}\n")
@@ -406,14 +407,25 @@ async def process_multiple_urls(
                 print(f"{'=' * 80}\n")
                 await async_main(model, url, None, question, instructions, service_tier)
 
-        tasks = []
+        tasks: list[asyncio.Task[None]] = []
+        task_to_url: dict[asyncio.Task[None], str] = {}
         for i, url in enumerate(urls, 1):
-            tasks.append(asyncio.create_task(_run_one(i, url)))
+            t = asyncio.create_task(_run_one(i, url))
+            tasks.append(t)
+            task_to_url[t] = url
 
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        for url, r in zip(urls, results, strict=False):
-            if isinstance(r, Exception):
-                print(f"\n❌ Error processing {url}: {r}")
+        errors: list[tuple[str, Exception]] = []
+        with tqdm(total=len(tasks), desc="Papers") as pbar:
+            for done in asyncio.as_completed(tasks):
+                try:
+                    await done
+                except Exception as e:
+                    errors.append((task_to_url.get(done, "<unknown>"), e))
+                finally:
+                    pbar.update(1)
+
+        for url, e in errors:
+            print(f"\n❌ Error processing {url}: {e}")
 
     print(f"\n🎉 Finished processing {len(urls)} papers!")
 

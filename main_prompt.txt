@@ -63,10 +63,6 @@ State the paper's core contribution and primary significance. Answer: What probl
 ## 3. Technical Approach
 NOTE: This should be the LONGEST and most detailed section of the summary. The reader has NOT read this paper and needs a complete standalone explanation.
 
-### 3.0 Detailed, sentence-based technical breakdown
-- Treat this as a detailed technical breakdown of the system/mechanism in full sentences (not telegraphic fragments).
-- Even when using bullets, each bullet should be a complete sentence that explains a concrete mechanism, interface, or cause→effect relation.
-
 At the start of this section, include these short sub-sections (use `###` headings) to make the breakdown approachable:
 
 ### 3.1 Reader orientation (approachable technical breakdown)
@@ -79,6 +75,10 @@ At the start of this section, include these short sub-sections (use `###` headin
 
 ### 3.3 Roadmap for the deep dive
 - 3–6 bullets that state the order you’ll explain components and why that order helps understanding.
+
+### 3.4 Detailed, sentence-based technical breakdown
+- Treat this as a detailed technical breakdown of the system/mechanism in full sentences (not telegraphic fragments).
+- Even when using bullets, each bullet should be a complete sentence that explains a concrete mechanism, interface, or cause→effect relation.
 
 REQUIRED ELEMENTS:
 - Start with a one-sentence framing: what type of paper is this (empirical system, theoretical framework, algorithmic contribution, etc.) and the core idea.

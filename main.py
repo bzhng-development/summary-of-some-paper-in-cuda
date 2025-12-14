@@ -118,6 +118,15 @@ def download_arxiv_pdf(url: str, output_path: Path) -> Path:
     return output_path
 
 
+def arxiv_id_from_url(url: str) -> str:
+    # Supports URLs like:
+    # - https://arxiv.org/abs/2312.07104
+    # - https://arxiv.org/abs/2312.07104v2
+    # - https://arxiv.org/pdf/2312.07104.pdf
+    last = url.rstrip("/").split("/")[-1]
+    return last.replace(".pdf", "")
+
+
 async def generate_full_summary(request: SummarizationRequest, arxiv_url: str | None = None) -> str:
     api_key, base_url = get_openai_config()
 
@@ -362,25 +371,49 @@ async def process_multiple_urls(
     question: str | None,
     instructions: str | None,
     service_tier: str | None = None,
+    concurrency: int = 1,
 ):
-    """Process multiple ArXiv URLs sequentially."""
-    print(f"\n📚 Processing {len(urls)} papers...")
+    """Process multiple ArXiv URLs (sequentially by default; optionally concurrently)."""
+    concurrency = max(1, int(concurrency))
+    if concurrency == 1:
+        print(f"\n📚 Processing {len(urls)} papers...")
+    else:
+        print(f"\n📚 Processing {len(urls)} papers (concurrency={concurrency})...")
     if service_tier:
         print(f"⚡ Using {service_tier} processing (lower cost, slower responses)\n")
     else:
         print()
 
-    for i, url in enumerate(urls, 1):
-        print(f"\n{'=' * 80}")
-        print(f"Processing paper {i}/{len(urls)}: {url}")
-        print(f"{'=' * 80}\n")
+    if concurrency == 1:
+        for i, url in enumerate(urls, 1):
+            print(f"\n{'=' * 80}")
+            print(f"Processing paper {i}/{len(urls)}: {url}")
+            print(f"{'=' * 80}\n")
 
-        try:
-            await async_main(model, url, None, question, instructions, service_tier)
-        except Exception as e:
-            print(f"\n❌ Error processing {url}: {e}")
-            print("Continuing to next paper...\n")
-            continue
+            try:
+                await async_main(model, url, None, question, instructions, service_tier)
+            except Exception as e:
+                print(f"\n❌ Error processing {url}: {e}")
+                print("Continuing to next paper...\n")
+                continue
+    else:
+        sem = asyncio.Semaphore(concurrency)
+
+        async def _run_one(i: int, url: str) -> None:
+            async with sem:
+                print(f"\n{'=' * 80}")
+                print(f"Processing paper {i}/{len(urls)}: {url}")
+                print(f"{'=' * 80}\n")
+                await async_main(model, url, None, question, instructions, service_tier)
+
+        tasks = []
+        for i, url in enumerate(urls, 1):
+            tasks.append(asyncio.create_task(_run_one(i, url)))
+
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        for url, r in zip(urls, results, strict=False):
+            if isinstance(r, Exception):
+                print(f"\n❌ Error processing {url}: {r}")
 
     print(f"\n🎉 Finished processing {len(urls)} papers!")
 
@@ -393,6 +426,13 @@ async def process_multiple_urls(
 @click.option("--question", help="Optional user question prompt file (text). If omitted, uses a short default.")
 @click.option("--instructions", help="System prompt file (text). Defaults to main_prompt.txt.")
 @click.option(
+    "--concurrency",
+    default=1,
+    show_default=True,
+    type=int,
+    help="When using --urls, how many papers to process concurrently (1 = sequential).",
+)
+@click.option(
     "--flex",
     is_flag=True,
     help="Use flex processing for lower costs (slower, may have resource unavailability)",
@@ -404,6 +444,7 @@ def main(
     pdf: str | None,
     question: str | None,
     instructions: str | None,
+    concurrency: int,
     flex: bool,
 ):
     service_tier = "flex" if flex else None
@@ -411,7 +452,7 @@ def main(
     if urls:
         # Process multiple URLs from comma-separated string
         url_list = [u.strip() for u in urls.split(",") if u.strip()]
-        asyncio.run(process_multiple_urls(model, url_list, question, instructions, service_tier))
+        asyncio.run(process_multiple_urls(model, url_list, question, instructions, service_tier, concurrency))
     else:
         # Process single URL or PDF
         asyncio.run(async_main(model, url, pdf, question, instructions, service_tier))
@@ -425,9 +466,15 @@ async def async_main(
     instructions: str | None,
     service_tier: str | None = None,
 ):
+    downloaded_pdf_path: Path | None = None
     if url:
-        pdf_path = download_arxiv_pdf(url, Path("temp_paper.pdf"))
         arxiv_url = url
+        arxiv_id = arxiv_id_from_url(url)
+        temp_dir = Path("temp_papers")
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        downloaded_pdf_path = temp_dir / f"{arxiv_id}.pdf"
+        # requests is blocking; run it off the event loop so concurrency works.
+        pdf_path = await asyncio.to_thread(download_arxiv_pdf, url, downloaded_pdf_path)
     elif pdf:
         pdf_path = Path(pdf)
         arxiv_url = None
@@ -466,6 +513,13 @@ async def async_main(
     print("\n" + "=" * 80)
     print("\n📖 FULL ANALYSIS\n")
     print(full_summary[:500] + "...")
+
+    # Best-effort cleanup for downloaded PDFs (avoid accumulating many files in concurrent runs).
+    if downloaded_pdf_path and downloaded_pdf_path.exists():
+        try:
+            downloaded_pdf_path.unlink()
+        except OSError:
+            pass
 
 
 if __name__ == "__main__":

@@ -63,6 +63,19 @@ State the paper's core contribution and primary significance. Answer: What probl
 ## 3. Technical Approach
 NOTE: This should be the LONGEST and most detailed section of the summary. The reader has NOT read this paper and needs a complete standalone explanation.
 
+At the start of this section, include these short sub-sections (use `###` headings) to make the breakdown approachable:
+
+### 3.1 Reader orientation (approachable technical breakdown)
+- One sentence on what the *system* is (or what is being built), in plain language.
+- One sentence on what problem it solves and the “shape” of the solution (e.g., runtime, compiler, language, serving stack, training pipeline).
+
+### 3.2 Big-picture architecture (diagram in words)
+- A high-level “box-and-arrows in words” view of the major components.
+- Name each component and its responsibility; keep this overview short (you will expand below).
+
+### 3.3 Roadmap for the deep dive
+- 3–6 bullets that state the order you’ll explain components and why that order helps understanding.
+
 REQUIRED ELEMENTS:
 - Start with a one-sentence framing: what type of paper is this (empirical system, theoretical framework, algorithmic contribution, etc.) and the core idea.
 - Provide a "system/data pipeline diagram in words": describe major components, their inputs/outputs, and how information flows through them. Use an explicit "what happens first, second, third" narrative—forbid vague descriptions.

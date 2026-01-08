@@ -1,4 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@6..144,1..1000&display=swap');
+
 :root {
+  --md-text-font: "Google Sans Flex", sans-serif;
+  --md-code-font: "Google Sans Flex", monospace;
   --black: #261230;
   --white: #ffffff;
   --radiate: #d7ff64;

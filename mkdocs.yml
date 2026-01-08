@@ -6,6 +6,10 @@ repo_name: bzhng-development/summary-of-some-paper-in-cuda
 extra_css:
   - stylesheets/extra.css
 
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+
 theme:
   name: material
   features:
@@ -50,6 +54,8 @@ plugins:
       fallback_to_build_date: true
 
 markdown_extensions:
+  - pymdownx.arithmatex:
+      generic: true
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.superfences

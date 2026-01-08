@@ -1,5 +1,7 @@
 site_name: Paper Summaries
-site_url: https://localhost:8000/
+site_url: https://summary-of-some-paper-in-cuda.readthedocs.io/
+repo_url: https://github.com/bzhng-development/summary-of-some-paper-in-cuda
+repo_name: bzhng-development/summary-of-some-paper-in-cuda
 
 extra_css:
   - stylesheets/extra.css

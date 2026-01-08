@@ -1,24 +1,24 @@
 import asyncio
 import base64
 import os
+import re
 from enum import StrEnum
 from pathlib import Path
-import re
 from typing import Any, Literal
 from urllib.parse import urlparse
 
-from anyio import Path as AsyncPath
-
 import click
 import orjson
-from loguru import logger
-from tqdm import tqdm
 from agents import Agent, ModelSettings, Runner, set_default_openai_client
 from agents.tracing import set_tracing_disabled
+from anyio import Path as AsyncPath
 from dotenv import load_dotenv
+from loguru import logger
+from tenacity import retry, stop_after_attempt, wait_exponential, before_sleep_log
 from openai import AsyncOpenAI
 from openai.types.shared import Reasoning
 from pydantic import BaseModel, Field
+from tqdm import tqdm
 
 from database import init_db, save_to_db
 
@@ -107,7 +107,10 @@ class SummarizationRequest(BaseModel):
     model: str = Field(default=ModelName.ANALYZER)
     arxiv_url: str | None = Field(default=None, description="ArXiv URL (preferred for URL mode)")
     pdf_path: Path | None = Field(default=None, description="Local PDF path (fallback)")
-    question: str | None = Field(default=None, description="Optional user question (if omitted, just uses system prompt)")
+    question: str | None = Field(
+        default=None,
+        description="Optional user question (if omitted, just uses system prompt)",
+    )
     instructions: str
     reasoning: ReasoningConfig = Field(default_factory=ReasoningConfig)
     text: TextConfig = Field(default_factory=TextConfig)
@@ -120,7 +123,7 @@ class SummarizationRequest(BaseModel):
         """Extract ArXiv ID from URL if available."""
         if self.arxiv_url:
             return arxiv_id_from_url(self.arxiv_url)
-        elif self.pdf_path:
+        if self.pdf_path:
             return self.pdf_path.stem
         return None
 
@@ -159,7 +162,8 @@ async def encode_pdf(file_path: Path) -> str:
 
 
 def get_openai_config() -> tuple[str, str]:
-    api_key = os.getenv("OPENAI_API_KEY", "")
+    api_key = os.getenv(
+        "OPENAI_API_KEY",""    )
     base_url = "https://api.openai.com/v1"
 
     if not api_key:
@@ -182,6 +186,7 @@ class PaperSummarizer:
 
         Args:
             service_tier: Optional service tier (e.g., "flex" for longer timeouts)
+
         """
         self.service_tier = service_tier
         timeout = Timeout.for_tier(service_tier)
@@ -221,8 +226,17 @@ class PaperSummarizer:
         result = await Runner.run(agent, input_items)  # type: ignore
         return result.final_output, serialize_response(result)
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        before_sleep=before_sleep_log(logger, "WARNING"),  # type: ignore[arg-type]
+        reraise=True,
+    )
     async def generate_pitch(
-        self, full_summary: str, arxiv_url: str | None = None, pdf_path: Path | None = None
+        self,
+        full_summary: str,
+        arxiv_url: str | None = None,
+        pdf_path: Path | None = None,
     ) -> tuple[PitchOutput, dict[str, Any]]:
         """Generate pitch and return both output and raw response."""
         pitch_model_settings = ModelSettings(
@@ -260,11 +274,18 @@ Paper Analysis (for context):
         result = await Runner.run(pitch_agent, input_items)  # type: ignore
         return result.final_output, serialize_response(result)
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        before_sleep=before_sleep_log(logger, "WARNING"),  # type: ignore[arg-type]
+        reraise=True,
+    )
     async def categorize_paper(self, title: str, pitch: str, full_summary: str) -> tuple[str, dict[str, Any]]:
         """Categorize paper using GPT-5-mini based on title, pitch, and full summary.
 
         Returns:
             Tuple of (category string, raw response dict)
+
         """
         response = await self.client.responses.create(
             model=ModelName.CATEGORIZER,
@@ -309,19 +330,20 @@ Paper Analysis (for context):
 
         Returns:
             Tuple of (pitch_output, full_summary, category, aggregated_responses)
+
         """
         logger.info("Step 1/3: Generating full analysis with GPT-5.2 (high reasoning)...")
         full_summary, summary_response = await self.generate_full_summary(request)
 
         logger.info("Step 2/3: Extracting title and generating pitch with GPT-5-mini...")
         pitch_output, pitch_response = await self.generate_pitch(
-            full_summary, arxiv_url=request.arxiv_url, pdf_path=request.pdf_path
+            full_summary,
+            arxiv_url=request.arxiv_url,
+            pdf_path=request.pdf_path,
         )
 
         logger.info("Step 3/3: Categorizing paper with GPT-5-mini...")
-        category, category_response = await self.categorize_paper(
-            pitch_output.title, pitch_output.pitch, full_summary
-        )
+        category, category_response = await self.categorize_paper(pitch_output.title, pitch_output.pitch, full_summary)
         logger.info(f"Category: {category}")
 
         full_response = {
@@ -375,6 +397,7 @@ async def build_pdf_input_item(arxiv_url: str | None = None, pdf_path: Path | No
 
     Raises:
         ValueError: If neither arxiv_url nor valid pdf_path provided
+
     """
     if arxiv_url:
         pdf_url = arxiv_url_to_pdf_url(arxiv_url)
@@ -382,7 +405,7 @@ async def build_pdf_input_item(arxiv_url: str | None = None, pdf_path: Path | No
             "role": "user",
             "content": [{"type": "input_file", "file_url": pdf_url}],
         }
-    elif pdf_path and pdf_path.exists():
+    if pdf_path and pdf_path.exists():
         b64_file = await encode_pdf(pdf_path)
         return {
             "role": "user",
@@ -391,11 +414,10 @@ async def build_pdf_input_item(arxiv_url: str | None = None, pdf_path: Path | No
                     "type": "input_file",
                     "file_data": f"data:application/pdf;base64,{b64_file}",
                     "filename": pdf_path.name,
-                }
+                },
             ],
         }
-    else:
-        raise ValueError("No PDF available: provide a local PDF path or an arXiv URL.")
+    raise ValueError("No PDF available: provide a local PDF path or an arXiv URL.")
 
 
 class PaperProcessingError(RuntimeError):
@@ -409,7 +431,7 @@ def serialize_response(obj: Any) -> dict[str, Any]:
     """Serialize an API response object to a JSON-compatible dict."""
     if hasattr(obj, "model_dump"):
         return obj.model_dump(mode="json")
-    elif hasattr(obj, "__dict__"):
+    if hasattr(obj, "__dict__"):
         return {k: str(v) for k, v in obj.__dict__.items() if not k.startswith("_")}
     return {"raw": str(obj)}
 
@@ -424,7 +446,12 @@ def normalize_title_for_filename(title: str, max_length: int = 80) -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "-", title).strip("-")[:max_length]
 
 
-async def save_summary(pitch_output: PitchOutput, full_summary: str, category: str, arxiv_url: str | None = None) -> Path:
+async def save_summary(
+    pitch_output: PitchOutput,
+    full_summary: str,
+    category: str,
+    arxiv_url: str | None = None,
+) -> Path:
     """Save paper summary to categorized directory with proper metadata header."""
     category_dir = Path("docs") / category
     category_dir.mkdir(parents=True, exist_ok=True)

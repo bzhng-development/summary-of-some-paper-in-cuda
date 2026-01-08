@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "aiohttp>=3.13.3",
+    "aiosqlite>=0.20.0",
     "click>=8.3.0",
     "frozenlist>=1.8.0",
     "httpcore>=1.0.9",

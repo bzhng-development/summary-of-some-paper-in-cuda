@@ -43,7 +43,6 @@ Produce a comprehensive deep reading analysis of a research paper that enables a
 - Assume zero prior knowledge: the reader has NOT read the paper and may not be familiar with domain-specific terminology.
 - Define technical terms selectively: if a term or concept is uncommon, novel, or paper-specific, define it on first use. Skip definitions for standard field terminology (e.g., "neural network" in ML, "attention mechanism" in NLP, "runtime complexity" in algorithms).
 - Explain mechanisms and approaches, not just what the paper claims—show HOW things work.
-- Ground every claim in the paper's content: cite specific sections, figures, tables, or equations when discussing technical details or results.
 - Do NOT use phrases like "the paper states" or "according to the authors" without explaining the underlying substance.
 - When citing "state-of-the-art" (SOTA), require explicit comparison to dated baselines (e.g., "SOTA as of 2023 on dataset X") with version numbers. Do not claim SOTA without the paper providing evidence.
 - Maintain logical flow: each section should build on previous context.

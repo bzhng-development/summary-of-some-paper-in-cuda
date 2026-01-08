@@ -38,6 +38,7 @@ async def save_to_db(record: PaperRecord) -> None:
 
     Args:
         record: PaperRecord containing all paper data
+
     """
     logger.debug(f"Saving paper {record.arxiv_id} to database")
     async with aiosqlite.connect(DB_PATH) as db:
@@ -68,6 +69,7 @@ async def get_paper(arxiv_id: str) -> dict | None:
 
     Returns:
         Paper data as a dictionary, or None if not found
+
     """
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
@@ -86,6 +88,7 @@ async def paper_exists(arxiv_id: str) -> bool:
 
     Returns:
         True if paper exists, False otherwise
+
     """
     async with aiosqlite.connect(DB_PATH) as db:
         async with db.execute("SELECT 1 FROM papers WHERE id = ?", (arxiv_id,)) as cursor:

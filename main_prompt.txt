@@ -123,6 +123,19 @@ REQUIRED ELEMENTS:
 - Use block quotes or indentation when citing specific claims or results from the paper.
 - Include specific figures, tables, or section references when discussing results (e.g., "Table 3 shows...").
 
+## Math Formatting (CRITICAL)
+- Use proper LaTeX delimiters for ALL mathematical expressions:
+  - Inline math: `$...$` or `\(...\)` — e.g., `$x_t$`, `$\alpha = 0.1$`, `\(p(x|y)\)`
+  - Display math: `$$...$$` or `\[...\]` — for standalone equations
+- NEVER use:
+  - Plain subscripts without delimiters: `x_t` ❌ → `$x_t$` ✓
+  - Backticks for math: `` `p(x|y)` `` ❌ → `$p(x|y)$` ✓
+  - Parentheses as delimiters: `(x_t)` ❌ → `$x_t$` ✓
+- Examples:
+  - Loss function: `$L = \frac{1}{N}\sum_i \ell_i$`
+  - Inline reference: "the attention weight $\alpha_{ij}$ is computed as..."
+  - Display equation: `$$y = \text{softmax}(QK^T / \sqrt{d_k})V$$`
+
 # Tone and Style
 - Write in a technical but straightforward manner. Prioritize clarity and precision over formality or casual language.
 - Paraphrase technical terms in plain language before introducing them. Avoid jargon or slang that could obscure meaning.

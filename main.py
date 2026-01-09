@@ -563,7 +563,9 @@ async def process_multiple_urls(
 @click.option("--model", default=ModelName.ANALYZER, help="Model to use for summarization")
 @click.option("--url", help="ArXiv URL to download and summarize")
 @click.option("--urls", help="Comma-separated list of ArXiv URLs to process")
-@click.option("--pdf", help="Local PDF path to summarize")
+@click.option("--pdf", help="Local PDF path to summarize (use with --external for non-arxiv)")
+@click.option("--scholar", help="Google Scholar citation URL to process")
+@click.option("--external", is_flag=True, help="Treat --pdf as external (non-arxiv) paper")
 @click.option("--question", help="Optional user question prompt file (text). If omitted, uses a short default.")
 @click.option("--instructions", help=f"System prompt file (text). Defaults to {DefaultFiles.PROMPT}.")
 @click.option(
@@ -583,6 +585,8 @@ def main(
     url: str | None,
     urls: str | None,
     pdf: str | None,
+    scholar: str | None,
+    external: bool,
     question: str | None,
     instructions: str | None,
     concurrency: int,
@@ -591,15 +595,33 @@ def main(
     service_tier = "flex" if flex else None
 
     async def _run():
-        # Initialize database on startup
+        # Dispatch to external module for scholar/external PDFs
+        if scholar or external:
+            from external import process_scholar_url, process_local_pdf
+
+            instructions_text = load_prompt(instructions)
+            summarizer = PaperSummarizer(service_tier=service_tier)
+
+            if scholar:
+                result = await process_scholar_url(summarizer, scholar, instructions_text)
+            elif pdf:
+                result = await process_local_pdf(summarizer, Path(pdf), instructions_text)
+            else:
+                raise click.UsageError("--external requires --pdf")
+
+            if result:
+                logger.success(f"Title: {result.title}")
+                logger.success(f"Category: {result.category}")
+                logger.success(f"Paper ID: {result.paper_id}")
+            return
+
+        # ArXiv path (existing)
         await init_db()
 
         if urls:
-            # Process multiple URLs from comma-separated string
             url_list = [u.strip() for u in urls.split(",") if u.strip()]
             await process_multiple_urls(model, url_list, question, instructions, service_tier, concurrency)
         else:
-            # Process single URL or PDF
             await async_main(model, url, pdf, question, instructions, service_tier)
 
     asyncio.run(_run())

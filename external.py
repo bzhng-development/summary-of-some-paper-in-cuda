@@ -276,9 +276,10 @@ async def save_external_summary(record: ExternalPaperRecord) -> Path:
                 out = candidate
                 break
 
-    doi_link = f"\n**DOI:** [{record.doi}](https://doi.org/{record.doi})\n" if record.doi else ""
+    scholar_link = f"\n**Google Scholar:** [{record.title}]({record.source_url})\n" if record.source == PaperSource.SCHOLAR and record.source_url else ""
+    doi_link = f"**DOI:** [{record.doi}](https://doi.org/{record.doi})\n" if record.doi else ""
     content = f"""# {record.title}
-{doi_link}
+{scholar_link}{doi_link}
 ## Pitch
 
 {record.pitch}

@@ -1,5 +1,9 @@
 # Paper Summaries Knowledge Base
 
+Visit the site directly.
+
+https://summary-of-some-paper-in-cuda.readthedocs.io/en/latest/llm-systems/2512.02556-DeepSeek-V3.2-PushingtheFrontierofOpenLargeLanguageModels/?h=2512#342-deepseek-sparse-attention-dsa-what-it-is-and-how-it-works
+
 ## 📂 Categories
 
 | Category | Papers | Tokens | Avg/Paper |

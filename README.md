@@ -8,20 +8,20 @@ https://summary-of-some-paper-in-cuda.readthedocs.io/en/latest/llm-systems/2512.
 
 | Category | Papers | Tokens | Avg/Paper |
 |----------|--------|--------|-----------|
-| **Pretraining** | 55 | 251.6K | 4,574 |
-| **Inference Optimization** | 52 | 232.4K | 4,468 |
-| **Architecture** | 49 | 226.0K | 4,611 |
-| **Evaluation** | 35 | 162.4K | 4,639 |
-| **Training Methods** | 32 | 141.8K | 4,432 |
-| **Multimodal** | 29 | 141.6K | 4,882 |
-| **RL Training** | 24 | 105.6K | 4,399 |
-| **LLM Systems** | 18 | 83.2K | 4,622 |
-| **Alignment** | 17 | 76.0K | 4,471 |
+| **Architecture** | 71 | 361.0K | 5,084 |
+| **Pretraining** | 63 | 303.3K | 4,813 |
+| **Inference Optimization** | 59 | 279.9K | 4,743 |
+| **Evaluation** | 49 | 251.3K | 5,128 |
+| **Training Methods** | 46 | 238.9K | 5,193 |
+| **LLM Systems** | 37 | 212.3K | 5,736 |
+| **Multimodal** | 34 | 178.4K | 5,245 |
+| **RL Training** | 31 | 153.6K | 4,955 |
+| **Alignment** | 22 | 101.0K | 4,592 |
+| **Context Optimization** | 11 | 58.1K | 5,282 |
 | **Serving** | 9 | 41.9K | 4,653 |
-| **Context Optimization** | 9 | 40.3K | 4,475 |
+| **Low Precision** | 8 | 42.7K | 5,334 |
 | **Prompting** | 7 | 29.7K | 4,238 |
-| **Low Precision** | 6 | 27.6K | 4,594 |
-| **Retrieval** | 3 | 13.9K | 4,637 |
+| **Retrieval** | 4 | 20.5K | 5,120 |
 
 ## 🎯 Summarization Task Formulation
 

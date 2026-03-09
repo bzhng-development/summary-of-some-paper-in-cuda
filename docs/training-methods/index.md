@@ -1,13 +1,50 @@
 # Training Methods
 
-Papers on training techniques, distillation, and optimization methods.
+46 paper summaries in this category.
 
-## Overview
-
-This section contains 3 papers covering:
-
-- **Generalized Knowledge Distillation** - On-policy distillation with flexible divergences
-- **DeepSpeed-Chat** - End-to-end RLHF system with Hybrid Engine
-- **ReST_EM** - Self-training with binary feedback loops
-
-
+- [ADAM: A METHOD FOR STOCHASTIC OPTIMIZATION](1412.6980-ADAM-A-METHOD-FOR-STOCHASTIC-OPTIMIZATION.md)
+- [AXLearn: Modular, Hardware-Agnostic Large Model Training](2507.05411-AXLearn-Modular-Hardware-Agnostic-Large-Model-Training.md)
+- [Adapting Large Language Models for Document-Level Machine Translation](google-llm-mt-2020-Adapting-Large-Language-Models-for-Document-Level-Machine-Translation.md)
+- [An Effective Approach to Unsupervised Machine Translation](1902.01313-An-Effective-Approach-to-Unsupervised-Machine-Translation.md)
+- [Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift](1502.03167-Batch-Normalization-Accelerating-Deep-Network-Training-by-Reducing-Internal-Cova.md)
+- [Better & Faster Large Language Models via Multi-token Prediction](2404.19737-Better-Faster-Large-Language-Models-via-Multi-token-Prediction.md)
+- [Beyond Human Data: Scaling Self-Training for Problem-Solving with Language Models](2312.06585-Beyond-Human-Data-Scaling-Self-Training-for-Problem-Solving-with-Language-Models.md)
+- [BitFit: Simple Parameter-efficient Fine-tuning for Transformer-based Masked Language-models](2106.10199-BitFit-Simple-Parameter-efficient-Fine-tuning-for-Transformer-based-Masked-Langu.md)
+- [Black-Box On-Policy Distillation of Large Language Models](2511.10643-Black-Box-On-Policy-Distillation-of-Large-Language-Models.md)
+- [Compact Language Models via Pruning and Knowledge Distillation](2407.14679-Compact-Language-Models-via-Pruning-and-Knowledge-Distillation.md)
+- [Contrastive Learning for Many-to-many Multilingual Neural Machine Translation](2105.09501-Contrastive-Learning-for-Many-to-many-Multilingual-Neural-Machine-Translation.md)
+- [Critical Batch Size Revisited: A Simple Empirical Approach to Large-Batch Language Model Training](2505.23971-Critical-Batch-Size-Revisited-A-Simple-Empirical-Approach-to-Large-Batch-Languag.md)
+- [DECOUPLED WEIGHT DECAY REGULARIZATION](1711.05101-DECOUPLED-WEIGHT-DECAY-REGULARIZATION.md)
+- [Distilling the Knowledge in a Neural Network](1503.02531-Distilling-the-Knowledge-in-a-Neural-Network.md)
+- [Distributed Representations of Words and Phrases and their Compositionality](1310.4546-Distributed-Representations-of-Words-and-Phrases-and-their-Compositionality.md)
+- [FINETUNED LANGUAGE MODELS ARE ZERO-SHOT LEARNERS](2109.01652-FINETUNED-LANGUAGE-MODELS-ARE-ZERO-SHOT-LEARNERS.md)
+- [Fantastic Pretraining Optimizers and Where to Find Them](2509.02046-Fantastic-Pretraining-Optimizers-and-Where-to-Find-Them.md)
+- [Few-Shot Parameter-Efficient Fine-Tuning is Better and Cheaper than In-Context Learning](2205.05638-Few-Shot-Parameter-Efficient-Fine-Tuning-is-Better-and-Cheaper-than-In-Context-L.md)
+- [GROKKING: GENERALIZATION BEYOND OVERFITTING ON SMALL ALGORITHMIC DATASETS](2201.02177-GROKKING-GENERALIZATION-BEYOND-OVERFITTING-ON-SMALL-ALGORITHMIC-DATASETS.md)
+- [Gemma 2: Improving Open Language Models at a Practical Size](2408.00118-Gemma-2-Improving-Open-Language-Models-at-a-Practical-Size.md)
+- [Group Normalization](1803.08494-Group-Normalization.md)
+- [LARGE BATCH OPTIMIZATION FOR DEEP LEARNING: TRAINING BERT IN 76 MINUTES](1904.00962-LARGE-BATCH-OPTIMIZATION-FOR-DEEP-LEARNING-TRAINING-BERT-IN-76-MINUTES.md)
+- [LLAMA-ADAPTER: EFFICIENT FINE-TUNING OF LARGE LANGUAGE MODELS WITH ZERO-INITIALIZED ATTENTION](2303.16199-LLAMA-ADAPTER-EFFICIENT-FINE-TUNING-OF-LARGE-LANGUAGE-MODELS-WITH-ZERO-INITIALIZ.md)
+- [LLM Pruning and Distillation in Practice: The Minitron Approach](2408.11796-LLM-Pruning-and-Distillation-in-Practice-The-Minitron-Approach.md)
+- [Layer Normalization](1607.06450-Layer-Normalization.md)
+- [Liger Kernel: Efficient Triton Kernels for LLM Training](2410.10989-Liger-Kernel-Efficient-Triton-Kernels-for-LLM-Training.md)
+- [Linking GloVe with word2vec](1411.5595-Linking-GloVe-with-word2vec.md)
+- [LoRA: Low-Rank Adaptation of Large Language Models](2106.09685-LoRA-Low-Rank-Adaptation-of-Large-Language-Models.md)
+- [Merge to Learn: Efficiently Adding Skills to Language Models with Model Merging](2410.12937-Merge-to-Learn-Efficiently-Adding-Skills-to-Language-Models-with-Model-Merging.md)
+- [MiniCPM: Unveiling the Potential of Small Language Models with Scalable Training Strategies](2404.06395-MiniCPM-Unveiling-the-Potential-of-Small-Language-Models-with-Scalable-Training-.md)
+- [Model Merging in Pre-training of Large Language Models](2505.12082-Model-Merging-in-Pre-training-of-Large-Language-Models.md)
+- [Modifying Memories in Transformer Models](2012.00363-Modifying-Memories-in-Transformer-Models.md)
+- [Muon Outperforms Adam in Tail-End Associative Memory Learning](2509.26030-Muon-Outperforms-Adam-in-Tail-End-Associative-Memory-Learning.md)
+- [Nanbeige4.1-3B: A Small General Model that Reasons, Aligns, and Acts](2602.13367-Nanbeige4.1-3B-A-Small-General-Model-that-Reasons-Aligns-and-Acts.md)
+- [OLMo 2 Furious](2501.00656-OLMo-2-Furious.md)
+- [ON THE GENERALIZATION OF SFT: A REINFORCEMENT LEARNING PERSPECTIVE WITH REWARD RECTIFICATION](2508.05629-ON-THE-GENERALIZATION-OF-SFT-A-REINFORCEMENT-LEARNING-PERSPECTIVE-WITH-REWARD-RE.md)
+- [ON-POLICY DISTILLATION OF LANGUAGE MODELS: LEARNING FROM SELF-GENERATED MISTAKES](2306.13649-ON-POLICY-DISTILLATION-OF-LANGUAGE-MODELS-LEARNING-FROM-SELF-GENERATED-MISTAKES.md)
+- [Parameter-Efficient Transfer Learning for NLP](1902.00751-Parameter-Efficient-Transfer-Learning-for-NLP.md)
+- [Pre-training Distillation for Large Language Models: A Design Space Exploration](2410.16215-Pre-training-Distillation-for-Large-Language-Models-A-Design-Space-Exploration.md)
+- [ROBUSTFT: Robust Supervised Fine-tuning for Large Language Models under Noisy Response](2412.14922-ROBUSTFT-Robust-Supervised-Fine-tuning-for-Large-Language-Models-under-Noisy-Res.md)
+- [ReFT: Representation Finetuning for Language Models](2404.03592-ReFT-Representation-Finetuning-for-Language-Models.md)
+- [Scaling Instruction-Finetuned Language Models](2210.11416-Scaling-Instruction-Finetuned-Language-Models.md)
+- [The Lottery Ticket Hypothesis: Finding Sparse, Trainable Neural Networks](1803.03635-The-Lottery-Ticket-Hypothesis-Finding-Sparse-Trainable-Neural-Networks.md)
+- [TranslateGemma Technical Report](2601.09012-TranslateGemma-Technical-Report.md)
+- [Universal Language Model Fine-tuning for Text Classiﬁcation](1801.06146-Universal-Language-Model-Fine-tuning-for-Text-Classi-cation.md)
+- [jina-embeddings-v5-text: Task-Targeted Embedding Distillation](2602.15547-jina-embeddings-v5-text-Task-Targeted-Embedding-Distillation.md)

@@ -1,14 +1,55 @@
 # Inference Optimization
 
-Papers on speeding up inference, decoding strategies, and serving efficiency.
+51 paper summaries in this category.
 
-## Overview
-
-This section contains 4 papers covering:
-
-- **Classifier-Free Guidance** - Inference-time method for better prompt adherence
-- **Staged Speculative Decoding** - Tree-based speculation for on-device inference
-- **FlashFFTConv** - Optimized FFT for long-sequence convolutions
-- **Flash Attention** - Hardware-aware attention optimization
-
-
+- [Accelerating LLM Inference with Staged Speculative Decoding](2308.04623-Accelerating-LLM-Inference-with-Staged-Speculative-Decoding.md)
+- [An Efficient Inference Framework for Early-exit Large Language Models](2407.20272-An-Efficient-Inference-Framework-for-Early-exit-Large-Language-Models.md)
+- [BERT-of-Theseus: Compressing BERT by Progressive Module Replacing](2002.02925-BERT-of-Theseus-Compressing-BERT-by-Progressive-Module-Replacing.md)
+- [Break the Sequential Dependency of LLM Inference Using LOOKAHEAD DECODING](2402.02057-Break-the-Sequential-Dependency-of-LLM-Inference-Using-LOOKAHEAD-DECODING.md)
+- [CUDA-L2: Surpassing cuBLAS Performance for Matrix Multiplication through Reinforcement Learning](2512.02551-CUDA-L2-Surpassing-cuBLAS-Performance-for-Matrix-Multiplication-through-Reinforc.md)
+- [Context Parallelism for Scalable Million-Token Inference](2411.01783-Context-Parallelism-for-Scalable-Million-Token-Inference.md)
+- [DEEP COMPRESSION: COMPRESSING DEEP NEURAL NETWORKS WITH PRUNING, TRAINED QUANTIZATION AND HUFFMAN CODING](1510.00149-DEEP-COMPRESSION-COMPRESSING-DEEP-NEURAL-NETWORKS-WITH-PRUNING-TRAINED-QUANTIZAT.md)
+- [DFlash: Block Diffusion for Flash Speculative Decoding](2602.06036-DFlash-Block-Diffusion-for-Flash-Speculative-Decoding.md)
+- [DeepSpeed Inference: Enabling Efficient Inference of Transformer Models at Unprecedented Scale](2207.00032-DeepSpeed-Inference-Enabling-Efficient-Inference-of-Transformer-Models-at-Unprec.md)
+- [DistilBERT, a distilled version of BERT: smaller, faster, cheaper and lighter](1910.01108-DistilBERT-a-distilled-version-of-BERT-smaller-faster-cheaper-and-lighter.md)
+- [Draft with Diffusion, Verify with Autoregressive Models](2512.15176-Draft-with-Diffusion-Verify-with-Autoregressive-Models.md)
+- [EAGLE: Speculative Sampling Requires Rethinking Feature Uncertainty](2401.15077-EAGLE-Speculative-Sampling-Requires-Rethinking-Feature-Uncertainty.md)
+- [Efficient Streaming Language Models with Attention Sinks](2309.17453-Efficient-Streaming-Language-Models-with-Attention-Sinks.md)
+- [Efficiently Scaling Transformer Inference](2211.05102-Efficiently-Scaling-Transformer-Inference.md)
+- [FASA: FREQUENCY-AWARE SPARSE ATTENTION](2602.03152-FASA-FREQUENCY-AWARE-SPARSE-ATTENTION.md)
+- [FLEX ATTENTION: A PROGRAMMING MODEL FOR GENERATING OPTIMIZED ATTENTION KERNELS](2412.05496-FLEX-ATTENTION-A-PROGRAMMING-MODEL-FOR-GENERATING-OPTIMIZED-ATTENTION-KERNELS.md)
+- [Fast Inference from Transformers via Speculative Decoding](2211.17192-Fast-Inference-from-Transformers-via-Speculative-Decoding.md)
+- [Fast-dLLM: Training-free Acceleration of Diffusion LLM by Enabling KV Cache and Parallel Decoding](2505.22618-Fast-dLLM-Training-free-Acceleration-of-Diffusion-LLM-by-Enabling-KV-Cache-and-P.md)
+- [FastFormers: Highly Efficient Transformer Models for Natural Language Understanding](2010.13382-FastFormers-Highly-Efficient-Transformer-Models-for-Natural-Language-Understandi.md)
+- [FlashAttention-3: Fast and Accurate Attention with Asynchrony and Low-precision](2407.08608-FlashAttention-3-Fast-and-Accurate-Attention-with-Asynchrony-and-Low-precision.md)
+- [FlexGen: High-Throughput Generative Inference of Large Language Models with a Single GPU](2303.06865-FlexGen-High-Throughput-Generative-Inference-of-Large-Language-Models-with-a-Sin.md)
+- [GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints](2305.13245-GQA-Training-Generalized-Multi-Query-Transformer-Models-from-Multi-Head-Checkpoi.md)
+- [InfiniGen: Efficient Generative Inference of Large Language Models with Dynamic KV Cache Management](2406.19707-InfiniGen-Efficient-Generative-Inference-of-Large-Language-Models-with-Dynamic-K.md)
+- [InfiniteHiP: Extending Language Model Context Up to 3 Million Tokens on a Single GPU](2502.08910-InfiniteHiP-Extending-Language-Model-Context-Up-to-3-Million-Tokens-on-a-Single-.md)
+- [Knowledge Distillation: A Survey](2006.05525-Knowledge-Distillation-A-Survey.md)
+- [LLM in a flash: Efficient Large Language Model Inference with Limited Memory](2312.11514-LLM-in-a-flash-Efficient-Large-Language-Model-Inference-with-Limited-Memory.md)
+- [Large Language Monkeys: Scaling Inference Compute with Repeated Sampling](2407.21787-Large-Language-Monkeys-Scaling-Inference-Compute-with-Repeated-Sampling.md)
+- [LayerSkip: Enabling Early Exit Inference and Self-Speculative Decoding](2404.16710-LayerSkip-Enabling-Early-Exit-Inference-and-Self-Speculative-Decoding.md)
+- [Learning both Weights and Connections for Efficient Neural Networks](1506.02626-Learning-both-Weights-and-Connections-for-Efficient-Neural-Networks.md)
+- [LycheeDecode: Accelerating Long-Context LLM Inference via Hybrid-Head Sparse Decoding](2602.04541-LycheeDecode-Accelerating-Long-Context-LLM-Inference-via-Hybrid-Head-Sparse-Deco.md)
+- [MEDUSA: Simple LLM Inference Acceleration Framework with Multiple Decoding Heads](2401.10774-MEDUSA-Simple-LLM-Inference-Acceleration-Framework-with-Multiple-Decoding-Heads.md)
+- [MixLM: High-Throughput and Effective LLM Ranking via Text-Embedding Mix-Interaction](2512.07846-MixLM-High-Throughput-and-Effective-LLM-Ranking-via-Text-Embedding-Mix-Interacti.md)
+- [PRUNING FILTERS FOR EFFICIENT CONVNETS](1608.08710-PRUNING-FILTERS-FOR-EFFICIENT-CONVNETS.md)
+- [Prompt Cache: Modular Attention Reuse for Low-Latency Inference](2311.04934-Prompt-Cache-Modular-Attention-Reuse-for-Low-Latency-Inference.md)
+- [RECURRENT DRAFTER FOR FAST SPECULATIVE DECODING IN LARGE LANGUAGE MODELS](2403.09919-RECURRENT-DRAFTER-FOR-FAST-SPECULATIVE-DECODING-IN-LARGE-LANGUAGE-MODELS.md)
+- [SARATHI: Efficient LLM Inference by Piggybacking Decodes with Chunked Prefills](2308.16369-SARATHI-Efficient-LLM-Inference-by-Piggybacking-Decodes-with-Chunked-Prefills.md)
+- [SGLang: Efficient Execution of Structured Language Model Programs](2312.07104-SGLang-Efficient-Execution-of-Structured-Language-Model-Programs.md)
+- [SLA2: Sparse-Linear Attention with Learnable Routing and QAT](2602.12675-SLA2-Sparse-Linear-Attention-with-Learnable-Routing-and-QAT.md)
+- [SLA: BEYOND SPARSITY IN DIFFUSION TRANSFORMERS VIA FINE-TUNABLE SPARSE–LINEAR ATTENTION](2509.24006-SLA-BEYOND-SPARSITY-IN-DIFFUSION-TRANSFORMERS-VIA-FINE-TUNABLE-SPARSE-LINEAR-ATT.md)
+- [SageAttention2: Efficient Attention with Thorough Outlier Smoothing and Per-thread INT4 Quantization](2411.10958-SageAttention2-Efficient-Attention-with-Thorough-Outlier-Smoothing-and-Per-threa.md)
+- [Scaling LLM Test-Time Compute Optimally can be More Effective than Scaling Model Parameters](2408.03314-Scaling-LLM-Test-Time-Compute-Optimally-can-be-More-Effective-than-Scaling-Model.md)
+- [Sleep-time Compute: Beyond Inference Scaling at Test-time](2504.13171-Sleep-time-Compute-Beyond-Inference-Scaling-at-Test-time.md)
+- [SparseGPT: Massive Language Models Can be Accurately Pruned in One-Shot](2301.00774-SparseGPT-Massive-Language-Models-Can-be-Accurately-Pruned-in-One-Shot.md)
+- [SqueezeLLM: Dense-and-Sparse Quantization](2306.07629-SqueezeLLM-Dense-and-Sparse-Quantization.md)
+- [Stay on topic with Classifier-Free Guidance](2306.17806-Stay-on-topic-with-Classifier-Free-Guidance.md)
+- [THE PITFALLS OF KV CACHE COMPRESSION](2510.00231-THE-PITFALLS-OF-KV-CACHE-COMPRESSION.md)
+- [TRANSFORMER-SQUARED: SELF-ADAPTIVE LLMS](2501.06252-TRANSFORMER-SQUARED-SELF-ADAPTIVE-LLMS.md)
+- [TVM: An Automated End-to-End Optimizing Compiler for Deep Learning](1802.04799-TVM-An-Automated-End-to-End-Optimizing-Compiler-for-Deep-Learning.md)
+- [ThunderKittens: Simple, Fast, and Adorable AI Kernels](2410.20399-ThunderKittens-Simple-Fast-and-Adorable-AI-Kernels.md)
+- [TransMLA: MLA Is All You Need](2502.07864-TransMLA-MLA-Is-All-You-Need.md)
+- [TurboDiffusion: Accelerating Video Diffusion Models by 100–200 Times](2512.16093-TurboDiffusion-Accelerating-Video-Diffusion-Models-by-100-200-Times.md)

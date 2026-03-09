@@ -1,15 +1,36 @@
 # Alignment
 
-Papers on alignment techniques and fine-tuning methods for large language models.
+32 paper summaries in this category.
 
-## Overview
-
-This section contains 6 papers covering:
-
-- **LIMA** - Minimal alignment with 1000 examples
-- **Large Reasoning Models** - Learning alignment from flawed thinking  
-- **RECAP** - Mitigating capabilities forgetting during RL
-- **PPO-max** - Stabilizing RLHF with careful PPO engineering
-- **Reducing Sycophancy** - Synthetic data to reduce agreement bias
-- **TÜLU 2** - Advanced instruction-tuning dataset mixture
-
+- [Benchmarking Distributional Alignment of Large Language Models](2411.05403-Benchmarking-Distributional-Alignment-of-Large-Language-Models.md)
+- [Camels in a Changing Climate: Enhancing LM Adaptation with TÜLU 2](2311.10702-Camels-in-a-Changing-Climate-Enhancing-LM-Adaptation-with-T-LU-2.md)
+- [Constitutional AI: Harmlessness from AI Feedback](2212.08073-Constitutional-AI-Harmlessness-from-AI-Feedback.md)
+- [Cooperative Inverse Reinforcement Learning](1606.03137-Cooperative-Inverse-Reinforcement-Learning.md)
+- [Deep Reinforcement Learning from Human Preferences](1706.03741-Deep-Reinforcement-Learning-from-Human-Preferences.md)
+- [Direct Preference Optimization: Your Language Model is Secretly a Reward Model](2305.18290-Direct-Preference-Optimization-Your-Language-Model-is-Secretly-a-Reward-Model.md)
+- [Fine-Tuning Language Models from Human Preferences](1909.08593-Fine-Tuning-Language-Models-from-Human-Preferences.md)
+- [HERMES 3 TECHNICAL REPORT](2408.11857-HERMES-3-TECHNICAL-REPORT.md)
+- [INSTRUCTION TUNING WITH GPT-4](2304.03277-INSTRUCTION-TUNING-WITH-GPT-4.md)
+- [Inverse Reward Design](1711.02827-Inverse-Reward-Design.md)
+- [KTO: Model Alignment as Prospect Theoretic Optimization](2402.01306-KTO-Model-Alignment-as-Prospect-Theoretic-Optimization.md)
+- [LIMA: Less Is More for Alignment](2305.11206-LIMA-Less-Is-More-for-Alignment.md)
+- [Learning to summarize from human feedback](2009.01325-Learning-to-summarize-from-human-feedback.md)
+- [Llama 2: Open Foundation and Fine-Tuned Chat Models](2307.09288-Llama-2-Open-Foundation-and-Fine-Tuned-Chat-Models.md)
+- [Multiplayer Nash Preference Optimization](2509.23102-Multiplayer-Nash-Preference-Optimization.md)
+- [RLAIF vs. RLHF: Scaling Reinforcement Learning from Human Feedback with AI Feedback](2309.00267-RLAIF-vs.-RLHF-Scaling-Reinforcement-Learning-from-Human-Feedback-with-AI-Feedba.md)
+- [RLHF Workflow: From Reward Modeling to Online RLHF - A Comprehensive Practical Alignment Recipe of Iterative Preference Learning](2405.07863-RLHF-Workflow-From-Reward-Modeling-to-Online-RLHF---A-Comprehensive-Practical-Al.md)
+- [Recursively Summarizing Books with Human Feedback](2109.10862-Recursively-Summarizing-Books-with-Human-Feedback.md)
+- [Reinforcement Learning from Human Feedback](2504.12501-Reinforcement-Learning-from-Human-Feedback.md)
+- [SELF-INSTRUCT: Aligning Language Models with Self-Generated Instructions](2212.10560-SELF-INSTRUCT-Aligning-Language-Models-with-Self-Generated-Instructions.md)
+- [Secrets of RLHF in Large Language Models Part I: PPO](2307.04964-Secrets-of-RLHF-in-Large-Language-Models-Part-I-PPO.md)
+- [Secrets of RLHF in Large Language Models Part II: Reward Modeling](2401.06080-Secrets-of-RLHF-in-Large-Language-Models-Part-II-Reward-Modeling.md)
+- [Self-Rewarding Language Models](2401.10020-Self-Rewarding-Language-Models.md)
+- [Simple Synthetic Data Reduces Sycophancy in Large Language Models](2308.03958-Simple-Synthetic-Data-Reduces-Sycophancy-in-Large-Language-Models.md)
+- [The Lessons of Developing Process Reward Models in Mathematical Reasoning](2501.07301-The-Lessons-of-Developing-Process-Reward-Models-in-Mathematical-Reasoning.md)
+- [Towards a Unified View of Preference Learning for Large Language Models: A Survey](2409.02795-Towards-a-Unified-View-of-Preference-Learning-for-Large-Language-Models-A-Survey.md)
+- [Training a Helpful and Harmless Assistant with Reinforcement Learning from Human Feedback](2204.05862-Training-a-Helpful-and-Harmless-Assistant-with-Reinforcement-Learning-from-Human.md)
+- [Training language models to follow instructions with human feedback](2203.02155-Training-language-models-to-follow-instructions-with-human-feedback.md)
+- [Tuning Language Models by Proxy](2401.08565-Tuning-Language-Models-by-Proxy.md)
+- [Tülu 3: Pushing Frontiers in Open Language Model Post-Training](2411.15124-T-lu-3-Pushing-Frontiers-in-Open-Language-Model-Post-Training.md)
+- [UFT: Unifying Fine-Tuning of SFT and RLHF/DPO/UNA through a Generalized Implicit Reward Function](2410.21438-UFT-Unifying-Fine-Tuning-of-SFT-and-RLHF-DPO-UNA-through-a-Generalized-Implicit-.md)
+- [Weak-to-Strong Generalization: Eliciting Strong Capabilities with Weak Supervision](2312.09390-Weak-to-Strong-Generalization-Eliciting-Strong-Capabilities-with-Weak-Supervisio.md)

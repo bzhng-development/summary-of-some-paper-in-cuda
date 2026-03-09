@@ -1,14 +1,29 @@
 # Low Precision
 
-Papers on quantization and low-precision training techniques.
+25 paper summaries in this category.
 
-## Overview
-
-This section contains 5 papers covering:
-
-- **SageAttention3** - FP4 attention for inference and 8-bit training
-- **QERL** - Quantization-enhanced reinforcement learning
-- **NVFP4** - Pretraining LLMs in 4-bit floating point
-- **BitNet** - 1-bit weight LLMs with competitive accuracy
-- **FP8 Training Framework** - Full FP8 mixed-precision beyond matrix ops
-
+- ["Give Me BF16 or Give Me Death"? Accuracy-Performance Trade-Offs in LLM Quantization](2411.02355-Give-Me-BF16-or-Give-Me-Death-Accuracy-Performance-Trade-Offs-in-LLM-Quantizatio.md)
+- [AWQ: Activation-aware Weight Quantization for On-Device LLM Compression and Acceleration](2306.00978-AWQ-Activation-aware-Weight-Quantization-for-On-Device-LLM-Compression-and-Accel.md)
+- [Binarized Neural Networks: Training Neural Networks with Weights and Activations Constrained to +1 or −1](1602.02830-Binarized-Neural-Networks-Training-Neural-Networks-with-Weights-and-Activations-.md)
+- [BinaryBERT: Pushing the Limit of BERT Quantization](2012.15701-BinaryBERT-Pushing-the-Limit-of-BERT-Quantization.md)
+- [BinaryConnect: Training Deep Neural Networks with binary weights during propagations](1511.00363-BinaryConnect-Training-Deep-Neural-Networks-with-binary-weights-during-propagati.md)
+- [FP8-LM: Training FP8 Large Language Models](2310.18313-FP8-LM-Training-FP8-Large-Language-Models.md)
+- [Four Over Six: More Accurate NVFP4 Quantization with Adaptive Block Scaling](2512.02010-Four-Over-Six-More-Accurate-NVFP4-Quantization-with-Adaptive-Block-Scaling.md)
+- [GPTQ: Accurate Post-Training Quantization for Generative Pre-Trained Transformers](2210.17323-GPTQ-Accurate-Post-Training-Quantization-for-Generative-Pre-Trained-Transformers.md)
+- [HAWQ: Hessian AWare Quantization of Neural Networks with Mixed-Precision](1905.03696-HAWQ-Hessian-AWare-Quantization-of-Neural-Networks-with-Mixed-Precision.md)
+- [INT v.s. FP: A Comprehensive Study of Fine-Grained Low-bit Quantization Formats](2510.25602-INT-v.s.-FP-A-Comprehensive-Study-of-Fine-Grained-Low-bit-Quantization-Formats.md)
+- [LLM.int8(): 8-bit Matrix Multiplication for Transformers at Scale](2208.07339-LLM.int8-8-bit-Matrix-Multiplication-for-Transformers-at-Scale.md)
+- [MIXED PRECISION TRAINING](1710.03740-MIXED-PRECISION-TRAINING.md)
+- [Optimizing Large Language Model Training Using FP4 Quantization](2501.17116-Optimizing-Large-Language-Model-Training-Using-FP4-Quantization.md)
+- [Pretraining Large Language Models with NVFP4](2509.25149-Pretraining-Large-Language-Models-with-NVFP4.md)
+- [Q-BERT: Hessian Based Ultra Low Precision Quantization of BERT](1909.05840-Q-BERT-Hessian-Based-Ultra-Low-Precision-Quantization-of-BERT.md)
+- [Q8BERT: Quantized 8Bit BERT](1910.06188-Q8BERT-Quantized-8Bit-BERT.md)
+- [QLORA: Efficient Finetuning of Quantized LLMs](2305.14314-QLORA-Efficient-Finetuning-of-Quantized-LLMs.md)
+- [QuaRot: Outlier-Free 4-Bit Inference in Rotated LLMs](2404.00456-QuaRot-Outlier-Free-4-Bit-Inference-in-Rotated-LLMs.md)
+- [Quantization and Training of Neural Networks for Efficient Integer-Arithmetic-Only Inference](1712.05877-Quantization-and-Training-of-Neural-Networks-for-Efficient-Integer-Arithmetic-On.md)
+- [Quantizing deep convolutional networks for efficient inference: A whitepaper](1806.08342-Quantizing-deep-convolutional-networks-for-efficient-inference-A-whitepaper.md)
+- [SageAttention3: Microscaling FP4 Attention for Inference and An Exploration of 8-bit Training](2505.11594-SageAttention3-Microscaling-FP4-Attention-for-Inference-and-An-Exploration-of-8-.md)
+- [SmoothQuant: Accurate and Efficient Post-Training Quantization for Large Language Models](2211.10438-SmoothQuant-Accurate-and-Efficient-Post-Training-Quantization-for-Large-Language.md)
+- [The Era of 1-bit LLMs: All Large Language Models are in 1.58 Bits](2402.17764-The-Era-of-1-bit-LLMs-All-Large-Language-Models-are-in-1.58-Bits.md)
+- [XNOR-Net: ImageNet Classification Using Binary Convolutional Neural Networks](1603.05279-XNOR-Net-ImageNet-Classification-Using-Binary-Convolutional-Neural-Networks.md)
+- [ZeroQuant: Eﬃcient and Aﬀordable Post-Training Quantization for Large-Scale Transformers](2206.01861-ZeroQuant-E-cient-and-A-ordable-Post-Training-Quantization-for-Large-Scale-Trans.md)

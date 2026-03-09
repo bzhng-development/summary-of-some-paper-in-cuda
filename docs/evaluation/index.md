@@ -1,15 +1,57 @@
 # Evaluation
 
-Papers on benchmarking, evaluation methods, and model monitoring.
+53 paper summaries in this category.
 
-## Overview
-
-This section contains 5 papers covering:
-
-- **LLM-as-a-Judge** - Using GPT-4 to evaluate chat models with MT-bench
-- **LLM Evaluation Survey** - Comprehensive framework for LLM assessment
-- **GPT Model Drift** - Tracking performance changes over time
-- **LMSYS-Chat-1M** - Real-world conversation dataset
-- **GPQA** - Graduate-level science benchmark for scalable oversight
-
-
+- [A Survey on Evaluation of Large Language Models](2307.03109-A-Survey-on-Evaluation-of-Large-Language-Models.md)
+- [Beyond Accuracy: Behavioral Testing of NLP Models with CheckList](2005.04118-Beyond-Accuracy-Behavioral-Testing-of-NLP-Models-with-CheckList.md)
+- [Beyond the Imitation Game: Quantifying and extrapolating the capabilities of language models](2206.04615-Beyond-the-Imitation-Game-Quantifying-and-extrapolating-the-capabilities-of-lang.md)
+- [Chatbot Arena: An Open Platform for Evaluating LLMs by Human Preference](2403.04132-Chatbot-Arena-An-Open-Platform-for-Evaluating-LLMs-by-Human-Preference.md)
+- [CodeClash: Benchmarking Goal-Oriented Software Engineering](2511.00839-CodeClash-Benchmarking-Goal-Oriented-Software-Engineering.md)
+- [Do Membership Inference Attacks Work on Large Language Models?](2402.07841-Do-Membership-Inference-Attacks-Work-on-Large-Language-Models.md)
+- [EFFICIENTLLM: EFFICIENCY IN LARGE LANGUAGE MODELS EVALUATION ON ARCHITECTURE PRETRAINING, FINE-TUNING, AND BIT-WIDTH QUANTIZATION](2505.13840-EFFICIENTLLM-EFFICIENCY-IN-LARGE-LANGUAGE-MODELS-EVALUATION-ON-ARCHITECTURE-PRET.md)
+- [Estimating the Causal Effect of Early ArXiving on Paper Acceptance](2306.13891-Estimating-the-Causal-Effect-of-Early-ArXiving-on-Paper-Acceptance.md)
+- [FROM CROWDSOURCED DATA TO HIGH-QUALITY BENCHMARKS: ARENA-HARD AND BENCHBUILDER PIPELINE](2406.11939-FROM-CROWDSOURCED-DATA-TO-HIGH-QUALITY-BENCHMARKS-ARENA-HARD-AND-BENCHBUILDER-PI.md)
+- [GLUE: A MULTI-TASK BENCHMARK AND ANALYSIS PLATFORM FOR NATURAL LANGUAGE UNDERSTANDING](1804.07461-GLUE-A-MULTI-TASK-BENCHMARK-AND-ANALYSIS-PLATFORM-FOR-NATURAL-LANGUAGE-UNDERSTAN.md)
+- [GPQA: A Graduate-Level Google-Proof Q&A Benchmark](2311.12022-GPQA-A-Graduate-Level-Google-Proof-Q-A-Benchmark.md)
+- [GenAI Arena: An Open Evaluation Platform for Generative Models](2406.04485-GenAI-Arena-An-Open-Evaluation-Platform-for-Generative-Models.md)
+- [HOLISTICALLY EVALUATING THE ENVIRONMENTAL IMPACT OF CREATING LANGUAGE MODELS](2503.05804-HOLISTICALLY-EVALUATING-THE-ENVIRONMENTAL-IMPACT-OF-CREATING-LANGUAGE-MODELS.md)
+- [HellaSwag: Can a Machine Really Finish Your Sentence?](1905.07830-HellaSwag-Can-a-Machine-Really-Finish-Your-Sentence.md)
+- [Holistic Evaluation of Language Models](2211.09110-Holistic-Evaluation-of-Language-Models.md)
+- [How Is ChatGPT's Behavior Changing over Time?](2307.09009-How-Is-ChatGPT-s-Behavior-Changing-over-Time.md)
+- [Humanity's Last Exam](2501.14249-Humanity-s-Last-Exam.md)
+- [Instruction-Following Evaluation for Large Language Models](2311.07911-Instruction-Following-Evaluation-for-Large-Language-Models.md)
+- [Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena](2306.05685-Judging-LLM-as-a-Judge-with-MT-Bench-and-Chatbot-Arena.md)
+- [Know What You Don't Know: Unanswerable Questions for SQuAD](1806.03822-Know-What-You-Don-t-Know-Unanswerable-Questions-for-SQuAD.md)
+- [LIVEBENCH: A CHALLENGING, CONTAMINATION-LIMITED LLM BENCHMARK](2406.19314-LIVEBENCH-A-CHALLENGING-CONTAMINATION-LIMITED-LLM-BENCHMARK.md)
+- [LMMs-Eval: Reality Check on the Evaluation of Large Multimodal Models](2407.12772-LMMs-Eval-Reality-Check-on-the-Evaluation-of-Large-Multimodal-Models.md)
+- [Language Models as Knowledge Bases?](1909.01066-Language-Models-as-Knowledge-Bases.md)
+- [Lost in the Middle: How Language Models Use Long Contexts](2307.03172-Lost-in-the-Middle-How-Language-Models-Use-Long-Contexts.md)
+- [MEASURING MASSIVE MULTITASK LANGUAGE UNDERSTANDING](2009.03300-MEASURING-MASSIVE-MULTITASK-LANGUAGE-UNDERSTANDING.md)
+- [MMGR: Multi-Modal Generative Reasoning](2512.14691-MMGR-Multi-Modal-Generative-Reasoning.md)
+- [MMLU-Pro: A More Robust and Challenging Multi-Task Language Understanding Benchmark](2406.01574-MMLU-Pro-A-More-Robust-and-Challenging-Multi-Task-Language-Understanding-Benchma.md)
+- [MMMU-Pro: A More Robust Multi-discipline Multimodal Understanding Benchmark](2409.02813-MMMU-Pro-A-More-Robust-Multi-discipline-Multimodal-Understanding-Benchmark.md)
+- [MMMU: A Massive Multi-discipline Multimodal Understanding and Reasoning Benchmark for Expert AGI](2311.16502-MMMU-A-Massive-Multi-discipline-Multimodal-Understanding-and-Reasoning-Benchmark.md)
+- [Measuring and Improving Consistency in Pretrained Language Models](2102.01017-Measuring-and-Improving-Consistency-in-Pretrained-Language-Models.md)
+- [Not All LLM Reasoners Are Created Equal](2410.01748-Not-All-LLM-Reasoners-Are-Created-Equal.md)
+- [OLMES: A Standard for Language Model Evaluations](2406.08446-OLMES-A-Standard-for-Language-Model-Evaluations.md)
+- [PaperBench: Evaluating AI's Ability to Replicate AI Research](2504.01848-PaperBench-Evaluating-AI-s-Ability-to-Replicate-AI-Research.md)
+- [People who frequently use ChatGPT for writing tasks are accurate and robust detectors of AI-generated text](2501.15654-People-who-frequently-use-ChatGPT-for-writing-tasks-are-accurate-and-robust-dete.md)
+- [Probing Classifiers: Promises, Shortcomings, and Advances](2102.12452-Probing-Classifiers-Promises-Shortcomings-and-Advances.md)
+- [Probing Scientific General Intelligence of LLMs with Scientist-Aligned Workflows](2512.16969-Probing-Scientific-General-Intelligence-of-LLMs-with-Scientist-Aligned-Workflows.md)
+- [RULER: What's the Real Context Size of Your Long-Context Language Models?](2404.06654-RULER-What-s-the-Real-Context-Size-of-Your-Long-Context-Language-Models.md)
+- [Rankers, Judges, and Assistants: Towards Understanding the Interplay of LLMs in Information Retrieval Evaluation](2503.19092-Rankers-Judges-and-Assistants-Towards-Understanding-the-Interplay-of-LLMs-in-Inf.md)
+- [RewardBench: Evaluating Reward Models for Language Modeling](2403.13787-RewardBench-Evaluating-Reward-Models-for-Language-Modeling.md)
+- [SWE-Perf: Can Language Models Optimize Code Performance on Real-World Repositories?](2507.12415-SWE-Perf-Can-Language-Models-Optimize-Code-Performance-on-Real-World-Repositorie.md)
+- [Sanity Check: A Strong Alignment and Information Retrieval Baseline for Question Answering](1807.01836-Sanity-Check-A-Strong-Alignment-and-Information-Retrieval-Baseline-for-Question-.md)
+- [SuperGLUE: A Stickier Benchmark for General-Purpose Language Understanding Systems](1905.00537-SuperGLUE-A-Stickier-Benchmark-for-General-Purpose-Language-Understanding-System.md)
+- [The Arcade Learning Environment: An Evaluation Platform for General Agents](1207.4708-The-Arcade-Learning-Environment-An-Evaluation-Platform-for-General-Agents.md)
+- [The Automated LLM Speedrunning Benchmark: Reproducing NanoGPT Improvements](2506.22419-The-Automated-LLM-Speedrunning-Benchmark-Reproducing-NanoGPT-Improvements.md)
+- [The LAMBADA dataset: Word prediction requiring a broad discourse context](1606.06031-The-LAMBADA-dataset-Word-prediction-requiring-a-broad-discourse-context.md)
+- [The Leaderboard Illusion](2504.20879-The-Leaderboard-Illusion.md)
+- [The geometry of hidden representations of large transformer models](2302.00294-The-geometry-of-hidden-representations-of-large-transformer-models.md)
+- [TruthfulQA: Measuring How Models Mimic Human Falsehoods](2109.07958-TruthfulQA-Measuring-How-Models-Mimic-Human-Falsehoods.md)
+- [Understanding Chain-of-Thought in LLMs through Information Theory](2411.11984-Understanding-Chain-of-Thought-in-LLMs-through-Information-Theory.md)
+- [Unknown (Source text is garbled)](reinforce-williams-1992-Unknown-Source-text-is-garbled.md)
+- [Vibe Checker: Aligning Code Evaluation with Human Preference](2510.07315-Vibe-Checker-Aligning-Code-Evaluation-with-Human-Preference.md)
+- [WINOGRANDE: An Adversarial Winograd Schema Challenge at Scale](1907.10641-WINOGRANDE-An-Adversarial-Winograd-Schema-Challenge-at-Scale.md)
+- [Why Language Models Hallucinate](2509.04664-Why-Language-Models-Hallucinate.md)

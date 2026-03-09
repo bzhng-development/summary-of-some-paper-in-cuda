@@ -1,11 +1,40 @@
 # Retrieval
 
-Papers on embeddings and retrieval systems.
+36 paper summaries in this category.
 
-## Overview
-
-This section contains 2 papers covering:
-
-- **EmbeddingGemma** - Lightweight 308M parameter embedding model
-- **DeepMMSearch-R1** - Multimodal web search with image and text tools
-
+- [Approximate Nearest Neighbor Negative Contrastive Learning for Dense Text Retrieval](2007.00808-Approximate-Nearest-Neighbor-Negative-Contrastive-Learning-for-Dense-Text-Retrie.md)
+- [Atlas: Few-shot Learning with Retrieval Augmented Language Models](2208.03299-Atlas-Few-shot-Learning-with-Retrieval-Augmented-Language-Models.md)
+- [BM25 Query Augmentation Learned End-to-End](2305.14087-BM25-Query-Augmentation-Learned-End-to-End.md)
+- [ColBERT: Efficient and Effective Passage Search via Contextualized Late Interaction over BERT](2004.12832-ColBERT-Efficient-and-Effective-Passage-Search-via-Contextualized-Late-Interacti.md)
+- [Dense Passage Retrieval for Open-Domain Question Answering](2004.04906-Dense-Passage-Retrieval-for-Open-Domain-Question-Answering.md)
+- [Efficient and Effective Query Auto-Completion](apple-qac-Efficient-and-Effective-Query-Auto-Completion.md)
+- [EmbeddingGemma: Powerful and Lightweight Text Representations](2509.20354-EmbeddingGemma-Powerful-and-Lightweight-Text-Representations.md)
+- [Enabling Cognitive Intelligence Queries in Relational Databases using Low-dimensional Word Embeddings](1603.07185-Enabling-Cognitive-Intelligence-Queries-in-Relational-Databases-using-Low-dimens.md)
+- [GENERALIZATION THROUGH MEMORIZATION: NEAREST NEIGHBOR LANGUAGE MODELS](1911.00172-GENERALIZATION-THROUGH-MEMORIZATION-NEAREST-NEIGHBOR-LANGUAGE-MODELS.md)
+- [Gemini Embedding: Generalizable Embeddings from Gemini](2503.07891-Gemini-Embedding-Generalizable-Embeddings-from-Gemini.md)
+- [Improving language models by retrieving from trillions of tokens](2112.04426-Improving-language-models-by-retrieving-from-trillions-of-tokens.md)
+- [Inference Scaling for Long-Context Retrieval Augmented Generation](2410.04343-Inference-Scaling-for-Long-Context-Retrieval-Augmented-Generation.md)
+- [LLM2Vec: Large Language Models Are Secretly Powerful Text Encoders](2404.05961-LLM2Vec-Large-Language-Models-Are-Secretly-Powerful-Text-Encoders.md)
+- [Latent Retrieval for Weakly Supervised Open Domain Question Answering](1906.00300-Latent-Retrieval-for-Weakly-Supervised-Open-Domain-Question-Answering.md)
+- [Leveraging Passage Retrieval with Generative Models for Open Domain Question Answering](2007.01282-Leveraging-Passage-Retrieval-with-Generative-Models-for-Open-Domain-Question-Ans.md)
+- [LiNR: Model Based Neural Retrieval on GPUs at LinkedIn](2407.13218-LiNR-Model-Based-Neural-Retrieval-on-GPUs-at-LinkedIn.md)
+- [MetaEmbed: Scaling Multimodal Retrieval at Test-Time with Flexible Late Interaction](2509.18095-MetaEmbed-Scaling-Multimodal-Retrieval-at-Test-Time-with-Flexible-Late-Interacti.md)
+- [Multi-Field Adaptive Retrieval](2410.20056-Multi-Field-Adaptive-Retrieval.md)
+- [Multilingual E5 Text Embeddings: A Technical Report](2402.05672-Multilingual-E5-Text-Embeddings-A-Technical-Report.md)
+- [OLMOTRACE: Tracing Language Model Outputs Back to Trillions of Training Tokens](2504.07096-OLMOTRACE-Tracing-Language-Model-Outputs-Back-to-Trillions-of-Training-Tokens.md)
+- [On the Theoretical Limitations of Embedding-Based Retrieval](2508.21038-On-the-Theoretical-Limitations-of-Embedding-Based-Retrieval.md)
+- [Optimizing Test-Time Query Representations for Dense Retrieval](2205.12680-Optimizing-Test-Time-Query-Representations-for-Dense-Retrieval.md)
+- [Precise Zero-Shot Dense Retrieval without Relevance Labels](2212.10496-Precise-Zero-Shot-Dense-Retrieval-without-Relevance-Labels.md)
+- [Qwen3 Embedding: Advancing Text Embedding and Reranking Through Foundation Models](2506.05176-Qwen3-Embedding-Advancing-Text-Embedding-and-Reranking-Through-Foundation-Models.md)
+- [Qwen3-VL-Embedding and Qwen3-VL-Reranker: A Unified Framework for State-of-the-Art Multimodal Retrieval and Ranking](2601.04720-Qwen3-VL-Embedding-and-Qwen3-VL-Reranker-A-Unified-Framework-for-State-of-the-Ar.md)
+- [RAFT: Adapting Language Model to Domain Specific RAG](2403.10131-RAFT-Adapting-Language-Model-to-Domain-Specific-RAG.md)
+- [REALM: Retrieval-Augmented Language Model Pre-Training](2002.08909-REALM-Retrieval-Augmented-Language-Model-Pre-Training.md)
+- [REUSING PRE-TRAINING DATA AT TEST TIME IS A COMPUTE MULTIPLIER](2511.04234-REUSING-PRE-TRAINING-DATA-AT-TEST-TIME-IS-A-COMPUTE-MULTIPLIER.md)
+- [Reading Wikipedia to Answer Open-Domain Questions](1704.00051-Reading-Wikipedia-to-Answer-Open-Domain-Questions.md)
+- [Rethinking the Role of Token Retrieval in Multi-Vector Retrieval](2304.01982-Rethinking-the-Role-of-Token-Retrieval-in-Multi-Vector-Retrieval.md)
+- [Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks](2005.11401-Retrieval-Augmented-Generation-for-Knowledge-Intensive-NLP-Tasks.md)
+- [SPLADE: Sparse Lexical and Expansion Model for First Stage Ranking](2107.05720-SPLADE-Sparse-Lexical-and-Expansion-Model-for-First-Stage-Ranking.md)
+- [Scaling Retrieval-Based Language Models with a Trillion-Token Datastore](2407.12854-Scaling-Retrieval-Based-Language-Models-with-a-Trillion-Token-Datastore.md)
+- [Semantic IDs for Joint Generative Search and Recommendation](2508.10478-Semantic-IDs-for-Joint-Generative-Search-and-Recommendation.md)
+- [SparseEmbed: Learning Sparse Lexical Representations with Contextual Embeddings for Retrieval](sparseembed-SparseEmbed-Learning-Sparse-Lexical-Representations-with-Contextual-Embeddings-f.md)
+- [Unsupervised Dense Information Retrieval with Contrastive Learning](2112.09118-Unsupervised-Dense-Information-Retrieval-with-Contrastive-Learning.md)

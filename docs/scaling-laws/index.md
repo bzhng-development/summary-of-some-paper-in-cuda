@@ -1,0 +1,27 @@
+# Scaling Laws
+
+23 paper summaries in this category.
+
+- [Appendix to "Real second-order freeness and the asymptotic real second-order freeness of several real matrix models": Examples and Diagrams](1204.6211-Appendix-to-Real-second-order-freeness-and-the-asymptotic-real-second-order-free.md)
+- [ConvNets Match Vision Transformers at Scale](2310.16764-ConvNets-Match-Vision-Transformers-at-Scale.md)
+- [Deep Learning Scaling is Predictable, Empirically](1712.00409-Deep-Learning-Scaling-is-Predictable-Empirically.md)
+- [DeepSeek LLM: Scaling Open-Source Language Models with Longtermism](2401.02954-DeepSeek-LLM-Scaling-Open-Source-Language-Models-with-Longtermism.md)
+- [Emergent Abilities of Large Language Models](2206.07682-Emergent-Abilities-of-Large-Language-Models.md)
+- [GPT-4 Technical Report](2303.08774-GPT-4-Technical-Report.md)
+- [Inference-Time Scaling for Generalist Reward Modeling](2504.02495-Inference-Time-Scaling-for-Generalist-Reward-Modeling.md)
+- [Language Models are Few-Shot Learners](2005.14165-Language-Models-are-Few-Shot-Learners.md)
+- [PaLM 2 Technical Report](2305.10403-PaLM-2-Technical-Report.md)
+- [PaLM: Scaling Language Modeling with Pathways](2204.02311-PaLM-Scaling-Language-Modeling-with-Pathways.md)
+- [Parallel Scaling Law for Language Models](2505.10475-Parallel-Scaling-Law-for-Language-Models.md)
+- [Pre-training under infinite compute](2509.14786-Pre-training-under-infinite-compute.md)
+- [Principled Synthetic Data Enables the First Scaling Laws for LLMs in Recommendation](2602.07298-Principled-Synthetic-Data-Enables-the-First-Scaling-Laws-for-LLMs-in-Recommendat.md)
+- [SCALING LAWS MEET MODEL ARCHITECTURE: TOWARD INFERENCE-EFFICIENT LLMS](2510.18245-SCALING-LAWS-MEET-MODEL-ARCHITECTURE-TOWARD-INFERENCE-EFFICIENT-LLMS.md)
+- [Scaling Language Models: Methods, Analysis & Insights from Training Gopher](2112.11446-Scaling-Language-Models-Methods-Analysis-Insights-from-Training-Gopher.md)
+- [Scaling Law for Recommendation Models: Towards General-purpose User Representations](2111.11294-Scaling-Law-for-Recommendation-Models-Towards-General-purpose-User-Representatio.md)
+- [Scaling Laws for Autoregressive Generative Modeling](2010.14701-Scaling-Laws-for-Autoregressive-Generative-Modeling.md)
+- [Scaling Laws for Neural Language Models](2001.08361-Scaling-Laws-for-Neural-Language-Models.md)
+- [Scaling Pre-training to One Hundred Billion Data for Vision Language Models](2502.07617-Scaling-Pre-training-to-One-Hundred-Billion-Data-for-Vision-Language-Models.md)
+- [The Art of Scaling Reinforcement Learning Compute for LLMs](2510.13786-The-Art-of-Scaling-Reinforcement-Learning-Compute-for-LLMs.md)
+- [Towards Scalable Pre-training of Visual Tokenizers for Generation](2512.13687-Towards-Scalable-Pre-training-of-Visual-Tokenizers-for-Generation.md)
+- [Towards a Science of Scaling Agent Systems](2512.08296-Towards-a-Science-of-Scaling-Agent-Systems.md)
+- [Training Compute-Optimal Large Language Models](2203.15556-Training-Compute-Optimal-Large-Language-Models.md)

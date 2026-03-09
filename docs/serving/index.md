@@ -1,11 +1,29 @@
 # Serving
 
-Papers on model serving, deployment, and production systems.
+25 paper summaries in this category.
 
-## Overview
-
-This section contains 1 paper covering:
-
-- **S-LoRA** - Serving thousands of LoRA adapters concurrently
-
-
+- [AlpaServe: Statistical Multiplexing with Model Parallelism for Deep Learning Serving](2302.11665-AlpaServe-Statistical-Multiplexing-with-Model-Parallelism-for-Deep-Learning-Serv.md)
+- [Beyond the Buzz: A Pragmatic Take on Inference Disaggregation](2506.05508-Beyond-the-Buzz-A-Pragmatic-Take-on-Inference-Disaggregation.md)
+- [ChunkAttention: Efficient Self-Attention with Prefix-Aware KV Cache and Two-Phase Partition](2402.15220-ChunkAttention-Efficient-Self-Attention-with-Prefix-Aware-KV-Cache-and-Two-Phase.md)
+- [Clipper: A Low-Latency Online Prediction Serving System](1612.03079-Clipper-A-Low-Latency-Online-Prediction-Serving-System.md)
+- [DistServe: Disaggregating Prefill and Decoding for Goodput-optimized Large Language Model Serving](2401.09670-DistServe-Disaggregating-Prefill-and-Decoding-for-Goodput-optimized-Large-Langua.md)
+- [Efficient Memory Management for Large Language Model Serving with PagedAttention](2309.06180-Efficient-Memory-Management-for-Large-Language-Model-Serving-with-PagedAttention.md)
+- [Efficiently Scaling LLM Reasoning with Certaindex](2412.20993-Efficiently-Scaling-LLM-Reasoning-with-Certaindex.md)
+- [Fast Distributed Inference Serving for Large Language Models](2305.05920-Fast-Distributed-Inference-Serving-for-Large-Language-Models.md)
+- [FlashInfer: Efficient and Customizable Attention Engine for LLM Inference Serving](2501.01005-FlashInfer-Efficient-and-Customizable-Attention-Engine-for-LLM-Inference-Serving.md)
+- [Inference without Interference: Disaggregate LLM Inference for Mixed Downstream Workloads](2401.11181-Inference-without-Interference-Disaggregate-LLM-Inference-for-Mixed-Downstream-W.md)
+- [Is the GPU Half-Empty or Half-Full? Practical Scheduling Techniques for LLMs](2410.17840-Is-the-GPU-Half-Empty-or-Half-Full-Practical-Scheduling-Techniques-for-LLMs.md)
+- [Llumnix: Dynamic Scheduling for Large Language Model Serving](2406.03243-Llumnix-Dynamic-Scheduling-for-Large-Language-Model-Serving.md)
+- [MARCONI: PREFIX CACHING FOR THE ERA OF HYBRID LLMS](2411.19379-MARCONI-PREFIX-CACHING-FOR-THE-ERA-OF-HYBRID-LLMS.md)
+- [MegaScale-Infer: Serving Mixture-of-Experts at Scale with Disaggregated Expert Parallelism](2504.02263-MegaScale-Infer-Serving-Mixture-of-Experts-at-Scale-with-Disaggregated-Expert-Pa.md)
+- [Mooncake: A KVCache-centric Disaggregated Architecture for LLM Serving](2407.00079-Mooncake-A-KVCache-centric-Disaggregated-Architecture-for-LLM-Serving.md)
+- [NanoFlow: Towards Optimal Large Language Model Serving Throughput](2408.12757-NanoFlow-Towards-Optimal-Large-Language-Model-Serving-Throughput.md)
+- [Nexus: A GPU Cluster Engine for Accelerating DNN-Based Video Analysis](nexus-gpu-cluster-Nexus-A-GPU-Cluster-Engine-for-Accelerating-DNN-Based-Video-Analysis.md)
+- [PUNICA: MULTI-TENANT LORA SERVING](2310.18547-PUNICA-MULTI-TENANT-LORA-SERVING.md)
+- [PrefillOnly: An Inference Engine for Prefill-only Workloads in Large Language Model Applications](2505.07203-PrefillOnly-An-Inference-Engine-for-Prefill-only-Workloads-in-Large-Language-Mod.md)
+- [S-LORA: SERVING THOUSANDS OF CONCURRENT LORA ADAPTERS](2311.03285-S-LORA-SERVING-THOUSANDS-OF-CONCURRENT-LORA-ADAPTERS.md)
+- [Scaling Up Large Language Models Serving Systems for Semantic Job Search](2510.22101-Scaling-Up-Large-Language-Models-Serving-Systems-for-Semantic-Job-Search.md)
+- [SpecInfer: Accelerating Large Language Model Serving with Tree-based Speculative Inference and Verification](2305.09781-SpecInfer-Accelerating-Large-Language-Model-Serving-with-Tree-based-Speculative-.md)
+- [Splitwise: Efficient Generative LLM Inference Using Phase Splitting](2311.18677-Splitwise-Efficient-Generative-LLM-Inference-Using-Phase-Splitting.md)
+- [Taming Throughput-Latency Tradeoff in LLM Inference with Sarathi-Serve](2403.02310-Taming-Throughput-Latency-Tradeoff-in-LLM-Inference-with-Sarathi-Serve.md)
+- [TensorFlow-Serving: Flexible, High-Performance ML Serving](1712.06139-TensorFlow-Serving-Flexible-High-Performance-ML-Serving.md)

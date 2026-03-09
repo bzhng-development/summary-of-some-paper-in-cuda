@@ -1,13 +1,46 @@
 # Pretraining
 
-Papers on pretraining methods, data quality, and scaling laws.
+42 paper summaries in this category.
 
-## Overview
-
-This section contains 3 papers covering:
-
-- **PaLM 2** - Compute-optimal scaling with multilingual data
-- **phi-1.5** - Textbook-quality synthetic data for small models
-- **In-Context Pretraining** - Document ordering for better learning
-
-
+- [ALBERT: A LITE BERT FOR SELF-SUPERVISED LEARNING OF LANGUAGE REPRESENTATIONS](1909.11942-ALBERT-A-LITE-BERT-FOR-SELF-SUPERVISED-LEARNING-OF-LANGUAGE-REPRESENTATIONS.md)
+- [An Empirical Study of Autoregressive Pre-training from Videos](2501.05453-An-Empirical-Study-of-Autoregressive-Pre-training-from-Videos.md)
+- [BART: Denoising Sequence-to-Sequence Pre-training for Natural Language Generation, Translation, and Comprehension](1910.13461-BART-Denoising-Sequence-to-Sequence-Pre-training-for-Natural-Language-Generation.md)
+- [BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](1810.04805-BERT-Pre-training-of-Deep-Bidirectional-Transformers-for-Language-Understanding.md)
+- [BLOOM: A 176B-Parameter Open-Access Multilingual Language Model](2211.05100-BLOOM-A-176B-Parameter-Open-Access-Multilingual-Language-Model.md)
+- [DEBERTAV3: IMPROVING DEBERTA USING ELECTRA-STYLE PRE-TRAINING WITH GRADIENT-DISENTANGLED EMBEDDING SHARING](2111.09543-DEBERTAV3-IMPROVING-DEBERTA-USING-ELECTRA-STYLE-PRE-TRAINING-WITH-GRADIENT-DISEN.md)
+- [Decouple Searching from Training: Scaling Data Mixing via Model Merging for Large Language Model Pre-training](2602.00747-Decouple-Searching-from-Training-Scaling-Data-Mixing-via-Model-Merging-for-Large.md)
+- [Deep contextualized word representations](1802.05365-Deep-contextualized-word-representations.md)
+- [Democratizing Open and Compliant LLMs for Global Language Environments: Apertus V1 Technical Report](2509.14233-Democratizing-Open-and-Compliant-LLMs-for-Global-Language-Environments-Apertus-V.md)
+- [Diversity or Precision? A Deep Dive into Next Token Prediction](2512.22955-Diversity-or-Precision-A-Deep-Dive-into-Next-Token-Prediction.md)
+- [ELECTRA: PRE-TRAINING TEXT ENCODERS AS DISCRIMINATORS RATHER THAN GENERATORS](2003.10555-ELECTRA-PRE-TRAINING-TEXT-ENCODERS-AS-DISCRIMINATORS-RATHER-THAN-GENERATORS.md)
+- [ERNIE 2.0: A Continual Pre-Training Framework for Language Understanding](1907.12412-ERNIE-2.0-A-Continual-Pre-Training-Framework-for-Language-Understanding.md)
+- [ERNIE: Enhanced Representation through Knowledge Integration](1904.09223-ERNIE-Enhanced-Representation-through-Knowledge-Integration.md)
+- [Emerging Properties in Self-Supervised Vision Transformers](2104.14294-Emerging-Properties-in-Self-Supervised-Vision-Transformers.md)
+- [Exploring the Limits of Transfer Learning with a Unified Text-to-Text Transformer](1910.10683-Exploring-the-Limits-of-Transfer-Learning-with-a-Unified-Text-to-Text-Transforme.md)
+- [Generalization v.s. Memorization: Tracing Language Models' Capabilities Back to Pretraining Data](2407.14985-Generalization-v.s.-Memorization-Tracing-Language-Models-Capabilities-Back-to-Pr.md)
+- [IN-CONTEXT PRETRAINING: LANGUAGE MODELING BEYOND DOCUMENT BOUNDARIES](2310.10638-IN-CONTEXT-PRETRAINING-LANGUAGE-MODELING-BEYOND-DOCUMENT-BOUNDARIES.md)
+- [Instruction Pre-Training: Language Models are Supervised Multitask Learners](2406.14491-Instruction-Pre-Training-Language-Models-are-Supervised-Multitask-Learners.md)
+- [LLaMA: Open and Efficient Foundation Language Models](2302.13971-LLaMA-Open-and-Efficient-Foundation-Language-Models.md)
+- [Nemotron-4 15B Technical Report](2402.16819-Nemotron-4-15B-Technical-Report.md)
+- [Nemotron-CLIMB: CLustering-based Iterative Data Mixture Bootstrapping for Language Model Pre-training](2504.13161-Nemotron-CLIMB-CLustering-based-Iterative-Data-Mixture-Bootstrapping-for-Languag.md)
+- [OLMo: Accelerating the Science of Language Models](2402.00838-OLMo-Accelerating-the-Science-of-Language-Models.md)
+- [ON LINEAR REPRESENTATIONS AND PRETRAINING DATA FREQUENCY IN LANGUAGE MODELS](2504.12459-ON-LINEAR-REPRESENTATIONS-AND-PRETRAINING-DATA-FREQUENCY-IN-LANGUAGE-MODELS.md)
+- [OPENCODER: THE OPEN COOKBOOK FOR TOP-TIER CODE LARGE LANGUAGE MODELS](2411.04905-OPENCODER-THE-OPEN-COOKBOOK-FOR-TOP-TIER-CODE-LARGE-LANGUAGE-MODELS.md)
+- [OPT: Open Pre-trained Transformer Language Models](2205.01068-OPT-Open-Pre-trained-Transformer-Language-Models.md)
+- [On the Opportunities and Risks of Foundation Models](2108.07258-On-the-Opportunities-and-Risks-of-Foundation-Models.md)
+- [PEGASUS: Pre-training with Extracted Gap-sentences for Abstractive Summarization](1912.08777-PEGASUS-Pre-training-with-Extracted-Gap-sentences-for-Abstractive-Summarization.md)
+- [Phi-4 Technical Report](2412.08905-Phi-4-Technical-Report.md)
+- [QWEN2 TECHNICAL REPORT](2407.10671-QWEN2-TECHNICAL-REPORT.md)
+- [Qwen2.5 Technical Report](2412.15115-Qwen2.5-Technical-Report.md)
+- [Reinforcement Pre-Training](2506.08007-Reinforcement-Pre-Training.md)
+- [Rephrasing the Web: A Recipe for Compute & Data-Efficient Language Modeling](2401.16380-Rephrasing-the-Web-A-Recipe-for-Compute-Data-Efficient-Language-Modeling.md)
+- [Representation Learning with Contrastive Predictive Coding](1807.03748-Representation-Learning-with-Contrastive-Predictive-Coding.md)
+- [RoBERTa: A Robustly Optimized BERT Pretraining Approach](1907.11692-RoBERTa-A-Robustly-Optimized-BERT-Pretraining-Approach.md)
+- [SmolLM2: When Smol Goes Big — Data-Centric Training of a Small Language Model](2502.02737-SmolLM2-When-Smol-Goes-Big-Data-Centric-Training-of-a-Small-Language-Model.md)
+- [SpanBERT: Improving Pre-training by Representing and Predicting Spans](1907.10529-SpanBERT-Improving-Pre-training-by-Representing-and-Predicting-Spans.md)
+- [THINKING AUGMENTED PRE-TRAINING](2509.20186-THINKING-AUGMENTED-PRE-TRAINING.md)
+- [The Llama 3 Herd of Models](2407.21783-The-Llama-3-Herd-of-Models.md)
+- [To Code, or Not To Code? Exploring Impact of Code in Pre-training](2408.10914-To-Code-or-Not-To-Code-Exploring-Impact-of-Code-in-Pre-training.md)
+- [UL2: Unifying Language Learning Paradigms](2205.05131-UL2-Unifying-Language-Learning-Paradigms.md)
+- [Unsupervised Cross-lingual Representation Learning at Scale](1911.02116-Unsupervised-Cross-lingual-Representation-Learning-at-Scale.md)
+- [XLNet: Generalized Autoregressive Pretraining for Language Understanding](1906.08237-XLNet-Generalized-Autoregressive-Pretraining-for-Language-Understanding.md)

@@ -286,7 +286,7 @@ The data from Clusters A and B (**Table 3**) confirms that the architectural cho
 *   **Metadata Size:** Despite managing nearly 1 million files and 1.5 million chunks in Cluster B, the master's memory footprint was only **60 MB** (**Table 2**). This empirically validates the claim that 64 MB chunks keep metadata small enough for in-memory storage even at petabyte scales.
 
 **3. Workload Characteristics**
-*   **Operation Sizes:** **Table 4** reveals a bimodal distribution. Reads are either very small (<64 KB, for seeks) or very large (>512 KB, for streaming). Large operations (>256 KB) account for the vast majority of bytes transferred (**Table 5**).
+*   **Operation Sizes:** **Table 4** reveals a bimodal distribution. Reads are either very small (&lt;64 KB, for seeks) or very large (>512 KB, for streaming). Large operations (>256 KB) account for the vast majority of bytes transferred (**Table 5**).
 *   **Append Dominance:** In the production cluster (Y), the ratio of bytes transferred via record append vs. standard write is **3.7:1**. In the R&D cluster (X), it is 108:1, though skewed by specific apps. Crucially, explicit overwrites (modifying existing data) accounted for less than **0.05%** of mutated bytes in production (**Section 6.3.3**), confirming the "append-only" assumption.
 
 #### Fault Tolerance and Recovery
@@ -301,7 +301,7 @@ The authors conducted active failure injection experiments on Cluster B (**Secti
 Yes, the results strongly support the paper's core assertions:
 1.  **High Aggregate Throughput:** The system consistently achieves 75–80% of theoretical network limits for reads and roughly 50% for writes in micro-benchmarks, scaling to nearly 600 MB/s in production. This validates the "decoupled control/data" architecture.
 2.  **Scalability of Metadata:** The measurement of only 60 MB of master memory for 1.5 million chunks definitively proves that the 64 MB chunk size allows the entire namespace to reside in RAM, enabling fast lookups and global optimization.
-3.  **Workload Alignment:** The production traces confirm that the design assumptions (huge files, sequential access, append-dominance) match reality. The negligible percentage of overwrites (<0.05%) justifies the relaxed consistency model.
+3.  **Workload Alignment:** The production traces confirm that the design assumptions (huge files, sequential access, append-dominance) match reality. The negligible percentage of overwrites (&lt;0.05%) justifies the relaxed consistency model.
 
 **Limitations and Trade-offs**
 The analysis also honestly exposes the system's weaknesses, which are critical for a complete understanding:
@@ -330,7 +330,7 @@ The entire architecture of GFS rests on the premise that application behavior wi
     *   *Hot Spot Risk:* The paper admits that small files can cause "hot spots." In one instance, a batch-queue system stored an executable as a single-chunk file. When hundreds of machines tried to launch it simultaneously, the few chunkservers holding that single chunk were overloaded (**Section 2.5**). This required manual intervention (staggering start times) and policy changes (increasing replication) to fix, indicating the system does not automatically solve contention for popular small files.
 
 *   **Streaming vs. Random Access:** The design favors large streaming reads.
-    *   *Evidence:* **Table 4** shows a bimodal distribution of read sizes: very small (<64 KB) and very large (>512 KB). The system handles the large reads efficiently via pipelining.
+    *   *Evidence:* **Table 4** shows a bimodal distribution of read sizes: very small (&lt;64 KB) and very large (>512 KB). The system handles the large reads efficiently via pipelining.
     *   *Limitation:* While small random reads are supported, the lack of client-side data caching (**Section 2.3**) means every small read incurs network latency to the chunkserver. Applications with high locality of reference (re-reading the same small blocks repeatedly) do not benefit from the OS buffer cache on the client side, as GFS explicitly disables this to avoid coherence issues.
 
 ### 6.2 Consistency and Semantic Weaknesses
@@ -431,7 +431,7 @@ When considering whether to adopt a GFS-like architecture (or a system based on 
 
 **When to Avoid or Augment with Alternatives:**
 *   **Low-Latency Interactive Access:** If your application requires millisecond response times for random reads/writes (e.g., a web serving backend, a real-time gaming database), a GFS-style system is inappropriate. Consider key-value stores (e.g., Cassandra, Redis) or traditional relational databases.
-*   **Small File Dominance:** If your dataset consists of millions of tiny files (<1 MB), the metadata overhead of a centralized master will become a bottleneck, and storage efficiency will plummet due to block fragmentation. In this case, object stores with flat namespaces or specialized small-file optimizers are better suited.
+*   **Small File Dominance:** If your dataset consists of millions of tiny files (&lt;1 MB), the metadata overhead of a centralized master will become a bottleneck, and storage efficiency will plummet due to block fragmentation. In this case, object stores with flat namespaces or specialized small-file optimizers are better suited.
 *   **Strict Consistency Requirements:** If your application cannot tolerate "undefined" regions or stale reads (e.g., financial ledgers, inventory management systems requiring strong ACID guarantees), do not rely on the relaxed consistency model. You would need a system with distributed consensus (e.g., Paxos/Raft-based stores like etcd or CockroachDB) or strict locking mechanisms.
 *   **Frequent Random Overwrites:** If the workload involves modifying existing data in place frequently, the performance penalty of GFS's checksum verification and copy-on-write mechanisms will be prohibitive.
 

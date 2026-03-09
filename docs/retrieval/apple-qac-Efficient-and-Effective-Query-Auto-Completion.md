@@ -386,7 +386,7 @@ For practitioners considering adopting this approach, the following guidelines c
 
 *   **When to Prefer This Method:**
     *   **Adopt Conjunctive-Search if:** Your user base frequently types multi-term queries with variable word order, or if your query logs show significant "zero result" rates for strict prefix matching. This is ideal for eCommerce, media libraries, and large documentation sets.
-    *   **Stick to Prefix-Search (Trie) if:** Your domain involves strictly ordered identifiers (e.g., IP addresses, serial numbers) or if your latency budget is extremely tight (<10 µs) and your hardware resources are severely constrained.
+    *   **Stick to Prefix-Search (Trie) if:** Your domain involves strictly ordered identifiers (e.g., IP addresses, serial numbers) or if your latency budget is extremely tight (&lt;10 µs) and your hardware resources are severely constrained.
     *   **Choose Front Coding over Tries if:** Your average query length exceeds 3-4 terms. The cache efficiency gains of linear decoding will outweigh the space savings of the trie.
 
 *   **Integration Strategy:**

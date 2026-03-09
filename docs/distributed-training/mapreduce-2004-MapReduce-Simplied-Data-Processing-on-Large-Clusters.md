@@ -231,7 +231,7 @@ The `grep` program scanned **1 TB** of data (10 billion 100-byte records) search
     *   The actual data processing phase took only ~90 seconds, demonstrating near-linear scaling of read bandwidth across the cluster.
 
 #### The Sort Experiment (Shuffle and Compute Bound)
-The `sort` program sorted the same **1 TB** dataset ($10^{10}$ records). The user code was minimal (<50 lines), using an identity reduce function.
+The `sort` program sorted the same **1 TB** dataset ($10^{10}$ records). The user code was minimal (&lt;50 lines), using an identity reduce function.
 *   **Configuration:** Input splits were $M = 15,000$. The output was partitioned into $R = 4,000$ files. The partitioning function used knowledge of the key distribution to ensure balanced output files.
 *   **Phased Execution Analysis (**Figure 3a**):** The execution profile reveals the distinct phases of MapReduce:
     1.  **Map Phase (Input Read):** The input read rate peaked at **13 GB/s**. This is lower than the `grep` benchmark (30 GB/s) because map tasks spent approximately 50% of their I/O bandwidth writing intermediate data to local disks, whereas `grep` wrote negligible intermediate data. All map tasks completed within **200 seconds**.

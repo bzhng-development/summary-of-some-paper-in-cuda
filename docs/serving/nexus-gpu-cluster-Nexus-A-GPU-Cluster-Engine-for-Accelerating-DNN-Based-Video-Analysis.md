@@ -348,7 +348,7 @@ For practitioners and researchers looking to adopt or build upon Nexus, the foll
 
 #### When to Prefer Nexus (or Nexus-inspired Architectures)
 *   **High Tenant Diversity:** If your workload involves **many specialized models** (variants of a base model) rather than a single monolithic model, Nexus's **prefix batching** is essential. Standard servers will fail to batch these efficiently.
-*   **Strict Latency + High Throughput:** If you must meet tight SLOs (e.g., <100ms) while maximizing GPU utilization, the **squishy bin packing** and **duty cycle** management are superior to standard queue-based schedulers.
+*   **Strict Latency + High Throughput:** If you must meet tight SLOs (e.g., &lt;100ms) while maximizing GPU utilization, the **squishy bin packing** and **duty cycle** management are superior to standard queue-based schedulers.
 *   **Video/Stream Workloads:** The **early drop** policy is specifically designed for redundant data streams (video frames) where dropping a few inputs is acceptable to save the batch. **Do not use this approach** for non-redundant, critical transactions (e.g., financial fraud detection) where every request must be processed; in those cases, the "drop" philosophy is inappropriate.
 
 #### Integration Challenges and Strategies

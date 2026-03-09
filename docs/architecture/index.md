@@ -81,7 +81,7 @@
 - [Replacing softmax with ReLU in Vision Transformers](2309.08586-Replacing-softmax-with-ReLU-in-Vision-Transformers.md)
 - [RoFormer: Enhanced Transformer with Rotary Position Embedding](2104.09864-RoFormer-Enhanced-Transformer-with-Rotary-Position-Embedding.md)
 - [SEMI-SUPERVISED CLASSIFICATION WITH GRAPH CONVOLUTIONAL NETWORKS](1609.02907-SEMI-SUPERVISED-CLASSIFICATION-WITH-GRAPH-CONVOLUTIONAL-NETWORKS.md)
-- [SQUEEZENET: ALEXNET-LEVEL ACCURACY WITH 50X FEWER PARAMETERS AND <0.5MB MODEL SIZE](1602.07360-SQUEEZENET-ALEXNET-LEVEL-ACCURACY-WITH-50X-FEWER-PARAMETERS-AND-0.5MB-MODEL-SIZE.md)
+- [SQUEEZENET: ALEXNET-LEVEL ACCURACY WITH 50X FEWER PARAMETERS AND &lt;0.5MB MODEL SIZE](1602.07360-SQUEEZENET-ALEXNET-LEVEL-ACCURACY-WITH-50X-FEWER-PARAMETERS-AND-0.5MB-MODEL-SIZE.md)
 - [Scaling Latent Reasoning via Looped Language Models](2510.25741-Scaling-Latent-Reasoning-via-Looped-Language-Models.md)
 - [Self-Attention with Relative Position Representations](1803.02155-Self-Attention-with-Relative-Position-Representations.md)
 - [Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks](1908.10084-Sentence-BERT-Sentence-Embeddings-using-Siamese-BERT-Networks.md)

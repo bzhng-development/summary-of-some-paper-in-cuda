@@ -160,7 +160,7 @@ Table 3 also highlights a critical divergence in how reads and writes scale with
 A common criticism of distributed transactions is that 2PC does not scale beyond a few participants. Table 4 challenges this assumption.
 *   With **50 participants** (spanning multiple zones), the mean latency is **42.7 ms** and the 99th percentile is **93.7 ms**.
 *   Latencies remain reasonable up to 50 participants but begin to rise noticeably at **100 participants** (mean **71.4 ms**, 99th percentile **131.2 ms**) and degrade significantly at **200 participants** (mean **150.5 ms**).
-*   **Conclusion:** The data supports the claim that 2PC is viable for typical application scopes (often <50 groups), refuting the notion that it is universally too expensive for distributed systems.
+*   **Conclusion:** The data supports the claim that 2PC is viable for typical application scopes (often &lt;50 groups), refuting the notion that it is universally too expensive for distributed systems.
 
 ### 5.3 Availability and Failure Recovery
 

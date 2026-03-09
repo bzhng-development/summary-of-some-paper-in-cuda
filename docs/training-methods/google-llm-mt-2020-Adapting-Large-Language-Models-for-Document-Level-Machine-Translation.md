@@ -347,7 +347,7 @@ For practitioners looking to integrate these findings, the paper provides a clea
 | Scenario | Recommended Approach | Rationale |
 | :--- | :--- | :--- |
 | **Abundant Parallel Data** (>20k docs) | **LoRA Fine-Tuning** on Base Model | LoRA prevents overfitting on large datasets and achieves higher peak performance (Figure 4). Base models (`LLAMA2`) show better transfer than instruction-tuned ones. |
-| **Scarce Parallel Data** (<2k docs) | **Full Fine-Tuning (FFT)** on Base Model | FFT is vastly more data-efficient, reaching near-peak performance with only **1%** of the data, whereas LoRA requires **10%** (Figure 4). |
+| **Scarce Parallel Data** (&lt;2k docs) | **Full Fine-Tuning (FFT)** on Base Model | FFT is vastly more data-efficient, reaching near-peak performance with only **1%** of the data, whereas LoRA requires **10%** (Figure 4). |
 | **Multilingual Source Languages** | **BLOOM-7B Backbone** | `BLOOM`'s multilingual pre-training significantly reduces **off-target translation rates** compared to English-centric backbones like `LLAMA2` (Table 3). |
 | **High-Stakes Production** | **Hybrid Decoding Strategy** | Do not rely solely on **REUSE** (standard autoregressive) due to error propagation risks. Implement a lightweight **language detection check** on generated context; if drift is detected, switch to **REGEN** (regenerate context) for that segment despite the higher cost. |
 | **Prompt Design** | **Prompt 4 Structure** | Always use the compound structure: **Alternating Source-Target Pairs + Explicit Instruction**. Avoid block-text contexts or instructions alone, as the combination yields the best stability (Table 1). |

@@ -92,10 +92,10 @@ Here, $K(x_i, x_j)$ is the kernel function replacing the dot product $\Phi(x_i) 
 
 **Step 4: Classifying Points via Multipliers**
 The values of the optimized multipliers $\beta_j$ reveal the geometric status of each point relative to the cluster boundaries:
-*   **Support Vectors (SVs):** Points with $0 < \beta_j < C$ lie exactly on the surface of the feature-space sphere. When mapped back to data space, these points define the cluster boundaries.
+*   **Support Vectors (SVs):** Points with $0 &lt; \beta_j &lt; C$ lie exactly on the surface of the feature-space sphere. When mapped back to data space, these points define the cluster boundaries.
 *   **Bounded Support Vectors (BSVs):** Points with $\beta_j = C$ lie outside the sphere ($\xi_j > 0$). These are treated as outliers or noise and are excluded from the cluster interior.
 *   **Interior Points:** Points with $\beta_j = 0$ lie strictly inside the sphere and are considered core members of a cluster.
-The paper notes a critical relationship between the parameter $C$ and the number of outliers ($n_{bsv}$): since $\sum \beta_j = 1$ and each BSV contributes exactly $C$ to this sum, the number of BSVs is bounded by $n_{bsv} < 1/C$. Consequently, the authors define a more intuitive parameter $p = 1/(NC)$, which represents the expected fraction of outliers in the dataset.
+The paper notes a critical relationship between the parameter $C$ and the number of outliers ($n_{bsv}$): since $\sum \beta_j = 1$ and each BSV contributes exactly $C$ to this sum, the number of BSVs is bounded by $n_{bsv} &lt; 1/C$. Consequently, the authors define a more intuitive parameter $p = 1/(NC)$, which represents the expected fraction of outliers in the dataset.
 
 #### The Gaussian Kernel and Scale Control
 The choice of kernel function is the primary mechanism for controlling the "shape" and "scale" of the clustering. The paper explicitly selects the **Gaussian kernel**:
@@ -111,10 +111,10 @@ The paper describes a "divisive" strategy where one starts with a small $q$ (sin
 Once the optimal $\beta_j$ values are found, the algorithm must determine the shape of the clusters in the original data space. The squared distance of any point $x$ from the sphere center $a$ in feature space is given by:
 $$ R^2(x) = ||\Phi(x) - a||^2 = K(x, x) - 2 \sum_j \beta_j K(x_j, x) + \sum_{i,j} \beta_i \beta_j K(x_i, x_j) $$
 The radius $R$ of the enclosing sphere is determined by evaluating this distance for any Support Vector (since SVs lie on the surface):
-$$ R = \sqrt{R^2(x_i)} \quad \text{for any } x_i \text{ such that } 0 < \beta_i < C $$
+$$ R = \sqrt{R^2(x_i)} \quad \text{for any } x_i \text{ such that } 0 &lt; \beta_i &lt; C $$
 The cluster boundaries are defined as the set of points in data space where this distance equals the radius:
 $$ \{x \mid R(x) = R\} $$
-Points where $R(x) < R$ are inside the clusters, while points where $R(x) > R$ are outside. A key insight of SVC is that this set $\{x \mid R(x) \leq R\}$ is not necessarily connected in data space. Even though the sphere in feature space is a single connected object, its pre-image in data space can consist of several disjoint "islands." Each island corresponds to a separate cluster.
+Points where $R(x) &lt; R$ are inside the clusters, while points where $R(x) > R$ are outside. A key insight of SVC is that this set $\{x \mid R(x) \leq R\}$ is not necessarily connected in data space. Even though the sphere in feature space is a single connected object, its pre-image in data space can consist of several disjoint "islands." Each island corresponds to a separate cluster.
 
 #### Cluster Assignment via Geometric Connectivity
 Identifying the boundaries is only half the task; the algorithm must also assign each data point to a specific cluster label. Since the optimization does not inherently distinguish between different disconnected components, the authors propose a geometric connectivity test.
@@ -165,7 +165,7 @@ The Support Vector Clustering (SVC) algorithm introduces fundamental shifts in h
 **The Innovation:** The introduction of the soft margin constant $C$ (or outlier fraction $p$) serves a dual purpose: it handles noise *and* acts as a control knob for the **topological connectivity** of the clusters.
 
 *   **Contrast with Prior Work:** Most non-parametric clustering algorithms lack a principled mechanism to exclude outliers. In graph-theoretic methods, a single noisy point bridging two dense regions can merge distinct clusters (the "chaining" effect). In $k$-means, outliers drag centroids, distorting the entire partition. SVC uniquely allows specific points (Bounded Support Vectors) to lie *outside* the enclosing sphere ($\xi_j > 0$), effectively removing them from the topological constraint.
-*   **Why It Matters:** This capability is critical for separating overlapping or noisy structures. Figure 3 illustrates a scenario where concentric rings cannot be separated when $C=1$ (no outliers allowed) because noise points bridge the gap. By increasing $p$ (allowing outliers), the algorithm "cuts" these bridges, allowing the contours to split cleanly. The paper highlights this as a distinct advantage: "Most clustering algorithms found in the literature... have no mechanism for dealing with noise or outliers." Furthermore, the relationship $n_{bsv} < 1/C$ provides a direct, interpretable link between a hyperparameter and the maximum number of allowed outliers, a level of control absent in heuristic noise-filtering pre-processing steps.
+*   **Why It Matters:** This capability is critical for separating overlapping or noisy structures. Figure 3 illustrates a scenario where concentric rings cannot be separated when $C=1$ (no outliers allowed) because noise points bridge the gap. By increasing $p$ (allowing outliers), the algorithm "cuts" these bridges, allowing the contours to split cleanly. The paper highlights this as a distinct advantage: "Most clustering algorithms found in the literature... have no mechanism for dealing with noise or outliers." Furthermore, the relationship $n_{bsv} &lt; 1/C$ provides a direct, interpretable link between a hyperparameter and the maximum number of allowed outliers, a level of control absent in heuristic noise-filtering pre-processing steps.
 
 ### 4.4 Support Vector Count as an Intrinsic Quality Metric
 **The Innovation:** The paper proposes using the **number of Support Vectors ($n_{sv}$)** as an intrinsic criterion for model selection and stopping, replacing external validity indices.

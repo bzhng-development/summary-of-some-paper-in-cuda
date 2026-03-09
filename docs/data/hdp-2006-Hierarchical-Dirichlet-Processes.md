@@ -222,7 +222,7 @@ The authors use articles from the **Neural Information Processing Systems (NIPS)
 
 **Quantitative Results:**
 **Figure 5 (Left)** plots the perplexity on VS test articles as a function of $N$ (the number of VS training articles).
-*   **Low Data Regime ($N < 20$):** When VS training data is scarce, **M3 (Hierarchical)** significantly outperforms both M1 and M2.
+*   **Low Data Regime ($N &lt; 20$):** When VS training data is scarce, **M3 (Hierarchical)** significantly outperforms both M1 and M2.
     *   M1 performs poorly because it lacks sufficient data to estimate topics reliably.
     *   M2 (Flat) performs better than M1 but worse than M3. The flat model suffers from "crosstalk," where noise from the unrelated section dilutes the specific structure of the VS section.
     *   M3 successfully leverages the 80 external articles to inform the global topic pool, reducing perplexity by a substantial margin compared to M1.

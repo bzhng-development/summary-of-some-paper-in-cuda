@@ -79,9 +79,9 @@ The paper defines a Random Forest formally as a classifier consisting of a colle
 *   **The Margin Function:** To analyze accuracy, the paper defines the "margin function" $mg(X,Y)$ as the difference between the average number of votes for the correct class $Y$ and the maximum average number of votes for any other class $j$, expressed as:
     $$mg(X,Y) = \text{av}_k I(h_k(X)=Y) - \max_{j \neq Y} \text{av}_k I(h_k(X)=j)$$
     where $I(\cdot)$ is the indicator function that equals 1 if the condition is true and 0 otherwise.
-*   **Generalization Error Limit:** The generalization error $PE^*$ is the probability that the margin is negative ($PE^* = P_{X,Y}(mg(X,Y) < 0)$).
+*   **Generalization Error Limit:** The generalization error $PE^*$ is the probability that the margin is negative ($PE^* = P_{X,Y}(mg(X,Y) &lt; 0)$).
 *   **Convergence Theorem:** The paper invokes the **Strong Law of Large Numbers** to prove Theorem 1.2, which states that as the number of trees increases, the generalization error converges almost surely to a limit:
-    $$PE^* \to P_{X,Y} \left( P_\Theta(h(X,\Theta)=Y) - \max_{j \neq Y} P_\Theta(h(X,\Theta)=j) < 0 \right)$$
+    $$PE^* \to P_{X,Y} \left( P_\Theta(h(X,\Theta)=Y) - \max_{j \neq Y} P_\Theta(h(X,\Theta)=j) &lt; 0 \right)$$
     This mathematical result is crucial because it proves that adding more trees does not lead to overfitting; instead, the error stabilizes at a fixed value determined by the underlying distribution of the trees.
 
 #### Theoretical Framework: Strength and Correlation
@@ -176,7 +176,7 @@ Prior to this work, the dominant heuristic in ensemble learning was to maximize 
 A persistent puzzle in machine learning prior to 2001 was why adding more trees to an ensemble did not eventually lead to overfitting, a behavior observed in many other iterative algorithms. While empirical observations existed, they lacked a formal probabilistic guarantee.
 
 *   **The Innovation:** **Theorem 1.2** leverages the **Strong Law of Large Numbers** to prove that as the number of trees approaches infinity, the generalization error converges almost surely to a fixed limit.
-    $$PE^* \to P_{X,Y} \left( P_\Theta(h(X,\Theta)=Y) - \max_{j \neq Y} P_\Theta(h(X,\Theta)=j) < 0 \right)$$
+    $$PE^* \to P_{X,Y} \left( P_\Theta(h(X,\Theta)=Y) - \max_{j \neq Y} P_\Theta(h(X,\Theta)=j) &lt; 0 \right)$$
 *   **Why It Matters:** This transforms the "number of trees" from a critical hyperparameter requiring careful tuning (to avoid overfitting) into a computational resource where "more is always better" until convergence. Unlike Adaboost, which can theoretically overfit if run too long on noisy data (as discussed in **Section 8**), Random Forests possess an asymptotic safety net. This allows practitioners to grow massive forests (e.g., 1,000+ trees) with confidence that the model is stabilizing, not diverging.
 
 ### 4.3 Robustness Through Non-Adaptive Aggregation

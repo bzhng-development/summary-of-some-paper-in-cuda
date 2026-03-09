@@ -75,7 +75,7 @@ Data flows from the user's partial query into the **Dictionary** for tokenizatio
 #### Core Scoring Strategy and Problem Formulation
 The fundamental innovation enabling this system's speed is a specific assignment of identifiers that decouples scoring from runtime computation.
 *   The system assigns a unique integer identifier, called a `docid`, to every completion in the collection $S$ such that the `docids` are sorted in **decreasing order of their popularity score** (e.g., query frequency).
-*   This design choice implies a crucial mathematical property: if completion $A$ has a smaller `docid` than completion $B$ ($docid_A < docid_B$), then $A$ is guaranteed to have a better (higher) score than $B$.
+*   This design choice implies a crucial mathematical property: if completion $A$ has a smaller `docid` than completion $B$ ($docid_A &lt; docid_B$), then $A$ is guaranteed to have a better (higher) score than $B$.
 *   Consequently, the problem of finding the "top-$k$ scored completions" transforms into the simpler problem of finding the "$k$ smallest `docids`" within a specific set of candidates.
 *   This transformation eliminates the need for expensive sorting algorithms or priority queues during the final ranking phase, as the natural order of the integers already reflects the desired ranking.
 

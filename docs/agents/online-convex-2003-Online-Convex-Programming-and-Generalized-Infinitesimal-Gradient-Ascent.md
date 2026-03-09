@@ -274,7 +274,7 @@ The application to repeated games yields **Theorem 4** (Section 3.3). For GIGA w
 $$ E[R^*_{\to a}(h|_T)] \leq \sqrt{T} + \left(\sqrt{T} - \frac{1}{2}\right) |A| |u|^2 $$
 *   **Scaling with Actions:** The bound depends on $|A|$ (the number of actions) and $|u|$ (the range of utility values).
 *   **Universal Consistency:** Through **Lemma 1** and **Lemma 11** (Section 3.4 and Appendix C), the paper translates this $O(\sqrt{T})$ bound into a probability statement. For any $\epsilon > 0$, the probability that the average regret exceeds $\epsilon$ after time $T$ drops exponentially:
-    $$ \text{Pr}[\text{Average Regret} > \epsilon] < |A| \exp\left( \frac{-T \epsilon^2}{8|u|^2} \right) $$
+    $$ \text{Pr}[\text{Average Regret} > \epsilon] &lt; |A| \exp\left( \frac{-T \epsilon^2}{8|u|^2} \right) $$
     This exponential decay confirms that the algorithm converges to consistent behavior with high probability.
 
 ### 5.3 Assessment of Claims and Support

@@ -389,7 +389,7 @@ For practitioners looking to adopt or build upon this work, the following guidel
 *   **Resource-Constrained Annotation:** If labeling data is the bottleneck but you have access to relevant unlabeled text, this semi-supervised pipeline is the optimal choice.
 
 #### When to Consider Alternatives
-*   **Extreme Low-Resource (< 1,000 examples):** As seen with RTE and MRPC, if your labeled dataset is tiny, this massive model may overfit despite pre-training. In these cases, simpler models (like linear classifiers on top of static embeddings) or explicit multi-task learning frameworks might be more stable.
+*   **Extreme Low-Resource (&lt; 1,000 examples):** As seen with RTE and MRPC, if your labeled dataset is tiny, this massive model may overfit despite pre-training. In these cases, simpler models (like linear classifiers on top of static embeddings) or explicit multi-task learning frameworks might be more stable.
 *   **Real-Time, Low-Latency Constraints:** The inference cost of a 12-layer Transformer is significantly higher than a shallow LSTM or CNN. Furthermore, for multiple-choice tasks, the requirement to run separate forward passes for each candidate (Section 3.3) linearly increases latency. If millisecond-level response times are critical and the candidate set is large, this architecture may be too slow without significant optimization (e.g., distillation, quantization).
 *   **Strictly Bidirectional Needs:** If the task relies heavily on seeing the full context immediately (e.g., filling in a missing word in the middle of a sentence based on future context), a bidirectional pre-training objective (developed in subsequent work) would be more appropriate than this decoder-only approach.
 

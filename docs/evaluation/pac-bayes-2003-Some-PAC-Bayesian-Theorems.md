@@ -125,7 +125,7 @@ Standard PAC proofs typically establish that "for every concept $c$, the sample 
 The Quantifier Reversal Lemma provides a rigorous way to swap these quantifiers while controlling the degradation of the confidence parameter.
 *   Let $x$ and $y$ be random variables (e.g., $x$ is the concept, $y$ is the sample).
 *   Let $\Phi(x, y, \delta)$ be a measurable formula such that the set of valid $\delta$ values forms an interval $(0, \delta_{\max}]$.
-*   If the condition $\forall x \forall \delta > 0, \forall_\delta y \Phi(x, y, \delta)$ holds (i.e., for every $x$, the property holds for $y$ with probability $1-\delta$), then the lemma asserts that for any $\delta > 0$ and $0 < \beta < 1$:
+*   If the condition $\forall x \forall \delta > 0, \forall_\delta y \Phi(x, y, \delta)$ holds (i.e., for every $x$, the property holds for $y$ with probability $1-\delta$), then the lemma asserts that for any $\delta > 0$ and $0 &lt; \beta &lt; 1$:
     $$ \forall_\delta y \forall_\alpha > 0, \forall_\alpha x \Phi\left(x, y, (\alpha \beta \delta)^{1/(1-\beta)}\right) $$
 *   **Interpretation:** This formula states that if a property holds point-wise with high probability, it also holds "on average" over $x$ for a fixed $y$, provided we relax the confidence parameter $\delta$ by a factor involving $\alpha$ (the measure of the set of $x$) and $\beta$ (a tuning parameter).
 *   **Application to Theorem 1:**

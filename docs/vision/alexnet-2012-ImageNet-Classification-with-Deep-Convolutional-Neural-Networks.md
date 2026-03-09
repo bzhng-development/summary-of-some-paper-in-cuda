@@ -159,7 +159,7 @@ The network employs a pooling strategy that differs from the standard practice o
 *   Pooling layers summarize the outputs of neighboring neurons in the same kernel map to reduce spatial resolution and provide translation invariance.
 *   Traditionally, pooling units summarize non-overlapping neighborhoods (e.g., a $2 \times 2$ grid with a stride of 2).
 *   The authors define a pooling layer by a stride $s$ and a neighborhood size $z \times z$.
-*   They utilize **overlapping pooling**, where the stride is smaller than the neighborhood size ($s < z$).
+*   They utilize **overlapping pooling**, where the stride is smaller than the neighborhood size ($s &lt; z$).
 *   Specifically, throughout the network, they use $s=2$ and $z=3$.
 *   This means each pooling unit summarizes a $3 \times 3$ region, but the centers of these regions are only 2 pixels apart, causing the receptive fields to overlap.
 *   Compared to the non-overlapping scheme ($s=2, z=2$) which produces output of equivalent dimensions, overlapping pooling reduces top-1 and top-5 error rates by 0.4% and 0.3%.

@@ -195,7 +195,7 @@ The specific configurations are:
 **Metrics**
 The primary metric is **Total Training Time** in seconds. To understand *why* time changes, the authors also report:
 *   **Kernel Evaluations**: The raw count of $K(x_i, x_j)$ computations during gradient reconstruction. This isolates the computational cost from I/O or memory latency.
-*   **Set Sizes**: $|A|$ (size of the active/shrunk set) and $|F|$ (number of free variables where $0 < \alpha_i < C$).
+*   **Set Sizes**: $|A|$ (size of the active/shrunk set) and $|F|$ (number of free variables where $0 &lt; \alpha_i &lt; C$).
 
 **Baselines and Variables**
 The core experiment compares four configurations in a $2 \times 2$ matrix:
@@ -248,7 +248,7 @@ The experiments highlight the critical role of the LRU cache.
 **Do the experiments support the claims?**
 Yes, but with important caveats that the authors explicitly acknowledge.
 1.  **Claim**: *Shrinking reduces training time.*
-    *   **Verdict**: **Conditionally True.** The experiments convincingly show that shrinking is essential for high-precision solutions (tight $\epsilon$) on large datasets (`a7a`). However, the `ijcnn1` results serve as a crucial counter-example, demonstrating that for low-precision requirements, the overhead of shrinking (specifically gradient reconstruction) can outweigh the benefits. The paper's inclusion of this failure case strengthens its credibility, as it provides a diagnostic warning (Section 5.6): if $2 \cdot |F| < |A|$ during reconstruction, users are warned that shrinking may be inefficient.
+    *   **Verdict**: **Conditionally True.** The experiments convincingly show that shrinking is essential for high-precision solutions (tight $\epsilon$) on large datasets (`a7a`). However, the `ijcnn1` results serve as a crucial counter-example, demonstrating that for low-precision requirements, the overhead of shrinking (specifically gradient reconstruction) can outweigh the benefits. The paper's inclusion of this failure case strengthens its credibility, as it provides a diagnostic warning (Section 5.6): if $2 \cdot |F| &lt; |A|$ during reconstruction, users are warned that shrinking may be inefficient.
 2.  **Claim**: *The gradient reconstruction heuristic is robust.*
     *   **Verdict**: **Strongly Supported.** The data in Table 2 shows the heuristic consistently picking the optimal strategy across disparate regimes (large vs. small $|F|$, large vs. small cache). The gap between Method 1 and Method 2 costs (e.g., 5M vs. 274M evaluations) proves that manual tuning would be error-prone, justifying the automated approach.
 3.  **Claim**: *LIBSVM enables large-scale SVM training.*
@@ -272,7 +272,7 @@ The most prominent trade-off identified in the paper concerns the **shrinking he
 *   **The Trade-off:** Shrinking is beneficial only when the number of optimization iterations is large enough to amortize the cost of reconstructing the gradient vector $\nabla f(\alpha)$ when variables are reactivated.
 *   **Evidence of Failure:** As demonstrated in **Table 2(b)** with the `ijcnn1` dataset, when a loose stopping tolerance ($\epsilon = 0.5$) is used, the solver converges in only ~4,000 iterations. In this scenario, enabling shrinking increases training time from **42s to 189s** (a 4.5x slowdown) with a large cache.
 *   **Root Cause:** With few iterations, the set of "free" variables ($|F|$) remains small relative to the active set ($|A|$). When the algorithm attempts to reconstruct the gradient to verify convergence, it must perform millions of kernel evaluations (e.g., 5.4 million in the `ijcnn1` case) to update the shrunk variables. This single reconstruction cost exceeds the total time saved by skipping those variables during the short optimization run.
-*   **Mitigation:** The authors implement a diagnostic check: if $2 \cdot |F| < |A|$ during reconstruction, `LIBSVM` issues a warning that the code might be faster without shrinking. This indicates that shrinking is not a universal win but a heuristic that depends heavily on the user's choice of $\epsilon$.
+*   **Mitigation:** The authors implement a diagnostic check: if $2 \cdot |F| &lt; |A|$ during reconstruction, `LIBSVM` issues a warning that the code might be faster without shrinking. This indicates that shrinking is not a universal win but a heuristic that depends heavily on the user's choice of $\epsilon$.
 
 ### 6.2 Scalability Constraints and Iteration Complexity
 Despite optimizations, `LIBSVM` faces hard scalability limits inherent to decomposition methods.
@@ -351,7 +351,7 @@ The design choices in `LIBSVM` make it particularly well-suited for specific cla
 For practitioners and researchers looking to integrate `LIBSVM` or reproduce its results, the following guidelines clarify when to prefer this method over alternatives and how to configure it effectively.
 
 #### When to Prefer LIBSVM Over Alternatives
-*   **Vs. Stochastic Gradient Descent (SGD) / Linear SVMs:** Prefer `LIBSVM` when the dataset is **non-linearly separable** and the number of samples is $< 100,000$. If the dataset is massive (millions of samples) or strictly linear, linear SVM solvers (like `LIBLINEAR`) or SGD-based methods will be orders of magnitude faster. `LIBSVM`'s $O(l^2)$ to $O(l^3)$ effective complexity makes it unsuitable for web-scale data.
+*   **Vs. Stochastic Gradient Descent (SGD) / Linear SVMs:** Prefer `LIBSVM` when the dataset is **non-linearly separable** and the number of samples is $&lt; 100,000$. If the dataset is massive (millions of samples) or strictly linear, linear SVM solvers (like `LIBLINEAR`) or SGD-based methods will be orders of magnitude faster. `LIBSVM`'s $O(l^2)$ to $O(l^3)$ effective complexity makes it unsuitable for web-scale data.
 *   **Vs. Deep Neural Networks:** Prefer `LIBSVM` when data is **scarce** (hundreds to thousands of samples). Deep learning requires vast amounts of data to generalize; SVMs, with their max-margin principle, often generalize better in low-data regimes. Also, prefer `LIBSVM` when **interpretability of the support vectors** is needed, as the model is defined by a small subset of training points rather than millions of opaque weights.
 *   **Vs. Random Forests:** Prefer `LIBSVM` when the feature space is continuous and the decision boundary is smooth. Random Forests may be preferred for mixed data types (categorical + continuous) or when feature importance scores are the primary goal.
 

@@ -365,7 +365,7 @@ The ability to train billion-parameter models on billion-example datasets unlock
 For practitioners and researchers considering adopting these techniques (or their modern equivalents), the paper provides clear heuristics for when to prefer specific approaches based on resource constraints and model architecture.
 
 #### When to Prefer Asynchronous SGD (`Downpour` style)
-*   **Resource Budget:** Ideal for clusters with **< 2,000 cores**. As shown in **Figure 5**, `Downpour SGD` + `Adagrad` offers the best time-to-solution efficiency in this range.
+*   **Resource Budget:** Ideal for clusters with **&lt; 2,000 cores**. As shown in **Figure 5**, `Downpour SGD` + `Adagrad` offers the best time-to-solution efficiency in this range.
 *   **Fault Tolerance Requirements:** Essential for environments with unstable hardware (e.g., spot instances, aging clusters). The asynchronous nature means the failure of a single worker results in the loss of only one mini-batch, with no global stall.
 *   **Model Architecture:** Works well for both fully-connected and locally-connected models, provided the model fits within the aggregate memory.
 *   **Critical Implementation Detail:** Do **not** use a fixed learning rate. The paper explicitly shows (Figure 4 & 5) that fixed-rate asynchronous SGD is unstable and slow. You **must** pair asynchronous updates with an adaptive learning rate method (like `Adagrad` or its successors) and employ a **warmstart** phase (training with 1 replica before scaling to hundreds) to ensure convergence.
@@ -377,7 +377,7 @@ For practitioners and researchers considering adopting these techniques (or thei
 *   **Integration Complexity:** Requires a more complex infrastructure (Coordinator + Parameter Servers + dynamic load balancing with backup tasks). It is less "plug-and-play" than asynchronous SGD and requires careful tuning of the task slicing strategy to avoid stragglers.
 
 #### When to Avoid Model Parallelism
-*   **Small Models:** If your model fits comfortably on a single GPU (e.g., < 100M parameters), do **not** use model parallelism. **Figure 3** clearly shows that for the 42M parameter speech model, partitioning across more than 8 machines *slows down* training due to communication overhead. Use **Data Parallelism** (replicas) instead, keeping each replica on a single device.
+*   **Small Models:** If your model fits comfortably on a single GPU (e.g., &lt; 100M parameters), do **not** use model parallelism. **Figure 3** clearly shows that for the 42M parameter speech model, partitioning across more than 8 machines *slows down* training due to communication overhead. Use **Data Parallelism** (replicas) instead, keeping each replica on a single device.
 *   **Fully-Connected Layers:** Be extremely cautious when splitting fully-connected layers. The communication cost scales with the square of the layer size. If possible, restrict model parallelism to convolutional or embedding layers where connectivity is sparse.
 
 ### 7.5 The Path Forward: From Clusters to Cloud

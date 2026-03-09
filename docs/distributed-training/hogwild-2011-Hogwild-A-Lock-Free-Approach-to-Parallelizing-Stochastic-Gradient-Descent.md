@@ -129,7 +129,7 @@ A significant theoretical contribution of this work is the derivation of a robus
 Standard SGD theory often prescribes a step size $\gamma_k \propto 1/k$. While this guarantees convergence, it is highly sensitive to the estimation of the strong convexity parameter $c$. As noted in Section 5.1, if one overestimates $c$ (choosing a step size that is too large relative to the true curvature), standard schemes can suffer exponential slow-downs, degrading the rate to $k^{-1/5}$ or worse.
 
 `Hogwild!` proposes a **back-off scheme** to mitigate this sensitivity:
-1.  **Phase 1 (Constant Step):** Run the algorithm with a fixed step size $\gamma < 1/c$ for a fixed number of iterations $K$. This drives the solution into a neighborhood of the optimum.
+1.  **Phase 1 (Constant Step):** Run the algorithm with a fixed step size $\gamma &lt; 1/c$ for a fixed number of iterations $K$. This drives the solution into a neighborhood of the optimum.
 2.  **Phase 2 (Back-off):** Wait for all threads to coalesce (synchronize briefly), reduce the step size by a constant factor $\beta \in (0, 1)$ (e.g., $\beta = 0.9$), and run for $\beta^{-1} K$ iterations.
 3.  **Repetition:** Repeat the reduction and extension of iterations.
 
@@ -379,7 +379,7 @@ The immediate impact of `Hogwild!` is felt in domains characterized by massive s
 For practitioners considering integrating `Hogwild!` or its descendants into their workflows, the following guidelines determine when to prefer this method over alternatives:
 
 #### When to Use `Hogwild!` (or Lock-Free SGD)
-*   **Sparsity is High:** Check your data's sparsity pattern. If each sample updates only a tiny fraction of the total parameters (e.g., $\rho < 0.01$), `Hogwild!` is likely optimal. This includes text data (bag-of-words), recommendation data (user-item matrices), and graph problems with low degree.
+*   **Sparsity is High:** Check your data's sparsity pattern. If each sample updates only a tiny fraction of the total parameters (e.g., $\rho &lt; 0.01$), `Hogwild!` is likely optimal. This includes text data (bag-of-words), recommendation data (user-item matrices), and graph problems with low degree.
 *   **Gradient Computation is Fast:** If the time to compute a gradient is comparable to or less than the time to acquire a lock (typically microseconds), locking will destroy parallel efficiency. `Hogwild!` shines when the bottleneck is memory bandwidth or synchronization, not FLOPs.
 *   **Shared Memory Architecture:** You are running on a single machine with multiple cores (multicore CPU or GPU) where all threads share physical RAM.
 *   **Throughput is Critical:** You need to iterate over the dataset quickly (e.g., for online learning or rapid hyperparameter tuning) and can tolerate a small amount of additional noise in the convergence path.

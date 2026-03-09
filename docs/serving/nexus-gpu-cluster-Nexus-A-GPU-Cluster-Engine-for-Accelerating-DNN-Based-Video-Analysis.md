@@ -137,7 +137,7 @@ Nexus does not merely optimize existing serving pipelines; it fundamentally rede
 *   **Significance:** This approach unlocks utilization in low-to-moderate load regimes where dedicated GPUs are wasteful. By merging residual loads from multiple applications onto a single GPU and shrinking their batch sizes just enough to fit the combined duty cycle, Nexus achieves **84% of theoretical optimal utilization** on mixed workloads (Section 7.4). The theoretical weight of this innovation is underscored by **Appendix A**, which proves that even a restricted version of this scheduling problem is **strongly NP-complete**, justifying Nexus's move away from simple heuristics to a sophisticated, profile-guided greedy approximation.
 
 ### 4.3 Innovation: Query-Aware Latency Splitting via Dynamic Programming
-**The Insight:** In multi-stage video pipelines (e.g., Detect $\to$ Track $\to$ Recognize), the end-to-end latency SLO is a shared resource. A naive, even split of this budget across stages often creates artificial bottlenecks. Nexus identifies that the optimal split depends on the **expansion factor** ($\gamma$) of each stage—whether a stage filters data ($\gamma < 1$), passes it through ($\gamma = 1$), or expands it ($\gamma > 1$, e.g., detecting multiple cars in one frame).
+**The Insight:** In multi-stage video pipelines (e.g., Detect $\to$ Track $\to$ Recognize), the end-to-end latency SLO is a shared resource. A naive, even split of this budget across stages often creates artificial bottlenecks. Nexus identifies that the optimal split depends on the **expansion factor** ($\gamma$) of each stage—whether a stage filters data ($\gamma &lt; 1$), passes it through ($\gamma = 1$), or expands it ($\gamma > 1$, e.g., detecting multiple cars in one frame).
 
 **Why It Is Fundamental:** This shifts the optimization scope from the *model* level to the *query* level.
 *   **Distinction from Prior Work:** Existing systems typically require developers to manually tune latency budgets per stage or rely on static, equal splits. Nexus automates this via a **Dynamic Programming** algorithm (Section 6.2) that explores the state space of possible time allocations to minimize total GPU consumption.
@@ -175,7 +175,7 @@ The evaluation utilizes **seven distinct video analysis applications** modeled a
 
 #### Metrics and Success Criteria
 The primary metric for success is **Throughput**, defined as the maximum request rate the system can sustain while ensuring that **at least 99%** of requests are served within their latency SLO.
-*   **Bad Rate:** The percentage of requests that either exceed their latency deadline or are explicitly dropped by the system. The target is a bad rate $< 1\%$.
+*   **Bad Rate:** The percentage of requests that either exceed their latency deadline or are explicitly dropped by the system. The target is a bad rate $&lt; 1\%$.
 *   **Utilization Efficiency:** Measured as the ratio of GPUs used by Nexus to the theoretical lower bound (the minimum number of GPUs required if models ran at peak isolated throughput with perfect batching).
 
 #### Baselines and Competitors

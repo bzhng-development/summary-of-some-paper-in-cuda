@@ -249,7 +249,7 @@ Do the experiments convincingly support the paper's claims?
 **Limitations and Trade-offs:**
 *   **Training Time:** The authors explicitly note in the Conclusion that dropout increases training time by a factor of **2–3x**. This is due to the noisy gradients requiring more iterations to converge and the necessity of using larger networks ($n/p$ units) to maintain capacity.
 *   **Hyperparameter Sensitivity:** While Figure 4 suggests robustness to architecture, Appendix A reveals that dropout requires careful tuning of *optimization* hyperparameters (learning rate, momentum, max-norm bound). Using standard SGD settings with dropout leads to poor results.
-*   **Small Data Limit:** As shown in Figure 10, dropout is not a magic bullet for extremely small datasets (e.g., < 500 samples) where the noise prevents any learning. In these regimes, Bayesian methods or severe dimensionality reduction (PCA) may still be superior.
+*   **Small Data Limit:** As shown in Figure 10, dropout is not a magic bullet for extremely small datasets (e.g., &lt; 500 samples) where the noise prevents any learning. In these regimes, Bayesian methods or severe dimensionality reduction (PCA) may still be superior.
 
 In summary, the experimental section provides a comprehensive and convincing argument that dropout is a fundamental advancement in neural network training, effectively solving the overfitting problem for large-scale deep learning while maintaining computational feasibility at test time.
 
@@ -341,7 +341,7 @@ For practitioners looking to integrate dropout based on this paper's findings, t
 *   **Co-adaptation Risks:** Use it in fully connected layers where units are prone to developing complex, brittle dependencies.
 
 #### When to Avoid or Modify
-*   **Extremely Small Data (< 1,000 samples):** As shown in Figure 10, dropout may cause underfitting if the dataset is too small to support learning through noise. In these cases, consider **Bayesian Neural Networks** or severe dimensionality reduction (PCA) instead.
+*   **Extremely Small Data (&lt; 1,000 samples):** As shown in Figure 10, dropout may cause underfitting if the dataset is too small to support learning through noise. In these cases, consider **Bayesian Neural Networks** or severe dimensionality reduction (PCA) instead.
 *   **Already Regularized Architectures:** If using **Batch Normalization**, be cautious. The noise from batch norm may render dropout redundant or harmful. Modern practice often removes dropout from layers immediately following batch norm.
 *   **Recurrent Layers:** Do not apply standard i.i.d. dropout to time steps in RNNs, as it destroys the temporal memory. Use **Variational Dropout** (same mask for all time steps) instead.
 

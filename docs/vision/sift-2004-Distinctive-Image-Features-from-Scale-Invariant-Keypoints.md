@@ -114,7 +114,7 @@ The Hessian matrix and derivatives are approximated using finite differences fro
 **Contrast Thresholding**
 Extrema with low contrast are sensitive to noise and should be discarded. The value of the function at the interpolated extremum is computed efficiently by substituting the solution back into the Taylor expansion:
 $$D(\hat{\mathbf{x}}) = D + \frac{1}{2} \frac{\partial D}{\partial \mathbf{x}}^T \hat{\mathbf{x}}$$
-The paper specifies a hard threshold: any extremum with $|D(\hat{\mathbf{x}})| < 0.03$ (assuming pixel values in $[0, 1]$) is rejected. As shown in **Figure 5**, this step removes a significant number of weak responses, cleaning up the feature set.
+The paper specifies a hard threshold: any extremum with $|D(\hat{\mathbf{x}})| &lt; 0.03$ (assuming pixel values in $[0, 1]$) is rejected. As shown in **Figure 5**, this step removes a significant number of weak responses, cleaning up the feature set.
 
 **Eliminating Edge Responses**
 The DoG function produces strong responses along edges, even though the exact position along the edge is ambiguous and unstable. To remove these, the algorithm analyzes the principal curvatures of the DoG surface at the keypoint location using a $2 \times 2$ Hessian matrix $H$:
@@ -208,7 +208,7 @@ SIFT accepts that exact alignment is impossible and instead builds tolerance int
 
 **Distinction from Prior Work:**
 Standard nearest-neighbor matching typically accepts a match if the distance to the closest database entry is below a fixed threshold. However, in high-dimensional spaces (like the 128-D SIFT vector), the concept of "distance" becomes less intuitive, and some features are naturally more distinctive than others. A fixed threshold either rejects good matches for non-distinctive features or accepts bad matches for ambiguous ones.
-SIFT introduces a relative metric (Section 7.1): a match is accepted only if the distance to the closest neighbor is significantly smaller (specifically, ratio < 0.8) than the distance to the second-closest neighbor.
+SIFT introduces a relative metric (Section 7.1): a match is accepted only if the distance to the closest neighbor is significantly smaller (specifically, ratio &lt; 0.8) than the distance to the second-closest neighbor.
 *   **Why it matters:** This effectively measures the **distinctiveness** of the feature in real-time. If a feature has multiple neighbors at similar distances, it is ambiguous (likely repetitive texture) and is discarded. If there is a clear "winner," the match is accepted.
 *   **Impact:** As shown in **Figure 11**, this simple heuristic eliminates 90% of false matches while discarding less than 5% of correct matches. It allows the subsequent Hough transform clustering (Section 7.3) to operate on a set of candidates with a much higher signal-to-noise ratio, enabling reliable object detection with as few as 3 features.
 
@@ -370,7 +370,7 @@ Although the paper emphasizes "near real-time" performance, this claim is bounde
 The paper claims robustness to illumination changes, but this robustness is qualified by specific assumptions about the nature of the lighting.
 
 *   **Linear vs. Non-Linear Changes:** The descriptor is mathematically invariant to affine illumination changes (brightness shifts and contrast scaling) due to gradient computation and vector normalization (Section 6.1). To handle non-linear changes (e.g., saturation), the algorithm thresholds vector elements at **0.2** and re-normalizes.
-*   **The Glare Limit:** Despite these measures, Section 8 explicitly states that the method requires "sufficient light" and fails under "excessive glare." Strong specular highlights can saturate pixel values, collapsing local gradient structures into uniform white regions where no orientation can be computed. Similarly, extreme shadows can reduce signal-to-noise ratios below the contrast threshold ($|D(\hat{\mathbf{x}})| < 0.03$), causing valid features to be discarded.
+*   **The Glare Limit:** Despite these measures, Section 8 explicitly states that the method requires "sufficient light" and fails under "excessive glare." Strong specular highlights can saturate pixel values, collapsing local gradient structures into uniform white regions where no orientation can be computed. Similarly, extreme shadows can reduce signal-to-noise ratios below the contrast threshold ($|D(\hat{\mathbf{x}})| &lt; 0.03$), causing valid features to be discarded.
 *   **Color Blindness:** A notable omission in the standard SIFT formulation is the use of color information. As mentioned in the Conclusions (Section 9), the descriptor uses only **monochrome intensity**. In scenarios where shape and texture are ambiguous but color is distinctive (e.g., distinguishing between two identical logos of different colors), SIFT loses a valuable discriminative cue that could otherwise improve matching accuracy.
 
 ### 6.5 Parameter Sensitivity and Heuristics

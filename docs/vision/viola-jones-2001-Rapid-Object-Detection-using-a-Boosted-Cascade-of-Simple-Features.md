@@ -90,7 +90,7 @@ Given the massive pool of 180,000+ potential features, the system employs a modi
 *   **The Selection Problem:** Computing all 180,000 features for every sub-window is prohibitively expensive; the hypothesis is that an effective classifier can be built from a tiny subset (e.g., fewer than 200 features).
 *   **Weak Learner Constraint:** The standard AdaBoost algorithm combines weak learners, but this paper imposes a strict constraint: each weak classifier $h_j(x)$ must depend on **only a single feature** $f_j$.
 *   **Weak Classifier Structure:** Each weak classifier consists of a single feature $f_j$, a threshold $\theta_j$, and a parity $p_j$ (which indicates the direction of the inequality). The classification rule is:
-    $$h_j(x) = \begin{cases} 1 & \text{if } p_j f_j(x) < p_j \theta_j \\ 0 & \text{otherwise} \end{cases}$$
+    $$h_j(x) = \begin{cases} 1 & \text{if } p_j f_j(x) &lt; p_j \theta_j \\ 0 & \text{otherwise} \end{cases}$$
     Here, $x$ represents a $24 \times 24$ pixel sub-window, and the output is binary (1 for object, 0 for non-object).
 *   **Training Process (Table 1):** The algorithm iterates through $T$ rounds. In each round $t$:
     1.  Weights $w_{t,i}$ are normalized so they sum to 1, representing a probability distribution over the training examples.

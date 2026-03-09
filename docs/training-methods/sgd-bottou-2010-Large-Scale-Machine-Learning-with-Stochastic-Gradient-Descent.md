@@ -208,7 +208,7 @@ These are compared against:
 **Hyperparameter Configuration:**
 Crucially, the paper specifies the exact gain schedules used, acknowledging that theoretical asymptotics require practical tuning:
 *   **SGD Gain:** $\gamma_t = \gamma_0 (1 + \lambda \gamma_0 t)^{-1}$. This follows the optimal $t^{-1}$ decay derived in Section 2.2.
-*   **ASGD Gain:** $\gamma_t = \gamma_0 (1 + \lambda \gamma_0 t)^{-0.75}$. As noted in Section 4, ASGD requires a slower decay (exponent $< 1$) to allow the averaging mechanism to reduce variance effectively.
+*   **ASGD Gain:** $\gamma_t = \gamma_0 (1 + \lambda \gamma_0 t)^{-0.75}$. As noted in Section 4, ASGD requires a slower decay (exponent $&lt; 1$) to allow the averaging mechanism to reduce variance effectively.
 *   **Initialization:** The initial gain $\gamma_0$ was set manually by observing performance on a subset of training data, a common practical necessity not covered by asymptotic theory.
 
 **Metrics:**
@@ -331,7 +331,7 @@ The paper advocates for Second-Order Stochastic Gradient Descent (2SGD) to impro
 The paper's scope is deliberately narrow, focusing on linear models and specific convex objectives. Several important scenarios are not addressed:
 
 *   **Non-Linear Models and Kernel Methods:** The experiments and derivations focus exclusively on **linear** models (Linear SVM, Lasso, Linear CRF). The paper does not address how these stochastic principles apply to **kernel methods** (where the number of parameters grows with $n$) or deep non-linear neural networks (which were less dominant in 2010 but are central today). The $O(1)$ cost per iteration relies on the gradient being computable from a single example and a fixed-size weight vector; this breaks down in standard kernel formulations.
-*   **Mini-Batch Trade-offs:** The paper analyzes the extremes: Batch GD (size $n$) vs. Stochastic GD (size 1). It does not explore **mini-batch SGD** (using small batches of size $b$, where $1 < b \ll n$).
+*   **Mini-Batch Trade-offs:** The paper analyzes the extremes: Batch GD (size $n$) vs. Stochastic GD (size 1). It does not explore **mini-batch SGD** (using small batches of size $b$, where $1 &lt; b \ll n$).
     *   *Missing Analysis:* Mini-batching is often used in practice to leverage parallel hardware (GPUs) and reduce gradient variance without incurring the full $O(n)$ cost. The paper's binary comparison misses the potential optimization of the batch size $b$ as a hyperparameter for modern hardware architectures.
 *   **Sparse vs. Dense Data Dependencies:** While the RCV1 results demonstrate massive speedups, this is heavily dependent on the **sparsity** of the TF/IDF features.
     *   *Constraint:* The $O(1)$ cost per iteration is technically $O(\text{number of non-zero features})$. For dense datasets (like the ALPHA task with 500 normalized variables), the constant factor advantage of SGD over batch methods is smaller. The paper does not provide a detailed ablation study quantifying how the speedup ratio degrades as data density increases.

@@ -35,7 +35,7 @@ Instead of trying to copy the expert's actions ($\pi_E$), the authors propose re
 The paper operates under a specific structural assumption to make the problem tractable. It assumes the unknown true reward function $R^*(s)$ is a **linear combination of known features**:
 $$ R^*(s) = w^* \cdot \phi(s) $$
 where:
-*   $\phi(s) \in [0, 1]^k$ is a vector of $k$ known features describing the state (e.g., "is the car in the left lane?", "is distance to nearest car < 5m?").
+*   $\phi(s) \in [0, 1]^k$ is a vector of $k$ known features describing the state (e.g., "is the car in the left lane?", "is distance to nearest car &lt; 5m?").
 *   $w^* \in \mathbb{R}^k$ is an unknown weight vector representing the expert's preferences.
 
 The critical insight driving the algorithm is that if the reward is linear in features, the expected total reward of any policy $\pi$ depends entirely on its **feature expectations** $\mu(\pi)$, defined as the discounted sum of features accumulated over time:

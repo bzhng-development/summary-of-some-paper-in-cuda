@@ -369,7 +369,7 @@ Prior to this work, the field was dominated by the **Apriori heuristic**, which 
 The efficiency and structural properties of the FP-tree enable several specific lines of follow-up research that were impractical under the *Apriori* framework. The paper itself outlines a roadmap for these extensions in **Section 6**:
 
 #### A. Constraint-Based Mining
-Because the FP-tree captures the complete information of the database, it allows for **constraint pushing**. Instead of mining all patterns and filtering them afterward (post-pruning), future algorithms can incorporate user constraints (e.g., "must contain item $X$", "sum of prices $< \$50$") directly into the recursive growth process.
+Because the FP-tree captures the complete information of the database, it allows for **constraint pushing**. Instead of mining all patterns and filtering them afterward (post-pruning), future algorithms can incorporate user constraints (e.g., "must contain item $X$", "sum of prices $&lt; \$50$") directly into the recursive growth process.
 *   **Mechanism:** Constraints can be used to prune branches of the FP-tree *during* the construction of conditional pattern bases, drastically reducing the search space before mining even begins. This transforms the FP-tree from a static index into a dynamic filter.
 
 #### B. Mining Complex Pattern Types

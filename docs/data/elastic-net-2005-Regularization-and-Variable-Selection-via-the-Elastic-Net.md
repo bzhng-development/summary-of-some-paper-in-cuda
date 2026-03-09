@@ -37,7 +37,7 @@ $$ \text{Minimize: } |y - X\beta|^2 + \lambda_1 |\beta|_1 $$
 
 ### The Real-World Catalyst: Microarray Data
 The motivation for this paper is not purely theoretical; it is driven by the explosion of **microarray data** in biology.
-*   **Scale:** These datasets typically have thousands of genes ($p \approx 10,000$) and very few samples ($n < 100$). This is the extreme $p \gg n$ case.
+*   **Scale:** These datasets typically have thousands of genes ($p \approx 10,000$) and very few samples ($n &lt; 100$). This is the extreme $p \gg n$ case.
 *   **Structure:** Genes operating in the same biological "pathway" are highly correlated.
 *   **The Ideal Goal:** A perfect method for this domain should eliminate irrelevant genes (sparsity) but, once it identifies one gene in a pathway, it should automatically include the **entire group** of correlated genes ("grouped selection").
 
@@ -91,7 +91,7 @@ A major design choice in this paper is avoiding the creation of a new, slow opti
     $$ y^* = \begin{pmatrix} y \\ 0 \end{pmatrix} $$
 *   By defining a transformed coefficient $\beta^* = \sqrt{1+\lambda_2}\beta$ and a new tuning parameter $\gamma = \frac{\lambda_1}{\sqrt{1+\lambda_2}}$, the naive elastic net minimization becomes mathematically equivalent to minimizing the standard lasso criterion on the augmented data:
     $$ \text{Minimize: } |y^* - X^*\beta^*|^2 + \gamma |\beta^*|_1 $$
-*   This transformation is crucial because it implies that the naive elastic net inherits the computational efficiency of the lasso and, importantly, overcomes the $p \gg n$ limitation: since the augmented matrix $X^*$ has $n+p$ rows and $p$ columns, it has full rank $p$, meaning the method can theoretically select all $p$ variables even if $n < p$.
+*   This transformation is crucial because it implies that the naive elastic net inherits the computational efficiency of the lasso and, importantly, overcomes the $p \gg n$ limitation: since the augmented matrix $X^*$ has $n+p$ rows and $p$ columns, it has full rank $p$, meaning the method can theoretically select all $p$ variables even if $n &lt; p$.
 
 #### The Grouping Effect Mechanism
 The primary theoretical contribution of the elastic net is the "grouping effect," where highly correlated predictors receive nearly identical coefficients, preventing the arbitrary selection of single variables seen in the lasso.
@@ -148,7 +148,7 @@ To make the method practical for large-scale problems (like microarrays with $p=
 The technical architecture reflects specific trade-offs to achieve the paper's goals:
 *   **Augmentation over Custom Solvers:** By mapping the problem to Lasso via data augmentation, the authors leverage existing, highly optimized code (LARS) rather than developing a new, potentially slower convex optimizer.
 *   **Rescaling over Naive Combination:** The decision to rescale by $(1+\lambda_2)$ is the critical design choice that distinguishes the elastic net from a simple "Ridge + Lasso" sum; it prioritizes prediction accuracy (bias reduction) while retaining the grouping and selection mechanics.
-*   **Strict Convexity:** The inclusion of *any* $\lambda_2 > 0$ ensures strict convexity, which is the mathematical prerequisite for the grouping effect, distinguishing it from Bridge regression with $1 < q < 2$ which fails to produce sparse solutions.
+*   **Strict Convexity:** The inclusion of *any* $\lambda_2 > 0$ ensures strict convexity, which is the mathematical prerequisite for the grouping effect, distinguishing it from Bridge regression with $1 &lt; q &lt; 2$ which fails to produce sparse solutions.
 
 ## 4. Key Insights and Innovations
 

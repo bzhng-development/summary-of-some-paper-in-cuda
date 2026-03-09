@@ -76,7 +76,7 @@ $$ F(x, y; w) = \langle w, \Psi(x, y) \rangle $$
 Here, $w$ is the parameter vector to be learned, and $\Psi(x, y)$ is a vector that encodes features derived from both the input $x$ and the candidate output $y$ simultaneously. For instance, in natural language parsing, $\Psi(x, y)$ might be a histogram counting the occurrences of specific grammar rules within the parse tree $y$ for sentence $x$.
 
 To learn $w$, the paper generalizes the large-margin principle. In the ideal case where the data is perfectly separable, the goal is to find a $w$ such that the score of the correct label $y_i$ exceeds the score of any incorrect label $y$ by a margin of at least 1. This requirement generates a set of non-linear constraints for every training example $i$:
-$$ \forall i : \max_{y \in \mathcal{Y} \setminus y_i} \langle w, \Psi(x_i, y) \rangle < \langle w, \Psi(x_i, y_i) \rangle $$
+$$ \forall i : \max_{y \in \mathcal{Y} \setminus y_i} \langle w, \Psi(x_i, y) \rangle &lt; \langle w, \Psi(x_i, y_i) \rangle $$
 This inequality states that the highest score among all incorrect outputs must be strictly less than the score of the correct output. By rearranging terms, this can be expressed as a set of linear constraints using the difference vector $\delta\Psi_i(y) \equiv \Psi(x_i, y_i) - \Psi(x_i, y)$:
 $$ \forall i, \forall y \in \mathcal{Y} \setminus y_i : \langle w, \delta\Psi_i(y) \rangle > 0 $$
 Since there are $|\mathcal{Y}| - 1$ incorrect outputs for each of the $n$ training examples, a naive formulation would require $n(|\mathcal{Y}| - 1)$ constraints, which is computationally prohibitive when $|\mathcal{Y}|$ is exponential.

@@ -277,7 +277,7 @@ The most critical claim of the paper is that deep networks *cannot* be trained e
 *   **Deep Network Failure (Left Panel):**
     *   **Architecture:** `784-400-200-100-50-25-6` (7 layers including input/output).
     *   **Result (Random Init):** The curve is perfectly flat. The squared reconstruction error remains at its initial high value (approx. 16-18) for all **500 epochs**. The text states the network makes "**no progress**." The gradient signal vanishes before it can update the lower layers meaningfully.
-    *   **Result (Pretrained):** The error drops rapidly within the first 50 epochs of fine-tuning, reaching a low error floor (< 2).
+    *   **Result (Pretrained):** The error drops rapidly within the first 50 epochs of fine-tuning, reaching a low error floor (&lt; 2).
     *   **Conclusion:** Without pretraining, the deep architecture is functionally useless. The optimization landscape is too rugged for standard gradient descent to navigate from a random start.
 
 *   **Shallow Network Comparison (Right Panel):**

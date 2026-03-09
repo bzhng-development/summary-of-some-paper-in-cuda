@@ -392,7 +392,7 @@ The robustness of CRFs has led to their deployment in critical infrastructure ac
 For practitioners deciding whether to employ CRFs in modern pipelines, the following guidelines synthesize the paper's lessons:
 
 #### When to Prefer CRFs
-*   **Moderate Label Spaces:** CRFs are ideal when the number of output labels $M$ is small to moderate (e.g., $M < 100$). The $O(M^2)$ complexity of exact inference makes them prohibitive for tasks with thousands of classes unless approximate inference is used.
+*   **Moderate Label Spaces:** CRFs are ideal when the number of output labels $M$ is small to moderate (e.g., $M &lt; 100$). The $O(M^2)$ complexity of exact inference makes them prohibitive for tasks with thousands of classes unless approximate inference is used.
 *   **Rich, Hand-Crafted Features:** If you have domain expertise to engineer specific, overlapping features (e.g., "word ends in -ing" AND "previous word is 'to'"), CRFs will likely outperform models that rely solely on raw input embeddings, as they can explicitly weight these interactions.
 *   **Known Topology:** CRFs excel when the dependency structure is known *a priori* (e.g., linear sequences, image grids). They are less suitable when the structure itself must be learned from data, as structure learning remains an open challenge (Section 6.2.3).
 *   **Need for Probabilistic Outputs:** Unlike Structured SVMs which provide a decision boundary, CRFs provide well-calibrated probability distributions $p(\mathbf{y}|\mathbf{x})$, which is crucial for downstream tasks requiring confidence estimates or integration with other probabilistic systems.

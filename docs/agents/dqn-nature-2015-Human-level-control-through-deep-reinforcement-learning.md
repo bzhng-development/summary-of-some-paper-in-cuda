@@ -131,7 +131,7 @@ Where:
 *   $Q(s, a; \theta_i)$ is the predicted value from the current network.
 *   The expectation $\mathbb{E}$ is approximated by sampling a minibatch from the replay memory $D$.
 
-To further stabilize training, the authors apply **error clipping**. The error term $\delta = y_i - Q(s, a; \theta_i)$ is clipped to the range $[-1, 1]$. Specifically, the loss function behaves like a squared error loss when $|\delta| < 1$ and like an absolute value loss (linear) when $|\delta| \ge 1$. This corresponds to using the Huber loss, which reduces the influence of large outliers (large TD errors) that could otherwise cause massive gradient updates and destabilize the network.
+To further stabilize training, the authors apply **error clipping**. The error term $\delta = y_i - Q(s, a; \theta_i)$ is clipped to the range $[-1, 1]$. Specifically, the loss function behaves like a squared error loss when $|\delta| &lt; 1$ and like an absolute value loss (linear) when $|\delta| \ge 1$. This corresponds to using the Huber loss, which reduces the influence of large outliers (large TD errors) that could otherwise cause massive gradient updates and destabilize the network.
 
 The gradient of the loss with respect to the weights $\theta_i$ is:
 $$ \nabla_{\theta_i} L_i(\theta_i) = \mathbb{E}_{(s,a,r,s') \sim U(D)} \left[ \left( y_i - Q(s, a; \theta_i) \right) \nabla_{\theta_i} Q(s, a; \theta_i) \right] $$

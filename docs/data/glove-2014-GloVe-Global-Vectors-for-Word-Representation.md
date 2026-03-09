@@ -118,7 +118,7 @@ The choice of the weighting function $f(x)$ is a critical hyperparameter design 
 3.  **Saturation**: $f(x)$ must remain relatively small for very large $x$ to prevent extremely frequent pairs from overwhelming the objective function.
 
 The paper proposes a specific piecewise function parameterized by a cutoff $x_{max}$ and an exponent $\alpha$:
-$$ f(x) = \begin{cases} (x/x_{max})^\alpha & \text{if } x < x_{max} \\ 1 & \text{otherwise} \end{cases} $$
+$$ f(x) = \begin{cases} (x/x_{max})^\alpha & \text{if } x &lt; x_{max} \\ 1 & \text{otherwise} \end{cases} $$
 Based on empirical experiments, the authors fix **$x_{max} = 100$** and set **$\alpha = 3/4$**.
 *   **Why $\alpha = 3/4$?** A linear weighting ($\alpha=1$) was found to be slightly inferior. The fractional power $3/4$ provides a "dampening" effect that reduces the influence of very high counts without discarding them, similar to the sub-sampling techniques used in `skip-gram`.
 *   **Why $x_{max} = 100$?** This threshold ensures that once a word pair co-occurs more than 100 times, its weight caps at 1. This prevents common function words or domain-specific boilerplate from dominating the gradient updates, allowing the model to focus on the nuanced relationships found in moderately frequent pairs.
@@ -180,7 +180,7 @@ Standard matrix factorization often minimizes the squared error of the counts th
 
 **The Innovation:**
 The paper proposes a specific piecewise weighting function (**Eq. 9**) with parameters $x_{max}=100$ and $\alpha=3/4$.
-*   **Dynamic Scaling:** For rare pairs ($X_{ij} < 100$), the weight grows as $(X_{ij}/100)^{0.75}$. This gives them *some* influence but prevents them from destabilizing the model.
+*   **Dynamic Scaling:** For rare pairs ($X_{ij} &lt; 100$), the weight grows as $(X_{ij}/100)^{0.75}$. This gives them *some* influence but prevents them from destabilizing the model.
 *   **Saturation:** For frequent pairs ($X_{ij} \ge 100$), the weight caps at 1. This prevents the model from overfitting to common syntactic collocations (like "of the") at the expense of semantic nuance.
 
 **Evidence of Impact:**
@@ -234,7 +234,7 @@ Experiments were conducted on five corpora ranging from **1 billion** tokens (Wi
 *   **Vocabulary:** The 400,000 most frequent words (2 million for the largest corpus).
 *   **Context Window:** Symmetric window of **10 words** left and right, with distance weighting ($1/d$).
 *   **Hyperparameters:** Fixed cutoff $x_{max} = 100$ and exponent $\alpha = 3/4$ for the weighting function $f(x)$.
-*   **Optimization:** AdaGrad with an initial learning rate of **0.05**. Training ran for **50 iterations** (dimensions < 300) or **100 iterations** (dimensions $\ge$ 300).
+*   **Optimization:** AdaGrad with an initial learning rate of **0.05**. Training ran for **50 iterations** (dimensions &lt; 300) or **100 iterations** (dimensions $\ge$ 300).
 *   **Final Representation:** The sum of target and context vectors ($W + \tilde{W}$).
 
 ### 5.2 Quantitative Results: Word Analogies
@@ -343,7 +343,7 @@ The mathematical derivation of GloVe rests on specific statistical assumptions t
     *   *Risk:* In domains with different statistical properties (e.g., highly technical manuals, code, or social media with heavy repetition), if the distribution deviates significantly from this power law, the number of non-zero entries $|X|$ could approach $O(|V|^2)$, causing the model to become computationally intractable.
 *   **Symmetry Bias:** The model enforces symmetry via bias terms ($b_i, \tilde{b}_j$) under the assumption that the relationship "word $i$ predicts word $j$" is fundamentally the same as "word $j$ predicts word $i$" (**Section 3.4**).
     *   *Edge Case:* This ignores directional semantic relationships. For example, "symptom" predicts "disease," but "disease" does not uniquely predict a specific "symptom." By symmetrizing the objective, GloVe may blur these asymmetric causal or hierarchical links, potentially harming tasks that rely on directionality (e.g., hypernym detection).
-*   **Handling of Rare Events:** The weighting function $f(x)$ explicitly down-weights rare co-occurrences ($x < x_{max}$) to reduce noise (**Eq. 9**).
+*   **Handling of Rare Events:** The weighting function $f(x)$ explicitly down-weights rare co-occurrences ($x &lt; x_{max}$) to reduce noise (**Eq. 9**).
     *   *Weakness:* While this stabilizes training, it may inadvertently suppress meaningful but rare semantic connections (the "long tail" of language). In specialized domains (e.g., medical terminology), a rare co-occurrence might be the *only* signal for a specific concept, and dampening it could degrade performance for low-frequency terms.
 
 ### 6.4 Unaddressed Problem Settings

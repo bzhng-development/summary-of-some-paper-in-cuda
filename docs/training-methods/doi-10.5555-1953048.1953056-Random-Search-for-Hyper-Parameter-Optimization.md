@@ -87,7 +87,7 @@ A critical technical contribution of this paper is the method for estimating the
 *   Standard practice reports the test error of the single configuration $\lambda^{(s)}$ that achieved the lowest validation error; however, this ignores the uncertainty that a different configuration might be truly better if the validation set were larger.
 *   The authors model the true test score $z$ of the best model as a **Gaussian Mixture Model**, where each component corresponds to one of the $S$ trials performed.
 *   Let $\Psi^{(\text{valid})}(\lambda^{(s)})$ be the observed validation error and $V^{(\text{valid})}(\lambda^{(s)})$ be its estimated variance for trial $s$. The probability that trial $s$ is actually the best is denoted as weight $w_s$.
-    $$ w_s = P\left(Z^{(s)} < Z^{(s')}, \forall s' \neq s\right) $$
+    $$ w_s = P\left(Z^{(s)} &lt; Z^{(s')}, \forall s' \neq s\right) $$
     where $Z^{(i)} \sim \mathcal{N}\left(\Psi^{(\text{valid})}(\lambda^{(i)}), V^{(\text{valid})}(\lambda^{(i)})\right)$.
 *   These weights $w_s$ are estimated via simulation by repeatedly drawing hypothetical validation scores from the normal distributions defined by the observed means and variances, then counting how often each trial wins.
 *   The final estimated generalization performance $\mu_z$ is the weighted average of the test set scores $\mu_s = \Psi^{(\text{test})}(\lambda^{(s)})$:
@@ -309,7 +309,7 @@ Do these experiments convincingly support the paper's claims?
 
 **Limitations and Nuances:**
 1.  **Non-Adaptive Nature:** The experiments clearly show that random search is *not* a silver bullet for *all* problems. In the 32-dimensional DBN case, it lost to manual search on 3 datasets. The authors are honest about this: random search is a **baseline**, not the ultimate solution. It beats grid search, but it does not necessarily beat adaptive sequential methods.
-2.  **Computational Budget Sensitivity:** The superiority of random search is most pronounced when the budget is limited (e.g., < 100 trials). If one had infinite compute, a sufficiently fine grid would eventually cover the space. The argument is strictly about **efficiency per trial**.
+2.  **Computational Budget Sensitivity:** The superiority of random search is most pronounced when the budget is limited (e.g., &lt; 100 trials). If one had infinite compute, a sufficiently fine grid would eventually cover the space. The argument is strictly about **efficiency per trial**.
 3.  **Preprocessing Overhead:** In Figure 6, random search required more trials (32 vs 8) to beat the baseline when the search space was expanded to include preprocessing. This highlights that expanding the search space with random search has a cost; it is not free. However, the eventual payoff (finding better models) justified the cost.
 
 ### 5.6 Conclusion on Experimental Evidence
@@ -367,7 +367,7 @@ The paper highlights a subtle but critical limitation in how we evaluate *any* h
 
 *   **The Issue:** In **Section 2.1**, the authors introduce a Gaussian Mixture Model to estimate performance because the "best" model selected by validation error is often a statistical artifact.
 *   **Evidence:** The **Random Experiment Efficiency Curves** (e.g., **Figure 2**) show a "gentle downward slope" in the upper bound of performance as experiment size increases. This indicates that small experiments often report inflated performance due to "lucky" trials that overfit the validation set.
-*   **Limitation:** This implies that the reported "wins" for random search (or any method) in small-budget regimes (e.g., < 16 trials) come with **high variance**. The method is reliable in expectation, but any *single* run of random search with a small budget carries a significant risk of yielding a sub-optimal model purely due to bad luck in sampling. The method reduces the *probability* of failure compared to grid search, but it does not eliminate the stochastic risk inherent in finite sampling.
+*   **Limitation:** This implies that the reported "wins" for random search (or any method) in small-budget regimes (e.g., &lt; 16 trials) come with **high variance**. The method is reliable in expectation, but any *single* run of random search with a small budget carries a significant risk of yielding a sub-optimal model purely due to bad luck in sampling. The method reduces the *probability* of failure compared to grid search, but it does not eliminate the stochastic risk inherent in finite sampling.
 
 ### 6.6 Summary of Trade-offs
 

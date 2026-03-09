@@ -71,12 +71,12 @@ The fundamental operation of Pegasos is a stochastic sub-gradient descent step p
 *   **Objective Function Definition:** The algorithm seeks to minimize the function $f(w) = \frac{\lambda}{2} \|w\|^2 + \frac{1}{m} \sum_{(x,y) \in S} \ell(w; (x, y))$, where the first term penalizes large weights (regularization) and the second term averages the hinge loss $\ell(w; (x, y)) = \max\{0, 1 - y \langle w, x \rangle\}$ over the training set.
 *   **Instantaneous Objective Approximation:** Instead of computing the gradient over all $m$ examples, at iteration $t$, Pegasos selects a single random index $i_t$ and constructs an "instantaneous" objective $f(w; i_t) = \frac{\lambda}{2} \|w\|^2 + \ell(w; (x_{i_t}, y_{i_t}))$.
 *   **Sub-Gradient Calculation:** Because the hinge loss is not differentiable at the point where $y \langle w, x \rangle = 1$, the algorithm computes a *sub-gradient*, which is a generalization of the gradient for non-smooth convex functions.
-    *   The sub-gradient $\nabla_t$ at the current weight vector $w_t$ is defined as $\nabla_t = \lambda w_t - \mathbb{I}[y_{i_t} \langle w_t, x_{i_t} \rangle < 1] y_{i_t} x_{i_t}$.
+    *   The sub-gradient $\nabla_t$ at the current weight vector $w_t$ is defined as $\nabla_t = \lambda w_t - \mathbb{I}[y_{i_t} \langle w_t, x_{i_t} \rangle &lt; 1] y_{i_t} x_{i_t}$.
     *   Here, $\mathbb{I}[\cdot]$ is an indicator function that equals 1 if the condition is true (meaning the example incurs a loss) and 0 otherwise.
     *   If the example is correctly classified with a margin greater than 1, the loss component vanishes, and the sub-gradient consists solely of the regularization term $\lambda w_t$.
 *   **The Update Rule:** The weight vector is updated by moving in the negative direction of this sub-gradient scaled by a step size $\eta_t$.
     *   The raw update is $w_{t+1} \leftarrow w_t - \eta_t \nabla_t$.
-    *   Substituting the definition of $\nabla_t$ and rearranging terms yields the computationally efficient form: $w_{t+1} \leftarrow (1 - \eta_t \lambda) w_t + \eta_t \mathbb{I}[y_{i_t} \langle w_t, x_{i_t} \rangle < 1] y_{i_t} x_{i_t}$.
+    *   Substituting the definition of $\nabla_t$ and rearranging terms yields the computationally efficient form: $w_{t+1} \leftarrow (1 - \eta_t \lambda) w_t + \eta_t \mathbb{I}[y_{i_t} \langle w_t, x_{i_t} \rangle &lt; 1] y_{i_t} x_{i_t}$.
     *   This equation reveals two distinct mechanisms: a **shrinkage step** $(1 - \eta_t \lambda) w_t$ that reduces the magnitude of the weights to satisfy regularization, and an **additive step** that corrects the weights only if the current example violates the margin.
 
 #### Critical Design Choice: The Step Size Schedule
@@ -93,7 +93,7 @@ While the basic algorithm processes one example at a time, the framework natural
 *   **Modified Objective:** The instantaneous objective becomes the average loss over this batch: $f(w; A_t) = \frac{\lambda}{2} \|w\|^2 + \frac{1}{k} \sum_{i \in A_t} \ell(w; (x_i, y_i))$.
 *   **Update Adjustment:** The sub-gradient is averaged over the $k$ examples, and the update rule becomes:
     $$ w_{t+1} \leftarrow (1 - \eta_t \lambda) w_t + \frac{\eta_t}{k} \sum_{i \in A_t^+} y_i x_i $$
-    where $A_t^+$ is the subset of examples in the batch that currently incur a loss (i.e., $y_i \langle w_t, x_i \rangle < 1$).
+    where $A_t^+$ is the subset of examples in the batch that currently incur a loss (i.e., $y_i \langle w_t, x_i \rangle &lt; 1$).
 *   **Trade-off:** Theoretically, increasing $k$ increases the cost per iteration linearly without improving the convergence rate in terms of total operations. However, empirically (Section 7.4), moderate batch sizes allow for parallel computation of the sum, reducing wall-clock time while maintaining similar convergence properties.
 
 #### Optional Projection Step
@@ -312,7 +312,7 @@ The most significant theoretical and practical limitation of Pegasos is its sens
 ### 6.2 The Kernel Bottleneck: Re-introducing Dependence on $m$
 A central claim of the paper is that Pegasos achieves runtime independent of the training set size $m$. However, this guarantee **strictly holds only for linear kernels**. When extending to non-linear kernels, the algorithm faces a fundamental computational bottleneck that erodes this advantage.
 
-*   **The Cost of Implicit Representation:** As described in Section 4, kernelized Pegasos maintains the weight vector $w$ implicitly as a linear combination of support vectors: $w_t = \sum \alpha_i y_i \phi(x_i)$. To check the margin condition $y \langle w, \phi(x) \rangle < 1$ for a new example, the algorithm must compute a kernel sum over all non-zero coefficients accumulated so far.
+*   **The Cost of Implicit Representation:** As described in Section 4, kernelized Pegasos maintains the weight vector $w$ implicitly as a linear combination of support vectors: $w_t = \sum \alpha_i y_i \phi(x_i)$. To check the margin condition $y \langle w, \phi(x) \rangle &lt; 1$ for a new example, the algorithm must compute a kernel sum over all non-zero coefficients accumulated so far.
 *   **Scaling Consequence:** While the *number of iterations* remains independent of $m$, the *cost per iteration* grows linearly with the number of updates performed (up to $m$). Consequently, the total runtime for the kernelized version becomes $\tilde{O}(m/(\lambda\epsilon))$. The variable $m$ re-enters the complexity bound, nullifying the primary scalability benefit seen in the linear case.
 *   **Performance Gap:** The experimental results in Section 7.2 confirm this limitation. On datasets like **MNIST** and **USPS** using Gaussian kernels, Pegasos is significantly slower than specialized solvers like **LASVM** and **SVM-Light**.
     *   On MNIST, Pegasos requires **4,200 seconds** to reach the target accuracy, whereas LASVM requires only **280 seconds** (Table 2).
@@ -403,7 +403,7 @@ For practitioners and researchers looking to implement or integrate Pegasos, the
 | **Hyperparameter Tuning** | **Prefer Pegasos** | Fast training allows rapid exploration of the $\lambda$ space. |
 | **Non-Linear Kernel, Moderate Accuracy** | **Consider Pegasos** | If implementation simplicity is paramount and ~1-2% test error is acceptable, kernelized Pegasos is easy to code. |
 | **Non-Linear Kernel, High Precision** | **Avoid Pegasos** | Use **LASVM** or **LIBSVM**. Pegasos converges too slowly near the optimum and kernel evaluation costs scale with $m$. |
-| **Very Small Regularization** ($\lambda < 10^{-6}$) | **Avoid Pegasos** | Convergence degrades as $1/\lambda$. Prefer **SDCA** or batch solvers which are more robust to small $\lambda$. |
+| **Very Small Regularization** ($\lambda &lt; 10^{-6}$) | **Avoid Pegasos** | Convergence degrades as $1/\lambda$. Prefer **SDCA** or batch solvers which are more robust to small $\lambda$. |
 | **Unregularized Bias Required** | **Use with Caution** | If an unregularized bias $b$ is critical, use the outer-loop binary search approach (Section 6) or accept the $O(1/\sqrt{T})$ convergence penalty. |
 
 #### Implementation Best Practices

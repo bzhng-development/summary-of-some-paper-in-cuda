@@ -259,7 +259,7 @@ Despite the data being generated specifically to favor the Bayesian assumption, 
     *   **Proposed Method ($\mu=0.1$):** RMSE **0.46**, Hit Error **13.19%**.
     *   **Hierarchical Bayes:** RMSE **0.48**, Hit Error **13.42%**.
     *   **Single-Task SVM:** RMSE **0.68**, Hit Error **17.11%**.
-    *   *Analysis:* The proposed method reduces RMSE by ~4% relative to HB and ~32% relative to single-task learning. The statistical significance markers ($*$) indicate the proposed method is significantly better than HB at $p < 0.10$.
+    *   *Analysis:* The proposed method reduces RMSE by ~4% relative to HB and ~32% relative to single-task learning. The statistical significance markers ($*$) indicate the proposed method is significantly better than HB at $p &lt; 0.10$.
 *   **Low Similarity / Low Noise:** When tasks are distinct, sharing information is risky.
     *   **Proposed Method:** RMSE **0.58** (statistically indistinguishable from HB's 0.60).
     *   **Single-Task SVM:** RMSE **0.65**.
@@ -432,7 +432,7 @@ The deterministic nature and SVM compatibility of this method make it immediatel
 For practitioners considering this approach today, the following guidelines clarify when and how to deploy it relative to modern alternatives.
 
 #### When to Prefer This Method
-*   **Data Regime:** Ideal for **small-to-medium datasets** (total samples $N < 50,000$) where kernel matrices fit in memory. It excels when the number of tasks $T$ is moderate (10 to 500) and data per task is very limited ($m < 100$).
+*   **Data Regime:** Ideal for **small-to-medium datasets** (total samples $N &lt; 50,000$) where kernel matrices fit in memory. It excels when the number of tasks $T$ is moderate (10 to 500) and data per task is very limited ($m &lt; 100$).
 *   **Task Homogeneity:** Best suited for tasks that are **symmetrically related** and likely share a common underlying mechanism (the "mean-field" assumption). If tasks are known to be disjoint clusters, consider clustering first.
 *   **Interpretability Requirements:** Unlike deep neural networks, this method yields explicit weight vectors $w_t$. If stakeholders need to understand *why* a prediction was made (e.g., "which features drive preference for this consumer?"), the linear version of this model offers superior interpretability.
 *   **Computational Constraints:** Preferable when GPU resources are unavailable. The method relies on CPU-based quadratic programming, which is well-supported in standard libraries (e.g., LIBSVM, scikit-learn) without needing deep learning frameworks.
@@ -443,7 +443,7 @@ For practitioners considering this approach today, the following guidelines clar
 2.  **Hyperparameter Tuning:**
     *   Tune $C$ (slack penalty) and $\mu$ (task coupling) jointly via cross-validation.
     *   **Search Range for $\mu$:** Start with a logarithmic grid (e.g., $\mu \in \{10^{-2}, 10^{-1}, \dots, 10^4\}$).
-    *   **Heuristic:** If the optimal $\mu$ is very large ($> 1000$), the tasks are likely unrelated, and you should revert to single-task learning. If $\mu$ is very small ($< 0.01$), the tasks are nearly identical, and a single pooled model suffices.
+    *   **Heuristic:** If the optimal $\mu$ is very large ($> 1000$), the tasks are likely unrelated, and you should revert to single-task learning. If $\mu$ is very small ($&lt; 0.01$), the tasks are nearly identical, and a single pooled model suffices.
 3.  **Baseline Comparison:** Always compare against:
     *   **Independent Models:** Train one model per task.
     *   **Pooled Model:** Train one model on all data.

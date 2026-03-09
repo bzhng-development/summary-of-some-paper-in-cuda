@@ -92,7 +92,7 @@ The core mechanism proposed is a direct adaptation of the Littlestone and Warmut
 *   The algorithm initializes all weights equally, typically setting $w_i^1 = 1$ for all $i$, implying no prior bias toward any option.
 *   At each step $t$, after observing the loss vector $\boldsymbol{\ell}^t$, the algorithm updates the weight of each option $i$ using the multiplicative rule:
     $$w_i^{t+1} = w_i^t \cdot \beta^{\ell_i^t}$$
-*   Here, $\beta$ is a **learning rate parameter** (or discount factor) such that $0 \le \beta < 1$.
+*   Here, $\beta$ is a **learning rate parameter** (or discount factor) such that $0 \le \beta &lt; 1$.
 *   The term $\beta^{\ell_i^t}$ acts as a penalty factor: if an option incurs a high loss $\ell_i^t$, the exponent is large, causing $\beta^{\ell_i^t}$ to become very small, which drastically reduces the weight $w_i^{t+1}$.
 *   Conversely, if an option incurs zero loss ($\ell_i^t = 0$), the update factor is $\beta^0 = 1$, and the weight remains unchanged.
 *   This design choice is critical: it ensures that weights never become negative and that the relative ranking of options changes smoothly based on the magnitude of their errors, not just their correctness.
@@ -125,7 +125,7 @@ The most significant application presented is the derivation of a new boosting a
 *   The paper shows that by setting $\beta$ (or equivalently $\alpha_t$) optimally for each round based on $\epsilon_t$, the algorithm automatically focuses on the "hard" examples (those misclassified by the current weak hypothesis) without needing to know $\epsilon_t$ in advance.
 *   This leads to the construction of the final strong hypothesis $H(x)$ as a weighted majority vote of the weak hypotheses:
     $$H(x) = \text{sign}\left( \sum_{t=1}^T \alpha_t h_t(x) \right)$$
-*   The theoretical bound derived from the general framework proves that the training error of $H(x)$ drops exponentially fast as the number of rounds $T$ increases, provided each weak learner performs slightly better than random guessing ($\epsilon_t < 0.5$).
+*   The theoretical bound derived from the general framework proves that the training error of $H(x)$ drops exponentially fast as the number of rounds $T$ increases, provided each weak learner performs slightly better than random guessing ($\epsilon_t &lt; 0.5$).
 *   This specific instantiation removes the "prior knowledge" bottleneck mentioned in the Motivation, as the algorithm self-tunes $\alpha_t$ at every step based on the immediate feedback from the weak learner.
 
 #### Extensions to Continuous Domains and Games
@@ -328,7 +328,7 @@ Based strictly on the provided text, several questions remain unanswered for the
 *   **How to handle unbounded losses rigorously?** The paper suggests applicability to gambling (unbounded returns) but does not detail the transformation required to fit the $[0,1]$ loss bound.
 *   **What if $T$ is infinite?** No strategy is offered for setting $\beta$ without a known time horizon.
 *   **Can we scale beyond explicit enumeration?** There is no discussion of handling $N$ when it is too large to store in memory.
-*   **What happens if the weak learner fails?** The boosting derivation assumes perpetual success ($\epsilon_t < 0.5$); the behavior under violation of this condition is not characterized.
+*   **What happens if the weak learner fails?** The boosting derivation assumes perpetual success ($\epsilon_t &lt; 0.5$); the behavior under violation of this condition is not characterized.
 
 These limitations do not invalidate the paper's contributions; rather, they define the boundary conditions within which the **Generalized Weighted Majority** and **AdaBoost** algorithms operate optimally. They highlight that while the *theory* is universal, the *application* requires careful engineering to match the problem constraints to the algorithm's assumptions.
 

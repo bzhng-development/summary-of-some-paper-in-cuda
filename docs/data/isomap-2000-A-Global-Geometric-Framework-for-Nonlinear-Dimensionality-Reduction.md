@@ -368,7 +368,7 @@ For practitioners considering Isomap, the following guidelines distill the paper
 *   **When to Prefer Isomap:**
     *   Use Isomap when you have strong reason to believe the data lies on a **nonlinear manifold** (e.g., images of rotating objects, articulated bodies) and linear methods (PCA) fail to separate known factors of variation.
     *   Choose Isomap when **global consistency** is required. If your application needs a single coordinate system where distance reflects similarity across the entire dataset (unlike local clustering methods), Isomap is superior.
-    *   It is ideal for datasets of **moderate size** ($N < 5,000$) where the $O(N^3)$ cost is acceptable, or when sparse approximations are available.
+    *   It is ideal for datasets of **moderate size** ($N &lt; 5,000$) where the $O(N^3)$ cost is acceptable, or when sparse approximations are available.
 
 *   **Critical Implementation Steps:**
     1.  **Metric Selection:** Do not default to Euclidean distance if domain knowledge suggests otherwise. As shown with the MNIST digits, using a specialized metric like **tangent distance** can be crucial for capturing the correct local geometry.

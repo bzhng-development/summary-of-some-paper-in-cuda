@@ -1,6 +1,6 @@
 ## 1. Executive Summary
 
-This paper resolves the exploration-exploitation dilemma in the multi-armed bandit problem by introducing simple, computationally efficient policies—specifically `UCB1`, `UCB2`, and `UCB1-NORMAL`—that achieve optimal logarithmic regret uniformly over time rather than only asymptotically. Unlike prior work by Lai and Robbins (1985) which required complex indices or offered guarantees only as $n \to \infty$, the authors prove that `UCB1` bounds expected regret by $8 \sum_{i:\mu_i < \mu^*} (\ln n) / \Delta_i$ plus a small constant for any reward distribution with support in $[0, 1]$. This result is significant because it provides the first finite-time theoretical guarantees for bandit algorithms that are both easy to implement and robust across arbitrary bounded distributions without requiring prior knowledge of reward parameters.
+This paper resolves the exploration-exploitation dilemma in the multi-armed bandit problem by introducing simple, computationally efficient policies—specifically `UCB1`, `UCB2`, and `UCB1-NORMAL`—that achieve optimal logarithmic regret uniformly over time rather than only asymptotically. Unlike prior work by Lai and Robbins (1985) which required complex indices or offered guarantees only as $n \to \infty$, the authors prove that `UCB1` bounds expected regret by $8 \sum_{i:\mu_i &lt; \mu^*} (\ln n) / \Delta_i$ plus a small constant for any reward distribution with support in $[0, 1]$. This result is significant because it provides the first finite-time theoretical guarantees for bandit algorithms that are both easy to implement and robust across arbitrary bounded distributions without requiring prior knowledge of reward parameters.
 
 ## 2. Context and Motivation
 
@@ -88,7 +88,7 @@ The `UCB1` policy operates on the principle that the true expected reward of an 
 #### Refining the Constant: The UCB2 Policy
 The `UCB2` policy is designed to improve the leading constant of the regret bound, bringing it arbitrarily close to the theoretical optimum, at the cost of increased algorithmic complexity.
 *   Unlike `UCB1`, which selects an arm for a single play, `UCB2` operates in **epochs**, where an selected arm is played for a consecutive block of times determined by an exponential function.
-*   The policy introduces a hyperparameter $\alpha$ where $0 < \alpha < 1$, which controls the growth rate of the epoch lengths.
+*   The policy introduces a hyperparameter $\alpha$ where $0 &lt; \alpha &lt; 1$, which controls the growth rate of the epoch lengths.
 *   Let $r_i$ be the number of epochs arm $i$ has been played so far; the length of the next epoch for arm $i$ is determined by the function $\tau(r) = \lceil (1+\alpha)^r \rceil$.
 *   Specifically, if arm $i$ is selected at the start of a new epoch, it is played $\tau(r_i + 1) - \tau(r_i)$ times consecutively before the policy re-evaluates which arm to pick.
 *   The index used to select the arm for the next epoch is modified to account for the batch size:
@@ -96,7 +96,7 @@ The `UCB2` policy is designed to improve the leading constant of the regret boun
     where $n$ is the current total number of plays and $\tau(r_i)$ approximates the number of times arm $i$ has been played.
 *   By grouping plays into exponentially growing epochs, `UCB2` reduces the frequency of switching arms, which tightens the statistical bounds and allows the leading constant of the regret to approach $1/(2\Delta_i^2)$ as $\alpha \to 0$.
 *   **Theorem 2** states that for sufficiently large $n$, the regret bound for `UCB2` is:
-    $$ \sum_{i: \mu_i < \mu^*} \left( \frac{(1+\alpha)(1+4\alpha) \ln(2e \Delta_i^2 n)}{\Delta_i^2} + \frac{c_\alpha}{\Delta_i} \right) $$
+    $$ \sum_{i: \mu_i &lt; \mu^*} \left( \frac{(1+\alpha)(1+4\alpha) \ln(2e \Delta_i^2 n)}{\Delta_i^2} + \frac{c_\alpha}{\Delta_i} \right) $$
     where $c_\alpha$ is a constant that diverges to infinity as $\alpha \to 0$.
 *   This reveals a critical trade-off: choosing a very small $\alpha$ improves the coefficient of the $\ln n$ term (the long-term slope) but increases the additive constant $c_\alpha$ (the short-term overhead), meaning $\alpha$ must be tuned carefully or decreased slowly over time to optimize performance.
 
@@ -291,7 +291,7 @@ A significant, somewhat ironic limitation revealed in **Section 4** is that the 
 
 The usability of the proposed policies varies drastically regarding their dependency on prior knowledge of the problem structure.
 
-*   **The Fragility of `$\epsilon_n$-GREEDY`:** While **Theorem 3** proves logarithmic regret for `$\epsilon_n$-GREEDY`, the proof requires a parameter $d$ such that $d \leq \min_{i: \mu_i < \mu^*} \Delta_i$. In other words, the user must know a lower bound on the gap between the best and second-best arm *before* running the algorithm.
+*   **The Fragility of `$\epsilon_n$-GREEDY`:** While **Theorem 3** proves logarithmic regret for `$\epsilon_n$-GREEDY`, the proof requires a parameter $d$ such that $d \leq \min_{i: \mu_i &lt; \mu^*} \Delta_i$. In other words, the user must know a lower bound on the gap between the best and second-best arm *before* running the algorithm.
     *   **Evidence of Failure:** In **Section 4.1**, the authors admit that "there is no value [of $c$] that works reasonably well for all the distributions." Furthermore, the experiments set $d$ to the *true* gap $\Delta$, an "oracle" setting impossible in real applications. If a user overestimates $d$ (setting it larger than the true gap), the exploration rate decays too quickly, leading to the **linear regret** curves visible in **Figures 7 and 10**. This makes `$\epsilon_n$-GREEDY` theoretically sound but practically brittle.
 *   **The Complexity of `UCB2`:** `UCB2` improves the leading constant of the regret bound (approaching optimality) by introducing a parameter $\alpha$. **Theorem 2** highlights a trade-off: as $\alpha \to 0$, the logarithmic coefficient improves, but the additive constant $c_\alpha \to \infty$.
     *   **Practical Implication:** While **Figure 5** shows `UCB2` is relatively insensitive to small $\alpha$, choosing the "optimal" $\alpha$ requires knowing the time horizon $n$ in advance to balance the slope and intercept of the regret curve. If the horizon is unknown or infinite, tuning $\alpha$ becomes a guessing game.

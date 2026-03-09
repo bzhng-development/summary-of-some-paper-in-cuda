@@ -114,7 +114,7 @@ The objective of t-SNE is to find a configuration of map points $Y$ such that th
     $$\frac{\delta C}{\delta y_i} = 4 \sum_j (p_{ij} - q_{ij})(1 + \|y_i - y_j\|^2)^{-1} (y_i - y_j)$$
 *   This gradient can be interpreted as the sum of forces exerted by springs connecting every pair of points $y_i$ and $y_j$.
 *   The term $(p_{ij} - q_{ij})$ acts as the **spring stiffness**: if $p_{ij} > q_{ij}$ (points are too far apart in the map relative to their high-D similarity), the force is positive (attractive), pulling them together.
-*   Conversely, if $p_{ij} < q_{ij}$ (points are too close in the map relative to their high-D dissimilarity), the force is negative (repulsive), pushing them apart.
+*   Conversely, if $p_{ij} &lt; q_{ij}$ (points are too close in the map relative to their high-D dissimilarity), the force is negative (repulsive), pushing them apart.
 *   Crucially, the term $(1 + \|y_i - y_j\|^2)^{-1}$ modulates the magnitude of these forces based on distance; for dissimilar points ($p_{ij} \approx 0$) that are mistakenly placed close together, this term ensures a strong repulsive force that prevents them from staying clustered.
 *   In contrast to standard SNE, where repulsive forces vanish quickly for distant points, the t-SNE gradient maintains significant repulsion for dissimilar points, effectively creating "long-range forces" that push clusters apart to reveal global structure.
 
@@ -126,7 +126,7 @@ Since the cost function is non-convex, the solution depends heavily on the optim
     where $\eta$ is the learning rate and $\alpha(t)$ is the momentum coefficient.
 *   The paper specifies a precise schedule for these hyperparameters to ensure convergence to a good local optimum:
     *   **Iterations ($T$):** The total number of gradient descent steps is set to **1000**.
-    *   **Momentum ($\alpha$):** The momentum is set to **0.5** for the first 250 iterations ($t < 250$) and increased to **0.8** for the remaining iterations ($t \geq 250$) to accelerate convergence once the structure begins to form.
+    *   **Momentum ($\alpha$):** The momentum is set to **0.5** for the first 250 iterations ($t &lt; 250$) and increased to **0.8** for the remaining iterations ($t \geq 250$) to accelerate convergence once the structure begins to form.
     *   **Learning Rate ($\eta$):** The initial learning rate is set to **100**, and it is updated dynamically at every iteration using an adaptive scheme (Jacobs, 1988) that increases the rate in directions where the gradient is stable.
 *   Two specific "tricks" are employed to improve the quality of the final map, neither of which changes the cost function itself but alters the optimization trajectory:
     1.  **Early Exaggeration:** For the first **50 iterations**, all joint probabilities $p_{ij}$ in the high-dimensional space are multiplied by a factor of **4**. This artificially inflates the attractive forces between similar points, causing natural clusters to form tight, widely separated groups early in the optimization. This creates empty space in the map, allowing clusters to move freely relative to one another to find a better global arrangement before the exaggeration is removed.

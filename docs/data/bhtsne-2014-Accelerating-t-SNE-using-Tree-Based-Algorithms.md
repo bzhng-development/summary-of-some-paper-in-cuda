@@ -95,7 +95,7 @@ Constructing this tree takes $O(N \log N)$ time (or $O(N)$ with careful implemen
 The algorithm approximates the repulsive force on a point $y_i$ by traversing the quadtree starting from the root. At each node, it evaluates the **Barnes-Hut opening condition** to decide whether to treat the node as a summary or to recurse into its children. The condition compares the size of the cell to its distance from the target point:
 
 $$
-\frac{r_{\text{cell}}}{\|y_i - y_{\text{cell}}\|^2} < \theta
+\frac{r_{\text{cell}}}{\|y_i - y_{\text{cell}}\|^2} &lt; \theta
 $$
 
 Here, $r_{\text{cell}}$ is the width (or diagonal length) of the cell, $\|y_i - y_{\text{cell}}\|$ is the distance between the target point and the cell's center of mass, and $\theta$ is a user-defined threshold controlling the trade-off between speed and accuracy.
@@ -110,7 +110,7 @@ The **dual-tree algorithm** attempts to improve upon Barnes-Hut by summarizing i
 For every pair of nodes (one from Tree A, one from Tree B), the algorithm checks a dual-tree opening condition:
 
 $$
-\frac{\max(r_{\text{cell-A}}, r_{\text{cell-B}})}{\|y_{\text{cell-A}} - y_{\text{cell-B}}\|^2} < \theta
+\frac{\max(r_{\text{cell-A}}, r_{\text{cell-B}})}{\|y_{\text{cell-A}} - y_{\text{cell-B}}\|^2} &lt; \theta
 $$
 
 If this condition is satisfied, the interaction between the two cells is deemed uniform enough to be summarized. The algorithm computes a single force vector based on the centers of mass $y_{\text{cell-A}}$ and $y_{\text{cell-B}}$. This force is then distributed to the points within the cells:

@@ -218,7 +218,7 @@ These are critical for privacy amplification. The metrics are entropy $k$, seed 
 *   **This Work (Theorem 1.10):**
     *   Entropy: $k \ge C \log(d/\epsilon)$.
     *   Seed Length: $d = C \log(n/\epsilon)$.
-    *   Error: Achieves $\epsilon$ for any $0 < \epsilon < 1$ with linear output length $(1-\gamma)k/2$.
+    *   Error: Achieves $\epsilon$ for any $0 &lt; \epsilon &lt; 1$ with linear output length $(1-\gamma)k/2$.
 *   **Comparison:** For exponentially small error $\epsilon = 2^{-\Omega(n)}$, prior works required entropy growing faster than $\log n$ (often involving iterated logs). This work achieves **$k = O(\log n)$** and **$d = O(\log n)$** simultaneously, matching the existential bounds up to constants.
 
 #### C. Non-Malleable Codes (Split-State and Affine)

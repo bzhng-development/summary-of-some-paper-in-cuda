@@ -95,7 +95,7 @@ Once the graph is constructed, the learning problem is framed as finding a label
 *   Mathematically, a function is harmonic at an unlabeled node $i$ if its value is exactly the weighted average of its neighbors' values:
     $$f(i) = \frac{\sum_{j} w_{ij} f(j)}{\sum_{j} w_{ij}}$$
 *   This equation implies that information propagates from the labeled "boundary" nodes into the unlabeled "interior" nodes until an equilibrium is reached where no node can reduce the global energy by changing its value.
-*   A crucial theoretical result cited from Doyle & Snell (1984) is the **maximum principle** for harmonic functions, which guarantees that the solution $f$ is unique and that the value at any unlabeled node lies strictly between the minimum and maximum values of the labeled nodes (i.e., $-1 < f(i) < 1$ for unlabeled $i$).
+*   A crucial theoretical result cited from Doyle & Snell (1984) is the **maximum principle** for harmonic functions, which guarantees that the solution $f$ is unique and that the value at any unlabeled node lies strictly between the minimum and maximum values of the labeled nodes (i.e., $-1 &lt; f(i) &lt; 1$ for unlabeled $i$).
 
 #### Closed-Form Matrix Solution
 While the harmonic property provides an intuitive iterative update rule, the paper emphasizes that the solution can be computed directly and efficiently using linear algebra, avoiding the slow convergence of iterative methods.
@@ -181,7 +181,7 @@ A crucial practical insight is the recognition that the graph structure derived 
 *   **The Innovation:** The paper proposes **Class Mass Normalization (CMN)** (Section 4), a post-processing mechanism that rescales the decision boundary to enforce known or estimated class priors. Unlike simple threshold adjustment, CMN explicitly normalizes the total "mass" (sum of scores) of the predicted classes to match the prior probabilities $\pi_+$ and $\pi_-$.
 *   **Why It Matters:**
     *   **Correcting Geometric Bias:** In datasets where one class is more compact or dense than the other (e.g., digit "1" vs. "2" in Figure 3), the raw harmonic solution tends to over-predict the denser class because random walks are more likely to hit those nodes. The "thresh" baseline fails spectacularly here.
-    *   **Performance Gain:** As demonstrated in **Figure 3** (left and middle), CMN provides a massive accuracy boost over the raw threshold rule, particularly when labeled data is scarce ($l < 20$). It effectively acts as a regularizer against poor manifold estimation.
+    *   **Performance Gain:** As demonstrated in **Figure 3** (left and middle), CMN provides a massive accuracy boost over the raw threshold rule, particularly when labeled data is scarce ($l &lt; 20$). It effectively acts as a regularizer against poor manifold estimation.
 *   **Significance:** This is a **critical capability** for real-world deployment. It acknowledges that the "manifold assumption" is an approximation and provides a mathematically principled way to inject global statistical knowledge (priors) to correct local geometric errors.
 
 ### 4.4 Unsupervised Feature Selection via Entropy Minimization
@@ -251,7 +251,7 @@ In the binary digit task, the raw manifold structure derived from pixel-wise Euc
 **Multi-Class Digit Classification ("0"–"9"):**
 The advantage of CMN persists in the 10-way classification task with unbalanced classes (**Figure 3, middle**).
 *   Here, the class priors are estimated from the labeled set using Laplace smoothing.
-*   The gap between `thresh` and `CMN` is consistent: `CMN` maintains a lead of roughly **10–15 percentage points** over the raw threshold method when labeled data is scarce ($l < 40$).
+*   The gap between `thresh` and `CMN` is consistent: `CMN` maintains a lead of roughly **10–15 percentage points** over the raw threshold method when labeled data is scarce ($l &lt; 40$).
 *   Both graph-based methods (`CMN` and `thresh`) generally outperform the supervised baselines (1NN and RBF) in the low-label regime, confirming the value of the unlabeled data structure.
 
 **Text Classification:**
@@ -428,7 +428,7 @@ For practitioners considering this approach, the decision to use Gaussian Fields
 *   **Low-Label Regime:** You have very few labeled examples ($&lt;50$) but thousands of unlabeled points. Supervised methods (SVM, Perceptron) will overfit; this method leverages the unlabeled structure.
 *   **Strong Manifold Structure:** Your data lies on a clear manifold where "nearby" points are semantically similar (e.g., images, sensor readings, linked documents).
 *   **Known Class Priors:** You have reliable estimates of class balance (e.g., "fraud is always &lt;1% of transactions"). The **Class Mass Normalization (CMN)** step is critical here; without it, the method may fail on imbalanced data.
-*   **Moderate Scale:** The number of unlabeled points $u$ is manageable for $O(u^3)$ operations (typically $u < 5,000$ for standard hardware) or you have access to sparse linear solvers.
+*   **Moderate Scale:** The number of unlabeled points $u$ is manageable for $O(u^3)$ operations (typically $u &lt; 5,000$ for standard hardware) or you have access to sparse linear solvers.
 
 **When to Avoid or Adapt:**
 *   **Massive Datasets:** If $u > 100,000$, direct matrix inversion is infeasible. You must adopt sparse approximations (e.g., $k$-NN graphs with sparse solvers) or switch to scalable alternatives like Label Propagation with early stopping or deep semi-supervised methods.

@@ -2,7 +2,7 @@
 
 Visit the site directly.
 
-https://summary-of-some-paper-in-cuda.readthedocs.io/en/latest/llm-systems/2512.02556-DeepSeek-V3.2-PushingtheFrontierofOpenLargeLanguageModels/?h=2512#342-deepseek-sparse-attention-dsa-what-it-is-and-how-it-works
+[https://summary-of-some-paper-in-cuda.readthedocs.io/en/latest/llm-systems/2512.02556-DeepSeek-V3.2-PushingtheFrontierofOpenLargeLanguageModels/?h=2512#342-deepseek-sparse-attention-dsa-what-it-is-and-how-it-works](https://summary-of-some-paper-in-cuda.readthedocs.io/en/latest/architecture/2512.02556-DeepSeek-V3.2-Pushing-the-Frontier-of-Open-Large-Language-Models/)
 
 ## Preview:
 <img width="2946" height="1592" alt="CleanShot 2026-01-20 at 11 59 25@2x" src="https://github.com/user-attachments/assets/7e352c41-ce56-43e9-b283-21e225663ea6" />

@@ -1,6 +1,6 @@
 # Agents
 
-42 paper summaries in this category.
+46 paper summaries in this category.
 
 - [A Survey of Self-Evolving Agents: What, When, How, and Where to Evolve on the Path to Artificial Super Intelligence](2507.21046-A-Survey-of-Self-Evolving-Agents-What-When-How-and-Where-to-Evolve-on-the-Path-t.md)
 - [AGENTIC REINFORCED POLICY OPTIMIZATION](2507.19849-AGENTIC-REINFORCED-POLICY-OPTIMIZATION.md)
@@ -16,9 +16,12 @@
 - [Decoding ML Decision: An Agentic Reasoning Framework for Large-Scale Ranking System](2602.18640-Decoding-ML-Decision-An-Agentic-Reasoning-Framework-for-Large-Scale-Ranking-Syst.md)
 - [Deep Research: A Systematic Survey](2512.02038-Deep-Research-A-Systematic-Survey.md)
 - [Do As I Can, Not As I Say: Grounding Language in Robotic Affordances](2204.01691-Do-As-I-Can-Not-As-I-Say-Grounding-Language-in-Robotic-Affordances.md)
+- [Efficient Selectivity and Backup Operators in Monte-Carlo Tree Search](uct-mcts-2006-Efficient-Selectivity-and-Backup-Operators-in-Monte-Carlo-Tree-Search.md)
+- [End-to-End Training of Deep Visuomotor Policies](1504.00702-End-to-End-Training-of-Deep-Visuomotor-Policies.md)
 - [GLM-4.5: Agentic, Reasoning, and Coding (ARC) Foundation Models](2508.06471-GLM-4.5-Agentic-Reasoning-and-Coding-ARC-Foundation-Models.md)
 - [GLM-5: from Vibe Coding to Agentic Engineering](2602.15763-GLM-5-from-Vibe-Coding-to-Agentic-Engineering.md)
 - [Generative Agents: Interactive Simulacra of Human Behavior](2304.03442-Generative-Agents-Interactive-Simulacra-of-Human-Behavior.md)
+- [Human-level control through deep reinforcement learning](dqn-nature-2015-Human-level-control-through-deep-reinforcement-learning.md)
 - [KIMI K2.5: VISUAL AGENTIC INTELLIGENCE TECHNICAL REPORT OF KIMI K2.5](2602.02276-KIMI-K2.5-VISUAL-AGENTIC-INTELLIGENCE-TECHNICAL-REPORT-OF-KIMI-K2.5.md)
 - [KernelEvolve: Scaling Agentic Kernel Coding for Heterogeneous AI Accelerators at Meta](2512.23236-KernelEvolve-Scaling-Agentic-Kernel-Coding-for-Heterogeneous-AI-Accelerators-at-.md)
 - [LIMI: Less is More for Agency](2509.17567-LIMI-Less-is-More-for-Agency.md)
@@ -27,6 +30,7 @@
 - [Memento: Fine-tuning LLM Agents without Fine-tuning LLMs](2508.16153-Memento-Fine-tuning-LLM-Agents-without-Fine-tuning-LLMs.md)
 - [Memory in the Age of AI Agents: A Survey — Forms, Functions and Dynamics](2512.13564-Memory-in-the-Age-of-AI-Agents-A-Survey-Forms-Functions-and-Dynamics.md)
 - [Mixture-of-Agents Enhances Large Language Model Capabilities](2406.04692-Mixture-of-Agents-Enhances-Large-Language-Model-Capabilities.md)
+- [Online Convex Programming and Generalized Infinitesimal Gradient Ascent](online-convex-2003-Online-Convex-Programming-and-Generalized-Infinitesimal-Gradient-Ascent.md)
 - [Over-Searching in Search-Augmented Large Language Models](2601.05503-Over-Searching-in-Search-Augmented-Large-Language-Models.md)
 - [REACT: SYNERGIZING REASONING AND ACTING IN LANGUAGE MODELS](2210.03629-REACT-SYNERGIZING-REASONING-AND-ACTING-IN-LANGUAGE-MODELS.md)
 - [Reflexion: Language Agents with Verbal Reinforcement Learning](2303.11366-Reflexion-Language-Agents-with-Verbal-Reinforcement-Learning.md)

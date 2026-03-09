@@ -1,9 +1,10 @@
 # Scaling Laws
 
-23 paper summaries in this category.
+24 paper summaries in this category.
 
 - [Appendix to "Real second-order freeness and the asymptotic real second-order freeness of several real matrix models": Examples and Diagrams](1204.6211-Appendix-to-Real-second-order-freeness-and-the-asymptotic-real-second-order-free.md)
 - [ConvNets Match Vision Transformers at Scale](2310.16764-ConvNets-Match-Vision-Transformers-at-Scale.md)
+- [DEEP DOUBLE DESCENT: WHERE BIGGER MODELS AND MORE DATA HURT](1912.02292-DEEP-DOUBLE-DESCENT-WHERE-BIGGER-MODELS-AND-MORE-DATA-HURT.md)
 - [Deep Learning Scaling is Predictable, Empirically](1712.00409-Deep-Learning-Scaling-is-Predictable-Empirically.md)
 - [DeepSeek LLM: Scaling Open-Source Language Models with Longtermism](2401.02954-DeepSeek-LLM-Scaling-Open-Source-Language-Models-with-Longtermism.md)
 - [Emergent Abilities of Large Language Models](2206.07682-Emergent-Abilities-of-Large-Language-Models.md)

@@ -1,6 +1,6 @@
 # LLM Systems
 
-17 paper summaries in this category.
+19 paper summaries in this category.
 
 - [Bigtable: A Distributed Storage System for Structured Data](bigtable-2006-Bigtable-A-Distributed-Storage-System-for-Structured-Data.md)
 - [EXAONE 3.5: Series of Large Language Models for Real-world Use Cases](2412.04862-EXAONE-3.5-Series-of-Large-Language-Models-for-Real-world-Use-Cases.md)
@@ -14,8 +14,10 @@
 - [Insights into DeepSeek-V3: Scaling Challenges and Reflections on Hardware for AI Architectures](2505.09343-Insights-into-DeepSeek-V3-Scaling-Challenges-and-Reflections-on-Hardware-for-AI-.md)
 - [MSCCL++: Rethinking GPU Communication Abstractions for AI Inference](2504.09014-MSCCL-Rethinking-GPU-Communication-Abstractions-for-AI-Inference.md)
 - [Olmo 3](2512.13961-Olmo-3.md)
+- [PyTorch: An Imperative Style, High-Performance Deep Learning Library](pytorch-2019-PyTorch-An-Imperative-Style-High-Performance-Deep-Learning-Library.md)
 - [QWEN TECHNICAL REPORT](2309.16609-QWEN-TECHNICAL-REPORT.md)
 - [RDMA Point-to-Point Communication for LLM Systems](2510.27656-RDMA-Point-to-Point-Communication-for-LLM-Systems.md)
 - [Relax: Composable Abstractions for End-to-End Dynamic Machine Learning](2311.02103-Relax-Composable-Abstractions-for-End-to-End-Dynamic-Machine-Learning.md)
 - [Semantic Search At LinkedIn](2602.07309-Semantic-Search-At-LinkedIn.md)
+- [TensorFlow: A System for Large-Scale Machine Learning](tensorflow-2016-TensorFlow-A-System-for-Large-Scale-Machine-Learning.md)
 - [depyf: Open the Opaque Box of PyTorch Compiler for Machine Learning Researchers](2403.13839-depyf-Open-the-Opaque-Box-of-PyTorch-Compiler-for-Machine-Learning-Researchers.md)

@@ -1,14 +1,16 @@
 # RL Training
 
-53 paper summaries in this category.
+60 paper summaries in this category.
 
 - [A Survey of Reinforcement Learning for Large Reasoning Models](2509.08827-A-Survey-of-Reinforcement-Learning-for-Large-Reasoning-Models.md)
 - [ADAPTIVE GUIDANCE WITH REINFORCEMENT META-LEARNING](1901.04473-ADAPTIVE-GUIDANCE-WITH-REINFORCEMENT-META-LEARNING.md)
 - [Addressing Function Approximation Error in Actor-Critic Methods](1802.09477-Addressing-Function-Approximation-Error-in-Actor-Critic-Methods.md)
+- [Apprenticeship Learning via Inverse Reinforcement Learning](irl-abbeel-2004-Apprenticeship-Learning-via-Inverse-Reinforcement-Learning.md)
 - [Asynchronous Methods for Deep Reinforcement Learning](1602.01783-Asynchronous-Methods-for-Deep-Reinforcement-Learning.md)
 - [Beyond Reasoning Gains: Mitigating General Capabilities Forgetting in Large Reasoning Models](2510.21978-Beyond-Reasoning-Gains-Mitigating-General-Capabilities-Forgetting-in-Large-Reaso.md)
 - [Beyond the 80/20 Rule: High-Entropy Minority Tokens Drive Effective Reinforcement Learning for LLM Reasoning](2506.01939-Beyond-the-80-20-Rule-High-Entropy-Minority-Tokens-Drive-Effective-Reinforcement.md)
 - [Bootstrapped Thompson Sampling and Deep Exploration](apple-bootstrapped-Bootstrapped-Thompson-Sampling-and-Deep-Exploration.md)
+- [Conservative Q-Learning for Offline Reinforcement Learning](2006.04779-Conservative-Q-Learning-for-Offline-Reinforcement-Learning.md)
 - [Continuous Control with Deep Reinforcement Learning](1509.02971-Continuous-Control-with-Deep-Reinforcement-Learning.md)
 - [DAPO: An Open-Source LLM Reinforcement Learning System at Scale](2503.14476-DAPO-An-Open-Source-LLM-Reinforcement-Learning-System-at-Scale.md)
 - [DR. KERNEL: Reinforcement Learning Done Right for Triton Kernel Generations](2602.05885-DR.-KERNEL-Reinforcement-Learning-Done-Right-for-Triton-Kernel-Generations.md)
@@ -17,8 +19,10 @@
 - [DeepSearch: Overcome the Bottleneck of Reinforcement Learning with Verifiable Rewards via Monte Carlo Tree Search](2509.25454-DeepSearch-Overcome-the-Bottleneck-of-Reinforcement-Learning-with-Verifiable-Rew.md)
 - [DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning](2501.12948-DeepSeek-R1-Incentivizing-Reasoning-Capability-in-LLMs-via-Reinforcement-Learnin.md)
 - [Demystifying Reinforcement Learning in Agentic Reasoning](2510.11701-Demystifying-Reinforcement-Learning-in-Agentic-Reasoning.md)
+- [Deterministic Policy Gradient Algorithms](dpg-2014-Deterministic-Policy-Gradient-Algorithms.md)
 - [Does Reinforcement Learning Really Incentivize Reasoning Capacity in LLMs Beyond the Base Model?](2504.13837-Does-Reinforcement-Learning-Really-Incentivize-Reasoning-Capacity-in-LLMs-Beyond.md)
 - [Evaluating Parameter Efﬁcient Methods for RLVR](2512.23165-Evaluating-Parameter-Ef-cient-Methods-for-RLVR.md)
+- [Finite-time Analysis of the Multiarmed Bandit Problem](ucb1-2002-Finite-time-Analysis-of-the-Multiarmed-Bandit-Problem.md)
 - [GDPO: Group reward-Decoupled Normalization Policy Optimization for Multi-reward RL Optimization](2601.05242-GDPO-Group-reward-Decoupled-Normalization-Policy-Optimization-for-Multi-reward-R.md)
 - [Good SFT Optimizes for SFT, Better SFT Prepares for Reinforcement Learning](2602.01058-Good-SFT-Optimizes-for-SFT-Better-SFT-Prepares-for-Reinforcement-Learning.md)
 - [Group Sequence Policy Optimization](2507.18071-Group-Sequence-Policy-Optimization.md)
@@ -28,6 +32,7 @@
 - [Magistral](2506.10910-Magistral.md)
 - [Mastering Atari, Go, Chess and Shogi by Planning with a Learned Model](1911.08265-Mastering-Atari-Go-Chess-and-Shogi-by-Planning-with-a-Learned-Model.md)
 - [Mastering Chess and Shogi by Self-Play with a General Reinforcement Learning Algorithm](1712.01815-Mastering-Chess-and-Shogi-by-Self-Play-with-a-General-Reinforcement-Learning-Alg.md)
+- [Mastering the game of Go without human knowledge](alphago-zero-2017-Mastering-the-game-of-Go-without-human-knowledge.md)
 - [NEMOTRON-CROSSTHINK: Scaling Self-Learning beyond Math Reasoning](2504.13941-NEMOTRON-CROSSTHINK-Scaling-Self-Learning-beyond-Math-Reasoning.md)
 - [Off-Policy Deep Reinforcement Learning without Exploration](1812.02900-Off-Policy-Deep-Reinforcement-Learning-without-Exploration.md)
 - [On the Optimal Reasoning Length for RL-Trained Language Models](2602.09591-On-the-Optimal-Reasoning-Length-for-RL-Trained-Language-Models.md)
@@ -38,6 +43,7 @@
 - [QERL: BEYOND EFFICIENCY – QUANTIZATION-ENHANCED REINFORCEMENT LEARNING FOR LLMS](2510.11696-QERL-BEYOND-EFFICIENCY-QUANTIZATION-ENHANCED-REINFORCEMENT-LEARNING-FOR-LLMS.md)
 - [REINFORCE++: Stabilizing Critic-Free Policy Optimization with Global Normalization](2501.03262-REINFORCE-Stabilizing-Critic-Free-Policy-Optimization-with-Global-Normalization.md)
 - [Rainbow: Combining Improvements in Deep Reinforcement Learning](1710.02298-Rainbow-Combining-Improvements-in-Deep-Reinforcement-Learning.md)
+- [Rainbow: Combining Improvements in Deep Reinforcement Learning](rainbow-2018-Rainbow-Combining-Improvements-in-Deep-Reinforcement-Learning.md)
 - [Reinforcement Learning for Reasoning in Large Language Models with One Training Example](2504.20571-Reinforcement-Learning-for-Reasoning-in-Large-Language-Models-with-One-Training-.md)
 - [SFT Memorizes, RL Generalizes: A Comparative Study of Foundation Model Post-training](2501.17161-SFT-Memorizes-RL-Generalizes-A-Comparative-Study-of-Foundation-Model-Post-traini.md)
 - [Scaling Agent Learning via Experience Synthesis](2511.03773-Scaling-Agent-Learning-via-Experience-Synthesis.md)
@@ -50,6 +56,7 @@
 - [The Invisible Leash? Why RLVR May or May Not Escape Its Origin](2507.14843-The-Invisible-Leash-Why-RLVR-May-or-May-Not-Escape-Its-Origin.md)
 - [Training Language Models to Self-Correct via Reinforcement Learning](2409.12917-Training-Language-Models-to-Self-Correct-via-Reinforcement-Learning.md)
 - [Trust Region Policy Optimization](1502.05477-Trust-Region-Policy-Optimization.md)
+- [Trust Region Policy Optimization](trpo-2015-Trust-Region-Policy-Optimization.md)
 - [TruthRL: Incentivizing Truthful LLMs via Reinforcement Learning](2509.25760-TruthRL-Incentivizing-Truthful-LLMs-via-Reinforcement-Learning.md)
 - [Webscale-RL: Automated Data Pipeline for Scaling RL Data to Pretraining Levels](2510.06499-Webscale-RL-Automated-Data-Pipeline-for-Scaling-RL-Data-to-Pretraining-Levels.md)
 - [Your Group-Relative Advantage Is Biased](2601.08521-Your-Group-Relative-Advantage-Is-Biased.md)

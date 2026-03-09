@@ -1,6 +1,6 @@
 # Multimodal
 
-67 paper summaries in this category.
+68 paper summaries in this category.
 
 - [Adapting Vision-Language Models for E-commerce Understanding at Scale](2602.11733-Adapting-Vision-Language-Models-for-E-commerce-Understanding-at-Scale.md)
 - [Align before Fuse: Vision and Language Representation Learning with Momentum Distillation](2107.07651-Align-before-Fuse-Vision-and-Language-Representation-Learning-with-Momentum-Dist.md)
@@ -56,6 +56,7 @@
 - [SIMVLM: SIMPLE VISUAL LANGUAGE MODEL PRE-TRAINING WITH WEAK SUPERVISION](2108.10904-SIMVLM-SIMPLE-VISUAL-LANGUAGE-MODEL-PRE-TRAINING-WITH-WEAK-SUPERVISION.md)
 - [Scaling Autoregressive Multi-Modal Models: Pretraining and Instruction Tuning](2309.02591-Scaling-Autoregressive-Multi-Modal-Models-Pretraining-and-Instruction-Tuning.md)
 - [Scaling Up Visual and Vision-Language Representation Learning With Noisy Text Supervision](2102.05918-Scaling-Up-Visual-and-Vision-Language-Representation-Learning-With-Noisy-Text-Su.md)
+- [Show and Tell: A Neural Image Caption Generator](1411.4555-Show-and-Tell-A-Neural-Image-Caption-Generator.md)
 - [Show, Attend and Tell: Neural Image Caption Generation with Visual Attention](1502.03044-Show-Attend-and-Tell-Neural-Image-Caption-Generation-with-Visual-Attention.md)
 - [SigLIP 2: Multilingual Vision-Language Encoders with Improved Semantic Understanding, Localization, and Dense Features](2502.14786-SigLIP-2-Multilingual-Vision-Language-Encoders-with-Improved-Semantic-Understand.md)
 - [SmolVLM: Redefining small and efficient multimodal models](2504.05299-SmolVLM-Redefining-small-and-efficient-multimodal-models.md)

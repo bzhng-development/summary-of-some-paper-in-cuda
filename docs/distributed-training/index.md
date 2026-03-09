@@ -1,10 +1,11 @@
 # Distributed Training
 
-33 paper summaries in this category.
+37 paper summaries in this category.
 
 - [Alpa: Automating Inter- and Intra-Operator Parallelism for Distributed Deep Learning](2201.12023-Alpa-Automating-Inter--and-Intra-Operator-Parallelism-for-Distributed-Deep-Learn.md)
 - [Beyond Data and Model Parallelism for Deep Neural Networks](1807.05358-Beyond-Data-and-Model-Parallelism-for-Deep-Neural-Networks.md)
 - [Colossal-AI: A Unified Deep Learning System For Large-Scale Parallel Training](2110.14883-Colossal-AI-A-Unified-Deep-Learning-System-For-Large-Scale-Parallel-Training.md)
+- [Communication-Efficient Learning of Deep Networks from Decentralized Data](1602.05629-Communication-Efficient-Learning-of-Deep-Networks-from-Decentralized-Data.md)
 - [DCP: Addressing Input Dynamism In Long-Context Training via Dynamic Context Parallelism](2510.10620-DCP-Addressing-Input-Dynamism-In-Long-Context-Training-via-Dynamic-Context-Paral.md)
 - [Efficient Large-Scale Language Model Training on GPU Clusters Using Megatron-LM](2104.04473-Efficient-Large-Scale-Language-Model-Training-on-GPU-Clusters-Using-Megatron-LM.md)
 - [Efficient Long-Context Language Model Training by Core Attention Disaggregation](2510.18121-Efficient-Long-Context-Language-Model-Training-by-Core-Attention-Disaggregation.md)
@@ -12,8 +13,11 @@
 - [GPipe: Easy Scaling with Micro-Batch Pipeline Parallelism](1811.06965-GPipe-Easy-Scaling-with-Micro-Batch-Pipeline-Parallelism.md)
 - [GSPMD: General and Scalable Parallelization for ML Computation Graphs](2105.04663-GSPMD-General-and-Scalable-Parallelization-for-ML-Computation-Graphs.md)
 - [High-Performance Distributed ML at Scale through Parameter Server Consistency Models](1410.8043-High-Performance-Distributed-ML-at-Scale-through-Parameter-Server-Consistency-Mo.md)
+- [Hogwild!: A Lock-Free Approach to Parallelizing Stochastic Gradient Descent](hogwild-2011-Hogwild-A-Lock-Free-Approach-to-Parallelizing-Stochastic-Gradient-Descent.md)
 - [Horovod: fast and easy distributed deep learning in TensorFlow](1802.05799-Horovod-fast-and-easy-distributed-deep-learning-in-TensorFlow.md)
+- [Large Scale Distributed Deep Networks](distbelief-2012-Large-Scale-Distributed-Deep-Networks.md)
 - [MXNet: A Flexible and Efﬁcient Machine Learning Library for Heterogeneous Distributed Systems](1512.01274-MXNet-A-Flexible-and-Ef-cient-Machine-Learning-Library-for-Heterogeneous-Distrib.md)
+- [Map-Reduce for Machine Learning on Multicore](mapreduce-ml-2006-Map-Reduce-for-Machine-Learning-on-Multicore.md)
 - [MapReduce: Simplied Data Processing on Large Clusters](mapreduce-2004-MapReduce-Simplied-Data-Processing-on-Large-Clusters.md)
 - [Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism](1909.08053-Megatron-LM-Training-Multi-Billion-Parameter-Language-Models-Using-Model-Paralle.md)
 - [Mesh-TensorFlow: Deep Learning for Supercomputers](1811.02084-Mesh-TensorFlow-Deep-Learning-for-Supercomputers.md)

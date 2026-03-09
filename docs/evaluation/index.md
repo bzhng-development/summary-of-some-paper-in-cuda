@@ -1,8 +1,11 @@
 # Evaluation
 
-53 paper summaries in this category.
+61 paper summaries in this category.
 
+- ["Why Should I Trust You?" Explaining the Predictions of Any Classiﬁer](1602.04938-Why-Should-I-Trust-You-Explaining-the-Predictions-of-Any-Classi-er.md)
 - [A Survey on Evaluation of Large Language Models](2307.03109-A-Survey-on-Evaluation-of-Large-Language-Models.md)
+- [A Unified Approach to Interpreting Model Predictions](shap-2017-A-Unified-Approach-to-Interpreting-Model-Predictions.md)
+- [Account Suspended](gradient-boosting-2001-Account-Suspended.md)
 - [Beyond Accuracy: Behavioral Testing of NLP Models with CheckList](2005.04118-Beyond-Accuracy-Behavioral-Testing-of-NLP-Models-with-CheckList.md)
 - [Beyond the Imitation Game: Quantifying and extrapolating the capabilities of language models](2206.04615-Beyond-the-Imitation-Game-Quantifying-and-extrapolating-the-capabilities-of-lang.md)
 - [Chatbot Arena: An Open Platform for Evaluating LLMs by Human Preference](2403.04132-Chatbot-Arena-An-Open-Platform-for-Evaluating-LLMs-by-Human-Preference.md)
@@ -14,6 +17,7 @@
 - [GLUE: A MULTI-TASK BENCHMARK AND ANALYSIS PLATFORM FOR NATURAL LANGUAGE UNDERSTANDING](1804.07461-GLUE-A-MULTI-TASK-BENCHMARK-AND-ANALYSIS-PLATFORM-FOR-NATURAL-LANGUAGE-UNDERSTAN.md)
 - [GPQA: A Graduate-Level Google-Proof Q&A Benchmark](2311.12022-GPQA-A-Graduate-Level-Google-Proof-Q-A-Benchmark.md)
 - [GenAI Arena: An Open Evaluation Platform for Generative Models](2406.04485-GenAI-Arena-An-Open-Evaluation-Platform-for-Generative-Models.md)
+- [Gender Shades: Intersectional Accuracy Disparities in Commercial Gender Classification](gender-shades-2018-Gender-Shades-Intersectional-Accuracy-Disparities-in-Commercial-Gender-Classific.md)
 - [HOLISTICALLY EVALUATING THE ENVIRONMENTAL IMPACT OF CREATING LANGUAGE MODELS](2503.05804-HOLISTICALLY-EVALUATING-THE-ENVIRONMENTAL-IMPACT-OF-CREATING-LANGUAGE-MODELS.md)
 - [HellaSwag: Can a Machine Really Finish Your Sentence?](1905.07830-HellaSwag-Can-a-Machine-Really-Finish-Your-Sentence.md)
 - [Holistic Evaluation of Language Models](2211.09110-Holistic-Evaluation-of-Language-Models.md)
@@ -32,6 +36,7 @@
 - [MMMU-Pro: A More Robust Multi-discipline Multimodal Understanding Benchmark](2409.02813-MMMU-Pro-A-More-Robust-Multi-discipline-Multimodal-Understanding-Benchmark.md)
 - [MMMU: A Massive Multi-discipline Multimodal Understanding and Reasoning Benchmark for Expert AGI](2311.16502-MMMU-A-Massive-Multi-discipline-Multimodal-Understanding-and-Reasoning-Benchmark.md)
 - [Measuring and Improving Consistency in Pretrained Language Models](2102.01017-Measuring-and-Improving-Consistency-in-Pretrained-Language-Models.md)
+- [Model Cards for Model Reporting](1810.03993-Model-Cards-for-Model-Reporting.md)
 - [Not All LLM Reasoners Are Created Equal](2410.01748-Not-All-LLM-Reasoners-Are-Created-Equal.md)
 - [OLMES: A Standard for Language Model Evaluations](2406.08446-OLMES-A-Standard-for-Language-Model-Evaluations.md)
 - [PaperBench: Evaluating AI's Ability to Replicate AI Research](2504.01848-PaperBench-Evaluating-AI-s-Ability-to-Replicate-AI-Research.md)
@@ -43,6 +48,8 @@
 - [RewardBench: Evaluating Reward Models for Language Modeling](2403.13787-RewardBench-Evaluating-Reward-Models-for-Language-Modeling.md)
 - [SWE-Perf: Can Language Models Optimize Code Performance on Real-World Repositories?](2507.12415-SWE-Perf-Can-Language-Models-Optimize-Code-Performance-on-Real-World-Repositorie.md)
 - [Sanity Check: A Strong Alignment and Information Retrieval Baseline for Question Answering](1807.01836-Sanity-Check-A-Strong-Alignment-and-Information-Retrieval-Baseline-for-Question-.md)
+- [Some PAC-Bayesian Theorems](pac-bayes-2003-Some-PAC-Bayesian-Theorems.md)
+- [Sparks of Artificial General Intelligence: Early experiments with GPT-4](2303.12712-Sparks-of-Artificial-General-Intelligence-Early-experiments-with-GPT-4.md)
 - [SuperGLUE: A Stickier Benchmark for General-Purpose Language Understanding Systems](1905.00537-SuperGLUE-A-Stickier-Benchmark-for-General-Purpose-Language-Understanding-System.md)
 - [The Arcade Learning Environment: An Evaluation Platform for General Agents](1207.4708-The-Arcade-Learning-Environment-An-Evaluation-Platform-for-General-Agents.md)
 - [The Automated LLM Speedrunning Benchmark: Reproducing NanoGPT Improvements](2506.22419-The-Automated-LLM-Speedrunning-Benchmark-Reproducing-NanoGPT-Improvements.md)
@@ -50,6 +57,7 @@
 - [The Leaderboard Illusion](2504.20879-The-Leaderboard-Illusion.md)
 - [The geometry of hidden representations of large transformer models](2302.00294-The-geometry-of-hidden-representations-of-large-transformer-models.md)
 - [TruthfulQA: Measuring How Models Mimic Human Falsehoods](2109.07958-TruthfulQA-Measuring-How-Models-Mimic-Human-Falsehoods.md)
+- [Unable to Extract Title](adaptive-mixtures-local-experts-1991-Unable-to-Extract-Title.md)
 - [Understanding Chain-of-Thought in LLMs through Information Theory](2411.11984-Understanding-Chain-of-Thought-in-LLMs-through-Information-Theory.md)
 - [Unknown (Source text is garbled)](reinforce-williams-1992-Unknown-Source-text-is-garbled.md)
 - [Vibe Checker: Aligning Code Evaluation with Human Preference](2510.07315-Vibe-Checker-Aligning-Code-Evaluation-with-Human-Preference.md)

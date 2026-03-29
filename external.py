@@ -334,7 +334,8 @@ async def process_external(
 
     # Run summarization pipeline (reuse from main.py)
     # We need to import here to avoid circular imports
-    from main import SummarizationRequest, PitchOutput
+    from main import SummarizationRequest
+    from multi_prompt import PitchOutput
     import orjson
 
     # Create a request - we pass the pdf_url or pdf_path
@@ -377,7 +378,7 @@ async def process_external(
     # For URL-based, we need to handle differently - pass the pdf_input
     if pdf_url and not pdf_path:
         # Re-run pitch with URL
-        from main import PitchOutput as PO
+        from multi_prompt import PitchOutput as PO
         pitch_settings = ModelSettings(
             reasoning=Reasoning(effort="low", summary="auto"),
             verbosity="low",

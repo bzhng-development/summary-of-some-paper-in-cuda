@@ -5,7 +5,6 @@ import re
 from enum import StrEnum
 from pathlib import Path
 from typing import Any, Literal
-from urllib.parse import urlparse
 
 import click
 import orjson
@@ -20,7 +19,14 @@ from openai.types.shared import Reasoning
 from pydantic import BaseModel, Field
 from tqdm import tqdm
 
-from database import init_db, save_to_db
+from database import init_db, save_to_db, paper_exists, get_paper
+from multi_prompt import (
+    CATEGORIES,
+    FALLBACK_CATEGORY,
+    PitchOutput,
+    arxiv_id_from_url,
+    arxiv_url_to_pdf_url,
+)
 
 # NOTE: On newer Python versions, relying on dotenv's automatic discovery can be fragile in
 # some execution modes. Prefer loading from the repo root deterministically.
@@ -68,25 +74,6 @@ class DefaultFiles:
     FALLBACK_FILENAME = "paper.md"
 
 
-# Fallback category when categorization fails or returns invalid result
-FALLBACK_CATEGORY = "uncategorized"
-
-CATEGORIES = [
-    "alignment",
-    "architecture",
-    "context-optimization",
-    "evaluation",
-    "inference-optimization",
-    "llm-systems",
-    "low-precision",
-    "multimodal",
-    "pretraining",
-    "prompting",
-    "retrieval",
-    "rl-training",
-    "serving",
-    "training-methods",
-]
 
 
 class ReasoningConfig(BaseModel):
@@ -128,13 +115,6 @@ class SummarizationRequest(BaseModel):
         return None
 
 
-class PitchOutput(BaseModel):
-    title: str = Field(description="The exact title of the paper as it appears in the PDF")
-    pitch: str = Field(
-        description="A compelling 2-3 sentence pitch that captures the paper's core contribution and why it matters",
-    )
-
-
 class CategoryOutput(BaseModel):
     category: str = Field(description="Best matching category from the available list")
     reasoning: str = Field(description="Brief explanation for the categorization")
@@ -161,7 +141,13 @@ async def encode_pdf(file_path: Path) -> str:
     return base64.b64encode(content).decode("utf-8")
 
 
+_use_local = False
+
+
 def get_openai_config() -> tuple[str, str]:
+    if _use_local:
+        return "not-needed", "http://localhost:30000/v1"
+
     api_key = os.getenv(
         "OPENAI_API_KEY",""    )
     base_url = "https://api.openai.com/v1"
@@ -355,28 +341,6 @@ Paper Analysis (for context):
         return pitch_output, full_summary, category, full_response
 
 
-def arxiv_id_from_url(url: str) -> str:
-    """Extract ArXiv ID from any ArXiv URL format.
-
-    Safely handles URLs with query parameters, fragments, etc.
-
-    Supports URLs like:
-    - https://arxiv.org/abs/2312.07104
-    - https://arxiv.org/abs/2312.07104v2
-    - https://arxiv.org/pdf/2312.07104.pdf
-    - https://arxiv.org/abs/2312.07104?context=cs.AI
-    """
-    parsed = urlparse(url)
-    # Get just the path, ignoring query params and fragments
-    path = parsed.path.rstrip("/")
-    last_segment = path.split("/")[-1]
-    return last_segment.replace(".pdf", "")
-
-
-def arxiv_url_to_pdf_url(url: str) -> str:
-    """Convert any ArXiv URL to a direct PDF URL (redirect-free)."""
-    return url.replace("/abs/", "/pdf/").removesuffix(".pdf")
-
 
 def build_service_tier_args(service_tier: str | None) -> dict[str, str] | None:
     """Build extra_args dict for service tier configuration."""
@@ -516,6 +480,25 @@ async def process_multiple_urls(
     if service_tier:
         logger.info(f"Using {service_tier} processing (lower cost, slower responses)")
 
+    # Filter out papers already in DB
+    filtered_urls = []
+    for u in urls:
+        aid = arxiv_id_from_url(u)
+        if await paper_exists(aid):
+            existing = await get_paper(aid)
+            if existing and existing.get("summary") and len(existing["summary"]) >= 5000:
+                logger.info(f"Skipping {aid} (already in DB)")
+                continue
+        filtered_urls.append(u)
+
+    if len(filtered_urls) < len(urls):
+        logger.info(f"Skipped {len(urls) - len(filtered_urls)} papers already in DB")
+    urls = filtered_urls
+
+    if not urls:
+        logger.success("All papers already processed!")
+        return
+
     if concurrency == 1:
         for i, url in tqdm(list(enumerate(urls, 1)), total=len(urls), desc="Papers"):
             logger.info(f"Processing paper {i}/{len(urls)}: {url}")
@@ -580,6 +563,11 @@ async def process_multiple_urls(
     is_flag=True,
     help="Use flex processing for lower costs (slower, may have resource unavailability)",
 )
+@click.option(
+    "--local",
+    is_flag=True,
+    help="Use local server at localhost:30000 instead of OpenAI API",
+)
 def main(
     model: str,
     url: str | None,
@@ -591,8 +579,13 @@ def main(
     instructions: str | None,
     concurrency: int,
     flex: bool,
+    local: bool,
 ):
+    global _use_local
+    _use_local = local
     service_tier = "flex" if flex else None
+    if local:
+        logger.info("Using local server at http://localhost:30000/v1")
 
     async def _run():
         # Dispatch to external module for scholar/external PDFs

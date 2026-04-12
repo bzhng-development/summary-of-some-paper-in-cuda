@@ -27,8 +27,12 @@ def load_examples_block(repo_path: Path) -> str:
     """Load reading history titles grouped by category, same as hf_daily_papers.py."""
     examples: dict[str, str] = {}  # title -> category
 
-    for db_name in ("papers.db", "external_papers.db"):
-        db_path = repo_path / db_name
+    # papers.db lives under local_data/ (gitignored), external_papers.db at repo root
+    for db_path in (
+        repo_path / "local_data" / "papers.db",
+        repo_path / "papers.db",  # legacy fallback
+        repo_path / "external_papers.db",
+    ):
         if not db_path.exists():
             continue
         con = sqlite3.connect(str(db_path))

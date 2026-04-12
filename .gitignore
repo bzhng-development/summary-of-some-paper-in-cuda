@@ -8,8 +8,12 @@ site/
 temp_paper.pdf
 *.log
 
-# Built database (100MB+, exceeds github per-file limit)
-# Rebuild via `uv run python sync_db.py` from the committed jsonls + external_papers.db
+# Built database lives in local_data/ (100MB+ — exceeds github per-file limit).
+# Rebuild via `uv run python sync_db.py` from the committed jsonls + external_papers.db.
+# local_data/ also holds scratch snapshots (papers_unified.db, papers_stash3.db, backups).
+local_data/
+
+# Legacy top-level paths (kept so older checkouts don't accidentally stage them)
 papers.db
 papers.db-wal
 papers.db-shm

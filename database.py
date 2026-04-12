@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import aiosqlite
@@ -12,7 +14,10 @@ from loguru import logger
 if TYPE_CHECKING:
     from main import PaperRecord
 
-DB_PATH = "papers.db"
+# DB lives in local_data/ (gitignored — too large for github, rebuild via sync_db.py).
+# Resolved relative to this file so scripts work from any cwd.
+_REPO_ROOT = Path(__file__).resolve().parent
+DB_PATH = os.environ.get("PAPERS_DB_PATH", str(_REPO_ROOT / "local_data" / "papers.db"))
 
 # All columns that should exist on the papers table.
 # Migration adds any missing ones via ALTER TABLE.

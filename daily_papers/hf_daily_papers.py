@@ -112,8 +112,10 @@ def load_examples_from_repo(repo_path: Path) -> list[ExamplePaper]:
     """Load known-relevant papers from DB + docs directory."""
     examples: dict[str, ExamplePaper] = {}  # keyed by title to dedup
 
-    # 1) From papers.db
-    db_path = repo_path / "papers.db"
+    # 1) From papers.db (moved under local_data/ — too large for git)
+    db_path = repo_path / "local_data" / "papers.db"
+    if not db_path.exists():
+        db_path = repo_path / "papers.db"  # legacy fallback
     if db_path.exists():
         con = sqlite3.connect(str(db_path))
         for row in con.execute("SELECT title, category FROM papers WHERE title IS NOT NULL AND interested = 1"):

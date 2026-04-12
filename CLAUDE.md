@@ -10,6 +10,70 @@ uv sync                       # Reinstall/sync all deps
 
 Do not use `pip install` or `source .venv/bin/activate`.
 
+# Generating paper summaries (runbook)
+
+Full long-form paper summaries are produced by **`multi_prompt.py`**, NOT `main.py`. It fetches an arxiv PDF, extracts text with PyMuPDF, and sends it to a local LLM for the full 7-section teach-through (Executive Summary → Context → Technical Approach → Insights → Experiments → Limitations → Implications). Writes into `local_data/papers.db` by default.
+
+## Prereq
+
+Start a local OpenAI-compatible server at `http://localhost:30000/v1` (hardcoded in `multi_prompt.py:43`). SGLang, vLLM, llama.cpp server — anything OpenAI-compatible. The script sends `model="default"`; the server serves whatever it loaded.
+
+## Single paper
+
+```bash
+uv run python multi_prompt.py --url https://arxiv.org/abs/2312.07104
+```
+
+## Batch
+
+```bash
+uv run python multi_prompt.py --urls "url1,url2,url3" --concurrency 5
+```
+
+## Dynamic mode (continuous worker)
+
+Polls `papers.db` every `--interval` seconds for stub rows missing a summary and processes them. Run it in a tmux pane and let it chew through the backlog:
+
+```bash
+uv run python multi_prompt.py --dyn --concurrency 4096 --interval 30
+```
+
+`--concurrency` here is the semaphore ceiling for concurrent papers; the actual network cap is set by the single shared httpx client inside the script.
+
+## Backfill
+
+Re-summarize every `interested=1` paper currently missing a `summary`:
+
+```bash
+uv run python multi_prompt.py --backfill --concurrency 8
+```
+
+## Remote runs → JSONL sidecar
+
+When running on a remote box where you don't want to ship the DB, write results to JSONL and sync later:
+
+```bash
+uv run python multi_prompt.py --dyn --jsonl ./runs/remote.jsonl
+```
+
+Then import the JSONL into the local DB via whichever ingestion script you use (check `sync_db.py` for the `absorb_*` functions).
+
+## Model overrides
+
+- `--gemini` — use Gemini 3 Flash via OpenRouter/Google AI Studio free tier (bypasses the local server).
+- `--model <name>` — override the `"default"` model string sent in the chat completion request. Only meaningful if your local server dispatches by name.
+- `--many-pass` — use the old 7-section **sequential** pipeline (one LLM call per section, with prior sections in context). Default is a single big call; `--many-pass` is for smaller models that choke on the full context.
+
+## Where summaries land
+
+- **Default:** `local_data/papers.db`, column `summary`, keyed by arxiv_id. `paper_server.py` and the docs build read from here.
+- **`--jsonl`:** append-only JSONL file; re-imported into the DB later.
+- **`docs/<category>/*.md`:** NOT written by `multi_prompt.py`. Those are hand-curated / one-off exports. Don't expect `multi_prompt.py` to populate them.
+
+## Tuning for port-forwarded servers
+
+If hitting the LLM through VSCode port-forward or SSH -L, high concurrency causes connection resets. Drop `--concurrency` first (try 4–8); if still flaky, the httpx client limits live inside `multi_prompt.py` — look for the `AsyncOpenAI(...)` construction and cap `max_connections` there. See `daily_papers/hf_daily_papers.py` for the analogous single-client pattern.
+
 # Data paths
 
 There's one built artifact (`papers.db`) and several committed input files that feed it. Understanding where each lives matters because the built DB is too large for GitHub and is rebuilt from the inputs.

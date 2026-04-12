@@ -1,26 +1,25 @@
 #!/usr/bin/env python3
-"""Import Exa JSONL entries into papers.db, then enrich via arXiv API."""
+"""Import Exa JSONL entries into Neon, then enrich via arXiv API."""
 
 import json
-import sqlite3
 import sys
 
 sys.path.insert(0, ".")
 
-from database import DB_PATH, _migrate_sync, save_paper_sync
 from daily_papers.hf_daily_papers import fetch_arxiv_metadata
+from neon_db import NeonDB
 
 JSONL = "docs_new/missing-classic-papers-2012-2024.exa.jsonl"
 
 
 def main():
-    # 1) Migrate schema
-    _migrate_sync()
+    db = NeonDB()
+
+    # 1) Ensure schema
+    db.init_schema()
 
     # 2) Load existing IDs
-    con = sqlite3.connect(DB_PATH)
-    existing = {row[0] for row in con.execute("SELECT id FROM papers").fetchall()}
-    con.close()
+    existing = db.get_all_ids()
 
     # 3) Parse Exa JSONL
     entries = []
@@ -39,7 +38,7 @@ def main():
         aid = r["arxiv_id"]
         if aid in existing:
             continue
-        save_paper_sync(
+        db.save_paper(
             aid,
             title=r.get("title"),
             url=f"https://arxiv.org/abs/{aid}",
@@ -50,20 +49,16 @@ def main():
     print(f"Inserted {inserted} new stub rows")
 
     # 5) Enrich papers missing arXiv metadata
-    con = sqlite3.connect(DB_PATH)
     all_exa_ids = [r["arxiv_id"] for r in entries]
-    placeholders = ",".join("?" for _ in all_exa_ids)
-    need_enrich = [
-        row[0]
-        for row in con.execute(
-            f"""SELECT id FROM papers
-                WHERE id IN ({placeholders})
+    with db.get_conn() as conn, conn.cursor() as cur:
+        cur.execute(
+            """SELECT id FROM "nextjs-ui_paper"
+                WHERE id = ANY(%s)
                   AND (categories IS NULL OR abstract IS NULL OR abstract = ''
                        OR authors IS NULL OR authors = '' OR published IS NULL OR published = '')""",
-            all_exa_ids,
-        ).fetchall()
-    ]
-    con.close()
+            (all_exa_ids,),
+        )
+        need_enrich = [row[0] for row in cur.fetchall()]
 
     print(f"Need arXiv enrichment: {len(need_enrich)}")
 
@@ -71,7 +66,7 @@ def main():
         meta_map = fetch_arxiv_metadata(need_enrich)
         enriched = 0
         for aid, meta in meta_map.items():
-            save_paper_sync(
+            db.save_paper(
                 aid,
                 title=meta.title or None,
                 abstract=meta.abstract or None,
@@ -88,12 +83,11 @@ def main():
         print(f"Enriched {enriched}/{len(need_enrich)} papers with arXiv metadata")
 
     # Summary
-    con = sqlite3.connect(DB_PATH)
-    total = con.execute("SELECT COUNT(*) FROM papers").fetchone()[0]
-    with_cats = con.execute(
-        "SELECT COUNT(*) FROM papers WHERE categories IS NOT NULL"
-    ).fetchone()[0]
-    con.close()
+    with db.get_conn() as conn, conn.cursor() as cur:
+        cur.execute('SELECT COUNT(*) FROM "nextjs-ui_paper"')
+        total = cur.fetchone()[0]
+        cur.execute('SELECT COUNT(*) FROM "nextjs-ui_paper" WHERE categories IS NOT NULL')
+        with_cats = cur.fetchone()[0]
     print(f"\nDone! DB now has {total} papers ({with_cats} with arXiv metadata)")
 
 

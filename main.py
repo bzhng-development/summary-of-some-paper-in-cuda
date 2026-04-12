@@ -1,3 +1,13 @@
+"""Single-pass paper summarization entrypoint.
+
+This is the *legacy* one-model summarizer (fetch PDF → one big GPT-5.2 call →
+extract pitch → categorize → save). It is being superseded by
+``multi_prompt.py``, but is kept around for single-paper ad-hoc runs and for
+the ``--external`` / ``--scholar`` dispatch into :mod:`external`.
+"""
+
+from __future__ import annotations
+
 import asyncio
 import base64
 import os
@@ -13,13 +23,12 @@ from agents.tracing import set_tracing_disabled
 from anyio import Path as AsyncPath
 from dotenv import load_dotenv
 from loguru import logger
-from tenacity import retry, stop_after_attempt, wait_exponential, before_sleep_log
 from openai import AsyncOpenAI
 from openai.types.shared import Reasoning
 from pydantic import BaseModel, Field
+from tenacity import before_sleep_log, retry, stop_after_attempt, wait_exponential
 from tqdm import tqdm
 
-from database import init_db, save_to_db, paper_exists, get_paper
 from multi_prompt import (
     CATEGORIES,
     FALLBACK_CATEGORY,
@@ -27,53 +36,51 @@ from multi_prompt import (
     arxiv_id_from_url,
     arxiv_url_to_pdf_url,
 )
+from neon_db import NeonDB
 
-# NOTE: On newer Python versions, relying on dotenv's automatic discovery can be fragile in
-# some execution modes. Prefer loading from the repo root deterministically.
-_dotenv_path = Path(__file__).resolve().parent / ".env"
-if _dotenv_path.exists():
-    load_dotenv(dotenv_path=_dotenv_path)
-else:
-    load_dotenv()
+# Deterministic .env resolution: the repo root is load-bearing for
+# OPENAI_API_KEY and DATABASE_URL, so we point dotenv at it explicitly rather
+# than relying on CWD-based discovery.
+_DOTENV_PATH = Path(__file__).resolve().parent / ".env"
+load_dotenv(dotenv_path=_DOTENV_PATH if _DOTENV_PATH.exists() else None)
 
-# The openai-agents SDK enables a default tracing exporter that talks to OpenAI's backend.
-# When using a non-OpenAI proxy key (e.g., Shopify proxy), this can generate noisy 401s.
-# Disable tracing by default for this CLI tool.
+# The openai-agents SDK enables a default tracing exporter that talks to OpenAI's
+# backend. When using a non-OpenAI proxy key (e.g., Shopify proxy), this can
+# generate noisy 401s. Disable tracing by default for this CLI tool.
 set_tracing_disabled(True)
+
+# Shared Neon client for the async save path. NeonDB connections are short-lived
+# (one per method call) so constructing this at module load is cheap and
+# side-effect-free.
+_DB = NeonDB()
 
 
 # =============================================================================
-# Configuration Constants
+# Configuration
 # =============================================================================
 
 
 class ModelName(StrEnum):
-    """Available model names for different tasks."""
+    """Available model names for different stages of the pipeline."""
 
     ANALYZER = "gpt-5.2"
     PITCH = "gpt-5-mini-2025-08-07"
     CATEGORIZER = "gpt-5-mini-2025-08-07"
 
 
-class Timeout:
-    """Timeout configurations in seconds."""
+DEFAULT_TIMEOUT_SECONDS: float = 600.0
+FLEX_TIMEOUT_SECONDS: float = 900.0
 
-    DEFAULT = 600.0
-    FLEX = 900.0
+DEFAULT_PROMPT_FILE: str = "main_prompt.txt"
+FALLBACK_OUTPUT_FILENAME: str = "paper.md"
 
-    @classmethod
-    def for_tier(cls, service_tier: str | None) -> float:
-        """Get appropriate timeout for service tier."""
-        return cls.FLEX if service_tier == "flex" else cls.DEFAULT
-
-
-class DefaultFiles:
-    """Default file paths."""
-
-    PROMPT = "main_prompt.txt"
-    FALLBACK_FILENAME = "paper.md"
+# Minimum length (in characters) of an existing summary before we treat a
+# paper as "already processed" and skip it during batch runs.
+MIN_EXISTING_SUMMARY_LENGTH: int = 5000
 
 
+def _timeout_for_tier(service_tier: str | None) -> float:
+    return FLEX_TIMEOUT_SECONDS if service_tier == "flex" else DEFAULT_TIMEOUT_SECONDS
 
 
 class ReasoningConfig(BaseModel):
@@ -121,9 +128,11 @@ class CategoryOutput(BaseModel):
 
 
 class PaperRecord(BaseModel):
-    """Data model for paper storage in database.
+    """Data model for a fully-processed paper ready to be persisted.
 
-    Consolidates all paper data into a single object for cleaner function signatures.
+    Consolidates all paper fields into a single object so function signatures
+    stay small and unambiguous. This is the single-pass equivalent of the
+    multi-section record produced by ``multi_prompt.py``.
     """
 
     arxiv_id: str = Field(description="ArXiv paper ID (primary key)")
@@ -134,28 +143,43 @@ class PaperRecord(BaseModel):
     url: str | None = Field(default=None, description="Original ArXiv URL")
     full_response: str = Field(description="JSON-serialized full API response")
 
+    def to_db_fields(self) -> dict[str, Any]:
+        """Translate to the kwargs accepted by :meth:`NeonDB.save_paper`."""
+        return {
+            "title": self.title,
+            "category": self.category,
+            "pitch": self.pitch,
+            "summary": self.summary,
+            "url": self.url,
+            "full_response": self.full_response,
+        }
+
 
 async def encode_pdf(file_path: Path) -> str:
-    """Encode PDF file to base64 asynchronously."""
+    """Encode a PDF file to base64 without blocking the event loop."""
     content = await AsyncPath(file_path).read_bytes()
     return base64.b64encode(content).decode("utf-8")
 
 
-_use_local = False
+# Set by ``main()`` when the ``--local`` flag is passed, read by the client
+# constructor. A module-level bool is the simplest way to thread a one-shot CLI
+# flag through a Click command without rewriting every helper signature.
+_use_local: bool = False
 
 
 def get_openai_config() -> tuple[str, str]:
+    """Return ``(api_key, base_url)`` for the OpenAI-compatible client.
+
+    Respects the ``--local`` CLI flag to point at a locally running sglang/vllm
+    server. Otherwise reads ``OPENAI_API_KEY`` from the environment.
+    """
     if _use_local:
         return "not-needed", "http://localhost:30000/v1"
 
-    api_key = os.getenv(
-        "OPENAI_API_KEY",""    )
-    base_url = "https://api.openai.com/v1"
-
+    api_key = os.getenv("OPENAI_API_KEY", "")
     if not api_key:
-        raise ValueError("LLM API api key environment variable is required")
-
-    return api_key, base_url
+        raise ValueError("OPENAI_API_KEY environment variable is required")
+    return api_key, "https://api.openai.com/v1"
 
 
 class PaperSummarizer:
@@ -167,24 +191,19 @@ class PaperSummarizer:
     - Easy testing via dependency injection
     """
 
-    def __init__(self, service_tier: str | None = None):
+    def __init__(self, service_tier: str | None = None) -> None:
         """Initialize the summarizer with appropriate client configuration.
 
         Args:
-            service_tier: Optional service tier (e.g., "flex" for longer timeouts)
-
+            service_tier: Optional service tier (e.g., ``"flex"`` for longer timeouts).
         """
         self.service_tier = service_tier
-        timeout = Timeout.for_tier(service_tier)
+        timeout = _timeout_for_tier(service_tier)
 
         api_key, base_url = get_openai_config()
-        self.client = AsyncOpenAI(
-            base_url=base_url,
-            api_key=api_key,
-            timeout=timeout,
-        )
+        self.client = AsyncOpenAI(base_url=base_url, api_key=api_key, timeout=timeout)
         set_default_openai_client(client=self.client, use_for_tracing=False)
-        logger.debug(f"Initialized OpenAI client (timeout={timeout}s, tier={service_tier})")
+        logger.debug("Initialized OpenAI client (timeout={}s, tier={})", timeout, service_tier)
 
     async def generate_full_summary(self, request: SummarizationRequest) -> tuple[str, dict[str, Any]]:
         """Generate full summary and return both output and raw response."""
@@ -341,7 +360,6 @@ Paper Analysis (for context):
         return pitch_output, full_summary, category, full_response
 
 
-
 def build_service_tier_args(service_tier: str | None) -> dict[str, str] | None:
     """Build extra_args dict for service tier configuration."""
     if service_tier:
@@ -429,7 +447,7 @@ async def save_summary(
     if arxiv_id:
         base_name = f"{arxiv_id}-{normalized_title}.md" if normalized_title else f"{arxiv_id}.md"
     else:
-        base_name = f"{normalized_title}.md" if normalized_title else DefaultFiles.FALLBACK_FILENAME
+        base_name = f"{normalized_title}.md" if normalized_title else FALLBACK_OUTPUT_FILENAME
 
     output_file = category_dir / base_name
     if output_file.exists():
@@ -458,9 +476,84 @@ async def save_summary(
 
 
 def load_prompt(prompt_path: str | None) -> str:
-    """Load prompt from file, defaulting to main_prompt.txt."""
-    path = Path(prompt_path) if prompt_path else Path(DefaultFiles.PROMPT)
+    """Load a system prompt from disk, defaulting to ``main_prompt.txt``."""
+    path = Path(prompt_path) if prompt_path else Path(DEFAULT_PROMPT_FILE)
     return path.read_text(encoding="utf-8").strip()
+
+
+async def _already_has_full_summary(arxiv_id: str) -> bool:
+    """Return True if Neon already has a long-enough summary for ``arxiv_id``."""
+    existing = await asyncio.to_thread(_DB.get_paper, arxiv_id)
+    if not existing:
+        return False
+    summary = existing.get("summary") or ""
+    return len(summary) >= MIN_EXISTING_SUMMARY_LENGTH
+
+
+async def _filter_new_urls(urls: list[str]) -> list[str]:
+    """Drop URLs whose arxiv IDs already have a full summary in Neon."""
+    kept: list[str] = []
+    for url in urls:
+        aid = arxiv_id_from_url(url)
+        if await _already_has_full_summary(aid):
+            logger.info("Skipping {} (already in DB)", aid)
+            continue
+        kept.append(url)
+    skipped = len(urls) - len(kept)
+    if skipped:
+        logger.info("Skipped {} papers already in DB", skipped)
+    return kept
+
+
+async def _process_urls_sequentially(
+    model: str,
+    urls: list[str],
+    question: str | None,
+    instructions: str | None,
+    service_tier: str | None,
+) -> None:
+    for i, url in tqdm(list(enumerate(urls, 1)), total=len(urls), desc="Papers"):
+        logger.info("Processing paper {}/{}: {}", i, len(urls), url)
+        try:
+            await async_main(model, url, None, question, instructions, service_tier)
+        except Exception as exc:
+            logger.error("Error processing {}: {}", url, exc)
+            logger.info("Continuing to next paper...")
+
+
+async def _process_urls_concurrently(
+    model: str,
+    urls: list[str],
+    question: str | None,
+    instructions: str | None,
+    service_tier: str | None,
+    concurrency: int,
+) -> None:
+    sem = asyncio.Semaphore(concurrency)
+
+    async def run_one(url: str) -> None:
+        async with sem:
+            try:
+                await async_main(model, url, None, question, instructions, service_tier)
+            except Exception as exc:
+                raise PaperProcessingError(url, exc) from exc
+
+    tasks = [asyncio.create_task(run_one(u)) for u in urls]
+
+    errors: list[tuple[str, Exception]] = []
+    with tqdm(total=len(tasks), desc="Papers") as pbar:
+        for done in asyncio.as_completed(tasks):
+            try:
+                await done
+            except PaperProcessingError as exc:
+                errors.append((exc.url, exc.original))
+            except Exception as exc:
+                errors.append(("<unknown>", exc))
+            finally:
+                pbar.update(1)
+
+    for url, exc in errors:
+        logger.error("Error processing {}: {}", url, exc)
 
 
 async def process_multiple_urls(
@@ -470,76 +563,30 @@ async def process_multiple_urls(
     instructions: str | None,
     service_tier: str | None = None,
     concurrency: int = 1,
-):
-    """Process multiple ArXiv URLs (sequentially by default; optionally concurrently)."""
+) -> None:
+    """Process multiple ArXiv URLs, optionally in parallel.
+
+    Papers that already have a long-enough summary in Neon are skipped.
+    """
     concurrency = max(1, int(concurrency))
     if concurrency == 1:
-        logger.info(f"Processing {len(urls)} papers...")
+        logger.info("Processing {} papers...", len(urls))
     else:
-        logger.info(f"Processing {len(urls)} papers (concurrency={concurrency})...")
+        logger.info("Processing {} papers (concurrency={})...", len(urls), concurrency)
     if service_tier:
-        logger.info(f"Using {service_tier} processing (lower cost, slower responses)")
+        logger.info("Using {} processing (lower cost, slower responses)", service_tier)
 
-    # Filter out papers already in DB
-    filtered_urls = []
-    for u in urls:
-        aid = arxiv_id_from_url(u)
-        if await paper_exists(aid):
-            existing = await get_paper(aid)
-            if existing and existing.get("summary") and len(existing["summary"]) >= 5000:
-                logger.info(f"Skipping {aid} (already in DB)")
-                continue
-        filtered_urls.append(u)
-
-    if len(filtered_urls) < len(urls):
-        logger.info(f"Skipped {len(urls) - len(filtered_urls)} papers already in DB")
-    urls = filtered_urls
-
-    if not urls:
+    remaining = await _filter_new_urls(urls)
+    if not remaining:
         logger.success("All papers already processed!")
         return
 
     if concurrency == 1:
-        for i, url in tqdm(list(enumerate(urls, 1)), total=len(urls), desc="Papers"):
-            logger.info(f"Processing paper {i}/{len(urls)}: {url}")
-
-            try:
-                await async_main(model, url, None, question, instructions, service_tier)
-            except Exception as e:
-                logger.error(f"Error processing {url}: {e}")
-                logger.info("Continuing to next paper...")
-                continue
+        await _process_urls_sequentially(model, remaining, question, instructions, service_tier)
     else:
-        sem = asyncio.Semaphore(concurrency)
+        await _process_urls_concurrently(model, remaining, question, instructions, service_tier, concurrency)
 
-        async def _run_one(i: int, url: str) -> None:
-            async with sem:
-                try:
-                    await async_main(model, url, None, question, instructions, service_tier)
-                except Exception as e:
-                    raise PaperProcessingError(url, e) from e
-
-        tasks: list[asyncio.Task[None]] = []
-        for i, url in enumerate(urls, 1):
-            t = asyncio.create_task(_run_one(i, url))
-            tasks.append(t)
-
-        errors: list[tuple[str, Exception]] = []
-        with tqdm(total=len(tasks), desc="Papers") as pbar:
-            for done in asyncio.as_completed(tasks):
-                try:
-                    await done
-                except PaperProcessingError as e:
-                    errors.append((e.url, e.original))
-                except Exception as e:
-                    errors.append(("<unknown>", e))
-                finally:
-                    pbar.update(1)
-
-        for url, e in errors:
-            logger.error(f"Error processing {url}: {e}")
-
-    logger.success(f"Finished processing {len(urls)} papers!")
+    logger.success("Finished processing {} papers!", len(remaining))
 
 
 @click.command()
@@ -549,8 +596,14 @@ async def process_multiple_urls(
 @click.option("--pdf", help="Local PDF path to summarize (use with --external for non-arxiv)")
 @click.option("--scholar", help="Google Scholar citation URL to process")
 @click.option("--external", is_flag=True, help="Treat --pdf as external (non-arxiv) paper")
-@click.option("--question", help="Optional user question prompt file (text). If omitted, uses a short default.")
-@click.option("--instructions", help=f"System prompt file (text). Defaults to {DefaultFiles.PROMPT}.")
+@click.option(
+    "--question",
+    help="Optional user question prompt file (text). If omitted, uses a short default.",
+)
+@click.option(
+    "--instructions",
+    help=f"System prompt file (text). Defaults to {DEFAULT_PROMPT_FILE}.",
+)
 @click.option(
     "--concurrency",
     default=1,
@@ -580,44 +633,63 @@ def main(
     concurrency: int,
     flex: bool,
     local: bool,
-):
+) -> None:
     global _use_local
     _use_local = local
     service_tier = "flex" if flex else None
     if local:
         logger.info("Using local server at http://localhost:30000/v1")
 
-    async def _run():
-        # Dispatch to external module for scholar/external PDFs
+    async def run() -> None:
         if scholar or external:
-            from external import process_scholar_url, process_local_pdf
-
-            instructions_text = load_prompt(instructions)
-            summarizer = PaperSummarizer(service_tier=service_tier)
-
-            if scholar:
-                result = await process_scholar_url(summarizer, scholar, instructions_text)
-            elif pdf:
-                result = await process_local_pdf(summarizer, Path(pdf), instructions_text)
-            else:
-                raise click.UsageError("--external requires --pdf")
-
-            if result:
-                logger.success(f"Title: {result.title}")
-                logger.success(f"Category: {result.category}")
-                logger.success(f"Paper ID: {result.paper_id}")
+            await _run_external(
+                scholar=scholar,
+                external=external,
+                pdf=pdf,
+                instructions=instructions,
+                service_tier=service_tier,
+            )
             return
 
-        # ArXiv path (existing)
-        await init_db()
+        # ArXiv path. Schema init runs in a worker thread so we never hit the
+        # event loop with a blocking psycopg call.
+        await asyncio.to_thread(_DB.init_schema)
 
         if urls:
             url_list = [u.strip() for u in urls.split(",") if u.strip()]
             await process_multiple_urls(model, url_list, question, instructions, service_tier, concurrency)
-        else:
-            await async_main(model, url, pdf, question, instructions, service_tier)
+            return
 
-    asyncio.run(_run())
+        await async_main(model, url, pdf, question, instructions, service_tier)
+
+    asyncio.run(run())
+
+
+async def _run_external(
+    *,
+    scholar: str | None,
+    external: bool,
+    pdf: str | None,
+    instructions: str | None,
+    service_tier: str | None,
+) -> None:
+    """Dispatch ``--scholar`` / ``--external`` paths through :mod:`external`."""
+    from external import process_local_pdf, process_scholar_url
+
+    instructions_text = load_prompt(instructions)
+    summarizer = PaperSummarizer(service_tier=service_tier)
+
+    if scholar:
+        result = await process_scholar_url(summarizer, scholar, instructions_text)
+    elif pdf:
+        result = await process_local_pdf(summarizer, Path(pdf), instructions_text)
+    else:
+        raise click.UsageError("--external requires --pdf")
+
+    if result:
+        logger.success("Title: {}", result.title)
+        logger.success("Category: {}", result.category)
+        logger.success("Paper ID: {}", result.paper_id)
 
 
 async def async_main(
@@ -627,12 +699,12 @@ async def async_main(
     question: str | None,
     instructions: str | None,
     service_tier: str | None = None,
-):
+) -> None:
+    """Run the full single-paper pipeline: summarize → save markdown → upsert Neon."""
     if not url and not pdf:
         raise click.UsageError("Must provide either --url or --pdf")
 
-    # Build request with clean data model (no fake paths needed)
-    arxiv_url = url if url else None
+    arxiv_url = url or None
     pdf_path = Path(pdf) if pdf else None
 
     question_text = Path(question).read_text(encoding="utf-8").strip() if question else None
@@ -647,33 +719,27 @@ async def async_main(
         service_tier=service_tier,
     )
 
-    # Use PaperSummarizer with proper client lifecycle
     summarizer = PaperSummarizer(service_tier=service_tier)
     pitch_output, full_summary, category, full_response = await summarizer.process_paper(request)
 
-    # Save to file (async to avoid blocking)
     output_file = await save_summary(pitch_output, full_summary, category, arxiv_url)
 
-    # Save to database using PaperRecord model
-    arxiv_id = request.arxiv_id or "unknown"
-    full_response_json = orjson.dumps(full_response).decode("utf-8")
-
     record = PaperRecord(
-        arxiv_id=arxiv_id,
+        arxiv_id=request.arxiv_id or "unknown",
         title=pitch_output.title,
         category=category,
         pitch=pitch_output.pitch,
         summary=full_summary,
         url=arxiv_url,
-        full_response=full_response_json,
+        full_response=orjson.dumps(full_response).decode("utf-8"),
     )
-    await save_to_db(record)
+    await _DB.asave_paper(record.arxiv_id, **record.to_db_fields())
 
-    logger.success(f"Summary saved to: {output_file}")
-    logger.info(f"Title: {pitch_output.title}")
-    logger.info(f"Category: {category}")
-    logger.info(f"Pitch: {pitch_output.pitch}")
-    logger.debug(f"Full analysis preview: {full_summary[:500]}...")
+    logger.success("Summary saved to: {}", output_file)
+    logger.info("Title: {}", pitch_output.title)
+    logger.info("Category: {}", category)
+    logger.info("Pitch: {}", pitch_output.pitch)
+    logger.debug("Full analysis preview: {}...", full_summary[:500])
 
 
 if __name__ == "__main__":

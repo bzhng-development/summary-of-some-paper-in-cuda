@@ -73,7 +73,6 @@ def generate_html(papers: list[dict], min_score: int = 0) -> str:
             tag_category = p.get("tag_category") or ""
             comment = p.get("arxiv_comment") or ""
             journal = p.get("journal_ref") or ""
-            published = p.get("published") or ""
 
             is_interested = p.get("_interested", False)
             score_class = "high" if score >= 8 else "mid" if score >= 5 else "low"

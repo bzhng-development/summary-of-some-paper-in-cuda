@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
-"""External paper processing: Google Scholar URLs and arbitrary PDFs.
+"""External paper processing: Google Scholar URLs and arbitrary (non-arxiv) PDFs.
 
-Consolidates: paper types, metadata extraction, scholar scraping, DB, and processing.
-Reuses PaperSummarizer from main.py for the actual summarization.
+Consolidates paper types, metadata extraction, scholar scraping, the local
+``external_papers.db`` SQLite layer, and the end-to-end processing flow.
+Reuses :class:`PaperSummarizer` from :mod:`main` for the actual summarization.
+
+Note: this module intentionally keeps its storage in SQLite
+(``external_papers.db``). Only the main ``papers.db`` moved to Neon.
 """
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import re
 from enum import StrEnum
@@ -15,6 +20,7 @@ from typing import TYPE_CHECKING, Any
 
 import aiosqlite
 import httpx
+import orjson
 from agents import Agent, ModelSettings, Runner
 from anyio import Path as AsyncPath
 from bs4 import BeautifulSoup
@@ -90,57 +96,77 @@ class ExternalPaperRecord(BaseModel):
 # Database (external_papers.db)
 # =============================================================================
 
-EXTERNAL_DB = "external_papers.db"
+EXTERNAL_DB: str = "external_papers.db"
+
+_CREATE_PAPERS_TABLE = """
+CREATE TABLE IF NOT EXISTS papers (
+    paper_id      TEXT PRIMARY KEY,
+    source        TEXT NOT NULL,
+    title         TEXT,
+    first_author  TEXT,
+    year          INTEGER,
+    doi           TEXT,
+    venue         TEXT,
+    category      TEXT,
+    pitch         TEXT,
+    summary       TEXT,
+    source_url    TEXT,
+    pdf_path      TEXT,
+    full_response TEXT,
+    created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+"""
+
+_INSERT_PAPER = """
+INSERT OR REPLACE INTO papers
+    (paper_id, source, title, first_author, year, doi, venue,
+     category, pitch, summary, source_url, pdf_path, full_response)
+VALUES
+    (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+"""
 
 
 async def init_external_db() -> None:
-    """Initialize external papers database."""
+    """Create the ``external_papers.db`` schema if absent."""
     async with aiosqlite.connect(EXTERNAL_DB) as db:
-        await db.execute("""
-            CREATE TABLE IF NOT EXISTS papers (
-                paper_id TEXT PRIMARY KEY,
-                source TEXT NOT NULL,
-                title TEXT,
-                first_author TEXT,
-                year INTEGER,
-                doi TEXT,
-                venue TEXT,
-                category TEXT,
-                pitch TEXT,
-                summary TEXT,
-                source_url TEXT,
-                pdf_path TEXT,
-                full_response TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
+        await db.execute(_CREATE_PAPERS_TABLE)
         await db.execute("CREATE INDEX IF NOT EXISTS idx_doi ON papers(doi)")
         await db.commit()
-    logger.debug(f"External DB initialized: {EXTERNAL_DB}")
+    logger.debug("External DB initialized: {}", EXTERNAL_DB)
 
 
 async def save_external_paper(record: ExternalPaperRecord) -> None:
-    """Save external paper to database."""
+    """Insert-or-replace a fully-processed external paper row."""
     async with aiosqlite.connect(EXTERNAL_DB) as db:
         await db.execute(
-            """INSERT OR REPLACE INTO papers
-               (paper_id, source, title, first_author, year, doi, venue, category, pitch, summary, source_url, pdf_path, full_response)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            _INSERT_PAPER,
             (
-                record.paper_id, record.source, record.title, record.first_author,
-                record.year, record.doi, record.venue, record.category, record.pitch,
-                record.summary, record.source_url, record.pdf_path, record.full_response,
+                record.paper_id,
+                record.source,
+                record.title,
+                record.first_author,
+                record.year,
+                record.doi,
+                record.venue,
+                record.category,
+                record.pitch,
+                record.summary,
+                record.source_url,
+                record.pdf_path,
+                record.full_response,
             ),
         )
         await db.commit()
-    logger.info(f"Saved external paper: {record.paper_id}")
+    logger.info("Saved external paper: {}", record.paper_id)
 
 
 async def external_paper_exists(paper_id: str) -> bool:
-    """Check if paper exists by ID."""
-    async with aiosqlite.connect(EXTERNAL_DB) as db:
-        async with db.execute("SELECT 1 FROM papers WHERE paper_id = ?", (paper_id,)) as cur:
-            return await cur.fetchone() is not None
+    """Return True if ``paper_id`` already has a row in the external DB."""
+    async with (
+        aiosqlite.connect(EXTERNAL_DB) as db,
+        db.execute("SELECT 1 FROM papers WHERE paper_id = ?", (paper_id,)) as cur,
+    ):
+        return await cur.fetchone() is not None
 
 
 # =============================================================================
@@ -148,32 +174,31 @@ async def external_paper_exists(paper_id: str) -> bool:
 # =============================================================================
 
 
-def scrape_scholar(url: str) -> ScholarData:
-    """Scrape Google Scholar citation page."""
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-        "Accept-Language": "en-US,en;q=0.5",
-    }
-    resp = httpx.get(url, headers=headers, follow_redirects=True, timeout=30)
-    resp.raise_for_status()
-    soup = BeautifulSoup(resp.text, "html.parser")
+_SCHOLAR_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+    "Accept-Language": "en-US,en;q=0.5",
+}
+_SCHOLAR_TIMEOUT_SECONDS: float = 30.0
 
-    result = ScholarData(scholar_url=url)
 
-    # Title
+def _extract_scholar_title(soup: BeautifulSoup, result: ScholarData) -> None:
     title_el = soup.select_one("#gsc_oci_title a, #gsc_oci_title")
-    if title_el:
-        result.title = title_el.get_text(strip=True)
-        if title_el.get("href"):
-            result.article_link = title_el["href"]
+    if not title_el:
+        return
+    result.title = title_el.get_text(strip=True)
+    href = title_el.get("href")
+    if href:
+        result.article_link = href
 
-    # Field rows
+
+def _extract_scholar_fields(soup: BeautifulSoup, result: ScholarData) -> None:
     for row in soup.select(".gs_scl"):
         field = row.select_one(".gsc_oci_field")
         value = row.select_one(".gsc_oci_value")
         if not field or not value:
             continue
-        fname, fval = field.get_text(strip=True).lower(), value.get_text(strip=True)
+        fname = field.get_text(strip=True).lower()
+        fval = value.get_text(strip=True)
 
         if "author" in fname:
             result.authors = fval
@@ -186,24 +211,46 @@ def scrape_scholar(url: str) -> ScholarData:
         elif "description" in fname:
             result.description = fval
 
-    # Citation count
-    if cited := soup.select_one('a[href*="cites="]'):
-        if m := re.search(r"Cited by (\d[\d,]*)", cited.get_text()):
-            result.citation_count = int(m.group(1).replace(",", ""))
 
-    # PDF link
+def _extract_scholar_citations(soup: BeautifulSoup, result: ScholarData) -> None:
+    cited = soup.select_one('a[href*="cites="]')
+    if not cited:
+        return
+    if m := re.search(r"Cited by (\d[\d,]*)", cited.get_text()):
+        result.citation_count = int(m.group(1).replace(",", ""))
+
+
+def _extract_scholar_pdf_link(soup: BeautifulSoup, result: ScholarData) -> None:
     for link in soup.select('a[href*=".pdf"]'):
         if href := link.get("href"):
             result.pdf_link = href
-            break
-    if not result.pdf_link:
-        for link in soup.select(".gsc_oci_title_ggi a"):
-            href, text = link.get("href", ""), link.get_text(strip=True).lower()
-            if "pdf" in text or ".pdf" in href:
-                result.pdf_link = href
-                break
+            return
+    for link in soup.select(".gsc_oci_title_ggi a"):
+        href = link.get("href", "")
+        text = link.get_text(strip=True).lower()
+        if "pdf" in text or ".pdf" in href:
+            result.pdf_link = href
+            return
 
-    logger.info(f"Scraped: '{result.title}' by {result.first_author}")
+
+def scrape_scholar(url: str) -> ScholarData:
+    """Scrape a Google Scholar citation page into a :class:`ScholarData`."""
+    resp = httpx.get(
+        url,
+        headers=_SCHOLAR_HEADERS,
+        follow_redirects=True,
+        timeout=_SCHOLAR_TIMEOUT_SECONDS,
+    )
+    resp.raise_for_status()
+    soup = BeautifulSoup(resp.text, "html.parser")
+
+    result = ScholarData(scholar_url=url)
+    _extract_scholar_title(soup, result)
+    _extract_scholar_fields(soup, result)
+    _extract_scholar_citations(soup, result)
+    _extract_scholar_pdf_link(soup, result)
+
+    logger.info("Scraped: '{}' by {}", result.title, result.first_author)
     return result
 
 
@@ -221,17 +268,22 @@ _EXTRACTION_PROMPT = """Extract metadata from this paper PDF. Return JSON with:
 Return ONLY valid JSON."""
 
 
-async def extract_metadata(client: AsyncOpenAI, pdf_input: dict) -> PaperMetadata:
-    """Extract metadata from PDF using LLM."""
+async def extract_metadata(client: AsyncOpenAI, pdf_input: dict[str, Any]) -> PaperMetadata:
+    """Extract structured metadata from a PDF using an LLM call."""
     agent = Agent(
         name="Metadata Extractor",
         instructions=_EXTRACTION_PROMPT,
         model="gpt-4o-mini",
-        output_type=PaperMetadata,  # Handles structured JSON output automatically
+        output_type=PaperMetadata,
     )
     result = await Runner.run(agent, [pdf_input])
     metadata: PaperMetadata = result.final_output
-    logger.info(f"Extracted: '{metadata.title[:40]}...' by {metadata.first_author}, doi={metadata.doi}")
+    logger.info(
+        "Extracted: '{}...' by {}, doi={}",
+        metadata.title[:40],
+        metadata.first_author,
+        metadata.doi,
+    )
     return metadata
 
 
@@ -240,18 +292,30 @@ async def extract_metadata(client: AsyncOpenAI, pdf_input: dict) -> PaperMetadat
 # =============================================================================
 
 
-async def build_pdf_input(pdf_url: str | None = None, pdf_path: Path | None = None) -> dict[str, Any]:
-    """Build PDF input item for LLM from URL or local path."""
+async def build_pdf_input(
+    pdf_url: str | None = None,
+    pdf_path: Path | None = None,
+) -> dict[str, Any]:
+    """Build the LLM ``input_file`` item from either a URL or a local path."""
     if pdf_url:
-        return {"role": "user", "content": [{"type": "input_file", "file_url": pdf_url}]}
-    if pdf_path and pdf_path.exists():
-        import base64
-        b64 = base64.b64encode(await AsyncPath(pdf_path).read_bytes()).decode()
         return {
             "role": "user",
-            "content": [{"type": "input_file", "file_data": f"data:application/pdf;base64,{b64}", "filename": pdf_path.name}],
+            "content": [{"type": "input_file", "file_url": pdf_url}],
         }
-    raise ValueError("No PDF source provided")
+    if pdf_path and pdf_path.exists():
+        raw = await AsyncPath(pdf_path).read_bytes()
+        b64 = base64.b64encode(raw).decode()
+        return {
+            "role": "user",
+            "content": [
+                {
+                    "type": "input_file",
+                    "file_data": f"data:application/pdf;base64,{b64}",
+                    "filename": pdf_path.name,
+                }
+            ],
+        }
+    raise ValueError("No PDF source provided: pass pdf_url or an existing pdf_path")
 
 
 # =============================================================================
@@ -259,37 +323,44 @@ async def build_pdf_input(pdf_url: str | None = None, pdf_path: Path | None = No
 # =============================================================================
 
 
+_FILENAME_TITLE_LIMIT: int = 80
+_MAX_FILENAME_SUFFIX_ATTEMPTS: int = 1000
+
+
+def _unique_output_path(category_dir: Path, base_name: str) -> Path:
+    """Return a non-colliding path inside ``category_dir`` for ``base_name``."""
+    candidate = category_dir / base_name
+    if not candidate.exists():
+        return candidate
+    stem = candidate.stem
+    suffix = candidate.suffix
+    for k in range(2, _MAX_FILENAME_SUFFIX_ATTEMPTS):
+        alt = category_dir / f"{stem}-{k}{suffix}"
+        if not alt.exists():
+            return alt
+    raise RuntimeError(f"Could not find a free filename under {category_dir} for {base_name}")
+
+
 async def save_external_summary(record: ExternalPaperRecord) -> Path:
-    """Save summary to docs/{category}/."""
+    """Write the markdown summary for an external paper under ``docs/{category}/``."""
     category_dir = Path("docs") / record.category
     category_dir.mkdir(parents=True, exist_ok=True)
 
-    normalized = re.sub(r"[^A-Za-z0-9._-]+", "-", record.title).strip("-")[:80]
+    normalized = re.sub(r"[^A-Za-z0-9._-]+", "-", record.title).strip("-")[:_FILENAME_TITLE_LIMIT]
     safe_id = record.paper_id.replace(":", "-").replace("/", "-")
-    base = f"{safe_id}-{normalized}.md" if normalized else f"{safe_id}.md"
-    out = category_dir / base
+    base_name = f"{safe_id}-{normalized}.md" if normalized else f"{safe_id}.md"
+    out = _unique_output_path(category_dir, base_name)
 
-    if out.exists():
-        for k in range(2, 1000):
-            candidate = category_dir / f"{out.stem}-{k}.md"
-            if not candidate.exists():
-                out = candidate
-                break
-
-    scholar_link = f"\n**Google Scholar:** [{record.title}]({record.source_url})\n" if record.source == PaperSource.SCHOLAR and record.source_url else ""
+    scholar_link = (
+        f"\n**Google Scholar:** [{record.title}]({record.source_url})\n"
+        if record.source == PaperSource.SCHOLAR and record.source_url
+        else ""
+    )
     doi_link = f"**DOI:** [{record.doi}](https://doi.org/{record.doi})\n" if record.doi else ""
-    content = f"""# {record.title}
-{scholar_link}{doi_link}
-## Pitch
+    content = f"# {record.title}\n{scholar_link}{doi_link}\n## Pitch\n\n{record.pitch}\n\n---\n\n{record.summary}\n"
 
-{record.pitch}
-
----
-
-{record.summary}
-"""
     await AsyncPath(out).write_text(content)
-    logger.info(f"Saved: {out}")
+    logger.info("Saved: {}", out)
     return out
 
 
@@ -298,61 +369,17 @@ async def save_external_summary(record: ExternalPaperRecord) -> Path:
 # =============================================================================
 
 
-async def process_external(
-    summarizer: Any,  # PaperSummarizer from main.py
-    source: PaperSource,
-    pdf_url: str | None = None,
-    pdf_path: Path | None = None,
-    scholar_url: str | None = None,
-    instructions: str = "",
-) -> ExternalPaperRecord | None:
-    """Process external paper using shared summarizer.
+async def _generate_full_summary_from_pdf_input(
+    summarizer: Any,
+    pdf_input: dict[str, Any],
+    instructions: str,
+) -> tuple[str, dict[str, Any]]:
+    """Run the full analyzer agent directly on a raw ``pdf_input`` item.
 
-    Args:
-        summarizer: PaperSummarizer instance from main.py
-        source: PaperSource.SCHOLAR or PaperSource.LOCAL
-        pdf_url: Direct PDF URL
-        pdf_path: Local PDF path
-        scholar_url: Original Scholar URL (for reference)
-        instructions: System prompt for summarization
-
-    Returns:
-        ExternalPaperRecord or None if duplicate
+    We don't use :meth:`PaperSummarizer.generate_full_summary` here because it
+    assumes an ArXiv URL or local path; for external papers we already built
+    the PDF input item up-front so it is reused verbatim for summary + pitch.
     """
-    await init_external_db()
-
-    # Build PDF input
-    pdf_input = await build_pdf_input(pdf_url=pdf_url, pdf_path=pdf_path)
-
-    # Extract metadata for dedup
-    metadata = await extract_metadata(summarizer.client, pdf_input)
-    paper_id = metadata.generate_id()
-
-    if await external_paper_exists(paper_id):
-        logger.warning(f"Duplicate: {paper_id}")
-        return None
-
-    # Run summarization pipeline (reuse from main.py)
-    # We need to import here to avoid circular imports
-    from main import SummarizationRequest
-    from multi_prompt import PitchOutput
-    import orjson
-
-    # Create a request - we pass the pdf_url or pdf_path
-    # For external papers we don't have arxiv_url
-    request = SummarizationRequest(
-        arxiv_url=None,
-        pdf_path=pdf_path,
-        instructions=instructions,
-    )
-
-    # Generate summary - but we need to handle the case where we have a URL not arxiv
-    # Let's call the individual methods instead
-    logger.info("Step 1/3: Generating full analysis...")
-
-    # Build proper model settings
-    from agents import ModelSettings
-    from openai.types.shared import Reasoning
     from main import ModelName, build_service_tier_args, serialize_response
 
     model_settings = ModelSettings(
@@ -360,54 +387,99 @@ async def process_external(
         verbosity="high",
         extra_args=build_service_tier_args(summarizer.service_tier),
     )
-
-    from agents import Agent, Runner
     agent = Agent(
         name="Paper Analyzer",
         instructions=instructions,
         model=ModelName.ANALYZER,
         model_settings=model_settings,
     )
-
     result = await Runner.run(agent, [pdf_input])
-    full_summary = result.final_output
-    summary_response = serialize_response(result)
+    return result.final_output, serialize_response(result)
+
+
+async def _generate_pitch_from_pdf_input(
+    summarizer: Any,
+    pdf_input: dict[str, Any],
+    full_summary: str,
+) -> tuple[Any, dict[str, Any]]:
+    """Run the pitch agent directly on an existing ``pdf_input`` item."""
+    from main import ModelName, build_service_tier_args, serialize_response
+    from multi_prompt import PitchOutput
+
+    pitch_settings = ModelSettings(
+        reasoning=Reasoning(effort="low", summary="auto"),
+        verbosity="low",
+        extra_args=build_service_tier_args(summarizer.service_tier),
+    )
+    pitch_agent = Agent(
+        name="Pitch Generator",
+        instructions="Extract the exact paper title and generate a compelling pitch.",
+        model=ModelName.PITCH,
+        output_type=PitchOutput,
+        model_settings=pitch_settings,
+    )
+    prompt = (
+        "Extract the exact title and generate a 2-3 sentence pitch. "
+        "The pitch should capture the core contribution and why it matters.\n\n"
+        f"Paper Analysis:\n{full_summary[:2000]}..."
+    )
+    result = await Runner.run(
+        pitch_agent,
+        [pdf_input, {"role": "user", "content": prompt}],
+    )
+    return result.final_output, serialize_response(result)
+
+
+async def process_external(
+    summarizer: Any,
+    source: PaperSource,
+    *,
+    pdf_url: str | None = None,
+    pdf_path: Path | None = None,
+    scholar_url: str | None = None,
+    instructions: str = "",
+) -> ExternalPaperRecord | None:
+    """Process a single external paper end-to-end.
+
+    Args:
+        summarizer: :class:`main.PaperSummarizer` instance (owns the LLM client).
+        source: Provenance of the paper.
+        pdf_url: Direct PDF URL (mutually exclusive with ``pdf_path``).
+        pdf_path: Local PDF path (mutually exclusive with ``pdf_url``).
+        scholar_url: Original Scholar page, kept for reference.
+        instructions: System prompt for the analyzer agent.
+
+    Returns:
+        The persisted :class:`ExternalPaperRecord`, or ``None`` if the paper
+        was already in ``external_papers.db`` (deduplicated by DOI or
+        title+author hash).
+    """
+    await init_external_db()
+
+    pdf_input = await build_pdf_input(pdf_url=pdf_url, pdf_path=pdf_path)
+    metadata = await extract_metadata(summarizer.client, pdf_input)
+    paper_id = metadata.generate_id()
+
+    if await external_paper_exists(paper_id):
+        logger.warning("Duplicate: {}", paper_id)
+        return None
+
+    logger.info("Step 1/3: Generating full analysis...")
+    full_summary, summary_response = await _generate_full_summary_from_pdf_input(summarizer, pdf_input, instructions)
 
     logger.info("Step 2/3: Generating pitch...")
-    pitch_output, pitch_response = await summarizer.generate_pitch(full_summary, pdf_path=pdf_path)
-    # For URL-based, we need to handle differently - pass the pdf_input
-    if pdf_url and not pdf_path:
-        # Re-run pitch with URL
-        from multi_prompt import PitchOutput as PO
-        pitch_settings = ModelSettings(
-            reasoning=Reasoning(effort="low", summary="auto"),
-            verbosity="low",
-            extra_args=build_service_tier_args(summarizer.service_tier),
-        )
-        pitch_agent = Agent(
-            name="Pitch Generator",
-            instructions="Extract the exact paper title and generate a compelling pitch.",
-            model=ModelName.PITCH,
-            output_type=PO,
-            model_settings=pitch_settings,
-        )
-        pitch_prompt = f"""Extract the exact title and generate a 2-3 sentence pitch.
-The pitch should capture the core contribution and why it matters.
-
-Paper Analysis:
-{full_summary[:2000]}..."""
-        pitch_result = await Runner.run(pitch_agent, [pdf_input, {"role": "user", "content": pitch_prompt}])
-        pitch_output = pitch_result.final_output
-        pitch_response = serialize_response(pitch_result)
+    pitch_output, pitch_response = await _generate_pitch_from_pdf_input(summarizer, pdf_input, full_summary)
 
     logger.info("Step 3/3: Categorizing...")
     category, cat_response = await summarizer.categorize_paper(pitch_output.title, pitch_output.pitch, full_summary)
 
-    full_response = orjson.dumps({
-        "summary": summary_response,
-        "pitch": pitch_response,
-        "category": cat_response,
-    }).decode()
+    full_response = orjson.dumps(
+        {
+            "summary": summary_response,
+            "pitch": pitch_response,
+            "category": cat_response,
+        }
+    ).decode()
 
     record = ExternalPaperRecord(
         paper_id=paper_id,
@@ -428,26 +500,31 @@ Paper Analysis:
     await save_external_paper(record)
     await save_external_summary(record)
 
-    logger.success(f"Processed: {record.title[:50]}... [{record.paper_id}]")
+    logger.success("Processed: {}... [{}]", record.title[:50], record.paper_id)
     return record
 
 
 async def process_scholar_url(summarizer: Any, url: str, instructions: str) -> ExternalPaperRecord | None:
-    """Process Google Scholar citation URL."""
+    """Scrape a Google Scholar page and run the external pipeline on its PDF."""
     data = scrape_scholar(url)
     if not data.pdf_link:
         raise ValueError(f"No PDF link found for: {url}")
     return await process_external(
-        summarizer, PaperSource.SCHOLAR,
-        pdf_url=data.pdf_link, scholar_url=url, instructions=instructions,
+        summarizer,
+        PaperSource.SCHOLAR,
+        pdf_url=data.pdf_link,
+        scholar_url=url,
+        instructions=instructions,
     )
 
 
 async def process_local_pdf(summarizer: Any, pdf_path: Path, instructions: str) -> ExternalPaperRecord | None:
-    """Process local PDF file."""
+    """Run the external pipeline on a local non-arxiv PDF file."""
     if not pdf_path.exists():
         raise FileNotFoundError(f"PDF not found: {pdf_path}")
     return await process_external(
-        summarizer, PaperSource.LOCAL,
-        pdf_path=pdf_path, instructions=instructions,
+        summarizer,
+        PaperSource.LOCAL,
+        pdf_path=pdf_path,
+        instructions=instructions,
     )

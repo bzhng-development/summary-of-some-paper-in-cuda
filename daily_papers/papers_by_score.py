@@ -13,61 +13,31 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
-import sqlite3
+import sys
 from pathlib import Path
 
 import tiktoken
 
+# Make the repo root importable when run directly from ``daily_papers/``.
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from daily_papers.examples import build_examples_block, load_examples  # noqa: E402
+
 # Same repo path as hf_daily_papers.py
-PAPERS_REPO = Path(__file__).resolve().parent.parent
+PAPERS_REPO = _REPO_ROOT
 
 
 def load_examples_block(repo_path: Path) -> str:
-    """Load reading history titles grouped by category, same as hf_daily_papers.py."""
-    examples: dict[str, str] = {}  # title -> category
+    """Return the reading-history block rendered for the LLM.
 
-    # papers.db lives under local_data/ (gitignored), external_papers.db at repo root
-    for db_path in (
-        repo_path / "local_data" / "papers.db",
-        repo_path / "papers.db",  # legacy fallback
-        repo_path / "external_papers.db",
-    ):
-        if not db_path.exists():
-            continue
-        con = sqlite3.connect(str(db_path))
-        for row in con.execute("SELECT title, category FROM papers WHERE title IS NOT NULL AND interested = 1"):
-            title, cat = row
-            if title and title not in examples:
-                examples[title] = cat or "uncategorized"
-        con.close()
-
-    docs_dir = repo_path / "docs"
-    if docs_dir.exists():
-        for md_file in docs_dir.rglob("*.md"):
-            if md_file.name == "index.md":
-                continue
-            category = md_file.parent.name
-            try:
-                first_lines = md_file.read_text(errors="replace")[:500]
-                m = re.search(r"^#\s+(.+)$", first_lines, re.MULTILINE)
-                title = m.group(1).strip() if m else md_file.stem.replace("-", " ")
-            except OSError:
-                title = md_file.stem.replace("-", " ")
-            if title not in examples:
-                examples[title] = category
-
-    by_cat: dict[str, list[str]] = {}
-    for title, cat in examples.items():
-        by_cat.setdefault(cat, []).append(title)
-
-    lines = [f"The user's reading history ({len(examples)} papers):\n"]
-    for cat in sorted(by_cat):
-        lines.append(f"[{cat}]")
-        for t in by_cat[cat]:
-            lines.append(f"  - {t}")
-
-    return "\n".join(lines)
+    Thin wrapper around :func:`daily_papers.examples.load_examples` so the
+    header matches the original format (paper count on the first line).
+    """
+    examples = load_examples(repo_path)
+    header = f"The user's reading history ({len(examples)} papers):"
+    return build_examples_block(examples, header=header)
 
 
 def _format_authors_with_affiliations(p: dict) -> str:

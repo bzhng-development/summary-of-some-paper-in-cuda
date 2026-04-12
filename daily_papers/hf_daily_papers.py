@@ -16,50 +16,48 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import re
-import sqlite3
+import sys
 import tempfile
+import time
+import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from pathlib import Path
-
-import time
-import xml.etree.ElementTree as ET
 
 import httpx
 from loguru import logger
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 
+# Ensure the repo root is importable when running this file directly from
+# ``daily_papers/``. This mirrors paper_server.py's sys.path tweak.
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from daily_papers.examples import (  # noqa: E402  (after sys.path tweak)
+    build_examples_block,
+    load_examples,
+)
+from neon_db import NeonDB  # noqa: E402
+
 
 # ============================================================================
 # Config
 # ============================================================================
 
-import os
+# Override any of these via environment variables. ``SGLANG_BASE_URL`` /
+# ``SGLANG_MODEL`` point at whichever inference server you happen to be running
+# — local SGLang, Modal Flash, Modal web_server, etc.
+BASE_URL: str = os.environ.get("SGLANG_BASE_URL", "http://localhost:30000/v1")
+MODEL: str = os.environ.get("SGLANG_MODEL", "Qwen/Qwen3.5-122B-A10B")
+HF_PAPERS_API: str = "https://huggingface.co/api/daily_papers"
 
-# Set SGLANG_BASE_URL env var to override.
-#
-# Modal Flash (experimental.http_server) — lower latency, sticky sessions, but:
-#   - returns 503 instantly if no containers are up (no queuing)
-#   - won't auto-trigger scale-up on request
-#   - URL ends in .modal.direct
-# BASE_URL = os.environ.get("SGLANG_BASE_URL", "https://waterloo-data--sglang-inference-sglanginference.us-east.modal.direct/v1")
-#
-# Modal web_server — standard routing, auto-scales on request, but:
-#   - higher latency routing
-#   - request hangs until container is ready (no 503)
-#   - URL ends in .modal.run
-# BASE_URL = os.environ.get("SGLANG_BASE_URL", "https://waterloo-data--sglang-inference-ws-serve.modal.run/v1")
-#
-# Local SGLang server:
-BASE_URL = os.environ.get("SGLANG_BASE_URL", "http://localhost:30000/v1")
-MODEL = "Qwen/Qwen3.5-122B-A10B"
-HF_PAPERS_API = "https://huggingface.co/api/daily_papers"
-
-# Path to the summary-of-some-paper-in-cuda repo for loading examples
-PAPERS_REPO = Path(__file__).resolve().parent.parent
+# Path to the summary-of-some-paper-in-cuda repo for loading examples.
+PAPERS_REPO = _REPO_ROOT
 
 
 # ============================================================================
@@ -97,63 +95,8 @@ class ScoredPaper:
     reason: str
 
 
-@dataclass
-class ExamplePaper:
-    title: str
-    category: str
-
-
-# ============================================================================
-# Load examples from the papers repo
-# ============================================================================
-
-
-def load_examples_from_repo(repo_path: Path) -> list[ExamplePaper]:
-    """Load known-relevant papers from DB + docs directory."""
-    examples: dict[str, ExamplePaper] = {}  # keyed by title to dedup
-
-    # 1) From papers.db (moved under local_data/ — too large for git)
-    db_path = repo_path / "local_data" / "papers.db"
-    if not db_path.exists():
-        db_path = repo_path / "papers.db"  # legacy fallback
-    if db_path.exists():
-        con = sqlite3.connect(str(db_path))
-        for row in con.execute("SELECT title, category FROM papers WHERE title IS NOT NULL AND interested = 1"):
-            title, cat = row
-            if title:
-                examples[title] = ExamplePaper(title=title, category=cat or "uncategorized")
-        con.close()
-        logger.debug(f"Loaded {len(examples)} interested papers from papers.db")
-
-    # 2) From external_papers.db
-    ext_db = repo_path / "external_papers.db"
-    if ext_db.exists():
-        con = sqlite3.connect(str(ext_db))
-        for row in con.execute("SELECT title, category FROM papers WHERE title IS NOT NULL"):
-            title, cat = row
-            if title and title not in examples:
-                examples[title] = ExamplePaper(title=title, category=cat or "uncategorized")
-        con.close()
-
-    # 3) From docs/ markdown files (covers papers not in DB)
-    docs_dir = repo_path / "docs"
-    if docs_dir.exists():
-        for md_file in docs_dir.rglob("*.md"):
-            if md_file.name == "index.md":
-                continue
-            category = md_file.parent.name
-            # Try to extract title from first H1 in the file
-            try:
-                first_lines = md_file.read_text(errors="replace")[:500]
-                m = re.search(r"^#\s+(.+)$", first_lines, re.MULTILINE)
-                title = m.group(1).strip() if m else md_file.stem.replace("-", " ")
-            except OSError:
-                title = md_file.stem.replace("-", " ")
-            if title not in examples:
-                examples[title] = ExamplePaper(title=title, category=category)
-
-    logger.info(f"Loaded {len(examples)} example papers total")
-    return list(examples.values())
+# ``ExamplePaper`` / ``load_examples`` / ``build_examples_block`` now live in
+# ``daily_papers.examples`` and are shared with ``papers_by_score.py``.
 
 
 # ============================================================================
@@ -454,22 +397,6 @@ has NOTHING to do with policy optimization — do not fabricate connections.
 """
 
 
-def _build_examples_block(examples: list[ExamplePaper]) -> str:
-    if not examples:
-        return ""
-    # Group by category for a compact representation
-    by_cat: dict[str, list[str]] = {}
-    for ex in examples:
-        by_cat.setdefault(ex.category, []).append(ex.title)
-
-    lines = ["The user's reading history:\n"]
-    for cat, titles in sorted(by_cat.items()):
-        lines.append(f"[{cat}]")
-        for t in titles:
-            lines.append(f"  - {t}")
-    return "\n".join(lines)
-
-
 def _format_authors_with_affiliations(paper: Paper) -> str:
     """Format authors with their affiliations if available."""
     if not paper.affiliations:
@@ -484,30 +411,30 @@ def _format_authors_with_affiliations(paper: Paper) -> str:
     return ", ".join(parts)
 
 
-def _auto_pool_size(concurrency: int) -> int:
-    """Derive pool size from concurrency: ~1 client per 128 concurrent reqs, clamped [2, 64]."""
-    return max(2, min(concurrency // 128 + 1, 64))
-
-
 def _raise_fd_limit() -> None:
-    """Try to raise the process soft fd limit to the hard limit (macOS defaults to 256)."""
-    import resource
+    """Try to raise the process soft fd limit to the hard limit.
+
+    macOS defaults to 256, which collapses at any serious concurrency.
+    """
+    import resource  # POSIX-only, keep local so the module imports on Windows.
+
     soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
     target = min(hard, 65536) if hard != resource.RLIM_INFINITY else 65536
-    if soft < target:
-        try:
-            resource.setrlimit(resource.RLIMIT_NOFILE, (target, hard))
-            logger.info(f"Raised fd limit: {soft} → {target}")
-        except (ValueError, OSError) as e:
-            logger.warning(f"Could not raise fd limit from {soft}: {e}")
+    if soft >= target:
+        return
+    try:
+        resource.setrlimit(resource.RLIMIT_NOFILE, (target, hard))
+    except (ValueError, OSError) as exc:
+        logger.warning("Could not raise fd limit from {}: {}", soft, exc)
+    else:
+        logger.info("Raised fd limit: {} -> {}", soft, target)
 
 
 class AsyncClientPool:
-    """Pool of AsyncOpenAI clients for massive parallelism.
+    """Single AsyncOpenAI client with a bounded httpx connection pool.
 
-    Distributes requests round-robin across multiple clients so that
-    per-client connection limits don't bottleneck at 4096+ concurrency.
-    If pool_size is not given, it auto-scales from concurrency.
+    Straightforward replacement for the round-robin pool: one client,
+    one httpx.AsyncClient, max 64 concurrent TCP connections total.
     """
 
     def __init__(
@@ -518,43 +445,30 @@ class AsyncClientPool:
         timeout: float = 1500.0,
     ):
         _raise_fd_limit()
-        self.pool_size = pool_size if pool_size is not None else _auto_pool_size(concurrency)
-        # Scale per-client connections so total stays under a sane cap.
-        # All clients hit the same server, so we don't need thousands of TCP sockets.
-        max_total_conns = 128
-        per_client_conns = max(4, max_total_conns // self.pool_size)
-        per_client_keepalive = max(2, per_client_conns // 2)
-        self.clients: list[AsyncOpenAI] = [
-            AsyncOpenAI(
-                base_url=base_url,
-                api_key="not-needed",
-                timeout=timeout,
-                max_retries=0,
-                http_client=httpx.AsyncClient(
-                    limits=httpx.Limits(
-                        max_connections=per_client_conns,
-                        max_keepalive_connections=per_client_keepalive,
-                    ),
-                    timeout=timeout,
+        max_total_conns = 64
+        self.client = AsyncOpenAI(
+            base_url=base_url,
+            api_key="not-needed",
+            timeout=timeout,
+            max_retries=0,
+            http_client=httpx.AsyncClient(
+                limits=httpx.Limits(
+                    max_connections=max_total_conns,
+                    max_keepalive_connections=max_total_conns,
                 ),
-            )
-            for _ in range(self.pool_size)
-        ]
-        self._counter = 0
+                timeout=timeout,
+            ),
+        )
+        self.pool_size = 1
         logger.info(
-            f"Initialized {self.pool_size} async clients at {base_url} "
-            f"({per_client_conns} conns/client, {max_total_conns} total max)"
+            f"Initialized 1 async client at {base_url} ({max_total_conns} total conns max)"
         )
 
     def get(self) -> AsyncOpenAI:
-        """Return the next client (round-robin)."""
-        client = self.clients[self._counter % self.pool_size]
-        self._counter += 1
-        return client
+        return self.client
 
     async def close(self) -> None:
-        for c in self.clients:
-            await c.close()
+        await self.client.close()
 
 
 async def score_paper(pool: AsyncClientPool, paper: Paper, examples_block: str) -> ScoredPaper:
@@ -577,6 +491,11 @@ Abstract:
 """
 
     system = SYSTEM_PROMPT.format(examples_block=examples_block)
+    # Pre-bind ``result`` so static analyzers don't flag the "possibly
+    # unbound" path — the final ``attempt == 4`` branch always re-raises, so
+    # ``result`` is only read after a successful ``break``, but linters can't
+    # prove that without the explicit initial value.
+    result: ScoreOutput | None = None
 
     for attempt in range(5):
         try:
@@ -598,14 +517,26 @@ Abstract:
             raw = resp.choices[0].message.content or ""
             result = ScoreOutput.model_validate_json(raw)
             break
-        except Exception as e:
+        except Exception as exc:
             if attempt == 4:
                 raise
-            wait = 2 ** attempt
-            logger.warning(f"score_paper {paper.arxiv_id} attempt {attempt + 1} failed: {e}, retrying in {wait}s")
+            wait = 2**attempt
+            logger.warning(
+                "score_paper {} attempt {} failed: {}, retrying in {}s",
+                paper.arxiv_id,
+                attempt + 1,
+                exc,
+                wait,
+            )
             await asyncio.sleep(wait)
 
-    return ScoredPaper(paper=paper, score=result.score, similar_paper=result.similar_paper, reason=result.reason)
+    assert result is not None  # narrowed by the loop above
+    return ScoredPaper(
+        paper=paper,
+        score=result.score,
+        similar_paper=result.similar_paper,
+        reason=result.reason,
+    )
 
 
 # ============================================================================
@@ -642,6 +573,8 @@ async def async_main():
         default=None,
         help="Fetch a single date (YYYY-MM-DD). Default: today.",
     )
+    parser.add_argument("--batch-size", type=int, default=32, help="Tasks launched per burst before sleeping (default: 32)")
+    parser.add_argument("--batch-delay", type=float, default=0.3, help="Seconds to sleep between task-launch bursts (default: 0.3)")
     # Keep --workers as deprecated alias for --concurrency
     parser.add_argument("--workers", type=int, default=None, help="(deprecated, use --concurrency)")
     args = parser.parse_args()
@@ -670,9 +603,10 @@ async def async_main():
     except Exception as e:
         logger.error(f"Server health check failed: {e}")
 
-    # Load examples from the papers repo
-    examples = load_examples_from_repo(PAPERS_REPO)
-    examples_block = _build_examples_block(examples)
+    # Load examples from the papers repo (Neon + external SQLite + docs/)
+    db = NeonDB()
+    examples = load_examples(PAPERS_REPO, db=db)
+    examples_block = build_examples_block(examples)
 
     # Skip papers already in examples (they'd trivially match themselves)
     example_titles = {e.title.lower() for e in examples}
@@ -775,8 +709,17 @@ async def async_main():
                 logger.error(f"Failed {paper.arxiv_id}: {type(e).__name__}: {e}\n{traceback.format_exc()}")
                 return None
 
-    # Launch all scoring tasks concurrently, gated by semaphore
-    tasks = [asyncio.create_task(_score_one(p)) for p in papers_to_score]
+    # Launch scoring tasks in bursts: post batch_size tasks, sleep, repeat.
+    # Avoids hammering the port-forward with a single giant burst.
+    tasks: list[asyncio.Task] = []
+    batch_size = max(1, args.batch_size)
+    batch_delay = max(0.0, args.batch_delay)
+    for i in range(0, len(papers_to_score), batch_size):
+        batch = papers_to_score[i : i + batch_size]
+        tasks.extend(asyncio.create_task(_score_one(p)) for p in batch)
+        if i + batch_size < len(papers_to_score) and batch_delay > 0:
+            logger.debug(f"Launched {i + len(batch)}/{len(papers_to_score)} tasks, sleeping {batch_delay}s")
+            await asyncio.sleep(batch_delay)
     await asyncio.gather(*tasks)
 
     # Final save

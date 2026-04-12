@@ -20,10 +20,10 @@ import argparse
 import asyncio
 import json
 import resource
-import tempfile
 from pathlib import Path
 
 import httpx
+from loguru import logger
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 
@@ -129,15 +129,21 @@ Respond with valid JSON matching the schema."""
 def _raise_fd_limit() -> None:
     soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
     target = min(hard, 65536) if hard != resource.RLIM_INFINITY else 65536
-    if soft < target:
-        try:
-            resource.setrlimit(resource.RLIMIT_NOFILE, (target, hard))
-            print(f"Raised fd limit: {soft} -> {target}")
-        except (ValueError, OSError) as e:
-            print(f"Could not raise fd limit: {e}")
+    if soft >= target:
+        return
+    try:
+        resource.setrlimit(resource.RLIMIT_NOFILE, (target, hard))
+    except (ValueError, OSError) as exc:
+        logger.warning("Could not raise fd limit: {}", exc)
+    else:
+        logger.info("Raised fd limit: {} -> {}", soft, target)
 
 
-def make_client(base_url: str, concurrency: int = 4096, timeout: float = 300.0) -> AsyncOpenAI:
+def make_client(
+    base_url: str,
+    concurrency: int = 4096,
+    timeout: float = 300.0,
+) -> AsyncOpenAI:
     _raise_fd_limit()
     client = AsyncOpenAI(
         base_url=base_url,
@@ -152,7 +158,7 @@ def make_client(base_url: str, concurrency: int = 4096, timeout: float = 300.0) 
             timeout=timeout,
         ),
     )
-    print(f"Client: max_connections={concurrency}, base_url={base_url}")
+    logger.info("Client: max_connections={}, base_url={}", concurrency, base_url)
     return client
 
 
@@ -161,7 +167,22 @@ def make_client(base_url: str, concurrency: int = 4096, timeout: float = 300.0) 
 # =============================================================================
 
 
-async def tag_one(client: AsyncOpenAI, paper: dict, model: str) -> dict | None:
+def _coerce_category(raw_category: str) -> str:
+    """Normalize an LLM-predicted category against the allow-list."""
+    cat = raw_category.strip().lower()
+    if cat in CATEGORIES:
+        return cat
+    for c in CATEGORIES:
+        if c in cat:
+            return c
+    return "uncategorized"
+
+
+async def tag_one(
+    client: AsyncOpenAI,
+    paper: dict,
+    model: str,
+) -> dict | None:
     title = paper["title"]
     abstract = paper.get("abstract", "")
     user_msg = f"Title: {title}\n\nAbstract:\n{abstract[:2000]}"
@@ -186,26 +207,16 @@ async def tag_one(client: AsyncOpenAI, paper: dict, model: str) -> dict | None:
             if not raw.strip():
                 raise ValueError("Empty response from LLM")
             result = TagOutput.model_validate_json(raw)
-            # Validate category
-            cat = result.category.strip().lower()
-            if cat not in CATEGORIES:
-                # fuzzy match
-                for c in CATEGORIES:
-                    if c in cat:
-                        cat = c
-                        break
-                else:
-                    cat = "uncategorized"
             return {
                 "arxiv_id": paper["arxiv_id"],
                 "title": title,
-                "category": cat,
+                "category": _coerce_category(result.category),
                 "confidence": result.confidence,
                 "reason": result.reason,
             }
-        except Exception as e:
+        except Exception as exc:
             if attempt == 4:
-                print(f"FAILED {paper['arxiv_id']}: {e}")
+                logger.error("FAILED {}: {}", paper["arxiv_id"], exc)
                 return None
             await asyncio.sleep(2**attempt)
     return None
@@ -221,29 +232,37 @@ async def async_main():
     args = parser.parse_args()
 
     # Load input
-    papers = []
+    papers: list[dict] = []
     for line in args.input.read_text().splitlines():
         line = line.strip()
         if line:
             papers.append(json.loads(line))
-    print(f"Loaded {len(papers)} papers from {args.input}")
+    logger.info("Loaded {} papers from {}", len(papers), args.input)
 
     # Skip already tagged
     already_done: set[str] = set()
-    if args.output.exists():
-        for line in args.output.read_text().splitlines():
-            line = line.strip()
-            if line:
-                try:
-                    already_done.add(json.loads(line)["arxiv_id"])
-                except (json.JSONDecodeError, KeyError):
-                    pass
-        if already_done:
-            papers = [p for p in papers if p["arxiv_id"] not in already_done]
-            print(f"Skipped {len(already_done)} already tagged, {len(papers)} remaining")
+    try:
+        existing_lines = args.output.read_text().splitlines()
+    except FileNotFoundError:
+        existing_lines = []
+    for line in existing_lines:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            already_done.add(json.loads(line)["arxiv_id"])
+        except (json.JSONDecodeError, KeyError):
+            continue
+    if already_done:
+        papers = [p for p in papers if p["arxiv_id"] not in already_done]
+        logger.info(
+            "Skipped {} already tagged, {} remaining",
+            len(already_done),
+            len(papers),
+        )
 
     if not papers:
-        print("Nothing to tag!")
+        logger.info("Nothing to tag!")
         return
 
     client = make_client(base_url=args.base_url, concurrency=args.concurrency)
@@ -254,42 +273,43 @@ async def async_main():
         try:
             models = await client.models.list()
             model = models.data[0].id
-            print(f"Auto-detected model: {model}")
-        except Exception as e:
-            print(f"ERROR: Could not auto-detect model: {e}")
-            print("Pass --model explicitly, e.g. --model Qwen/Qwen3.5-2B")
+            logger.info("Auto-detected model: {}", model)
+        except Exception as exc:
+            logger.error("Could not auto-detect model: {}", exc)
+            logger.error("Pass --model explicitly, e.g. --model Qwen/Qwen3.5-2B")
             return
 
     sem = asyncio.Semaphore(args.concurrency)
     completed = 0
-    results: list[dict] = []
-
-    # Append mode — write results incrementally
-    out_f = open(args.output, "a")
-
     save_lock = asyncio.Lock()
 
-    async def _tag_one(paper: dict) -> None:
-        nonlocal completed
-        async with sem:
-            result = await tag_one(client, paper, model)
-            if result:
-                async with save_lock:
-                    results.append(result)
-                    out_f.write(json.dumps(result) + "\n")
-                    completed += 1
-                    if completed % 50 == 0:
-                        out_f.flush()
-                        print(f"Progress: {completed}/{len(papers)} tagged")
+    try:
+        with args.output.open("a") as out_f:
 
-    tasks = [asyncio.create_task(_tag_one(p)) for p in papers]
-    await asyncio.gather(*tasks)
+            async def _tag_one(paper: dict) -> None:
+                nonlocal completed
+                async with sem:
+                    result = await tag_one(client, paper, model)
+                    if result is None:
+                        return
+                    async with save_lock:
+                        out_f.write(json.dumps(result) + "\n")
+                        completed += 1
+                        if completed % 50 == 0:
+                            out_f.flush()
+                            logger.info(
+                                "Progress: {}/{} tagged", completed, len(papers)
+                            )
 
-    out_f.flush()
-    out_f.close()
-    await client.close()
+            tasks = [asyncio.create_task(_tag_one(p)) for p in papers]
+            await asyncio.gather(*tasks)
+            out_f.flush()
+    finally:
+        await client.close()
 
-    print(f"Done: tagged {completed}/{len(papers)} papers -> {args.output}")
+    logger.success(
+        "Done: tagged {}/{} papers -> {}", completed, len(papers), args.output
+    )
 
 
 def main():

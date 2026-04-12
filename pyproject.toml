@@ -21,6 +21,7 @@ dependencies = [
     "pandas>=2.3.3",
     "playwright>=1.57.0",
     "polars>=1.36.1",
+    "psycopg[binary,pool]>=3.3.3",
     "pydantic>=2.12.3",
     "pymupdf>=1.27.1",
     "python-dotenv>=1.2.1",

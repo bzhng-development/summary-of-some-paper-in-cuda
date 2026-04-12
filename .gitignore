@@ -21,3 +21,9 @@ papers.db-shm
 # Local mintlify leftovers
 mintlify-ref/
 
+# Per-run build artifacts from daily_papers/hf_daily_papers.py — rebuilt on every run.
+# all_scored.json stays tracked (it's the source of truth for scores); relevant.md is a cache.
+daily_papers/papers_out/relevant.md
+daily_papers/papers_out/by_score/
+__pycache__/
+

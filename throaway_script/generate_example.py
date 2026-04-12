@@ -10,13 +10,14 @@ Usage:
     uv run python generate_example.py --arxiv-id 2408.03314
     uv run python generate_example.py --gemini --backfill
 """
+
 from __future__ import annotations
 
 import argparse
 import base64
 import os
-import sqlite3
 from pathlib import Path
+from typing import Any
 
 import httpx
 from dotenv import load_dotenv
@@ -25,8 +26,8 @@ from openai import OpenAI
 
 load_dotenv()
 
-from database import DB_PATH, save_paper_sync
 from multi_prompt import SECTION_SPECS, _SYSTEM_PREAMBLE
+from neon_db import NeonDB
 
 EXAMPLES_DIR = Path(__file__).parent / "examples"
 
@@ -53,7 +54,7 @@ def generate_section(
         text_content += f"<prior_sections>\n{prior_sections}\n</prior_sections>\n\n"
     text_content += section_prompt
 
-    kwargs: dict = dict(
+    kwargs: dict[str, Any] = dict(
         model=model,
         messages=[
             {"role": "system", "content": _SYSTEM_PREAMBLE},
@@ -95,14 +96,13 @@ def summarize_paper(client: OpenAI, model: str, arxiv_id: str, extra_body: dict 
     return "\n\n".join(sections)
 
 
-def get_backfill_papers() -> list[tuple[str, str]]:
+def get_backfill_papers(db: NeonDB) -> list[tuple[str, str]]:
     """Return (arxiv_id, title) for interested papers missing a summary."""
-    con = sqlite3.connect(DB_PATH)
-    rows = con.execute(
-        "SELECT id, title FROM papers WHERE interested = 1 AND (summary IS NULL OR summary = '')"
-    ).fetchall()
-    con.close()
-    return rows
+    with db.get_conn() as conn, conn.cursor() as cur:
+        cur.execute(
+            "SELECT id, title FROM \"nextjs-ui_paper\" WHERE interested = 1 AND (summary IS NULL OR summary = '')"
+        )
+        return [(row[0], row[1]) for row in cur.fetchall()]
 
 
 def main():
@@ -125,15 +125,17 @@ def main():
         extra_body = {"provider": {"only": ["google-ai-studio"], "allow_fallbacks": False}}
         logger.info(f"Gemini mode: {args.model} via Google AI Studio")
 
+    db = NeonDB()
+
     if args.backfill:
-        papers = get_backfill_papers()
+        papers = get_backfill_papers(db)
         logger.info(f"Backfill: {len(papers)} interested papers need summaries")
         for i, (arxiv_id, title) in enumerate(papers, 1):
-            logger.info(f"[{i}/{len(papers)}] {arxiv_id} — {title}")
+            logger.info(f"[{i}/{len(papers)}] {arxiv_id} -- {title}")
             try:
                 full_summary = summarize_paper(client, args.model, arxiv_id, extra_body)
-                save_paper_sync(arxiv_id, summary=full_summary)
-                logger.success(f"  Saved {len(full_summary)} chars to DB")
+                db.save_paper(arxiv_id, summary=full_summary)
+                logger.success(f"  Saved {len(full_summary)} chars to Neon")
             except Exception as e:
                 logger.error(f"  Failed: {e}")
                 continue

@@ -8,3 +8,12 @@ site/
 temp_paper.pdf
 *.log
 
+# Built database (100MB+, exceeds github per-file limit)
+# Rebuild via `uv run python sync_db.py` from the committed jsonls + external_papers.db
+papers.db
+papers.db-wal
+papers.db-shm
+
+# Local mintlify leftovers
+mintlify-ref/
+

@@ -1,9 +1,9 @@
 """Neon Postgres layer for paper storage.
 
-This module is the replacement for the former SQLite ``database.py`` layer. It
-provides a single :class:`NeonDB` façade over a Neon (managed Postgres)
-instance, plus a migration helper for pulling data out of the legacy
-``local_data/papers.db`` SQLite file.
+Replaces the former SQLite ``database.py`` layer. Provides a single
+:class:`NeonDB` façade over a Neon (managed Postgres) instance, plus a
+migration helper for pulling data out of the legacy ``local_data/papers.db``
+SQLite file.
 
 Design notes
 ------------
@@ -14,8 +14,6 @@ Design notes
   only provided, non-``None`` fields update the row, via
   ``COALESCE(EXCLUDED.col, {table}.col)``. This matches the semantics of the
   previous ``save_paper_sync`` helper.
-- The public ``database.py`` module is now a thin backwards-compat shim around
-  this module so existing call sites keep working during the rolling refactor.
 """
 
 from __future__ import annotations
@@ -155,8 +153,8 @@ class PaperRow:
 class NeonDB:
     """Plain-Python Neon Postgres client for the papers table.
 
-    Construct once per process (or use the module-level shim singleton in
-    ``database.py``). Each method opens and closes its own connection.
+    Construct once per process. Each method opens and closes its own
+    connection.
     """
 
     def __init__(self, database_url: str | None = None) -> None:
@@ -235,7 +233,10 @@ class NeonDB:
             if value is None:
                 continue
             if key in _JSON_COLUMNS and not isinstance(value, str):
-                out[key] = json.dumps(value, ensure_ascii=False)
+                out[key] = json.dumps(value, ensure_ascii=False).replace("\x00", "")
+            elif isinstance(value, str):
+                # Postgres TEXT forbids NUL bytes; SQLite tolerated them.
+                out[key] = value.replace("\x00", "")
             else:
                 out[key] = value
         return out
@@ -358,9 +359,10 @@ class NeonDB:
 def migrate_sqlite_to_neon(sqlite_path: str | Path, *, batch_size: int = 500) -> int:
     """Stream every row from the legacy SQLite DB into Neon.
 
-    Uses :meth:`NeonDB.save_paper` so the column set is validated and JSON
-    fields are preserved verbatim (they were already stored as TEXT in SQLite).
-    Returns the number of rows copied.
+    Shares a single psycopg connection across the whole migration and uses
+    ``executemany`` to batch-insert. The SQL is a partial-upsert keyed on
+    ``id``, so re-running the migration is safe (existing columns are
+    preserved via ``COALESCE``). Returns the number of rows copied.
     """
     path = Path(sqlite_path)
     if not path.exists():
@@ -369,28 +371,46 @@ def migrate_sqlite_to_neon(sqlite_path: str | Path, *, batch_size: int = 500) ->
     db = NeonDB()
     db.init_schema()
 
+    # Columns to write — all writable schema columns, in a fixed order so we
+    # can use executemany. We never touch ``created_at`` (DB-managed).
+    cols = [c for c in SCHEMA_COLUMNS if c != "created_at"]
+    column_list = ", ".join(f'"{c}"' for c in cols)
+    placeholders = ", ".join(f"%({c})s" for c in cols)
+    update_parts = ", ".join(
+        f'"{c}" = COALESCE(EXCLUDED."{c}", {TABLE}."{c}")'
+        for c in cols
+        if c != "id"
+    )
+    sql = (
+        f"INSERT INTO {TABLE} ({column_list}) VALUES ({placeholders}) "
+        f"ON CONFLICT (id) DO UPDATE SET {update_parts}"
+    )
+
+    def _row_to_params(row: sqlite3.Row) -> dict[str, Any]:
+        data = dict(row)
+        data.pop("created_at", None)
+        params: dict[str, Any] = {c: None for c in cols}
+        normalized = NeonDB._normalize_fields(data)
+        params.update({k: v for k, v in normalized.items() if k in params})
+        return params
+
     logger.info("Migrating {} → Neon {}", path, TABLE)
     con = sqlite3.connect(path)
     con.row_factory = sqlite3.Row
+    copied = 0
     try:
         total = con.execute("SELECT COUNT(*) FROM papers").fetchone()[0]
         logger.info("Source has {} rows; batch_size={}", total, batch_size)
 
         cursor = con.execute("SELECT * FROM papers")
-        copied = 0
-        while True:
-            batch = cursor.fetchmany(batch_size)
-            if not batch:
-                break
-            for row in batch:
-                data = dict(row)
-                arxiv_id = data.pop("id")
-                data.pop("created_at", None)
-                # Strip Nones so COALESCE-upsert preserves any existing values.
-                data = {k: v for k, v in data.items() if v is not None}
-                db.save_paper(arxiv_id, **data)
-                copied += 1
-            logger.info("Migrated {}/{}", copied, total)
+        with db.get_conn() as pg, pg.cursor() as pg_cur:
+            while True:
+                batch = cursor.fetchmany(batch_size)
+                if not batch:
+                    break
+                pg_cur.executemany(sql, [_row_to_params(r) for r in batch])
+                copied += len(batch)
+                logger.info("Migrated {}/{}", copied, total)
 
         logger.info("Migration complete: {} rows", copied)
         return copied

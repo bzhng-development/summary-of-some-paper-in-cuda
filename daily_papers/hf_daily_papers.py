@@ -49,10 +49,18 @@ from neon_db import NeonDB  # noqa: E402
 # Config
 # ============================================================================
 
-# Override any of these via environment variables. ``SGLANG_BASE_URL`` /
-# ``SGLANG_MODEL`` point at whichever inference server you happen to be running
-# — local SGLang, Modal Flash, Modal web_server, etc.
-BASE_URL: str = os.environ.get("SGLANG_BASE_URL", "http://localhost:30000/v1")
+# Override any of these via environment variables.
+#
+# Priority for BASE_URL:
+#   1. SGLANG_BASE_URL    — full URL override (back-compat)
+#   2. LOCAL_LLM_PORT     — just the port; also consumed by multi_prompt_pkg
+#   3. default localhost:30000
+#
+# Setting LOCAL_LLM_PORT once configures both the scorer and multi_prompt's
+# summarizer, which is the common case. Use SGLANG_BASE_URL when you need to
+# point at a non-localhost endpoint (Modal, remote SSH, etc.).
+_LOCAL_LLM_PORT = int(os.environ.get("LOCAL_LLM_PORT", "30000"))
+BASE_URL: str = os.environ.get("SGLANG_BASE_URL", f"http://localhost:{_LOCAL_LLM_PORT}/v1")
 MODEL: str = os.environ.get("SGLANG_MODEL", "Qwen/Qwen3.5-122B-A10B")
 HF_PAPERS_API: str = "https://huggingface.co/api/daily_papers"
 
@@ -595,13 +603,19 @@ async def async_main():
 
     pool = AsyncClientPool(base_url=BASE_URL, concurrency=concurrency)
 
-    # Quick health check
+    # Preflight: fail fast if SGLang/vLLM isn't actually running. Otherwise
+    # every scoring call hits retry_async and we waste 10 backoff attempts per
+    # paper × thousands of papers before anything visible happens.
     try:
         client = pool.get()
         models = await client.models.list()
         logger.info(f"Server models: {[m.id for m in models.data]}")
     except Exception as e:
-        logger.error(f"Server health check failed: {e}")
+        logger.error(
+            f"Server health check failed at {BASE_URL}: {e!r}. "
+            f"Start the LLM server and retry."
+        )
+        raise SystemExit(2) from e
 
     # Load examples from the papers repo (Neon + external SQLite + docs/)
     db = NeonDB()

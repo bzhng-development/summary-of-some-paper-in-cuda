@@ -91,11 +91,14 @@ def generate_html(papers: list[dict], min_score: int = 0) -> str:
             comment_html = f'<div class="comment">{html.escape(comment)}</div>' if comment else ""
             journal_html = f'<span class="journal">{html.escape(journal)}</span>' if journal else ""
             interested_badge = '<span class="interested-badge">interested</span>' if is_interested else ""
-            # Embed full paper data for POST /add (strip _interested and large fields)
-            post_data = {k: v for k, v in p.items() if k not in ("_interested", "reason", "similar_paper", "score")}
-            data_json_esc = html.escape(json.dumps(post_data, ensure_ascii=True), quote=True)
+            # NOTE: the per-row embedded paper data used to live here as
+            # `data-paper='<~3KB JSON>'`, which ballooned the HTML to ~40 MB
+            # and made initial parse + scroll janky. It now lives in a single
+            # `<script type="application/json" id="papers-data">` block below,
+            # keyed by arxiv_id. Rows carry only the minimum dataset needed
+            # for filtering (authors, reason, tag, score, interested flag).
             row = (
-                f'<div class="paper {score_class}{interested_class}" data-title="{title_esc}" data-arxiv="{arxiv_id}" data-paper=\'{data_json_esc}\' data-org="{html.escape(org)}" data-authors="{html.escape(authors)}" data-cats="{html.escape(categories)}" data-tag="{html.escape(tag_category)}" data-upvotes="{upvotes}" data-gh-stars="{gh_stars}" data-has-code="{1 if gh else 0}" data-reason="{reason_esc}" onclick="toggleSelect(this)">\n'
+                f'<div class="paper {score_class}{interested_class}" data-title="{title_esc}" data-arxiv="{arxiv_id}" data-authors="{html.escape(authors)}" data-tag="{html.escape(tag_category)}" data-score="{score}" data-reason="{reason_esc}" onclick="toggleSelect(this)">\n'
                 f'  <div class="paper-header">\n'
                 f'    <span class="score">{score}/10</span>\n'
                 f"    {tag_html}\n"
@@ -128,6 +131,20 @@ def generate_html(papers: list[dict], min_score: int = 0) -> str:
     # Collect unique tag categories for filter dropdown
     all_tags = sorted({p.get("tag_category") for p in papers if p.get("tag_category")})
     tag_options = "\n".join(f'      <option value="{html.escape(t)}">{html.escape(t)}</option>' for t in all_tags)
+
+    # Build the single paper-data blob that used to live on each row.
+    # Strips the fields the server doesn't need and keys the rest by arxiv_id
+    # so markInterested() can look up everything with one O(1) lookup instead
+    # of parsing an HTML attribute per row.
+    paper_blob = {
+        p["arxiv_id"]: {
+            k: v
+            for k, v in p.items()
+            if k not in ("_interested", "reason", "similar_paper", "score")
+        }
+        for p in papers
+    }
+    paper_blob_json = json.dumps(paper_blob, ensure_ascii=True, separators=(",", ":"))
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -200,8 +217,12 @@ def generate_html(papers: list[dict], min_score: int = 0) -> str:
     border-radius: 6px;
     border: 1.5px solid transparent;
     cursor: pointer;
-    transition: all 0.12s;
+    /* Scope transitions to the two properties that actually change. */
+    transition: background-color 0.12s, border-color 0.12s;
     background: #fff;
+    /* Skip layout/paint for offscreen rows. Huge scroll win at 12k rows. */
+    content-visibility: auto;
+    contain-intrinsic-size: 0 80px;
   }}
   .paper:hover {{ background: #f0eee8; }}
   .paper.selected {{
@@ -361,9 +382,29 @@ def generate_html(papers: list[dict], min_score: int = 0) -> str:
 
 {all_rows}
 
+<script type="application/json" id="papers-data">{paper_blob_json}</script>
+
 <div class="toast" id="toast"></div>
 
 <script>
+// Parse the embedded JSON blob once. This replaces the previous per-row
+// `data-paper` attribute that ballooned the HTML to ~40 MB and made initial
+// parse + hover repaints unbearable.
+const PAPERS_BY_ID = JSON.parse(document.getElementById('papers-data').textContent);
+
+// Build a flat filter index once, at load. filterPapers() used to call
+// querySelector and read .dataset on every keystroke across 12k rows — this
+// pre-walks the DOM once and stores the minimum scalars we need.
+const ROWS = Array.from(document.querySelectorAll('.paper')).map(el => ({{
+  el,
+  title: el.dataset.title.toLowerCase(),
+  authors: (el.dataset.authors || '').toLowerCase(),
+  reason: (el.dataset.reason || '').toLowerCase(),
+  score: parseInt(el.dataset.score, 10) || 0,
+  tag: el.dataset.tag || '',
+}}));
+const DATE_GROUPS = Array.from(document.querySelectorAll('.date-group'));
+
 function toggleSelect(el) {{
   el.classList.toggle('selected');
   updateCount();
@@ -378,8 +419,8 @@ function markInterested() {{
   const items = document.querySelectorAll('.paper.selected:not(.interested)');
   if (!items.length) {{ showToast('Nothing to mark (all selected already interested)'); return; }}
   const papers = Array.from(items).map(el => {{
-    try {{ return JSON.parse(el.dataset.paper.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#x27;/g,"'")); }}
-    catch(e) {{ return {{arxiv_id: el.dataset.arxiv, title: el.dataset.title}}; }}
+    const full = PAPERS_BY_ID[el.dataset.arxiv];
+    return full || {{arxiv_id: el.dataset.arxiv, title: el.dataset.title}};
   }});
   fetch('/interested', {{
     method: 'POST',
@@ -423,29 +464,51 @@ function clearAll() {{
   updateCount();
 }}
 
-function filterPapers() {{
+// filterPapers runs against the pre-built ROWS cache (no per-row DOM reads)
+// and batches the visibility writes into a single animation frame. Debounced
+// below so three search boxes don't stampede the main thread per keystroke.
+let _filterRafId = 0;
+function filterPapersNow() {{
   const q = document.getElementById('search').value.toLowerCase();
   const qAuthor = document.getElementById('search-author').value.toLowerCase();
   const qDesc = document.getElementById('search-desc').value.toLowerCase();
-  const minScore = parseInt(document.getElementById('min-score').value);
+  const minScore = parseInt(document.getElementById('min-score').value, 10);
   const tagFilter = document.getElementById('tag-filter').value;
-  document.querySelectorAll('.paper').forEach(el => {{
-    const title = el.dataset.title.toLowerCase();
-    const authors = (el.dataset.authors || '').toLowerCase();
-    const reason = (el.dataset.reason || '').toLowerCase();
-    const score = parseInt(el.querySelector('.score').textContent);
-    const tag = el.dataset.tag || '';
-    const match = (!q || title.includes(q))
-      && (!qAuthor || authors.includes(qAuthor))
-      && (!qDesc || reason.includes(qDesc))
-      && score >= minScore
-      && (!tagFilter || tag === tagFilter);
-    el.classList.toggle('hidden', !match);
+
+  // Compute match bits synchronously, apply writes under rAF.
+  const writes = new Array(ROWS.length);
+  for (let i = 0; i < ROWS.length; i++) {{
+    const r = ROWS[i];
+    const match = (!q || r.title.includes(q))
+      && (!qAuthor || r.authors.includes(qAuthor))
+      && (!qDesc || r.reason.includes(qDesc))
+      && r.score >= minScore
+      && (!tagFilter || r.tag === tagFilter);
+    writes[i] = match;
+  }}
+  cancelAnimationFrame(_filterRafId);
+  _filterRafId = requestAnimationFrame(() => {{
+    let visibleGroup = new Map();
+    for (let i = 0; i < ROWS.length; i++) {{
+      const r = ROWS[i];
+      const match = writes[i];
+      r.el.classList.toggle('hidden', !match);
+      // Track per-date-group visibility by the row's parent.
+      if (match) {{
+        const g = r.el.parentElement;
+        visibleGroup.set(g, (visibleGroup.get(g) || 0) + 1);
+      }}
+    }}
+    for (const g of DATE_GROUPS) {{
+      g.classList.toggle('hidden', (visibleGroup.get(g) || 0) === 0);
+    }}
   }});
-  document.querySelectorAll('.date-group').forEach(g => {{
-    const visible = g.querySelectorAll('.paper:not(.hidden)').length;
-    g.classList.toggle('hidden', visible === 0);
-  }});
+}}
+
+let _filterDebounce = 0;
+function filterPapers() {{
+  clearTimeout(_filterDebounce);
+  _filterDebounce = setTimeout(filterPapersNow, 120);
 }}
 
 function addPaper() {{

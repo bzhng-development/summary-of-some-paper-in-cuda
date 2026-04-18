@@ -10,10 +10,11 @@ Pipeline for fetching Hugging Face Daily Papers, LLM-scoring them against your r
 | `papers_by_score.py` | Split `all_scored.json` into per-score markdown buckets for manual LLM re-verification |
 | `tag_papers.py` | Standalone batch tagger: JSONL in → categorized JSONL out (no DB) |
 | `paper_viewer.py` | Pure HTML generator — turns `all_scored.json` into a static interactive page |
-| `paper_server.py` | FastAPI wrapper: serves the viewer, handles "mark interested" POSTs into `papers.db` |
-| `../database.py` | SQLite schema + `save_paper_sync` used by the server to persist interested papers |
-| `../papers.db` | Main DB. Table `papers`; `interested=1` rows are the reading history |
-| `../external_papers.db` | Secondary DB scanned for more history examples |
+| `paper_server.py` | FastAPI wrapper: serves the viewer, handles "mark interested" POSTs via `NeonDB.mark_interested` |
+| `examples.py` | Shared reading-history loader (Neon + `external_papers.db` + `docs/**/*.md`) — used by `hf_daily_papers.py` and `papers_by_score.py` |
+| `../neon_db.py` | Neon Postgres client (`NeonDB`). `init_schema`, `save_paper`, `mark_interested`, etc. |
+| Neon `"nextjs-ui_paper"` | Main DB. `interested=1` rows are the reading history. Connection from `DATABASE_URL` |
+| `../external_papers.db` | Secondary SQLite DB scanned for more history examples (read by `external.py`) |
 | `../docs/<category>/*.md` | Third history source — H1 of each file becomes an example title under `<category>` |
 
 ## Data flow
@@ -23,17 +24,18 @@ HF Daily Papers API ──┐
                       ├─► hf_daily_papers.py ──► papers_out/all_scored.json
 arxiv.org API ────────┘        │                         │
                                │ (examples)              │
-papers.db ─────────────────────┤                         ▼
+Neon nextjs-ui_paper ──────────┤                         ▼
 external_papers.db ────────────┤              paper_server.py ◄── browser
 docs/**/*.md ──────────────────┘                         │
                                                          ▼
-                                              papers.db (interested=1)
+                                      Neon nextjs-ui_paper (interested=1)
 ```
 
 ## One-time setup
 
-1. Start a local SGLang server (default `http://localhost:30000/v1`, model `Qwen/Qwen3.5-122B-A10B`). Override with `SGLANG_BASE_URL` env var. Modal endpoints are commented at the top of `hf_daily_papers.py`.
+1. Start a local SGLang server (default `http://localhost:30000/v1`). Override with `SGLANG_BASE_URL` env var. Modal endpoints are commented at the top of `hf_daily_papers.py`.
 2. `uv sync` at the repo root.
+3. Make sure `DATABASE_URL` is discoverable by `neon_db.py` (repo `.env` or `../company-scraper/nextjs-ui/.env`), then `uv run python neon_db.py init-schema` once.
 
 ## Daily workflow
 
@@ -67,7 +69,7 @@ uv run python daily_papers/paper_server.py --port 8787 \
     --json ./daily_papers/papers_out/all_scored.json
 ```
 
-Open `http://localhost:8000`. Click papers to select, hit the mark button — `POST /interested` saves them into `papers.db` with `interested=1`. Those rows become reading-history examples on the **next** `hf_daily_papers.py` run, so the scorer gets sharper over time.
+Open `http://localhost:8000`. Click papers to select, hit the mark button — `POST /interested` calls `NeonDB.mark_interested` to flip `interested=1` in Neon. Those rows become reading-history examples on the **next** `hf_daily_papers.py` run, so the scorer gets sharper over time.
 
 Static (no server) alternative:
 
@@ -80,12 +82,12 @@ uv run python daily_papers/paper_viewer.py \
 
 ## Scoring model in one paragraph
 
-`SYSTEM_PROMPT` in `hf_daily_papers.py` tells the LLM to score 1–10 on whether the candidate solves the **same specific problem** as any paper in the reading history (loaded from `papers.db interested=1`, `external_papers.db`, and `docs/**/*.md`). It also applies a -2 penalty for unknown-author papers with no org, <5 upvotes, and <20 GitHub stars. Output is JSON-schema-validated into `ScoreOutput { score, similar_paper, reason }`. Edit the prompt or the `AUTHOR QUALITY PENALTY` block there if scores look off.
+`SYSTEM_PROMPT` in `hf_daily_papers.py` tells the LLM to score 1–10 on whether the candidate solves the **same specific problem** as any paper in the reading history (loaded from Neon `interested=1`, `external_papers.db`, and `docs/**/*.md` via `examples.py`). It also applies a -2 penalty for unknown-author papers with no org, <5 upvotes, and <20 GitHub stars. Output is JSON-schema-validated into `ScoreOutput { score, similar_paper, reason }`. Edit the prompt or the `AUTHOR QUALITY PENALTY` block there if scores look off.
 
 ## Common tweaks
 
 - **Change the scoring model**: edit `MODEL` at top of `hf_daily_papers.py`.
-- **Change history sources**: edit `load_examples_from_repo()`.
+- **Change history sources**: edit `daily_papers/examples.py:load_examples_from_repo()`.
 - **Per-score review buckets**: `uv run python daily_papers/papers_by_score.py` to split `all_scored.json` into markdown files per score.
 - **Standalone tagging of external JSONL**: `daily_papers/tag_papers.py` (no DB, self-contained).
 
@@ -93,5 +95,6 @@ uv run python daily_papers/paper_viewer.py \
 
 - **`arxiv API ... 429`**: the arxiv enrichment has 7 retries with exponential backoff; it'll recover. Range fetches skip arxiv enrichment entirely (see XXX note in `fetch_papers_range`).
 - **`fd limit`**: on macOS the script auto-raises soft fd limit; if scoring hangs at high concurrency, that's the culprit.
-- **Empty history**: check `papers.db` has rows with `interested=1` — otherwise the scorer has nothing to compare against and everything scores low.
+- **Empty history**: check Neon has rows with `interested=1` (`SELECT count(*) FROM "nextjs-ui_paper" WHERE interested = 1`) — otherwise the scorer has nothing to compare against and everything scores low.
+- **`DATABASE_URL is not set`**: `neon_db.py` couldn't find `.env`. Export it manually or drop it into this repo's `.env`.
 - **Server health check fails**: `SGLANG_BASE_URL` wrong, or server not up yet. Scoring still runs but will error per-request.

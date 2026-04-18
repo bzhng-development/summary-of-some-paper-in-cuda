@@ -59,19 +59,29 @@ provides them in-context.
 
 
 def _build_system_preamble() -> str:
-    """Assemble the system preamble, optionally appending a one-shot example.
+    """Assemble the system preamble with the required one-shot example.
 
-    The example file ships with the repo but is optional, so use EAFP for the
-    read rather than probing with ``exists()`` first.
+    The example file is *not* optional: it is the one-shot golden sample that
+    anchors output quality. If it's missing we'd rather crash at import time
+    with a clear error than silently produce much weaker summaries.
     """
-    preamble = _SYSTEM_PREAMBLE_BASE
     example_path = Path(__file__).resolve().parent.parent / "examples" / "2408.03314_example.md"
     try:
         example_text = example_path.read_text()
-    except FileNotFoundError:
-        return preamble
+    except FileNotFoundError as exc:
+        raise FileNotFoundError(
+            f"Golden-sample example not found at {example_path}. "
+            f"This file is the one-shot reference anchor for every summary; "
+            f"without it output quality collapses silently. Restore it from "
+            f"git (examples/2408.03314_example.md) before running."
+        ) from exc
+    if not example_text.strip():
+        raise ValueError(
+            f"Golden-sample example at {example_path} is empty. "
+            f"Restore it from git before running."
+        )
     return (
-        preamble
+        _SYSTEM_PREAMBLE_BASE
         + "\n\n# Reference Example\n"
         + "Below is a complete example of a high-quality paper summary. "
         + "Match this level of depth, structure, and style.\n\n"

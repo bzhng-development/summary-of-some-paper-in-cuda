@@ -69,8 +69,15 @@ def build_local_client(
     api_key: str = "not-needed",
     timeout: float = 1500.0,
     extra_body: dict[str, Any] | None = None,
+    preflight: bool = True,
 ) -> LLMClient:
-    """Build a client against a local OpenAI-compatible server (SGLang/vLLM)."""
+    """Build a client against a local OpenAI-compatible server (SGLang/vLLM).
+
+    When ``preflight`` is set (default), we issue a blocking ``models.list``
+    against the endpoint and raise ``SystemExit(2)`` if it cannot be reached.
+    The alternative is a silent 10-attempt exponential backoff on every paper,
+    which wastes both real time and any cache the LLM has warmed.
+    """
     raise_fd_limit()
     client = AsyncOpenAI(
         base_url=base_url,
@@ -81,7 +88,36 @@ def build_local_client(
     if extra_body is None and base_url == LOCAL_BASE_URL:
         extra_body = {"chat_template_kwargs": {"enable_thinking": False}}
     logger.info("Initialized local LLM client at {}", base_url)
+    if preflight:
+        _preflight_local_server(client, base_url)
     return LLMClient(client=client, extra_body=extra_body, native_pdf=False)
+
+
+def _preflight_local_server(client: AsyncOpenAI, base_url: str) -> None:
+    """Block on ``GET {base_url}/models`` and exit 2 if it doesn't answer.
+
+    Uses a plain sync ``httpx`` call rather than the AsyncOpenAI client because
+    this function may be invoked from inside an already-running event loop
+    (``main`` → ``asyncio.run(_dispatch)`` → ``build_local_client``).
+    """
+    _ = client  # kept for future typed probes; silences unused-arg lint
+    import httpx
+
+    url = base_url.rstrip("/") + "/models"
+    try:
+        resp = httpx.get(url, timeout=5.0)
+        resp.raise_for_status()
+        payload = resp.json()
+        models = [m.get("id", "?") for m in payload.get("data", [])]
+    except Exception as exc:
+        logger.error(
+            "Local LLM preflight failed at {}: {!r}. "
+            "Start SGLang/vLLM/llama.cpp on that port and retry.",
+            url,
+            exc,
+        )
+        raise SystemExit(2) from exc
+    logger.info("Local LLM preflight OK at {} (models={})", base_url, models)
 
 
 def build_gemini_client(*, timeout: float = 1500.0) -> LLMClient:

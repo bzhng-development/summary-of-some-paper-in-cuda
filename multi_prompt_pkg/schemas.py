@@ -10,10 +10,7 @@ class PitchOutput(BaseModel):
         description="The exact title of the paper as it appears in the PDF",
     )
     pitch: str = Field(
-        description=(
-            "A compelling 2-3 sentence pitch that captures the paper's core "
-            "contribution and why it matters"
-        ),
+        description=("A compelling 2-3 sentence pitch that captures the paper's core contribution and why it matters"),
     )
 
 

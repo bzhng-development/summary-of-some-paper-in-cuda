@@ -158,9 +158,7 @@ async def process_paper(
     total_steps = len(summarizer.sections) + 2  # sections + pitch + categorize
     pbar = tqdm(total=total_steps, desc=f"[{arxiv_id}]", leave=False, position=1)
     try:
-        full_summary, _ = await summarizer.generate_full_summary(
-            paper_input, arxiv_id=arxiv_id, pbar=pbar
-        )
+        full_summary, _ = await summarizer.generate_full_summary(paper_input, arxiv_id=arxiv_id, pbar=pbar)
         pbar.update(len(summarizer.sections))
 
         pbar.set_postfix_str("pitch")
@@ -170,9 +168,7 @@ async def process_paper(
         pbar.update(1)
 
         pbar.set_postfix_str("categorize")
-        category = await summarizer.categorize_paper(
-            pitch_output.title, pitch_output.pitch, full_summary
-        )
+        category = await summarizer.categorize_paper(pitch_output.title, pitch_output.pitch, full_summary)
         tqdm.write(f"[{arxiv_id}] Category: {category}")
         pbar.update(1)
     finally:
@@ -198,9 +194,7 @@ async def process_paper(
 # ---------------------------------------------------------------------------
 
 
-def _filter_already_done(
-    jobs: list[PaperJob], *, jsonl_path: str | None
-) -> list[PaperJob]:
+def _filter_already_done(jobs: list[PaperJob], *, jsonl_path: str | None) -> list[PaperJob]:
     """Drop jobs that already have a finished summary in JSONL or Neon."""
     done_ids: set[str] = set()
     if jsonl_path is not None:
@@ -253,9 +247,7 @@ async def process_multiple(
     async def _run_one(job: PaperJob) -> None:
         async with sem:
             summarizer = MultiPromptSummarizer(llm, model=model, sections=sections)
-            await process_paper(
-                summarizer, job, papers_pbar=papers_pbar, jsonl_path=jsonl_path
-            )
+            await process_paper(summarizer, job, papers_pbar=papers_pbar, jsonl_path=jsonl_path)
 
     # NOTE: we deliberately avoid asyncio.TaskGroup here. A single failing
     # paper must not cancel the rest of the batch — the daily backfill run
@@ -337,7 +329,7 @@ async def run_dynamic(
             in_flight.update(new_stubs)
             for aid in new_stubs:
                 tasks.add(asyncio.create_task(_run_one(aid)))
-    except (KeyboardInterrupt, asyncio.CancelledError):
+    except KeyboardInterrupt, asyncio.CancelledError:
         logger.info("\nStopping... waiting for {} in-flight tasks", len(tasks))
         for task in tasks:
             task.cancel()

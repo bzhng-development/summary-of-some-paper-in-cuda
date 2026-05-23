@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Tiny FastAPI server: serves the paper viewer and handles interested-marking.
+"""FastAPI JSON backend for the Svelte paper viewer in ``svelte-ui/``.
 
 Routes:
-    GET  /              — render the ``paper_viewer`` HTML for ``all_scored.json``
-    POST /interested    — mark one or more papers as interested in Neon
-    POST /add-paper     — add a paper by arxiv/HF URL or bare arxiv id
+    GET  /api/papers     — JSON feed of scored papers (``all_scored.json``)
+    POST /interested     — mark one or more papers as interested in Neon
+    POST /add-paper      — add a paper by arxiv/HF URL or bare arxiv id
     GET  /interested-ids — list ids currently flagged ``interested = 1``
 
 Usage:
@@ -26,7 +26,6 @@ from typing import Any, AsyncIterator
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
 from loguru import logger
 from pydantic import BaseModel
 
@@ -36,7 +35,6 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from daily_papers.hf_daily_papers import fetch_arxiv_metadata  # noqa: E402
-from daily_papers.paper_viewer import generate_html  # noqa: E402
 from neon_db import NeonDB  # noqa: E402
 
 
@@ -125,19 +123,15 @@ def _append_to_index(arxiv_ids: list[str]) -> None:
 # ---------------------------------------------------------------------------
 
 
-@app.get("/", response_class=HTMLResponse)
-def serve_viewer() -> str:
+@app.get("/api/papers")
+def api_papers() -> list[dict[str, Any]]:
+    """JSON feed of scored papers. Consumed by the SvelteKit UI in ``svelte-ui/``."""
     if _scored_json_path is None:
-        return "<h1>No scored papers found</h1>"
+        return []
     try:
-        papers = json.loads(_scored_json_path.read_text())
+        return json.loads(_scored_json_path.read_text())
     except FileNotFoundError:
-        return "<h1>No scored papers found</h1>"
-
-    interested = _interested_ids()
-    for paper in papers:
-        paper["_interested"] = paper["arxiv_id"] in interested
-    return generate_html(papers)
+        return []
 
 
 @app.post("/interested")

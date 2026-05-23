@@ -76,10 +76,7 @@ def _build_system_preamble() -> str:
             f"git (examples/2408.03314_example.md) before running."
         ) from exc
     if not example_text.strip():
-        raise ValueError(
-            f"Golden-sample example at {example_path} is empty. "
-            f"Restore it from git before running."
-        )
+        raise ValueError(f"Golden-sample example at {example_path} is empty. Restore it from git before running.")
     return (
         _SYSTEM_PREAMBLE_BASE
         + "\n\n# Reference Example\n"
@@ -140,9 +137,9 @@ SECTION_SPECS: tuple[SectionSpec, ...] = (
             "At the start, include these sub-sections with ### headings:\n\n"
             "### 3.1 Reader orientation (approachable technical breakdown)\n"
             "- One sentence on what the *system* is (or what is being built), in plain language.\n"
-            "- One sentence on what problem it solves and the \"shape\" of the solution.\n\n"
+            '- One sentence on what problem it solves and the "shape" of the solution.\n\n'
             "### 3.2 Big-picture architecture (diagram in words)\n"
-            "- A high-level \"box-and-arrows in words\" view of the major components.\n"
+            '- A high-level "box-and-arrows in words" view of the major components.\n'
             "- Name each component and its responsibility; keep this overview short (you will expand below).\n\n"
             "### 3.3 Roadmap for the deep dive\n"
             "- 3–6 bullets that state the order you'll explain components and why that order helps understanding.\n\n"
@@ -153,9 +150,9 @@ SECTION_SPECS: tuple[SectionSpec, ...] = (
             "mechanism, interface, or cause→effect relation.\n\n"
             "REQUIRED ELEMENTS:\n"
             "- Start with a one-sentence framing: what type of paper is this and the core idea.\n"
-            "- Provide a \"system/data pipeline diagram in words\": describe major components, their "
-            "inputs/outputs, and how information flows through them. Use an explicit \"what happens first, "
-            "second, third\" narrative — no vague descriptions.\n"
+            '- Provide a "system/data pipeline diagram in words": describe major components, their '
+            'inputs/outputs, and how information flows through them. Use an explicit "what happens first, '
+            'second, third" narrative — no vague descriptions.\n'
             "- Include all key configurations, hyperparameters, and numbers mentioned in the paper.\n"
             "- If mathematical: present core equations with plain-language paraphrases BEFORE notation. "
             "Define all symbols.\n"
@@ -245,9 +242,9 @@ SECTION_SPECS_2PASS: tuple[SectionSpec, ...] = (
             "Include these sub-sections with ### headings:\n\n"
             "### 3.1 Reader orientation\n"
             "- One sentence on what the *system* is (or what is being built), in plain language.\n"
-            "- One sentence on what problem it solves and the \"shape\" of the solution.\n\n"
+            '- One sentence on what problem it solves and the "shape" of the solution.\n\n'
             "### 3.2 Big-picture architecture (diagram in words)\n"
-            "- A high-level \"box-and-arrows in words\" view of the major components.\n"
+            '- A high-level "box-and-arrows in words" view of the major components.\n'
             "- Name each component and its responsibility; keep this overview short (you will expand below).\n\n"
             "### 3.3 Roadmap for the deep dive\n"
             "- 3-6 bullets that state the order you'll explain components and why that order helps understanding.\n\n"
@@ -257,7 +254,7 @@ SECTION_SPECS_2PASS: tuple[SectionSpec, ...] = (
             "mechanism, interface, or cause->effect relation.\n\n"
             "REQUIRED ELEMENTS:\n"
             "- Start with a one-sentence framing: what type of paper is this and the core idea.\n"
-            "- Provide a \"system/data pipeline diagram in words\".\n"
+            '- Provide a "system/data pipeline diagram in words".\n'
             "- Include all key configurations, hyperparameters, and numbers mentioned in the paper.\n"
             "- If mathematical: present core equations with plain-language paraphrases BEFORE notation. "
             "Define all symbols.\n"

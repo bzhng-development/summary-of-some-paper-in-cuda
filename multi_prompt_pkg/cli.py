@@ -52,9 +52,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Multi-prompt paper summarizer")
     parser.add_argument("--model", default=None, help="Model name (auto-set for --gemini)")
     parser.add_argument("--url", default=None, help="ArXiv URL to summarize")
-    parser.add_argument(
-        "--urls", default=None, help="Comma-separated list of ArXiv URLs"
-    )
+    parser.add_argument("--urls", default=None, help="Comma-separated list of ArXiv URLs")
     parser.add_argument(
         "--concurrency",
         type=int,
@@ -165,12 +163,8 @@ async def _run_batch(args: CLIArgs, llm: LLMClient) -> None:
 
 async def _run_single(args: CLIArgs, llm: LLMClient) -> None:
     assert args.url is not None
-    summarizer = MultiPromptSummarizer(
-        llm, model=args.model, sections=args.sections
-    )
-    await process_paper(
-        summarizer, PaperJob(url=args.url), jsonl_path=args.jsonl
-    )
+    summarizer = MultiPromptSummarizer(llm, model=args.model, sections=args.sections)
+    await process_paper(summarizer, PaperJob(url=args.url), jsonl_path=args.jsonl)
 
 
 async def _run_dyn(args: CLIArgs, llm: LLMClient) -> None:

@@ -31,9 +31,7 @@ class MultiPromptSummarizer:
     ) -> None:
         self.llm = llm
         self.model = model
-        self.sections: tuple[SectionSpec, ...] = (
-            tuple(sections) if sections is not None else SECTION_SPECS
-        )
+        self.sections: tuple[SectionSpec, ...] = tuple(sections) if sections is not None else SECTION_SPECS
 
     # ------------------------------------------------------------------
     # Low-level chat helpers
@@ -116,10 +114,7 @@ class MultiPromptSummarizer:
                 },
                 {"type": "text", "text": f"{context_block}{section_prompt}"},
             ]
-        return (
-            f"<paper>\n{paper_input}\n</paper>\n\n"
-            f"{context_block}{section_prompt}"
-        )
+        return f"<paper>\n{paper_input}\n</paper>\n\n{context_block}{section_prompt}"
 
     # ------------------------------------------------------------------
     # Section-by-section generation
@@ -145,44 +140,30 @@ class MultiPromptSummarizer:
             if pbar is not None:
                 pbar.set_postfix_str(f"s{spec.number}/{len(self.sections)} {spec.title}")
             context_block = self._build_context_block(completed, spec.depends_on)
-            user_content = self._build_user_content(
-                paper_input, context_block, spec.prompt
-            )
+            user_content = self._build_user_content(paper_input, context_block, spec.prompt)
 
             async def _call() -> str:
                 return await self._chat(SYSTEM_PREAMBLE, user_content)
 
-            output = await retry_async(
-                _call, label=f"{label}Section {spec.number} "
-            )
+            output = await retry_async(_call, label=f"{label}Section {spec.number} ")
             completed[spec.number] = output
             all_outputs[f"section_{spec.number}"] = output
-            tqdm.write(
-                f"\n{'=' * 60}\n{label}Section {spec.number}: {spec.title}\n"
-                f"{'=' * 60}\n{output}\n"
-            )
+            tqdm.write(f"\n{'=' * 60}\n{label}Section {spec.number}: {spec.title}\n{'=' * 60}\n{output}\n")
 
-        combined = "\n\n".join(
-            completed[s.number] for s in self.sections if s.number in completed
-        )
+        combined = "\n\n".join(completed[s.number] for s in self.sections if s.number in completed)
         return combined, all_outputs
 
     # ------------------------------------------------------------------
     # Structured post-processing: title/pitch and categorization
     # ------------------------------------------------------------------
 
-    async def generate_pitch(
-        self, full_summary: str, paper_text: str
-    ) -> PitchOutput:
+    async def generate_pitch(self, full_summary: str, paper_text: str) -> PitchOutput:
         """Extract an exact title plus a short pitch via structured output."""
         system = (
             "Extract the exact paper title and generate a compelling 2-3 sentence pitch. "
             "The pitch should capture the core contribution and why it matters."
         )
-        user_msg = (
-            f"<paper>\n{paper_text[:5000]}\n</paper>\n\n"
-            f"Paper Analysis (for context):\n{full_summary[:3000]}..."
-        )
+        user_msg = f"<paper>\n{paper_text[:5000]}\n</paper>\n\nPaper Analysis (for context):\n{full_summary[:3000]}..."
 
         async def _call() -> PitchOutput:
             raw = await self._chat_json(
@@ -195,9 +176,7 @@ class MultiPromptSummarizer:
 
         return await retry_async(_call, label="Pitch ")
 
-    async def categorize_paper(
-        self, title: str, pitch: str, full_summary: str
-    ) -> str:
+    async def categorize_paper(self, title: str, pitch: str, full_summary: str) -> str:
         """Assign the paper one of :data:`CATEGORIES` (or ``FALLBACK_CATEGORY``)."""
         system = (
             f"Categorize the paper into one of these categories: {', '.join(CATEGORIES)}. "

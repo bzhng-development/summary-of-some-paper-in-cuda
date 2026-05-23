@@ -23,6 +23,8 @@ import json
 import os
 import sqlite3
 import sys
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final
@@ -33,6 +35,7 @@ from loguru import logger
 from psycopg.rows import dict_row
 
 __all__ = [
+    "NeonBatch",
     "NeonDB",
     "PaperRow",
     "TABLE",
@@ -88,12 +91,12 @@ SCHEMA_COLUMNS: Final[tuple[str, ...]] = (
     "url",
     "full_response",
     "created_at",
-    "authors",            # JSON array of author names
-    "affiliations",       # JSON dict {name: [affs]}
-    "categories",         # JSON array ["cs.CL", "cs.AI"]
+    "authors",  # JSON array of author names
+    "affiliations",  # JSON dict {name: [affs]}
+    "categories",  # JSON array ["cs.CL", "cs.AI"]
     "primary_category",
     "arxiv_comment",
-    "published",          # ISO date string
+    "published",  # ISO date string
     "journal_ref",
     "doi",
     "upvotes",
@@ -115,9 +118,7 @@ SCHEMA_COLUMNS: Final[tuple[str, ...]] = (
 
 # Columns the caller is allowed to pass to ``save_paper`` as kwargs. ``id`` is
 # the positional ``arxiv_id`` and ``created_at`` is DB-managed.
-_WRITABLE_COLUMNS: Final[frozenset[str]] = frozenset(
-    c for c in SCHEMA_COLUMNS if c not in ("id", "created_at")
-)
+_WRITABLE_COLUMNS: Final[frozenset[str]] = frozenset(c for c in SCHEMA_COLUMNS if c not in ("id", "created_at"))
 
 # Fields that should be JSON-encoded on the way in if the caller passed a list
 # or dict. Everything else is passed through verbatim.
@@ -143,6 +144,61 @@ class PaperRow:
     interested: int
     score: int | None
     score_source: str | None
+
+
+# ---------------------------------------------------------------------------
+# NeonBatch — single-connection writer for hot loops
+# ---------------------------------------------------------------------------
+
+
+class NeonBatch:
+    """Reuse one psycopg connection across many writes.
+
+    Obtained from :meth:`NeonDB.batch`. Exposes the subset of write methods
+    that sync pipelines actually call in tight loops (save_paper,
+    update_category, mark_interested). Auto-commits every
+    ``commit_every`` writes for crash resilience on long runs.
+
+    Do not share across threads.
+    """
+
+    __slots__ = ("_conn", "_cur", "_commit_every", "_pending")
+
+    def __init__(self, conn: psycopg.Connection, *, commit_every: int = 500) -> None:
+        self._conn = conn
+        self._cur = conn.cursor()
+        self._commit_every = commit_every
+        self._pending = 0
+
+    def _tick(self) -> None:
+        self._pending += 1
+        if self._pending >= self._commit_every:
+            self._conn.commit()
+            self._pending = 0
+
+    def save_paper(self, arxiv_id: str, /, **fields: Any) -> None:
+        sql, payload = NeonDB._build_save_paper_sql(arxiv_id, fields)
+        self._cur.execute(sql, payload)
+        self._tick()
+
+    def update_category(self, arxiv_id: str, category: str) -> None:
+        self._cur.execute(
+            f"UPDATE {TABLE} SET category = %s WHERE id = %s",
+            (category, arxiv_id),
+        )
+        self._tick()
+
+    def mark_interested(self, arxiv_id: str) -> None:
+        self._cur.execute(
+            f"UPDATE {TABLE} SET interested = 1 WHERE id = %s",
+            (arxiv_id,),
+        )
+        self._tick()
+
+    def flush(self) -> None:
+        """Commit pending writes now. Useful before long external calls."""
+        self._conn.commit()
+        self._pending = 0
 
 
 # ---------------------------------------------------------------------------
@@ -241,32 +297,23 @@ class NeonDB:
                 out[key] = value
         return out
 
-    def save_paper(self, arxiv_id: str, /, **fields: Any) -> None:
-        """Partial upsert for a single paper row.
-
-        Only non-``None`` kwargs are applied. Existing column values are
-        preserved via ``COALESCE(EXCLUDED.col, {TABLE}.col)``. Unknown kwargs
-        raise ``TypeError`` so typos fail loudly.
-        """
+    @staticmethod
+    def _build_save_paper_sql(arxiv_id: str, fields: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+        """Return (sql, params) for the partial-upsert used by save_paper."""
         unknown = set(fields) - _WRITABLE_COLUMNS
         if unknown:
             raise TypeError(
-                f"save_paper() got unknown columns: {sorted(unknown)}. "
-                f"Allowed: {sorted(_WRITABLE_COLUMNS)}"
+                f"save_paper() got unknown columns: {sorted(unknown)}. Allowed: {sorted(_WRITABLE_COLUMNS)}"
             )
 
-        clean = self._normalize_fields(fields)
+        clean = NeonDB._normalize_fields(fields)
         payload: dict[str, Any] = {"id": arxiv_id, **clean}
 
         columns = list(payload.keys())
         placeholders = ", ".join(f"%({col})s" for col in columns)
         column_list = ", ".join(f'"{col}"' for col in columns)
 
-        update_parts = [
-            f'"{col}" = COALESCE(EXCLUDED."{col}", {TABLE}."{col}")'
-            for col in columns
-            if col != "id"
-        ]
+        update_parts = [f'"{col}" = COALESCE(EXCLUDED."{col}", {TABLE}."{col}")' for col in columns if col != "id"]
 
         if update_parts:
             sql = (
@@ -274,14 +321,44 @@ class NeonDB:
                 f"ON CONFLICT (id) DO UPDATE SET {', '.join(update_parts)}"
             )
         else:
-            # Only the id was provided — insert-if-absent, else no-op.
-            sql = (
-                f"INSERT INTO {TABLE} ({column_list}) VALUES ({placeholders}) "
-                f"ON CONFLICT (id) DO NOTHING"
-            )
+            sql = f"INSERT INTO {TABLE} ({column_list}) VALUES ({placeholders}) ON CONFLICT (id) DO NOTHING"
+        return sql, payload
 
+    def save_paper(self, arxiv_id: str, /, **fields: Any) -> None:
+        """Partial upsert for a single paper row.
+
+        Only non-``None`` kwargs are applied. Existing column values are
+        preserved via ``COALESCE(EXCLUDED.col, {TABLE}.col)``. Unknown kwargs
+        raise ``TypeError`` so typos fail loudly.
+
+        Opens a fresh connection per call. For hot loops, use
+        :meth:`batch` instead — that reuses one connection across many
+        writes and avoids the per-row SSL handshake that makes Neon drop us.
+        """
+        sql, payload = self._build_save_paper_sql(arxiv_id, fields)
         with self.get_conn() as conn, conn.cursor() as cur:
             cur.execute(sql, payload)
+
+    @contextmanager
+    def batch(self, *, commit_every: int = 500) -> Iterator["NeonBatch"]:
+        """Context manager that reuses one connection for many writes.
+
+        Neon's serverless proxy closes connections aggressively, so calling
+        :meth:`save_paper` in a tight loop triggers SSL EOFs / connection
+        timeouts after a few thousand rows. This keeps a single connection
+        open, commits every ``commit_every`` statements, and commits the
+        remainder on clean exit (rolls back on exception).
+        """
+        conn = psycopg.connect(self._database_url, autocommit=False)
+        try:
+            batch = NeonBatch(conn, commit_every=commit_every)
+            yield batch
+            conn.commit()
+        except BaseException:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
 
     async def asave_paper(self, arxiv_id: str, /, **fields: Any) -> None:
         """Async mirror of :meth:`save_paper`.
@@ -376,15 +453,8 @@ def migrate_sqlite_to_neon(sqlite_path: str | Path, *, batch_size: int = 500) ->
     cols = [c for c in SCHEMA_COLUMNS if c != "created_at"]
     column_list = ", ".join(f'"{c}"' for c in cols)
     placeholders = ", ".join(f"%({c})s" for c in cols)
-    update_parts = ", ".join(
-        f'"{c}" = COALESCE(EXCLUDED."{c}", {TABLE}."{c}")'
-        for c in cols
-        if c != "id"
-    )
-    sql = (
-        f"INSERT INTO {TABLE} ({column_list}) VALUES ({placeholders}) "
-        f"ON CONFLICT (id) DO UPDATE SET {update_parts}"
-    )
+    update_parts = ", ".join(f'"{c}" = COALESCE(EXCLUDED."{c}", {TABLE}."{c}")' for c in cols if c != "id")
+    sql = f"INSERT INTO {TABLE} ({column_list}) VALUES ({placeholders}) ON CONFLICT (id) DO UPDATE SET {update_parts}"
 
     def _row_to_params(row: sqlite3.Row) -> dict[str, Any]:
         data = dict(row)

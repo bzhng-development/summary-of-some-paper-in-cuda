@@ -54,6 +54,13 @@ project_excludes = ["**/.[!/.]*", ".venv/**", "__pycache__/**"]
 search_path = ["."]
 python_version = "3.14"
 
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+pythonVersion = "3.14"
+typeCheckingMode = "basic"
+exclude = [".venv", "**/__pycache__", "local_data", "docs_backup"]
+
 [tool.ruff]
 line-length = 120
 target-version = "py314"

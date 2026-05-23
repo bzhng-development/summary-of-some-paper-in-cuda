@@ -14,11 +14,13 @@ Usage:
     python tag_papers.py -i papers_to_tag.jsonl -o tagged_papers.jsonl --base-url http://localhost:30000/v1
 
 """
+
 from __future__ import annotations
 
 import argparse
 import asyncio
 import json
+import os
 import resource
 from pathlib import Path
 
@@ -26,6 +28,26 @@ import httpx
 from loguru import logger
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
+
+
+# =============================================================================
+# Env: remote endpoint routing
+# =============================================================================
+#
+# Resolution order (first match wins):
+#   1. OPENROUTER_API_KEY — route to OpenRouter (OPENROUTER_MODEL, default
+#      google/gemini-3.1-flash-lite-preview). Preferred for this workload.
+#   2. MODAL_API_KEY      — route to the Modal OpenAI-compatible endpoint
+#      (MODAL_BASE_URL, MODAL_MODEL). Free tier is capped at concurrency=1
+#      and is currently unreliable; kept as a fallback.
+#   3. neither set        — use --base-url / --model CLI flags (local default
+#      http://localhost:30000/v1).
+OPENROUTER_API_KEY: str = os.environ.get("OPENROUTER_API_KEY", "")
+OPENROUTER_BASE_URL: str = os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+OPENROUTER_MODEL: str = os.environ.get("OPENROUTER_MODEL", "google/gemini-3.1-flash-lite-preview")
+MODAL_API_KEY: str = os.environ.get("MODAL_API_KEY", "")
+MODAL_BASE_URL: str = os.environ.get("MODAL_BASE_URL", "https://api.us-west-2.modal.direct/v1")
+MODAL_MODEL: str = os.environ.get("MODAL_MODEL", "zai-org/GLM-5.1-FP8")
 
 
 # =============================================================================
@@ -103,7 +125,7 @@ You are a paper categorizer. Given a paper's title and abstract, assign it to
 exactly ONE category from the list below. Pick the MOST SPECIFIC category that fits.
 
 Categories:
-{chr(10).join(f'- {cat}: {CATEGORY_DESCRIPTIONS[cat]}' for cat in CATEGORIES)}
+{chr(10).join(f"- {cat}: {CATEGORY_DESCRIPTIONS[cat]}" for cat in CATEGORIES)}
 
 Rules:
 - Pick the single best category. If a paper spans multiple, pick the primary contribution.
@@ -143,11 +165,12 @@ def make_client(
     base_url: str,
     concurrency: int = 4096,
     timeout: float = 300.0,
+    api_key: str = "not-needed",
 ) -> AsyncOpenAI:
     _raise_fd_limit()
     client = AsyncOpenAI(
         base_url=base_url,
-        api_key="not-needed",
+        api_key=api_key,
         timeout=timeout,
         max_retries=0,
         http_client=httpx.AsyncClient(
@@ -158,7 +181,8 @@ def make_client(
             timeout=timeout,
         ),
     )
-    logger.info("Client: max_connections={}, base_url={}", concurrency, base_url)
+    key_hint = "modal" if api_key and api_key != "not-needed" else "local"
+    logger.info("Client: max_connections={}, base_url={} [{}]", concurrency, base_url, key_hint)
     return client
 
 
@@ -218,7 +242,18 @@ async def tag_one(
             if attempt == 4:
                 logger.error("FAILED {}: {}", paper["arxiv_id"], exc)
                 return None
-            await asyncio.sleep(2**attempt)
+            # Modal free tier: 429s on a shared throttle need much longer than
+            # the default 1,2,4,8s curve. Use 30s+ when we see a 429.
+            is_429 = "429" in str(exc) or "Too many" in str(exc)
+            wait = 30 * (attempt + 1) if is_429 else 2**attempt
+            logger.warning(
+                "tag {} attempt {} failed: {}, retrying in {}s",
+                paper["arxiv_id"],
+                attempt + 1,
+                exc,
+                wait,
+            )
+            await asyncio.sleep(wait)
     return None
 
 
@@ -226,10 +261,40 @@ async def async_main():
     parser = argparse.ArgumentParser(description="High-throughput paper tagger")
     parser.add_argument("-i", "--input", type=Path, required=True, help="Input JSONL")
     parser.add_argument("-o", "--output", type=Path, required=True, help="Output JSONL")
-    parser.add_argument("--base-url", default="http://localhost:30000/v1")
-    parser.add_argument("--model", default="default", help="Model name (use 'default' for auto-detect)")
+
+    # Resolve endpoint defaults from env. CLI flags still win.
+    if OPENROUTER_API_KEY:
+        default_base_url = OPENROUTER_BASE_URL
+        default_model = OPENROUTER_MODEL
+        default_api_key = OPENROUTER_API_KEY
+    elif MODAL_API_KEY:
+        default_base_url = MODAL_BASE_URL
+        default_model = MODAL_MODEL
+        default_api_key = MODAL_API_KEY
+    else:
+        default_base_url = "http://localhost:30000/v1"
+        default_model = "default"
+        default_api_key = "not-needed"
+
+    parser.add_argument("--base-url", default=default_base_url)
+    parser.add_argument(
+        "--model",
+        default=default_model,
+        help="Model name (use 'default' for auto-detect)",
+    )
+    parser.add_argument(
+        "--api-key",
+        default=default_api_key,
+        help="Bearer token. Defaults to $OPENROUTER_API_KEY, then $MODAL_API_KEY.",
+    )
     parser.add_argument("--concurrency", type=int, default=4096)
     args = parser.parse_args()
+
+    # Modal free tier is hard-capped at concurrency=1. OpenRouter has no such
+    # cap (use whatever the user passed, default 4096).
+    if MODAL_API_KEY and not OPENROUTER_API_KEY and args.concurrency != 1:
+        logger.info("MODAL_API_KEY set — forcing concurrency=1 (was {})", args.concurrency)
+        args.concurrency = 1
 
     # Load input
     papers: list[dict] = []
@@ -251,7 +316,7 @@ async def async_main():
             continue
         try:
             already_done.add(json.loads(line)["arxiv_id"])
-        except (json.JSONDecodeError, KeyError):
+        except json.JSONDecodeError, KeyError:
             continue
     if already_done:
         papers = [p for p in papers if p["arxiv_id"] not in already_done]
@@ -265,7 +330,11 @@ async def async_main():
         logger.info("Nothing to tag!")
         return
 
-    client = make_client(base_url=args.base_url, concurrency=args.concurrency)
+    client = make_client(
+        base_url=args.base_url,
+        concurrency=args.concurrency,
+        api_key=args.api_key,
+    )
 
     # Auto-detect model
     model = args.model
@@ -297,9 +366,7 @@ async def async_main():
                         completed += 1
                         if completed % 50 == 0:
                             out_f.flush()
-                            logger.info(
-                                "Progress: {}/{} tagged", completed, len(papers)
-                            )
+                            logger.info("Progress: {}/{} tagged", completed, len(papers))
 
             tasks = [asyncio.create_task(_tag_one(p)) for p in papers]
             await asyncio.gather(*tasks)
@@ -307,9 +374,7 @@ async def async_main():
     finally:
         await client.close()
 
-    logger.success(
-        "Done: tagged {}/{} papers -> {}", completed, len(papers), args.output
-    )
+    logger.success("Done: tagged {}/{} papers -> {}", completed, len(papers), args.output)
 
 
 def main():

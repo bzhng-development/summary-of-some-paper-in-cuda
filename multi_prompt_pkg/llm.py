@@ -111,8 +111,7 @@ def _preflight_local_server(client: AsyncOpenAI, base_url: str) -> None:
         models = [m.get("id", "?") for m in payload.get("data", [])]
     except Exception as exc:
         logger.error(
-            "Local LLM preflight failed at {}: {!r}. "
-            "Start SGLang/vLLM/llama.cpp on that port and retry.",
+            "Local LLM preflight failed at {}: {!r}. Start SGLang/vLLM/llama.cpp on that port and retry.",
             url,
             exc,
         )

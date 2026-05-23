@@ -87,28 +87,17 @@ def save_summary_markdown(
     else:
         arxiv_id = arxiv_id_from_url(arxiv_url) if arxiv_url else None
         file_id = arxiv_id
-        arxiv_link = (
-            f"\n**ArXiv:** [{arxiv_id}](https://arxiv.org/abs/{arxiv_id})\n"
-            if arxiv_id
-            else ""
-        )
+        arxiv_link = f"\n**ArXiv:** [{arxiv_id}](https://arxiv.org/abs/{arxiv_id})\n" if arxiv_id else ""
 
     normalized_title = normalize_title_for_filename(pitch_output.title)
     if file_id:
-        base_name = (
-            f"{file_id}-{normalized_title}.md" if normalized_title else f"{file_id}.md"
-        )
+        base_name = f"{file_id}-{normalized_title}.md" if normalized_title else f"{file_id}.md"
     else:
         base_name = f"{normalized_title}.md" if normalized_title else "paper.md"
 
     output_file = _unique_output_path(category_dir / base_name)
     formatted_output = (
-        f"# {pitch_output.title}\n"
-        f"{arxiv_link}\n"
-        "## Pitch\n\n"
-        f"{pitch_output.pitch}\n\n"
-        "---\n\n"
-        f"{full_summary}\n"
+        f"# {pitch_output.title}\n{arxiv_link}\n## Pitch\n\n{pitch_output.pitch}\n\n---\n\n{full_summary}\n"
     )
     output_file.write_text(formatted_output)
     return output_file
@@ -155,9 +144,7 @@ def load_done_ids_from_jsonl(path: str | Path) -> set[str]:
 # ---------------------------------------------------------------------------
 
 
-def paper_has_real_summary(
-    arxiv_id: str, *, min_summary_len: int = MIN_REAL_SUMMARY_LEN
-) -> bool:
+def paper_has_real_summary(arxiv_id: str, *, min_summary_len: int = MIN_REAL_SUMMARY_LEN) -> bool:
     """Return True iff ``arxiv_id`` already has a pipeline-grade summary."""
     row = get_db().get_paper(arxiv_id)
     if row is None:

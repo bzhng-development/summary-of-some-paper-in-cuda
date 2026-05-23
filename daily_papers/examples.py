@@ -79,9 +79,7 @@ def _load_from_external_sqlite(repo_path: Path, out: dict[str, ExamplePaper]) ->
         return
 
     try:
-        cursor = con.execute(
-            "SELECT title, category FROM papers WHERE title IS NOT NULL"
-        )
+        cursor = con.execute("SELECT title, category FROM papers WHERE title IS NOT NULL")
         for title, category in cursor:
             if title and title not in out:
                 out[title] = ExamplePaper(

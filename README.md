@@ -4,6 +4,44 @@ Visit the site directly.
 
 https://summary-of-some-paper-in-cuda.readthedocs.io/en/latest/llm-systems/2512.02556-DeepSeek-V3.2-PushingtheFrontierofOpenLargeLanguageModels/?h=2512#342-deepseek-sparse-attention-dsa-what-it-is-and-how-it-works
 
+## Run the local UI
+
+Two processes — Python backend + Svelte frontend:
+
+```bash
+# terminal 1 — JSON/API backend (reads daily_papers/papers_out/all_scored.json + Neon)
+uv run python daily_papers/paper_server.py --port 8787
+
+# terminal 2 — Svelte UI (Vite proxies /api/papers etc. to :8787)
+cd svelte-ui && pnpm install && pnpm dev
+# open http://localhost:5173
+```
+
+Override the backend with `PAPER_SERVER_URL=http://host:port pnpm dev`. More details in `svelte-ui/README.md`.
+
+## Score new papers
+
+```bash
+export OPENROUTER_API_KEY=...   # BYOK via OpenRouter → Gemini 3.1 Flash Lite
+uv run python daily_papers/hf_daily_papers.py \
+  --out-dir daily_papers/papers_out \
+  --from 2026-03-01 --to 2026-04-18 \
+  --concurrency 16
+```
+
+The saver is append-only: `all_scored.json` is re-loaded on every flush and new rows are merged in, so date-scoped re-runs don't truncate prior work.
+
+## Push scored papers into Neon
+
+`paper_server.py` reads `/api/papers` straight from `all_scored.json`, but the "interested" toggle, `add-paper`, and downstream tools go through the Neon `nextjs-ui_paper` table. After a scoring run, mirror the JSON into Neon:
+
+```bash
+uv run python sync_db.py --skip-arxiv     # mirror all_scored.json → Neon (fast)
+uv run python sync_db.py                  # same, plus enrich from arxiv API
+```
+
+Step 5 copies every field — arxiv metadata **and** scoring columns (`score`, `similar_paper`, `score_reason`, `tag_category_v2`, `tag_confidence`, `tag_reason`, `score_source`). Writes go through `NeonDB.batch()` (single connection, commit every 500) so 13 k+ rows don't trip Neon's SSL reaper. Idempotent — safe to re-run.
+
 ## Preview:
 <img width="2946" height="1592" alt="CleanShot 2026-01-20 at 11 59 25@2x" src="https://github.com/user-attachments/assets/7e352c41-ce56-43e9-b283-21e225663ea6" />
 

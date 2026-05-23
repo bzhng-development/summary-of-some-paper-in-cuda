@@ -51,17 +51,38 @@ from neon_db import NeonDB  # noqa: E402
 
 # Override any of these via environment variables.
 #
-# Priority for BASE_URL:
-#   1. SGLANG_BASE_URL    — full URL override (back-compat)
-#   2. LOCAL_LLM_PORT     — just the port; also consumed by multi_prompt_pkg
-#   3. default localhost:30000
-#
-# Setting LOCAL_LLM_PORT once configures both the scorer and multi_prompt's
-# summarizer, which is the common case. Use SGLANG_BASE_URL when you need to
-# point at a non-localhost endpoint (Modal, remote SSH, etc.).
+# Resolution order for BASE_URL / MODEL / API_KEY (first match wins):
+#   1. OPENROUTER_API_KEY — route to OpenRouter (OPENROUTER_MODEL, default
+#      google/gemini-3.1-flash-lite-preview). Preferred for this workload.
+#   2. MODAL_API_KEY      — route to the Modal OpenAI-compatible endpoint.
+#      Free tier is capped at concurrency=1.
+#   3. SGLANG_BASE_URL    — full URL override for a remote/local SGLang.
+#   4. LOCAL_LLM_PORT     — just the port; also consumed by multi_prompt_pkg.
+#   5. default localhost:30000
+_OPENROUTER_API_KEY: str = os.environ.get("OPENROUTER_API_KEY", "")
+_OPENROUTER_BASE_URL: str = os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+_OPENROUTER_MODEL: str = os.environ.get("OPENROUTER_MODEL", "google/gemini-3.1-flash-lite-preview")
+
+_MODAL_API_KEY: str = os.environ.get("MODAL_API_KEY", "")
+_MODAL_BASE_URL: str = os.environ.get("MODAL_BASE_URL", "https://api.us-west-2.modal.direct/v1")
+_MODAL_MODEL: str = os.environ.get("MODAL_MODEL", "zai-org/GLM-5.1-FP8")
+
 _LOCAL_LLM_PORT = int(os.environ.get("LOCAL_LLM_PORT", "30000"))
-BASE_URL: str = os.environ.get("SGLANG_BASE_URL", f"http://localhost:{_LOCAL_LLM_PORT}/v1")
-MODEL: str = os.environ.get("SGLANG_MODEL", "Qwen/Qwen3.5-122B-A10B")
+if _OPENROUTER_API_KEY:
+    BASE_URL: str = _OPENROUTER_BASE_URL
+    MODEL: str = _OPENROUTER_MODEL
+    API_KEY: str = _OPENROUTER_API_KEY
+    PROVIDER: str = "openrouter"
+elif _MODAL_API_KEY:
+    BASE_URL = _MODAL_BASE_URL
+    MODEL = _MODAL_MODEL
+    API_KEY = _MODAL_API_KEY
+    PROVIDER = "modal"
+else:
+    BASE_URL = os.environ.get("SGLANG_BASE_URL", f"http://localhost:{_LOCAL_LLM_PORT}/v1")
+    MODEL = os.environ.get("SGLANG_MODEL", "Qwen/Qwen3.5-122B-A10B")
+    API_KEY = "not-needed"
+    PROVIDER = "local"
 HF_PAPERS_API: str = "https://huggingface.co/api/daily_papers"
 
 # Path to the summary-of-some-paper-in-cuda repo for loading examples.
@@ -152,6 +173,7 @@ ARXIV_NS = {
 @dataclass
 class ArxivMeta:
     """All metadata scraped from the arxiv API for a single paper."""
+
     title: str
     abstract: str
     authors: list[str]
@@ -205,9 +227,16 @@ def _parse_arxiv_entry(entry: ET.Element) -> tuple[str, ArxivMeta] | None:
     doi = doi_el.text.strip() if doi_el is not None and doi_el.text else None
 
     return arxiv_id, ArxivMeta(
-        title=title, abstract=abstract, authors=authors, affiliations=affiliations,
-        categories=categories, primary_category=primary_category, comment=comment,
-        published=published, journal_ref=journal_ref, doi=doi,
+        title=title,
+        abstract=abstract,
+        authors=authors,
+        affiliations=affiliations,
+        categories=categories,
+        primary_category=primary_category,
+        comment=comment,
+        published=published,
+        journal_ref=journal_ref,
+        doi=doi,
     )
 
 
@@ -240,8 +269,10 @@ def fetch_arxiv_metadata(arxiv_ids: list[str]) -> dict[str, ArxivMeta]:
                     break
                 except Exception as e:
                     is_429 = "429" in str(e)
-                    wait = min(3 ** attempt * (3 if is_429 else 1), 120)
-                    logger.warning(f"arxiv API batch {i // batch_size} attempt {attempt + 1} failed: {e}, retrying in {wait}s")
+                    wait = min(3**attempt * (3 if is_429 else 1), 120)
+                    logger.warning(
+                        f"arxiv API batch {i // batch_size} attempt {attempt + 1} failed: {e}, retrying in {wait}s"
+                    )
                     time.sleep(wait)
             if resp is None or resp.status_code != 200:
                 logger.error(f"arxiv API batch {i // batch_size} failed after 7 attempts, skipping")
@@ -333,7 +364,9 @@ def fetch_papers_range(start: date, end: date, enrich_batch: int = 1000) -> list
                 seen.add(p.arxiv_id)
                 all_papers.append(p)
 
-    logger.info(f"Fetched {len(all_papers)} unique papers from {len(day_results)} days, enriching arxiv in background...")
+    logger.info(
+        f"Fetched {len(all_papers)} unique papers from {len(day_results)} days, enriching arxiv in background..."
+    )
 
     # XXX: arxiv enrichment disabled for now. categories, affiliations,
     # arxiv_comment, journal_ref, doi, published will be missing.
@@ -451,12 +484,13 @@ class AsyncClientPool:
         pool_size: int | None = None,
         concurrency: int = 4096,
         timeout: float = 1500.0,
+        api_key: str = API_KEY,
     ):
         _raise_fd_limit()
         max_total_conns = 64
         self.client = AsyncOpenAI(
             base_url=base_url,
-            api_key="not-needed",
+            api_key=api_key,
             timeout=timeout,
             max_retries=0,
             http_client=httpx.AsyncClient(
@@ -468,9 +502,8 @@ class AsyncClientPool:
             ),
         )
         self.pool_size = 1
-        logger.info(
-            f"Initialized 1 async client at {base_url} ({max_total_conns} total conns max)"
-        )
+        key_hint = "modal" if api_key and api_key != "not-needed" else "local"
+        logger.info(f"Initialized 1 async client at {base_url} [{key_hint}] ({max_total_conns} total conns max)")
 
     def get(self) -> AsyncOpenAI:
         return self.client
@@ -522,6 +555,21 @@ Abstract:
                     },
                 },
             )
+            # Log OpenRouter usage accounting fields when present. We dump only
+            # the keys that came back — different providers populate different
+            # subsets (cost, cached_tokens, reasoning_tokens, ...).
+            try:
+                usage_obj = getattr(resp, "usage", None)
+                if usage_obj is not None:
+                    if hasattr(usage_obj, "model_dump"):
+                        usage = usage_obj.model_dump(exclude_none=True)
+                    elif hasattr(usage_obj, "to_dict"):
+                        usage = usage_obj.to_dict()
+                    else:
+                        usage = dict(usage_obj)
+                    logger.info("usage {} {}", paper.arxiv_id, usage)
+            except Exception as usage_exc:
+                logger.debug("usage dump failed for {}: {}", paper.arxiv_id, usage_exc)
             raw = resp.choices[0].message.content or ""
             result = ScoreOutput.model_validate_json(raw)
             break
@@ -581,13 +629,23 @@ async def async_main():
         default=None,
         help="Fetch a single date (YYYY-MM-DD). Default: today.",
     )
-    parser.add_argument("--batch-size", type=int, default=32, help="Tasks launched per burst before sleeping (default: 32)")
-    parser.add_argument("--batch-delay", type=float, default=0.3, help="Seconds to sleep between task-launch bursts (default: 0.3)")
+    parser.add_argument(
+        "--batch-size", type=int, default=32, help="Tasks launched per burst before sleeping (default: 32)"
+    )
+    parser.add_argument(
+        "--batch-delay", type=float, default=0.3, help="Seconds to sleep between task-launch bursts (default: 0.3)"
+    )
+    parser.add_argument(
+        "--limit", type=int, default=None, help="Cap the number of newly-scored papers this run (for small test runs)."
+    )
     # Keep --workers as deprecated alias for --concurrency
     parser.add_argument("--workers", type=int, default=None, help="(deprecated, use --concurrency)")
     args = parser.parse_args()
 
     concurrency = args.workers if args.workers is not None else args.concurrency
+    if PROVIDER == "modal" and concurrency != 1:
+        logger.info("MODAL_API_KEY set — forcing concurrency=1 (was {})", concurrency)
+        concurrency = 1
 
     out_dir: Path = args.out_dir
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -599,9 +657,9 @@ async def async_main():
     else:
         papers = fetch_papers(args.date)
 
-    logger.info(f"Using BASE_URL={BASE_URL} MODEL={MODEL}")
+    logger.info(f"Using BASE_URL={BASE_URL} MODEL={MODEL} provider={PROVIDER}")
 
-    pool = AsyncClientPool(base_url=BASE_URL, concurrency=concurrency)
+    pool = AsyncClientPool(base_url=BASE_URL, concurrency=concurrency, api_key=API_KEY)
 
     # Preflight: fail fast if SGLang/vLLM isn't actually running. Otherwise
     # every scoring call hits retry_async and we waste 10 backoff attempts per
@@ -611,10 +669,7 @@ async def async_main():
         models = await client.models.list()
         logger.info(f"Server models: {[m.id for m in models.data]}")
     except Exception as e:
-        logger.error(
-            f"Server health check failed at {BASE_URL}: {e!r}. "
-            f"Start the LLM server and retry."
-        )
+        logger.error(f"Server health check failed at {BASE_URL}: {e!r}. Start the LLM server and retry.")
         raise SystemExit(2) from e
 
     # Load examples from the papers repo (Neon + external SQLite + docs/)
@@ -659,6 +714,10 @@ async def async_main():
         else:
             papers_to_score.append(p)
 
+    if args.limit is not None and len(papers_to_score) > args.limit:
+        logger.info(f"--limit={args.limit}: truncating from {len(papers_to_score)} candidates down to {args.limit}")
+        papers_to_score = papers_to_score[: args.limit]
+
     if papers_to_score:
         logger.info(f"Scoring {len(papers_to_score)} new papers ({len(scored)} cached, concurrency={concurrency})")
     else:
@@ -666,33 +725,51 @@ async def async_main():
 
     save_path = out_dir / "all_scored.json"
 
+    def _scored_to_dict(s: ScoredPaper) -> dict:
+        return {
+            "arxiv_id": s.paper.arxiv_id,
+            "title": s.paper.title,
+            "score": s.score,
+            "similar_paper": s.similar_paper,
+            "reason": s.reason,
+            "upvotes": s.paper.upvotes,
+            "github": s.paper.github_repo,
+            "github_stars": s.paper.github_stars,
+            "keywords": s.paper.ai_keywords,
+            "authors": s.paper.authors,
+            "affiliations": s.paper.affiliations,
+            "organization": s.paper.organization,
+            "org_fullname": s.paper.org_fullname,
+            "categories": s.paper.categories,
+            "primary_category": s.paper.primary_category,
+            "arxiv_comment": s.paper.arxiv_comment,
+            "published": s.paper.published,
+            "journal_ref": s.paper.journal_ref,
+            "doi": s.paper.doi,
+            "summary": s.paper.summary,
+        }
+
     def _save_progress_sync():
-        snapshot = list(scored)
-        all_results = [
-            {
-                "arxiv_id": s.paper.arxiv_id,
-                "title": s.paper.title,
-                "score": s.score,
-                "similar_paper": s.similar_paper,
-                "reason": s.reason,
-                "upvotes": s.paper.upvotes,
-                "github": s.paper.github_repo,
-                "github_stars": s.paper.github_stars,
-                "keywords": s.paper.ai_keywords,
-                "authors": s.paper.authors,
-                "affiliations": s.paper.affiliations,
-                "organization": s.paper.organization,
-                "org_fullname": s.paper.org_fullname,
-                "categories": s.paper.categories,
-                "primary_category": s.paper.primary_category,
-                "arxiv_comment": s.paper.arxiv_comment,
-                "published": s.paper.published,
-                "journal_ref": s.paper.journal_ref,
-                "doi": s.paper.doi,
-                "summary": s.paper.summary,
-            }
-            for s in snapshot
-        ]
+        # Append-merge: reload whatever's on disk, overlay this run's scored
+        # papers (new wins on duplicate arxiv_id), write back atomically. This
+        # preserves entries outside the current --from/--to date range and
+        # stays safe across re-runs and partial failures.
+        on_disk: dict[str, dict] = {}
+        if save_path.exists():
+            try:
+                existing = json.loads(save_path.read_text())
+            except (json.JSONDecodeError, OSError) as exc:
+                logger.warning("could not re-read {} for merge: {}", save_path, exc)
+                existing = []
+            for entry in existing:
+                aid = entry.get("arxiv_id")
+                if aid:
+                    on_disk[aid] = entry
+
+        for s in list(scored):
+            on_disk[s.paper.arxiv_id] = _scored_to_dict(s)
+
+        all_results = list(on_disk.values())
         fd, tmp = tempfile.mkstemp(dir=out_dir, suffix=".json.tmp")
         try:
             with open(fd, "w") as f:
@@ -720,6 +797,7 @@ async def async_main():
                 return result
             except Exception as e:
                 import traceback
+
                 logger.error(f"Failed {paper.arxiv_id}: {type(e).__name__}: {e}\n{traceback.format_exc()}")
                 return None
 

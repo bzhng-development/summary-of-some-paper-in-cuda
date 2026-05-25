@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "ignorePatterns": [
+    "node_modules",
+    ".next",
+    "src/components/**",
+    "src/hooks/**",
+    "src/utils/**",
+    "src/contexts/**",
+    "src/constants/**",
+    "src/icons/**",
+    "src/fonts/**",
+    "src/styles/**",
+    "src/generated/**",
+    "src/content/**",
+    "src/lib/shiki.js",
+    "src/lib/rehype-code-props.js",
+    "tailwind.config.js",
+    "postcss.config.js",
+    "empty.js"
+  ],
+  "plugins": ["react", "react-hooks", "unicorn", "import", "typescript", "nextjs"],
+  "rules": {}
+}

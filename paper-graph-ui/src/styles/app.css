@@ -1,0 +1,49 @@
+/* App-local style overrides. Keeps Neon's upstream styles/ untouched. */
+
+.prose-doc .katex-display,
+.prose-blog .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.25rem 0;
+}
+
+/* Mobile: respect notch / home indicator on full-bleed pages. */
+body {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Slightly tighter prose on mobile so paper text stays readable on a phone. */
+@media (max-width: 640px) {
+  .prose-doc {
+    font-size: 0.95rem;
+    line-height: 1.55;
+  }
+  .prose-doc h1,
+  .prose-doc h2,
+  .prose-doc h3 {
+    line-height: 1.25;
+  }
+  .prose-doc pre {
+    font-size: 0.78rem;
+  }
+}
+
+/* Horizontal scroll guard for prose tables on narrow viewports. */
+.table-wrapper {
+  overflow-x: auto;
+  margin-block: 1rem;
+}
+.table-wrapper table {
+  min-width: 480px;
+}
+
+/* Compact the breadcrumbs on tight screens — Neon's defaults overflow. */
+@media (max-width: 640px) {
+  nav[aria-label='Breadcrumb'] {
+    font-size: 11px;
+  }
+  nav[aria-label='Breadcrumb'] ol {
+    flex-wrap: wrap;
+    row-gap: 0.25rem;
+  }
+}

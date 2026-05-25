@@ -1,0 +1,15 @@
+# Picked up by oxfmt by default.
+# Everything under src/ is excluded by default; user-code paths are re-included below.
+src/**
+!src/app/**
+!src/lib/psets.js
+!src/lib/headings.js
+!src/lib/remark-collapse-solutions.js
+!src/lib/remark-strategy-admonition.js
+!src/config/**
+
+# Never format
+node_modules/
+.next/
+src/content/**
+src/generated/**

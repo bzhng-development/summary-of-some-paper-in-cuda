@@ -1,0 +1,118 @@
+'use client';
+
+import PropTypes from 'prop-types';
+
+import useCopyToClipboard from 'hooks/use-copy-to-clipboard';
+import { cn } from 'utils/cn';
+import getLanguageIcon from 'utils/get-language-icon';
+import sendGtagEvent from 'utils/send-gtag-event';
+
+import CheckIcon from './images/check.inline.svg';
+import CopyIcon from './images/copy.inline.svg';
+
+function extractTextFromNode(node) {
+  // Base case: if the node is a string, return it.
+  if (typeof node === 'string') return node;
+
+  // Check if the node is an object and has the required properties.
+  if (typeof node !== 'object' || !node.props || !node.props.children) return '';
+
+  // Skip removed lines of code from differences
+  if (node.props.className?.includes('remove')) return '__line_removed_in_code__';
+
+  // If the children are in an array, loop through them.
+  if (Array.isArray(node.props.children)) {
+    let text = '';
+    node.props.children.forEach((child) => {
+      text += extractTextFromNode(child);
+    });
+    return text;
+  }
+
+  // If there's only one child, process that child directly.
+  return extractTextFromNode(node.props.children);
+}
+
+const CodeBlockWrapper = ({
+  className = '',
+  copyButtonClassName = '',
+  filename = null,
+  language = null,
+  trackingLabel = null,
+  copyCode = null,
+  children,
+  as: Tag = 'figure',
+  ...otherProps
+}) => {
+  const { isCopied, handleCopy } = useCopyToClipboard(3000);
+
+  // copyCode bypasses extractTextFromNode, which can't traverse RSC lazy chunks in children
+  const code =
+    copyCode ?? extractTextFromNode(children).replace(/(\n)?__line_removed_in_code__(\n)?/g, '');
+  const isSingleLineCode = code.trimEnd().split('\n').length === 1;
+  let copyButtonTopClassName = 'top-4';
+
+  if (filename) {
+    copyButtonTopClassName = 'top-[58px]';
+  } else if (isSingleLineCode) {
+    copyButtonTopClassName = 'top-[min(1rem,calc(50%-.8175rem))]';
+  }
+
+  const handleCopyWithTracking = () => {
+    handleCopy(code);
+    if (trackingLabel) {
+      sendGtagEvent('Button Clicked', { text: trackingLabel });
+    }
+  };
+
+  return (
+    <Tag
+      className={cn(
+        'code-block group/code-block relative flex flex-col [&_pre]:min-w-full',
+        filename && 'overflow-hidden',
+        className
+      )}
+      data-has-filename={filename ? 'true' : 'false'}
+      {...otherProps}
+    >
+      {filename && (
+        <div className="flex h-11 items-center gap-2 truncate border-b border-gray-new-80 bg-gray-new-98 px-4 text-[13px] leading-none font-medium tracking-tight text-gray-new-40 dark:border-gray-new-20 dark:bg-gray-new-8 dark:text-gray-new-70">
+          {getLanguageIcon(language)}
+          {filename}
+        </div>
+      )}
+      {children}
+
+      <button
+        className={cn(
+          'invisible absolute right-4 border border-gray-new-80 bg-white p-1.5 text-gray-new-40 opacity-0 transition-[background-color,opacity,visibility] duration-200 group-hover/code-block:visible group-hover/code-block:opacity-100 hover:bg-gray-new-90 dark:border-gray-new-20 dark:bg-black-pure dark:text-gray-new-60 dark:hover:bg-gray-new-8 lg:visible lg:opacity-100',
+          copyButtonTopClassName,
+          copyButtonClassName
+        )}
+        type="button"
+        aria-label={isCopied ? 'Copied' : 'Copy'}
+        disabled={isCopied}
+        onClick={handleCopyWithTracking}
+      >
+        {isCopied ? (
+          <CheckIcon className="h-3.5 w-3.5 text-current" />
+        ) : (
+          <CopyIcon className="h-3.5 w-3.5 text-current" />
+        )}
+      </button>
+    </Tag>
+  );
+};
+
+export default CodeBlockWrapper;
+
+CodeBlockWrapper.propTypes = {
+  className: PropTypes.string,
+  copyButtonClassName: PropTypes.string,
+  filename: PropTypes.string,
+  language: PropTypes.string,
+  trackingLabel: PropTypes.string,
+  copyCode: PropTypes.string,
+  children: PropTypes.node,
+  as: PropTypes.string,
+};

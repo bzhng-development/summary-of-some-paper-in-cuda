@@ -1,0 +1,7 @@
+@utility safe-paddings {
+  @apply px-safe;
+}
+
+footer.safe-paddings {
+  @apply pb-safe;
+}

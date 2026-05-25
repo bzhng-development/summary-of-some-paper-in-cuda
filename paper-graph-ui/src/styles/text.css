@@ -1,0 +1,157 @@
+.t-sm {
+  @apply text-sm;
+}
+
+.t-base {
+  @apply text-base;
+}
+
+.t-lg {
+  @apply text-lg;
+}
+
+.t-xl {
+  @apply text-xl;
+}
+
+.t-2xl {
+  @apply text-2xl;
+}
+
+.t-3xl {
+  @apply text-3xl;
+}
+
+.t-4xl {
+  @apply text-4xl;
+}
+
+.t-5xl {
+  @apply text-5xl;
+}
+
+.t-6xl {
+  @apply text-6xl;
+}
+
+.t-7xl {
+  @apply text-7xl;
+}
+
+.t-8xl {
+  @apply text-8xl;
+}
+
+@media (max-width: 1919px) {
+  .t-7xl {
+    font-size: 72px;
+  }
+}
+
+@media (max-width: 1599px) {
+  .t-base {
+    font-size: 14px;
+  }
+
+  .t-lg {
+    font-size: 16px;
+  }
+
+  .t-xl {
+    font-size: 18px;
+  }
+
+  .t-2xl {
+    font-size: 20px;
+  }
+
+  .t-3xl {
+    font-size: 24px;
+  }
+
+  .t-4xl {
+    font-size: 36px;
+  }
+
+  .t-5xl {
+    font-size: 40px;
+  }
+
+  .t-6xl {
+    font-size: 48px;
+  }
+
+  .t-7xl {
+    font-size: 56px;
+  }
+
+  .t-8xl {
+    font-size: 72px;
+  }
+}
+
+@media (max-width: 1279px) {
+  .t-xl {
+    font-size: 16px;
+  }
+
+  .t-2xl {
+    font-size: 18px;
+  }
+
+  .t-3xl {
+    font-size: 20px;
+  }
+
+  .t-4xl {
+    font-size: 32px;
+  }
+
+  .t-5xl {
+    font-size: 36px;
+  }
+
+  .t-6xl {
+    font-size: 40px;
+  }
+
+  .t-7xl {
+    font-size: 48px;
+  }
+
+  .t-8xl {
+    font-size: 64px;
+  }
+}
+
+@media (max-width: 767px) {
+  .t-2xl {
+    font-size: 16px;
+  }
+
+  .t-4xl {
+    font-size: 28px;
+  }
+
+  .t-5xl {
+    font-size: 32px;
+  }
+
+  .t-6xl {
+    font-size: 36px;
+  }
+
+  .t-7xl {
+    font-size: 36px;
+  }
+
+  .t-8xl {
+    font-size: 42px;
+  }
+}
+
+@media (max-width: 413px) {
+  .t-3xl {
+    font-size: 17px;
+  }
+}

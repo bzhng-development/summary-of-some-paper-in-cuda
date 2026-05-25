@@ -9,146 +9,773 @@ TransMLA introduces a practical framework to convert any Grouped-Query-Attention
 ---
 
 ## 1. Executive Summary
-TransMLA presents a practical, mostly training-free procedure to convert any Grouped-Query-Attention (GQA) large language model into a Multi-Head Latent Attention (MLA) model that runs on the highly optimized DeepSeek inference stack. It compresses the key–value (KV) cache with minimal quality loss, enables the MLA “Absorb” inference mode, and achieves large real-world speedups (up to 10.6x at 8K context; Figure 5a) while preserving model behavior after light fine-tuning.
+
+This paper introduces **TransMLA**, a framework for converting any pre-trained GQA-based language model (e.g., LLaMA, Qwen, Mistral) into an MLA-based model by decoupling rotary positional embeddings through a novel principal component rotation technique called **RoRoPE** (consolidating positional information into a single attention head via orthogonal transformations applied identically to the real and imaginary RoPE components) and compressing the remaining non-positional keys jointly with values using a **Balanced Key-Value** normalization procedure (rescaling key and value activations to equal L2 norms before joint PCA to prevent key-dominated decomposition). On LLaMA-2-7B, TransMLA compresses 93% of the KV cache while maintaining meaningful output training-free, and recovers comparable performance across six benchmarks after fine-tuning on only 6B tokens — a compression ratio that leaves a concurrent method, MHA2MLA, with a 21.85% performance drop at only 68.75% compression. The converted model achieves up to a **10.6× inference speedup** at 8K context length on consumer hardware by running directly on DeepSeek's MLA-optimized inference stack, establishing that GQA-to-MLA migration is practical and nearly lossless only when positional information is concentrated via symmetric real-imaginary rotation before low-rank compression.
 
 ## 2. Context and Motivation
-- Problem addressed
-  - Modern LLMs are increasingly bottlenecked by KV-cache memory movement rather than compute. The KV cache stores past attention “keys” and “values” for every token; its size grows linearly with context length and dominates memory bandwidth during decoding.
-  - Many high-quality open and proprietary models are trained with `GQA` (grouped-query attention), which reduces KV size compared to standard multi-head attention, but hardware/runtime ecosystems are now optimized around DeepSeek’s `MLA` layout and kernels, leaving model providers with sunk costs in GQA checkpoints (Abstract; Section 1).
 
-- Why it matters
-  - Shrinking the KV cache without re-training from scratch brings immediate throughput gains, lower serving costs, and longer feasible contexts on commodity accelerators (Section 1; Figure 5, Table 4).
-  - A path to migrate existing GQA models to MLA unlocks DeepSeek-specific optimizations (vLLM integration, SGLang, FP8, multi-token prediction), broadening impact beyond a single model family (Abstract; Section 5.4).
+### The Core Problem: KV Cache Is the Inference Bottleneck, and the Industry Is Locked Into GQA
 
-- Prior approaches and gaps
-  - Architectural choices: `MQA` (one shared KV head) and `GQA` (groups of shared KV heads) cut KV size but degrade quality vs. full MHA (Section 2).
-  - Post-training compression: KV quantization, head sharing, token pruning, or custom cache schemas (e.g., DuoAttention, KiVi, H2O) save memory but require nonstandard runtimes or re-expansion steps that blunt speedups (Section 2).
-  - DeepSeek’s `MLA`: architected to pre-train with compressed KV and a decoupled positional path, enabling the “Absorb” inference trick; however, existing checkpoints in the wild are largely GQA and not MLA (Section 3.3).
+The fundamental problem this paper addresses is a **deployment deadlock**. Modern large language models (LLMs) spend most of their inference time not on computation, but on waiting for data to move between memory and compute units. The culprit is the **key-value (KV) cache** — the intermediate representations of all previous tokens that must be stored and retrieved during autoregressive generation. As context windows grow from 4K to 128K tokens and beyond, the KV cache's memory footprint balloons proportionally, creating three cascading problems:
 
-- Positioning
-  - TransMLA offers a conversion framework: it proves MLA is strictly more expressive than GQA for a fixed KV budget (Appendix A; Figure 1a), then provides a sequence of equivalence-preserving transformations plus low-rank compression that turns any GQA checkpoint into an MLA checkpoint compatible with DeepSeek kernels (Section 4; Figure 1b).
+1. **Memory capacity limits**: A single 7B-parameter model with an 8K context can easily consume 16–32 GB of GPU memory *just for the KV cache*, forcing expensive hardware upgrades or restricting deployable context lengths.
+
+2. **Memory bandwidth bottlenecks**: Even when the KV cache fits in memory, reading it for every new token generation step saturates memory bandwidth long before compute units are fully utilized. This is why LLM inference is described as "memory-bound" — the GPU's floating-point units spend most of their time idle, waiting for KV cache data to arrive.
+
+3. **Batch size constraints**: Larger per-request KV caches reduce the number of requests that can be served concurrently on a single GPU, directly increasing per-token serving costs.
+
+These problems are not theoretical. They are the dominant factor determining whether LLMs can be deployed on consumer hardware, in latency-sensitive applications, or at economically viable scale. The paper frames this crisply in Section 1:
+
+> "as model and context sizes grow, the KV cache itself becomes a major bottleneck for inference"
+
+### Why Existing Solutions Fall Short
+
+The field has developed three broad families of responses to the KV cache problem, each with significant limitations that motivate TransMLA's approach.
+
+**Architectural compression at training time.** Multi-Query Attention (MQA; Shazeer, 2019) and Grouped-Query Attention (GQA; Ainslie et al., 2023) shrink the KV cache by sharing key and value heads across multiple query heads. In MQA, *all* queries share a single key-value head; in GQA, queries are partitioned into groups, each sharing one KV head. Both approaches reduce the KV cache size by factors of $h$ (for MQA) or $h/g$ (for GQA) compared to standard Multi-Head Attention (MHA), where $h$ is the number of query heads and $g$ is the number of KV groups.
+
+The problem is that **this compression comes at a quality cost**. As the paper notes (Section 1):
+
+> "both MQA and GQA cut the size of the KV cache relative to MHA, they do so at the cost of model quality"
+
+This quality degradation has been empirically documented across model families — GQA models generally underperform their MHA counterparts at equivalent parameter counts, particularly on tasks requiring fine-grained attention patterns. The tension between memory efficiency and model quality has forced an uneasy compromise: most major model providers (Meta with LLaMA, Alibaba with Qwen, Google with Gemma, Mistral) have adopted GQA as their standard, accepting the quality penalty in exchange for tractable inference costs.
+
+The consequence is that **billions of dollars of pretraining investment are now locked into the GQA architecture**. Retraining these models from scratch with a better attention mechanism — even one known to be superior — represents an economically prohibitive cost. This is the deployment deadlock: MLA is demonstrably better than GQA, but the installed base of GQA models is too valuable to abandon.
+
+**Runtime KV cache compression.** A second family of approaches — including H2O (Zhang et al., 2023), SnapKV (Li et al., 2024), LazyLLM (Fu et al., 2024), and KV-Quant (Hooper et al., 2024) — applies compression *post-hoc* to the KV cache of already-trained models. These methods selectively prune tokens, quantize cache entries, or evict less-important key-value pairs at inference time.
+
+The problem is that **these are non-standard operations requiring custom kernels and runtime modifications**. The paper observes (Section 2):
+
+> "their non-standard implementations demand specialized optimizations, hindering widespread adoption"
+
+Each of these methods introduces a different API, different memory layout, and different computational pattern. Integrating them into production inference stacks (vLLM, SGLang, TensorRT-LLM) requires custom engineering for each combination of model and compression method. More fundamentally, these runtime methods don't change the underlying model architecture — they discard information at inference time that the model was trained to expect, which can cause unpredictable quality degradation on inputs that deviate from the pruning heuristics' assumptions.
+
+**Low-rank weight compression (Palu).** The closest prior work to TransMLA is Palu (Chang et al., 2024), which applies low-rank decomposition to the key and value *projection weights* themselves, compressing the KV cache by reducing the dimensionality of the stored representations.
+
+The critical limitation is that **Palu does not handle Rotary Positional Embeddings (RoPE)**. Because the keys still carry RoPE after compression, the Absorb operation — the key mechanism that makes DeepSeek MLA fast at inference time — cannot be applied. The paper explains (Section 2):
+
+> "Palu does not specifically handle RoPE, which prevents it from using the Absorb operation during inference. Therefore, Palu needs to project the compressed representations back to their original size. This projection incurs significant computational overhead during inference, limiting the overall acceleration."
+
+In other words, Palu compresses what is *stored* in the KV cache, but must decompress it back to the full key-value dimension during attention computation, negating much of the computational benefit. It's memory-efficient but not compute-efficient.
+
+### Why MLA Is the Right Target, and Why Migration Is Hard
+
+Multi-Head Latent Attention (MLA), introduced in DeepSeek V2 (DeepSeek-AI, 2024) and refined in DeepSeek V3 and R1, solves the quality-efficiency tradeoff differently than GQA. Instead of sharing KV heads across query groups (which loses information), MLA **learns a low-rank latent space** for keys and values, projecting the input into a compressed representation and then expanding it back to full dimensionality only when needed. The key innovation — the **Absorb operation** — means that during inference, the up-projection matrices can be mathematically absorbed into the query projection, so attention is computed directly in the compressed latent space without ever materializing the full-sized keys and values.
+
+This achieves what GQA cannot: **compression without information loss due to head sharing**. The paper proves this formally in Appendix A (Proposition 1), establishing that under the same KV cache budget, the expressiveness hierarchy is:
+
+$$\text{GQA} < \text{MLA}_{\text{Factorized}} < \text{MQA}$$
+
+Intuitively, MLA's learnable low-rank projections can represent any set of per-head key-value patterns that GQA can (by setting the up-projection matrix to specific sparse selector matrices), but can also represent richer patterns that GQA's head-sharing constraint prohibits. The full MLA architecture with decoupled RoPE further extends this advantage by using an MQA structure for positional components while using the MLA factorized structure for content components.
+
+The problem is that **converting GQA to MLA is not architecturally trivial** — and this is the gap TransMLA fills. There are two obstacles:
+
+**Obstacle 1: RoPE blocks the Absorb operation.** In standard GQA, Rotary Positional Embeddings are applied to *every* query and key head. The RoPE operation multiplies different dimensions of the key vectors by different rotation matrices based on token position, which breaks the linear algebraic property that enables absorption. Specifically, the Absorb operation requires that keys can be expressed as a linear function of the compressed latent representation — but RoPE applies a *non-linear positional transformation* to each key vector after it's computed from the latent. You cannot absorb a RoPE-transformed key into a static query projection matrix because the key depends on position through a non-matrix-multiplication operation.
+
+The paper identifies this as the central technical barrier (Section 1):
+
+> "A key obstacle to converting a GQA-based model to MLA is that every query–key head carries its own Rotary Positional Embedding (RoPE), blocking the Absorb operation that DeepSeek uses to switch between compute- and memory-efficient modes."
+
+**Obstacle 2: Naive low-rank compression loses information unevenly.** Even if RoPE can be decoupled, jointly compressing keys and values into a shared low-rank space introduces a norm imbalance problem. The paper observes (Section 4.3) that the L2 norm of key activations is substantially larger than that of value activations. If PCA is applied directly to the concatenated key-value representation, the principal components are dominated by key directions, and the value subspace — which carries the semantic content used for output generation — is poorly represented. The paper states:
+
+> "the ℓ2-norm of K_nope is far larger than that of V. If we run PCA on the concatenated matrix [K_nope; V] without adjustment, the principal components are dominated by K_nope, leading to severe information loss from the value subspace and a sharp drop in accuracy."
+
+### The Concurrent Work and Its Limitations
+
+The paper positions itself against one particularly relevant concurrent submission: **MHA2MLA** (Ji et al., 2025), which also proposes converting MHA models to MLA by decoupling RoPE. TransMLA is not simply a GQA generalization of MHA2MLA — both methods support both architectures — but they differ fundamentally in *how* RoPE is decoupled.
+
+MHA2MLA's approach is to **selectively remove RoPE from individual dimensions** based on the norms of query and key vectors. Dimensions with small norms are deemed "less important" for positional encoding and have their RoPE removed. The paper identifies three critical weaknesses in this approach (Section 2):
+
+1. **Higher information loss at equivalent compression**: The norm-based selection criterion is a heuristic that doesn't optimally preserve the positional information structure. The paper shows that at the same compression ratio, TransMLA's RoRoPE approach achieves significantly lower perplexity degradation.
+
+2. **Sparse, irregular importance patterns**: The dimensions MHA2MLA keeps don't form contiguous blocks — important dimensions are scattered irregularly across the head structure. This requires sparse indexing during inference, which complicates hardware-optimized implementations. The paper notes: "the distribution of important dimensions in MHA2MLA is uneven, requiring sparse indexing that complicates optimization and acceleration."
+
+3. **No demonstrated speedup**: Despite claiming compression ratios, MHA2MLA reports "compression ratios of the KV cache but does not demonstrate actual inference speedup" (Section 2). The irregular memory access patterns from sparse dimension selection may prevent the theoretical compression from translating into wall-clock acceleration.
+
+4. **Direct joint SVD without balancing**: MHA2MLA applies singular value decomposition directly to concatenated key-value matrices without the norm-balancing step that TransMLA introduces. This leads to key-dominated decomposition and higher reconstruction error for values.
+
+### How TransMLA Positions Itself
+
+TransMLA's contribution is not a new attention mechanism, but rather a **migration pathway** — a set of mathematically principled techniques for converting *existing, pre-trained* GQA models into the MLA format such that they can run on DeepSeek's optimized inference stack with minimal quality loss and minimal retraining. The positioning is:
+
+- **Against retraining from scratch**: TransMLA acknowledges that model providers have "heavily invested in optimizing GQA-based models and, therefore, lack strong incentives to retrain MLA-based models from scratch" (Abstract). It offers weight inheritance rather than clean-slate training.
+
+- **Against runtime compression methods**: TransMLA produces a model that is natively MLA-format, meaning it benefits from DeepSeek's entire inference ecosystem (vLLM, SGLang, FP8 quantization, Multi-Token Prediction) without custom kernels. The paper emphasizes: "the TransMLA models are fully compatible with DeepSeek's code, enjoying DeepSeek's ecosystem to accelerate inference and seamlessly integrate with various hardware and frameworks" (Section 1).
+
+- **Against Palu's limited acceleration**: By solving the RoPE decoupling problem, TransMLA enables the Absorb operation that Palu cannot, delivering actual computational speedup (10.6×) rather than just memory savings.
+
+- **Against MHA2MLA's heuristic approach**: TransMLA's RoRoPE technique is derived from a mathematical invariance property — orthogonal rotations within the same RoPE frequency subspace preserve the attention inner product — rather than from a norm threshold heuristic. The paper proves this invariance formally in Appendix B and then uses it to *optimize* the concentration of positional information into a single head, rather than simply discarding low-norm dimensions.
+
+The architectural motivation is captured in Figure 1a, which shows that GQA, MLA, and MQA form a hierarchy of expressiveness under the same KV cache budget, with MLA occupying an intermediate position that balances the quality of GQA with the efficiency advantages of MQA. TransMLA's goal is to **slide existing GQA models rightward on this spectrum** — toward MQA-like efficiency — without requiring retraining from the left.
 
 ## 3. Technical Approach
-The pipeline converts a GQA layer to an MLA layer that supports the MLA “Absorb” inference mode. Key terms:
-- `KV cache`: the per-token memory storing all past keys (`K`) and values (`V`).
-- `RoPE`: rotary positional embedding; encodes token position by rotating pairs of feature dimensions with sin/cos at fixed frequencies (Eq. 1; Section 3.1).
-- `Absorb`: MLA’s inference-time reparameterization that collapses per-head projections into a shared latent KV, delivering MQA-like runtime while retaining multi-head expressivity (Eqs. 9–10; Section 3.3).
-- `RoRoPE`: a new rotation-and-PCA procedure that concentrates positional information into a small subspace (Section 4.2; Figure 2).
-- `FreqFold`: groups adjacent RoPE frequencies (which are similar) so their principal components can be learned jointly, increasing how much positional information fits into the target subspace (Appendix C; Figure 7).
-- `BKV` (Balanced Key–Value): rescales keys vs. values before joint PCA to avoid the larger-norm keys dominating the compression (Eq. 20; Appendix D; Figure 4).
 
-Step-by-step
+### 3.1 Reader orientation (approachable technical breakdown)
 
-1) Merge all GQA K/V heads into one latent head (no quality change)
-- Mechanism: Introduce per-query-head matrices `WUK_i` and `WUV_i` that “select” the original K/V group for that head. Initialize them as block identity selectors so each query head still attends to its original K/V group. Merge all K and all V into a single concatenated latent vector `c_KV_t = [c_K_t; c_V_t] = [W^K; W^V] x_t` (Eq. 11).
-- The attention then becomes (Eqs. 12–15): compute queries `q_t`, apply a “big RoPE” to the merged key portion `c_K_t`, use `WUK_i` to route attention scores, and `WUV_i` to route values back to each head. KV cache size is unchanged at this stage; this step is algebraic refactoring that enables the next steps.
+**What the system is:** TransMLA is a post-training conversion pipeline that takes any pre-trained GQA-based language model and algebraically rewrites its attention layers into the MLA format, producing a drop-in replacement model that runs on DeepSeek's highly optimized inference stack. **What problem it solves:** It eliminates the RoPE-induced barrier that prevents GQA models from using MLA's Absorb operation (the key to MLA's inference speed), by concentrating all positional information into a single attention head through an orthogonal rotation derived from principal component analysis, then compressing the remaining non-positional key representations jointly with the value representations using a norm-balanced low-rank decomposition.
 
-2) Decouple RoPE while preserving attention scores (RoRoPE)
-- Key observation: RoPE uses the same rotation frequency pattern for the same pair of dimensions across all heads. Therefore, rotating the stacked (across-head) real and imaginary parts by the same orthogonal matrix `U_l` for each frequency `l` leaves all RoPE dot-products unchanged (Eq. 19; proof in Appendix B).
-- Procedure (Figure 2; Section 4.2):
-  - For each RoPE frequency pair `l`, collect the key outputs across heads (both real and imaginary parts).
-  - Compute an orthogonal rotation `U_l` via PCA that concentrates the variance into the first few coordinates (the “first head positions” after rotation).
-  - Apply the same `U_l` to both real and imaginary channels to preserve RoPE dot-products (constraint proven in Appendix B).
-  - Keep RoPE only on the concentrated dimensions (call them `K_rope`); remove RoPE from the rest (call them `K_nope`) to make them compatible with MLA’s Absorb.
+### 3.2 Big-picture architecture (diagram in words)
 
-3) Increase positional capacity via frequency folding (FreqFold)
-- Motivation: If RoPE information from all heads is forced into a single dimension per frequency, capacity can be insufficient. Adjacent RoPE frequencies are very similar; grouping them lets PCA find shared components in a higher-dimensional folded block (Appendix C; Figure 7).
-- Mechanism: Concatenate the 2g-dimensional segments for multiple nearby frequencies and run a single PCA to obtain multiple principal components allocated to one head’s RoPE channel(s). Proposition 2 (Appendix C.2–C.3) formalizes why PCA on the concatenated block captures at least as much variance as running separate PCAs and then combining.
+The TransMLA pipeline has four sequential stages applied to each attention layer of the input GQA model:
 
-4) Balance `K_nope` and `V` before joint compression (BKV)
-- Observation: After extracting `K_rope`, the norm of the remaining key features (`K_nope`) is still much larger than the value features `V`, so naïve joint PCA of `[K_nope; V]` ignores `V` (Section 4.3; Figure 4a).
-- Fix: Scale `K_nope` by `1/α`, where `α = E[||K_nope||^2] / E[||V||^2]` (Eq. 20), to equalize magnitudes during PCA. Multiply the corresponding up-projection by `α` afterwards to keep the overall function unchanged (Appendix D.1).
+1. **Key-Head Merging:** The $g$ separate GQA key-value heads are merged into a single shared latent representation by constructing identity-modulated up-projection matrices $W^{UK}$ and $W^{UV}$, producing a mathematically equivalent computation that now operates on one large key head instead of $g$ small ones. This stage does not compress anything — it only restructures the computation to prepare for subsequent stages.
 
-5) Low-rank KV projection with joint PCA
-- Concatenate the balanced activations `[K_nope'; V]` over a small calibration set and run PCA to learn a projection `R_KV` (Appendix D.2).
-- Replace the original projections by a low-rank bottleneck:
-  - Down: `WDKV' = R_KV^T WDKV` (Eq. 35) stores a compressed latent `c_KV` in the cache.
-  - Up: `WUKV' = WUKV R_KV`, which decomposes into head-wise `WUK` and `WUV` in the MLA parametrization (Eqs. 36–37).
-- Optional: compress queries similarly (Section 5.4 distinguishes “Low-rank Q” vs. “Full-rank Q” in speed plots).
+2. **RoRoPE + FreqFold (Positional Decoupling):** A data-driven principal component rotation is applied to the key vectors within each RoPE frequency subspace, concentrating positional information into the dimensions of the first attention head. The remaining $(g-1)$ heads have their RoPE components removed entirely, splitting the key into an RoPE-bearing component ($K_{\text{rope}}$, 1 head) and position-free components ($K_{\text{nope}}$, $g-1$ heads). Because the rotation is orthogonal and applied identically to real and imaginary RoPE components, the attention scores are mathematically preserved exactly (proven in Appendix B).
 
-6) Enable MLA Absorb inference mode
-- With RoPE isolated to a small shared key vector and the content K/V routed through a low-rank latent, the layer supports the MLA Absorb form (Eqs. 9–10; Section 3.3):
-  - Training-time: behaves MHA-like (per-head activations), ensuring optimization stability.
-  - Inference-time: collapses to a shared latent key/value per token (MQA-like runtime), but per-head diversity re-emerges via learned up-projections on the fly.
+3. **Balanced KV Norm (Rescaling):** The $K_{\text{nope}}$ and $V$ projection matrices are rescaled so that their activation norms match, preventing the key-dominated PCA problem. This is an equivalence transformation — outputs are unchanged — but it dramatically improves the quality of the subsequent low-rank decomposition.
 
-7) Expressiveness guarantee (why this preserves capability)
-- Appendix A proves the strict expressiveness ordering at equal KV budget: `GQA < MLA_factorized < MQA`. MLA with decoupled RoPE uses an MLA_factorized core for content and an MQA-style shared positional stream, hence is more expressive than GQA while using the same KV budget (Appendix A.3; Figure 6, mirrored in Figure 1a).
+4. **Joint PCA Compression:** Principal component analysis is performed on the concatenated (balanced) $K_{\text{nope}}$ and $V$ activations collected from a calibration dataset. The resulting projection matrix compresses the $(2g-1)d$-dimensional combined representation into an $r_{kv}$-dimensional latent space, reducing the KV cache proportionally.
 
-Analogy for RoRoPE/FreqFold
-- Think of each RoPE frequency as a “note” played across many instrument tracks (heads). RoRoPE finds a rotation that mixes tracks so the loudest parts of each note move into the first track. FreqFold groups nearby notes into short chords and learns a joint mix so the first track can carry richer positional melody, letting other tracks drop the positional effect (NoPE) without losing the song.
+After these four stages, the model's weights are restructured into the MLA format (with $W^{DKV'}$, $W^{UK}$, $W^{UV}$, and decoupled RoPE projections), and the converted checkpoint can be loaded directly into DeepSeek-compatible inference engines.
+
+### 3.3 Roadmap for the deep dive
+
+- **First, merging all key heads into one shared latent representation** — because MLA's Absorb operation requires a single key head shared across all queries, and this merge must be mathematically equivalent to the original GQA computation.
+- **Second, decoupling RoPE via RoRoPE** — the core technical innovation — walking through why RoPE blocks absorption, the invariance property that RoRoPE exploits, how the orthogonal rotation matrices are computed via joint PCA on real and imaginary components, and why the same rotation must be applied to both.
+- **Third, FreqFold** — the extension that treats adjacent RoPE frequencies as effectively identical, enabling richer positional representations by concatenating multiple frequency groups before PCA, with a formal proof of why this is variance-preserving.
+- **Fourth, the norm imbalance problem and KV balancing** — why keys dominate values in joint PCA, the scaling factor computation, and why this simple normalization dramatically improves compression quality.
+- **Fifth, the joint PCA compression step** — how activation-based PCA is performed on the balanced $K_{\text{nope}}$ and $V$ representations, how the projection matrices $W^{DKV}$ and $W^{UKV}$ are restructured, and how the final compressed model maps onto the standard MLA formulation.
+- **Sixth, a walk-through of the full transformation** — showing how the original GQA equations are progressively rewritten into MLA form, making the flow of information through the pipeline concrete.
+
+### 3.4 Detailed, sentence-based technical breakdown
+
+This is primarily a **model-conversion engineering paper** whose core idea is that RoPE can be safely isolated into a single attention head through a mathematically justified orthogonal rotation, enabling the Absorb operation and thus full MLA inference acceleration on converted GQA models.
+
+---
+
+#### 3.4.1 Merging All Key Heads into One Shared Latent Representation
+
+**Why merging is necessary.** In MLA's inference mode (Equation 10 in the paper), all query heads attend to a *single* shared key latent vector $c^{KV}_t \in \mathbb{R}^{r_{kv}}$ rather than to $g$ group-specific key vectors as in GQA. The Absorb operation requires this shared structure: the up-projection weights $W^{UK}_i$ (which would normally expand the compressed key to per-head dimensions) are absorbed into the query projection, so the effective query vectors $\hat{q}_{t,i}$ directly interact with the latent $c^{KV}_t$ without ever materializing full-dimensional keys. For a GQA model to be converted to MLA, the first step is therefore to restructure its computation so that all queries interact with a single merged key representation — without changing the functional output.
+
+**The merging construction.** Given a GQA model with $h$ query heads, $g$ KV groups, and per-head dimension $d = D/h$, the original key projection $W^K \in \mathbb{R}^{gd \times D}$ produces $g$ distinct key vectors $[k_{t,1}; \ldots; k_{t,g}]$ of dimension $d$ each. The merged representation introduces a single latent key $c^K_t = W^K x_t \in \mathbb{R}^{gd}$ (simply the concatenation of all original group keys) and defines per-query-head up-projection matrices $W^{UK}_i \in \mathbb{R}^{d \times gd}$ initialized as *selector matrices*:
+
+> For each query head $i$, we introduce $W^{UK}_i \in \mathbb{R}^{d \times gd}$ with the group index $j = \lceil i/(h/g) \rceil$, and initialize the matrix $W^{UK}_i[:, jd : (j+1)d]$ to be $I_d$ (identity matrix of shape $d \times d$), with all other elements set to 0.
+
+In plain language: for query head $i$, the matrix $W^{UK}_i$ selects the $d$-dimensional block of $c^K_t$ corresponding to head $i$'s assigned KV group $j$, and maps it through an identity transformation. The effective key for head $i$ becomes:
+
+$$k_{t,i}^{\text{eff}} = (W^{UK}_i)^\top c^K_t$$
+
+which equals $k_{t,j}$ — the original GQA key for that group. All other query heads sharing the same group use the same selector but with the identity block at the same offset, meaning they all extract the identical key vector.
+
+An identical construction is applied to values: $W^{UV}_i$ is initialized with identity blocks selecting the value vector corresponding to head $i$'s group from the concatenated value latent $c^V_t = W^V x_t \in \mathbb{R}^{gd}$.
+
+**The merged RoPE complication.** Because the original GQA applies RoPE to each key head independently, and those heads are now concatenated into a single large vector, the RoPE operation must be applied to the merged representation in a way that produces the same per-head rotated keys. This is handled by defining $\widehat{\text{RoPE}}$ as the operation that applies standard RoPE repeatedly for every $d$-dimensional block of the merged key:
+
+> Since the original RoPE operation in GQA is the same for each head, $\widehat{\text{RoPE}}$ simply applies the same RoPE operation repeatedly for every $d$ dimensions.
+
+**Result of the merge (Equations 11-15).** After merging, the GQA computation is rewritten in a form structurally identical to MLA's absorbed inference mode (Equation 10), but with a crucial difference — the KV cache size is still $2gd$ per token, equal to the original GQA, so no compression has been achieved yet. The equations become:
+
+$$c^{KV}_t = W^{DKV} x_t, \quad W^{DKV} = \begin{bmatrix} W^K \\ W^V \end{bmatrix} \in \mathbb{R}^{2gd \times D}$$
+
+This concatenates key and value projections into a single matrix whose output is the merged KV latent vector.
+
+$$\hat{q}^R_{t,i} = \widehat{\text{RoPE}}((W^{UK}_i)^\top q_{t,i}, t), \quad \hat{k}^R_t = \widehat{\text{RoPE}}(c^K_t, t)$$
+
+The query-side projection $(W^{UK}_i)^\top q_{t,i}$ extracts the key relevant to head $i$ from the query space (mirroring the key-side extraction), and both are RoPE-rotated.
+
+$$\hat{o}_{t,i} = \sum_{j=1}^t \text{softmax}_j\left(\frac{(\hat{q}^R_{t,i})^\top \hat{k}^R_j}{\sqrt{d}}\right) c^V_j$$
+
+Attention scores are computed between the rotated query-key pairs, and the output is a weighted sum over the value latent vectors.
+
+$$y_t = W^O[W^{UV}_1 \hat{o}_{t,1}; \ldots; W^{UV}_h \hat{o}_{t,h}]$$
+
+The per-head outputs are up-projected through $W^{UV}_i$ and concatenated for the final output projection.
+
+**What this stage accomplishes and doesn't accomplish.** The merged representation is mathematically equivalent to the original GQA — it produces identical outputs — but it has restructured the computation into MLA-like form. It has also introduced a computational *increase*: the per-head dimension of the attention computation is now $gd$ (the full merged key size) rather than $d$ (the original per-group size), and the new matrices $W^{UK}_i$ and $W^{UV}_i$ add parameters and computation. This stage is *not* about efficiency — it is about creating the structural conditions (a single merged key) necessary for the subsequent RoPE decoupling and compression stages to work. As the paper notes: "By merging multiple KV heads, we can better identify shared principal components and represent the KV cache in a lower-dimensional latent space."
+
+---
+
+#### 3.4.2 Decoupling RoPE via RoRoPE: The Core Innovation
+
+**Why RoPE blocks the Absorb operation.** The Absorb operation in MLA (Equation 9 transforming to Equation 10) works because the per-head key $k_{t,i}$ can be expressed as a linear function of the shared latent $c^{KV}_t$:
+
+$$k_{t,i} = W^{UK}_i \; c^{KV}_t$$
+
+This linearity means that $(W^{UK}_i)^\top$ can be absorbed into the query projection:
+
+$$\hat{q}_{t,i} = (W^{UK}_i)^\top q_{t,i}$$
+
+and attention can be computed directly against $c^{KV}_t$ without materializing $k_{t,i}$. However, when RoPE is applied *after* the linear projection:
+
+$$k^R_{t,i} = \text{RoPE}(W^{UK}_i c^{KV}_t, t)$$
+
+the key is no longer a linear function of $c^{KV}_t$ — it has been non-linearly transformed by position-dependent rotation matrices. There is no static matrix you can multiply $q_{t,i}$ by to produce $(\text{RoPE}(W^{UK}_i c^{KV}_t, t))^\top$ because the RoPE operation depends on $t$. This breaks absorption.
+
+DeepSeek's solution (in native MLA) is **decoupled RoPE**: separate the key into a content component $k^C_{t,i}$ (which *is* a linear function of the latent and can be absorbed) and a positional component $k^R_t$ (which carries RoPE and is shared across heads, using an MQA structure for the positional part). The attention score becomes a sum:
+
+$$(q^C_{t,i})^\top k^C_{j,i} + (q^R_{t,i})^\top k^R_j$$
+
+where only the second term involves RoPE, and only the first term participates in absorption. The challenge for conversion is: the base GQA model applies RoPE to *every* dimension of *every* key head. How do you restructure this into the decoupled form without retraining?
+
+**The key insight: orthogonal rotations within RoPE frequency subspaces preserve attention.** The paper proves (Appendix B) that for each RoPE frequency $l$, if you take the $2g$-dimensional vectors formed by gathering the $l$-th RoPE subspace dimensions across all $g$ key heads — that is, the vectors:
+
+$$\hat{q}^{[2l-1::d]}_{t,i}, \hat{q}^{[2l::d]}_{t,i}, \hat{k}^{[2l-1::d]}_j, \hat{k}^{[2l::d]}_j \in \mathbb{R}^g$$
+
+and multiply each by the *same* orthogonal matrix $U_l \in \mathbb{R}^{g \times g}$, the RoPE inner product remains exactly invariant. Formally:
+
+> $$\sum_{l=1}^{d/2} \left(\left[U_l \hat{q}^{[2l-1::d]}_{t,i}; U_l \hat{q}^{[2l::d]}_{t,i}\right]^R\right)^\top \left(\left[U_l \hat{k}^{[2l-1::d]}_j; U_l \hat{k}^{[2l::d]}_j\right]^R\right) = (\hat{q}^R_{t,i})^\top \hat{k}^R_j$$
+>
+> where the notation $\hat{q}^{[2l-1::d]}_{t,i} \in \mathbb{R}^g$ selects the $(2l-1)$-th dimension from each of the $g$ key heads (using Python-style slicing `[2l-1::d]`), $U_l \in \mathbb{R}^{g \times g}$ is an orthogonal matrix, and the superscript $R$ denotes RoPE application.
+
+**What this equation means operationally:** For each RoPE frequency $l$, there is a $g$-dimensional subspace (one dimension per original GQA key head) carrying that frequency's positional information. Applying the *same* orthogonal rotation $U_l$ to both the real component (dimension $2l-1$ of each head) and the imaginary component (dimension $2l$ of each head) of the query and key vectors leaves the dot product after RoPE completely unchanged. This is analogous to how rotating a coordinate system doesn't change the distance between points — RoPE applies the same $(\cos t\theta_l, \sin t\theta_l)$ rotation to each dimension within the subspace, so any orthogonal transformation that treats real and imaginary parts identically commutes with the RoPE operation.
+
+**Critical constraint:** The proof reveals that $U_l$ *must* be applied identically to real and imaginary components. Performing separate PCA on the real parts and imaginary parts would break the RoPE structure because the commutation property relies on the rotation operating on the paired dimensions as a unit. The paper states:
+
+> "This requirement precludes performing separate PCA on the real and imaginary parts. We must therefore find a single rotation that is jointly optimal for both."
+
+**How RoRoPE computes the optimal rotation.** The procedure operates layer-by-layer, using a small calibration dataset (the paper uses WikiText-2) to collect key activations:
+
+1. **Collect activations:** For each input in the calibration set, perform a forward pass and collect the merged key representations $\hat{k}_t$ at the point just before RoPE application (i.e., after the $W^{UK}$ up-projection but before rotation). For each RoPE frequency $l \in \{1,\ldots,d/2\}$, extract the real-part vectors $k_{x,l} \in \mathbb{R}^g$ (one dimension per head for the $(2l-1)$-th component) and imaginary-part vectors $k_{y,l} \in \mathbb{R}^g$ (one dimension per head for the $2l$-th component) across $N$ calibration samples.
+
+2. **Form the joint optimization problem:** For each frequency $l$, find an orthogonal matrix $U_l \in \mathbb{R}^{g \times g}$ that maximizes the variance concentrated in the first $m$ dimensions after rotation:
+
+> $$\max_{U_l} \; \text{Tr}\left( (U_l^\top (\Sigma_{x,l} + \Sigma_{y,l}) U_l)_{:m,:m} \right) \quad \text{s.t.} \quad U_l^\top U_l = I$$
+>
+> where $\Sigma_{x,l} = \frac{1}{N} K_{x,l}^\top K_{x,l}$ and $\Sigma_{y,l} = \frac{1}{N} K_{y,l}^\top K_{y,l}$ are the $g \times g$ covariance matrices of the real and imaginary key components in the $l$-th RoPE subspace, and $(\cdot)_{:m,:m}$ denotes the top-left $m \times m$ submatrix.
+
+**What this optimization computes:** The objective is the trace of the top-left $m \times m$ block of the rotated summed covariance — the total variance captured by the first $m$ components after rotation. By maximizing this, the rotation $U_l$ "sorts" the key dimensions so that the largest principal components (across both real and imaginary parts jointly) land in the first few dimensions. The constraint $U_l^\top U_l = I$ ensures the transformation is orthogonal, which is required for the RoPE invariance proof.
+
+**Why this form:** The sum $\Sigma_{x,l} + \Sigma_{y,l}$ enforces the "same rotation for real and imaginary" constraint from the proof. If we optimized $\Sigma_{x,l}$ and $\Sigma_{y,l}$ separately, we would get different rotations for each, breaking the RoPE inner product preservation. The joint optimization finds directions that are simultaneously principal for both the real and imaginary key components.
+
+3. **Solve via eigendecomposition:** The optimal $U_l$ is given by the eigenvectors of $\Sigma_{x,l} + \Sigma_{y,l}$, sorted in descending order of their eigenvalues. The columns of $U_l$ are the principal directions of the combined real+imaginary key variation in the $l$-th RoPE subspace.
+
+4. **Apply the rotation:** The key projection matrix $W^K$ and the up-projection matrices $W^{UK}_i$ are transformed by $U_l$ (the rotation operates on the $g$ key-head dimensions, which are columns of $W^K$ and rows of $W^{UK}_i$). After rotation, the principal components are concentrated in the first dimensions (which map to the first attention head's dimensions).
+
+**What RoRoPE produces.** After applying the optimal rotations for all $l = 1, \ldots, d/2$, the key representation is restructured so that the first head's dimensions carry the dominant positional signal. The remaining $(g-1)$ heads' dimensions carry minimal positional information and can have their RoPE safely removed with minimal loss. The attention computation is now split:
+
+$$K_{\text{rope}} \in \mathbb{R}^{d \times D}: \text{ first head dimensions, still carrying RoPE}$$
+$$K_{\text{nope}} \in \mathbb{R}^{(g-1)d \times D}: \text{ remaining head dimensions, RoPE removed}$$
+
+The paper shows this empirically in Figure 3a: after RoRoPE, the key norm distribution (which was highly irregular in the original model) becomes sharply concentrated in the first two heads (dimensions 0–128). Further applying FreqFold compresses the tail even more.
+
+**Why this is superior to MHA2MLA's approach.** MHA2MLA selects which RoPE dimensions to remove by thresholding the *norms* of individual query and key vector components. This is a *univariate* criterion that doesn't account for correlations between dimensions — two dimensions might both have moderate norms but be strongly correlated, meaning they carry redundant information that could be combined. RoRoPE's PCA-based approach finds the *multivariate* directions of maximum variance, which captures the full correlational structure. Moreover, MHA2MLA's per-dimension selection produces sparse, irregular retention patterns that require custom sparse indexing kernels. RoRoPE's rotation naturally produces a *dense* concentration — the important dimensions are contiguous in the first head — enabling dense matrix operations in standard MLA implementations.
+
+**Figure 3b demonstrates the practical impact:** At 90% RoPE removal ratio, RoRoPE + 4D-FreqFold maintains a log-perplexity around 2 on WikiText-2, while MHA2MLA reaches nearly 6 (at which point the model no longer generates meaningful text). The gap widens with increasing removal ratio, confirming that the PCA-derived rotation is substantially more efficient at preserving positional information.
+
+---
+
+#### 3.4.3 FreqFold: Exploiting Frequency Similarity for Richer Positional Encoding
+
+**The limitation of one-dimensional positional encoding.** In the basic RoRoPE procedure, each RoPE frequency $l$ independently undergoes PCA on its $g$-dimensional subspace (one dimension per head). After rotation, only the first principal component (mapped to the first head) is retained with RoPE; the other $g-1$ components have RoPE removed. This means the positional encoding is represented using only a single dimension per frequency — a $d/2$-dimensional total positional subspace (two per frequency for real+imaginary). For models with many heads, this is a significant dimensionality reduction of the positional encoding, which could limit its expressive power.
+
+**FreqFold's observation: adjacent RoPE frequencies are nearly identical.** RoPE uses base frequencies $\theta_l = 10000^{-2(l-1)/d}$ for $l = 1, \ldots, d/2$. For large $d$, adjacent frequencies are numerically very close — for example, in a 128-dimensional head, $\theta_{63}/\theta_{64} \approx 10000^{2/128} \approx 1.15$. FreqFold treats $M$ adjacent frequency subspaces as having *effectively the same* rotation frequency, meaning their corresponding dimensions can be concatenated before PCA rather than analyzed independently.
+
+**The concatenation operation.** With $M$-dimensional FreqFold, the $M$ adjacent RoPE frequency subspaces are merged. Instead of performing $M$ separate PCA operations on $g$-dimensional vectors (one per frequency), a *single* PCA is performed on $M \cdot g$-dimensional vectors formed by concatenating the $g$-dimensional components from each of the $M$ frequencies. The resulting M-dimensional principal subspace (retaining the top $M$ components after rotation) provides a richer positional encoding — $M$ dimensions per frequency group instead of 1.
+
+**Example from the paper:** For 2D-FreqFold on a model with $g=2$ heads and $d=8$ per head, frequencies $\phi_1$ and $\phi_2$ (originally two separate $2 \times 2 = 4$-dimensional subspaces) are merged into one $8$-dimensional subspace. Joint PCA on this larger vector can distribute the $M=2$ retained principal components across the richer space, capturing more positional variation than two separate PCA operations each retaining only 1 component could.
+
+**Formal justification via Proposition 2 (Appendix C).** The paper proves that joint PCA on the concatenated $M$-group vectors preserves *more total variance* than separate PCA on each group individually. Specifically:
+
+> Let $V_1 = \sum_{p=1}^M \lambda_{p,1}$ be the sum of the *largest* eigenvalues from each of the $M$ separate covariance matrices. This is the variance captured by reducing each original group to one dimension.
+>
+> Let $V_2 = \sum_{j=1}^M \mu_j$ be the sum of the $M$ *largest* eigenvalues of the concatenated covariance matrix $S_{\text{concat}}$. This is the variance captured by reducing the merged data to $M$ dimensions.
+>
+> Then $V_2 \geq V_1$.
+
+**What this means in practice:** If you're going to allocate $M$ total dimensions to represent positional information from $M$ adjacent frequencies, it's better to let those $M$ dimensions be chosen *jointly* from the concatenated space than to assign one dimension per frequency. The joint PCA can find directions that span across frequencies, capturing cross-frequency correlations that the per-frequency approach misses.
+
+**The FreqFold trade-off.** The paper acknowledges (Appendix C.4) that treating distinct RoPE frequencies as identical introduces approximation error — the attention scores will deviate slightly from the original because the actual $\theta_{l_1}$ and $\theta_{l_2}$ are not exactly equal. Increasing $M$ improves PCA variance capture but increases frequency approximation error. The paper's experiments (Figure 3b) show that for LLaMA 3 8B, $M=4$ (4D-FreqFold) is the sweet spot: "overly aggressive FreqFold (i.e., using too many dimensions) can degrade performance, as the loss introduced by approximation of nearby dimensions can outweigh the benefit in concentrating the principal components." At 90% RoPE removal, 4D-FreqFold substantially outperforms both 2D-FreqFold (too restrictive) and 8D-FreqFold (too much approximation error).
+
+**Integration with RoRoPE.** After FreqFold grouping, the RoRoPE rotation is computed on the concatenated vectors as described in Section 3.4.2, with the optimization now operating on $M \cdot g$-dimensional vectors instead of $g$-dimensional ones. The first $M$ principal components (mapped to the first $M$ attention head dimensions) retain RoPE; the remaining $(g-1)M$ components have RoPE removed. For 4D-FreqFold, this means the first head can carry positional information in a 4-dimensional subspace per frequency group, substantially richer than the 1-dimensional subspace in basic RoRoPE.
+
+---
+
+#### 3.4.4 The Norm Imbalance Problem and Balanced Key-Value PCA
+
+**The problem: keys dominate values in joint decomposition.** After RoRoPE and FreqFold have isolated positional information into the first head, the remaining components — $K_{\text{nope}}$ (the $(g-1)d$ non-positional key dimensions) and $V$ (the $gd$ value dimensions) — need to be compressed jointly into a shared low-rank latent space. The naive approach would be to concatenate them and apply PCA directly. However, the paper identifies a critical obstacle:
+
+> "the $\ell_2$-norm of $K_{\text{nope}}$ is far larger than that of $V$. If we run PCA on the concatenated matrix $[K_{\text{nope}}; V]$ without adjustment, the principal components are dominated by $K_{\text{nope}}$, leading to severe information loss from the value subspace and a sharp drop in accuracy."
+
+**Why this matters.** PCA finds directions in the input space that maximize variance. If the key activations have $10\times$ larger norms than the value activations, the principal components will almost entirely be directions within the key subspace — even a key direction with relatively low within-key variance will have larger total variance than the strongest value direction. The compressed representation will faithfully reconstruct keys but poorly reconstruct values. Since values carry the semantic content that actually contributes to the output token prediction (via the weighted sum in attention), this key-dominated compression directly degrades model quality.
+
+**The evidence.** Figure 4a in the paper visualizes this norm disparity in the first layer of LLaMA 3 8B. Even after removing the RoPE head (which carries the largest norms), the remaining key components have norms that are orders of magnitude larger than the value components. The lower panel shows the equalized norms after applying the balancing procedure described below.
+
+**The balancing procedure.** The paper introduces a simple yet effective rescaling:
+
+> $$\alpha = \frac{\mathbb{E}_t[\|W^{DK}_{\text{NoPE}} x_t\|_2]}{\mathbb{E}_t[\|W^{DV} x_t\|_2]}$$
+>
+> where $\mathbb{E}_t$ is the expectation over tokens $t$ in the calibration dataset, $W^{DK}_{\text{NoPE}} \in \mathbb{R}^{(g-1)d \times D}$ is the part of the key projection corresponding to the non-positional heads, and $W^{DV} \in \mathbb{R}^{gd \times D}$ is the value projection.
+
+**What this computes:** The expected L2 norm of the non-positional key activations divided by the expected L2 norm of the value activations. This is a single scalar $\alpha$ per layer. A value of $\alpha = 10$ means keys are on average 10× larger in magnitude than values.
+
+**How the rescaling is applied.** The key projection is scaled down by $1/\alpha$ and the up-projection is scaled up by $\alpha$:
+
+$$W^{DK}_{\text{NoPE}} \leftarrow \frac{1}{\alpha} W^{DK}_{\text{NoPE}}$$
+$$W^{UK}_{\text{NoPE}} \leftarrow \alpha \cdot W^{UK}_{\text{NoPE}}$$
+
+**Why this is an equivalence transformation.** The product that produces the final key vector is:
+
+$$k_{\text{nope}} = W^{UK}_{\text{NoPE}} \cdot \left(\frac{1}{\alpha} W^{DK}_{\text{NoPE}}\right) \cdot x_t = (W^{UK}_{\text{NoPE}} \cdot W^{DK}_{\text{NoPE}}) \cdot x_t$$
+
+which is identical to the original because the $\alpha$ and $1/\alpha$ cancel. The model's output does not change. But from the perspective of the PCA that will be applied to the *activations* (not the weights), the key activations are now scaled down by $1/\alpha$, bringing their norms into alignment with the value activations.
+
+**The impact (Figure 4b).** The paper ablates the effect of KV balancing on WikiText-2 perplexity after joint PCA compression. The results show that:
+
+- Whether PCA is applied to weights directly (W-based) or to activations (WX-based), KV balancing consistently reduces perplexity at all compression ratios.
+- Activation-based PCA (WX-based) significantly outperforms weight-based PCA regardless of balancing — the paper explains this as activation-based PCA capturing the *data-dependent* principal components rather than just the weight matrix structure.
+- At 87.5% compression ratio, WX-based with BKV achieves log-perplexity around 2.5, compared to roughly 4 for WX-based without BKV — a substantial improvement from a simple norm normalization.
+
+---
+
+#### 3.4.5 Joint Low-Rank Approximation of $K_{\text{nope}}$ and $V$
+
+**The target for compression.** After RoRoPE, FreqFold, and KV balancing, the model has three sets of projections for each layer:
+
+- $W^{DK}_{\text{RoPE}} \in \mathbb{R}^{d \times D}$: the RoPE-bearing key head (1 head, not compressed)
+- $W^{DK}_{\text{NoPE}} \in \mathbb{R}^{(g-1)d \times D}$: the non-positional key heads ($g-1$ heads, to be compressed jointly with values)
+- $W^{DV} \in \mathbb{R}^{gd \times D}$: the value heads ($g$ heads, to be compressed jointly with non-positional keys)
+
+The total KV cache dimension per token for this layer is currently $d + (g-1)d + gd = 2gd$ (RoPE key + NoPE keys + values). This is identical to the original GQA cache. The compression stage will reduce this to $d + r_{kv}$ where $r_{kv} \ll (2g-1)d$ is the compressed rank.
+
+**Step 1: Collect balanced activations.** Using the calibration dataset (WikiText-2), forward passes are run through the model and the intermediate activations are collected. For each token $x_t$, the balanced NoPE key activations and value activations are computed:
+
+$$k'_{\text{NoPE}, t} = \frac{1}{\alpha} \cdot W^{DK}_{\text{NoPE}} x_t \in \mathbb{R}^{(g-1)d}$$
+$$v_t = W^{DV} x_t \in \mathbb{R}^{gd}$$
+
+These are concatenated into combined activation vectors:
+
+$$c_{\text{NoPE}, t} = \begin{bmatrix} k'_{\text{NoPE}, t} \\ v_t \end{bmatrix} \in \mathbb{R}^{(2g-1)d}$$
+
+This produces $N$ samples (one per calibration token) of $(2g-1)d$-dimensional vectors.
+
+**Step 2: Perform PCA on the combined activations.** Principal component analysis is performed on the set $\{c_{\text{NoPE}, t}\}_{t=1}^N$. This computes the eigenvectors of the covariance matrix:
+
+$$\Sigma = \frac{1}{N-1} \sum_{t=1}^N (c_{\text{NoPE}, t} - \bar{c})(c_{\text{NoPE}, t} - \bar{c})^\top$$
+
+where $\bar{c}$ is the mean activation vector. The eigenvectors are sorted by decreasing eigenvalue, and the top $r_{kv}$ eigenvectors are retained to form the projection matrix:
+
+$$R_{KV} \in \mathbb{R}^{((2g-1)d) \times r_{kv}}$$
+
+The columns of $R_{KV}$ are the $r_{kv}$ principal directions of variation in the combined (balanced) NoPE-key and value activation space.
+
+**The compression ratio.** The original KV cache stores $2gd$ dimensions per token (for keys and values combined). After compression, it stores $d$ (for the RoPE key, which is not compressed) plus $r_{kv}$ (for the compressed NoPE-key+value latent). The compression ratio is:
+
+$$\frac{d + r_{kv}}{2gd}$$
+
+For LLaMA-2-7B with $g=1$ (MHA, treating MHA as a special case of GQA with $g=h=32$), $d=128$, and $r_{kv}$ chosen to achieve 92.97% compression:
+
+$$\frac{128 + r_{kv}}{2 \cdot 32 \cdot 128} = 0.0703 \implies r_{kv} \approx 448$$
+
+So the combined NoPE-key+value latent dimension is reduced from $(2g-1)d \approx 8064$ to just 448 dimensions.
+
+**Step 3: Restructure the weight matrices.** The original combined projection matrix (before compression) is:
+
+$$W^{DKV} = \begin{bmatrix} W^{DK}_{\text{NoPE}} \\ W^{DV} \end{bmatrix} \in \mathbb{R}^{(2g-1)d \times D}$$
+
+This matrix transforms the input $x_t$ into the intermediate NoPE-key and value representation. After PCA, it is replaced by a compressed version:
+
+> $$W^{DKV'} = R_{KV}^\top \; W^{DKV} \in \mathbb{R}^{r_{kv} \times D}$$
+
+This new matrix takes the input $x_t$ and projects it directly into the $r_{kv}$-dimensional latent space. The output of this matrix is what gets cached.
+
+The original up-projection matrix (which expanded the intermediate representation to per-head keys and values) is:
+
+$$W^{UKV} = \begin{bmatrix} W^{UK}_{\text{NoPE}} & 0 \\ 0 & W^{UV} \end{bmatrix} \in \mathbb{R}^{2hd \times (2g-1)d}$$
+
+This matrix takes the intermediate representation and maps it to per-head key and value vectors. After PCA, it is replaced by:
+
+> $$W^{UKV'} = W^{UKV} \; R_{KV} \in \mathbb{R}^{2hd \times r_{kv}}$$
+
+This new matrix takes the compressed latent representation and expands it into the full per-head keys and values needed for attention computation. The paper notes that $W^{UKV'}$ is effectively the concatenation of $W^{UK}$ and $W^{UV}$ in the standard MLA notation:
+
+$$W^{UKV'} = \begin{bmatrix} W^{UK} \\ W^{UV} \end{bmatrix}$$
+
+**The full MLA structure after conversion.** After all stages, the attention computation for a converted layer is:
+
+$$c^{KV}_t = W^{DKV'} x_t \in \mathbb{R}^{r_{kv}} \quad \text{(KV cache entry: this is what is stored)}$$
+$$k^R_t = \text{RoPE}(W^{DK}_{\text{RoPE}} x_t, t) \in \mathbb{R}^d \quad \text{(decoupled RoPE key, also cached)}$$
+$$q_{t,i} = W^Q_i x_t \in \mathbb{R}^d$$
+$$q^R_{t,i} = \text{RoPE}(W^{QR}_i x_t, t) \in \mathbb{R}^d \quad \text{(decoupled RoPE query component)}$$
+$$\hat{q}_{t,i} = [(W^{UK}_i)^\top q_{t,i}; \; q^R_{t,i}] \in \mathbb{R}^{r_{kv} + d}$$
+$$\hat{k}_t = [c^{KV}_t; \; k^R_t] \in \mathbb{R}^{r_{kv} + d}$$
+
+In inference mode, the per-head key up-projection is absorbed: the effective query $\hat{q}_{t,i}$ interacts directly with the latent $c^{KV}_t$ (the content score) and the shared RoPE key $k^R_t$ (the positional score), without ever materializing the full-dimensional per-head keys. This is exactly the computation described in DeepSeek's MLA (Equation 10).
+
+**The total KV cache per token per layer is now $r_{kv} + d$** instead of the original $2gd$. At 92.97% compression for LLaMA-2-7B, this represents a reduction from $2 \cdot 32 \cdot 128 = 8192$ dimensions to approximately $448 + 128 = 576$ dimensions.
+
+**Why activation-based PCA over weight-based PCA.** The paper shows (Figure 4b) that performing PCA on the activations $W X$ (i.e., on $c_{\text{NoPE}, t}$ collected from real data) substantially outperforms performing PCA directly on the weight matrix $W$ itself. The reason is that weight-based PCA finds directions that capture variance in the *weight space* — which may correspond to directions that are never or rarely activated by actual inputs. Activation-based PCA finds directions that capture variance in the *representation space* — the subspace that real inputs actually use. Since the goal is to minimize reconstruction error on real inputs, activation-based PCA is the correct objective.
+
+---
+
+#### 3.4.6 Complete Transformation Summary: From GQA Equations to MLA Equations
+
+This sub-section provides a concrete walk-through of how the original GQA attention computation is progressively rewritten into MLA form through the TransMLA pipeline, connecting each stage to the equations.
+
+**Original GQA (Equations 2-6):**
+
+$$q_t = W^Q x_t \in \mathbb{R}^{hd}$$
+$$k_t = W^K x_t \in \mathbb{R}^{gd}, \quad v_t = W^V x_t \in \mathbb{R}^{gd}$$
+$$q^R_{t,i} = \text{RoPE}(q_{t,i}, t), \quad k^R_{t,j} = \text{RoPE}(k_{t,j}, t)$$
+$$o_{t,i} = \sum_{l=1}^t \text{softmax}_l\left(\frac{(q^R_{t,i})^\top k^R_{l, \lceil i/(h/g) \rceil}}{\sqrt{d}}\right) v_{l, \lceil i/(h/g) \rceil}$$
+$$y_t = W^O [o_{t,1}; \ldots; o_{t,h}]$$
+
+Key property: each query head attends to one of $g$ key-value pairs. The KV cache stores $2gd$ elements per token.
+
+**Stage 1 (Key-Head Merging, Equations 11-15):** The $g$ key vectors are concatenated into a single latent. Per-query-head selectors extract the appropriate key.
+
+$$c^K_t = W^K x_t \in \mathbb{R}^{gd}, \quad c^V_t = W^V x_t \in \mathbb{R}^{gd}$$
+$$\hat{q}^R_{t,i} = \widehat{\text{RoPE}}((W^{UK}_i)^\top q_{t,i}, t), \quad \hat{k}^R_t = \widehat{\text{RoPE}}(c^K_t, t)$$
+$$\hat{o}_{t,i} = \sum_{l=1}^t \text{softmax}_l\left(\frac{(\hat{q}^R_{t,i})^\top \hat{k}^R_l}{\sqrt{d}}\right) c^V_l$$
+$$y_t = W^O [W^{UV}_1 \hat{o}_{t,1}; \ldots; W^{UV}_h \hat{o}_{t,h}]$$
+
+Key property: output is identical to original when $W^{UK}_i$ and $W^{UV}_i$ are identity-selector matrices. KV cache still $2gd$ dimensions. Structure now resembles MLA's absorbed form but without compression.
+
+**Stage 2 (RoRoPE + FreqFold):** Orthogonal rotations $U_l$ are applied to the key projection $W^K$ and up-projection $W^{UK}$, concentrating positional information into the first head. The key projection is split:
+
+$$W^{DK}_{\text{RoPE}} \in \mathbb{R}^{d \times D} \quad \text{(first head dimensions, retain RoPE)}$$
+$$W^{DK}_{\text{NoPE}} \in \mathbb{R}^{(g-1)d \times D} \quad \text{(remaining dimensions, RoPE removed)}$$
+
+The query-side RoPE is correspondingly modified: only the dimensions corresponding to the first head carry RoPE. The attention score becomes a sum of content and positional terms, structurally matching MLA's decoupled RoPE.
+
+**Stage 3 (KV Balancing):** The scaling factor $\alpha$ is computed and applied as an equivalence transformation. The NoPE key projection is scaled down, and the NoPE key up-projection is scaled up, equalizing the activation norms of NoPE keys and values for the subsequent PCA. Outputs remain unchanged.
+
+**Stage 4 (Joint PCA Compression):** The balanced NoPE key and value projections are compressed:
+
+$$W^{DKV'} = R_{KV}^\top \begin{bmatrix} W^{DK}_{\text{NoPE}} / \alpha \\ W^{DV} \end{bmatrix} \in \mathbb{R}^{r_{kv} \times D}$$
+$$W^{UKV'} = \begin{bmatrix} \alpha \cdot W^{UK}_{\text{NoPE}} & 0 \\ 0 & W^{UV} \end{bmatrix} R_{KV} \in \mathbb{R}^{2hd \times r_{kv}}$$
+
+These directly correspond to $W^{DKV}$ and the concatenated $[W^{UK}; W^{UV}]$ in MLA notation.
+
+**Final MLA form (matching DeepSeek Equations 7-10):**
+
+The converted model now exactly implements the MLA computation. The content components use the compressed latent:
+
+$$c^{KV}_t = W^{DKV'} x_t \in \mathbb{R}^{r_{kv}}$$
+$$k^C_{t,i} = W^{UK}_i c^{KV}_t \in \mathbb{R}^d$$
+
+The positional components use the decoupled RoPE head:
+
+$$k^R_t = \text{RoPE}(W^{DK}_{\text{RoPE}} x_t, t) \in \mathbb{R}^d$$
+
+And the inference-mode Absorb operation is now valid because $k^C_{t,i}$ is a linear function of $c^{KV}_t$ (RoPE has been removed from this path). The absorbed query becomes:
+
+$$\hat{q}_{t,i} = [(W^{UK}_i)^\top q_{t,i}; \; q^R_{t,i}]$$
+
+with attention computed directly against the cached latent $[c^{KV}_t; k^R_t]$ — exactly as in DeepSeek's inference kernel. The model is now a syntactically valid MLA model that can be loaded into DeepSeek's codebase and benefit from all its optimizations without any custom kernel development.
 
 ## 4. Key Insights and Innovations
-- Theoretical expressiveness advantage of MLA over GQA under equal KV budget
-  - Novelty: A constructive mapping showing any GQA can be represented as MLA with one extra projection, while the reverse does not hold; rank-based arguments further separate MLA_factorized and MQA (Appendix A.2–A.3).
-  - Significance: Justifies switching to MLA not only for speed, but for representation capacity at the same cache cost (Figure 1a; Appendix A Figure 6).
 
-- RoRoPE: Rotation-invariant decoupling of RoPE across heads
-  - What’s new: A provably invariant orthogonal rotation per RoPE frequency that concentrates positional content into chosen dimensions of one head, enabling RoPE removal from other heads without changing any attention scores before compression (Eq. 19; Appendix B).
-  - Why it matters: Makes the Absorb trick possible on converted GQA checkpoints, which prior KV-compression methods couldn’t do efficiently due to RoPE entanglement (Section 4.2; Figure 2).
+### Innovation 1: RoPE Decoupling as an Equivalence Transformation, Not a Heuristic Pruning
 
-- FreqFold: Multi-frequency PCA for higher positional capacity
-  - What’s new: Joint PCA over clusters of nearby RoPE frequencies, with a formal variance-preservation advantage (Proposition 2, Appendix C).
-  - Why it matters: Retains more positional detail in `K_rope` while keeping most heads entirely RoPE-free. Empirically, 4D-FreqFold is a sweet spot for LLaMA 3 8B (Figure 3b).
+The field's default assumption — visible in both MHA2MLA's norm-thresholded dimension removal and in Palu's decision to leave RoPE untouched — has been that converting a RoPE-bearing model to an MLA-compatible form requires *sacrificing* positional information: you identify which dimensions matter less and discard their RoPE, accepting the resulting quality loss as the price of compression. TransMLA challenges this framing at its root.
 
-- Balanced Key–Value (BKV) joint compression
-  - What’s new: A simple, activation-based rescaling that equalizes key/value magnitudes before joint PCA, plus an algebraically exact inverse rescaling of the up-projection (Eq. 20; Appendix D).
-  - Why it matters: Prevents the values from being washed out by higher-norm keys, reducing perplexity spikes under aggressive KV compression (Figure 4).
+The paper's conceptual move is to treat RoPE decoupling as an **orthogonal change of basis** rather than a pruning operation. The proof in Appendix B establishes that for each RoPE frequency subspace (spanning the $g$ key heads), applying the *same* orthogonal rotation $U_l$ to both the real and imaginary components of the query and key vectors leaves the RoPE inner product *exactly invariant*. This is not an approximation — it's an algebraic identity. Information is not being discarded; it's being *relocated* within the representation space via a rotation that the RoPE structure commutes with.
 
-- Full compatibility with DeepSeek MLA and runtime ecosystems
-  - What’s new: Converted checkpoints run directly on DeepSeek’s MLA code paths (vLLM, SGLang) and benefit from existing optimizations (Section 5.4).
-  - Why it matters: Translates to real throughput gains across hardware without custom kernels (Figure 5; Table 4).
+Why this is intellectually distinctive: prior work implicitly assumed that RoPE dimensions are atomic — you either keep a dimension's RoPE or remove it, and removal always costs information. TransMLA shows that the RoPE dimensionality structure is *redundant across heads*: the $g$ dimensions within a given frequency subspace carry correlated positional signals, and an orthogonal transformation can concentrate that signal into a compact principal subspace without loss. The multi-head structure of GQA, far from being an obstacle to decoupling, is actually what enables it — without multiple heads per frequency, there would be no subspace to rotate within.
+
+The constraint that $U_l$ must be applied identically to real and imaginary components (proven to be necessary for RoPE commutation) is a non-obvious requirement that would be easy to violate in a naive implementation. If you ran PCA on the real key components and imaginary key components independently, you would obtain different optimal rotations for each, breaking the RoPE inner product invariance. The joint optimization in Equation 32 — maximizing the trace of $(U_l^\top (\Sigma_{x,l} + \Sigma_{y,l}) U_l)_{:m,:m}$ — enforces this constraint elegantly: the summed covariance matrix treats real and imaginary components symmetrically, so the eigenvectors $U_l$ are simultaneously optimal for both.
+
+**Prior work contrast:** MHA2MLA's importance criterion is $L_2$ norm — a *univariate* measure that asks "how large is each individual dimension?" RoRoPE's PCA criterion asks "which *joint directions* carry the most variance across heads?" This is the difference between discarding dimensions and rotating the coordinate system. The practical consequence is stark: at 90% RoPE removal, MHA2MLA reaches log-perplexity ~6 (effectively random output) while RoRoPE + 4D-FreqFold maintains log-perplexity ~2 (Figure 3b). The heuristic approach catastrophically degrades at high compression ratios because it misses the correlations that RoRoPE exploits.
+
+**Significance beyond performance:** This establishes a template for *lossless architectural conversion* — transformations that restructure a model's computation into a different form without changing its functional behavior. The technique generalizes beyond RoPE to any situation where an invariance property under orthogonal transformations exists, and it shifts the conversation from "how much accuracy do we lose by converting?" to "how can we convert without losing anything, and then compress efficiently?"
+
+---
+
+### Innovation 2: FreqFold as a Variance-Preserving Dimensionality Expansion
+
+If RoRoPE is the paper's primary conceptual contribution, FreqFold is its most subtle. The problem it solves is counterintuitive: after RoRoPE concentrates positional information into the first head, that head has only a single dimension per RoPE frequency to carry all positional information from $g$ heads. This is a severe bottleneck — the positional encoding capacity has been reduced by a factor of $g$. The obvious fix would be to retain *more* principal components per frequency and spread them across multiple heads, but this would require those heads to also carry RoPE, which defeats the purpose of decoupling.
+
+FreqFold's insight is to *intentionally coarsen the frequency resolution* of RoPE. By treating $M$ adjacent RoPE frequencies as effectively identical, you can concatenate their corresponding $g$-dimensional subspaces into a single $M \cdot g$-dimensional subspace, perform one joint PCA on this larger space, and retain the top $M$ principal components — all within a single head. The positional encoding capacity per "effective frequency group" is now $M$ dimensions rather than 1, while the number of heads requiring RoPE stays constant.
+
+**Prior work contrast:** This is not a standard dimensionality reduction technique. The typical ML approach to "we need more dimensions for our representation" would be to simply keep more principal components — which would mean keeping RoPE on more heads and breaking the decoupling. FreqFold instead *reduces* the number of distinct frequencies (increasing approximation error) in exchange for *increasing* the representational capacity per retained dimension (improving information capture). It's a deliberate trade-off between frequency precision and spatial dimensionality, and it's a design move with no obvious precedent in the attention literature.
+
+The formal justification via Proposition 2 (Appendix C) is important here because it proves that joint PCA on concatenated groups is *guaranteed* to preserve at least as much variance as separate per-group PCA — even before accounting for the advantage of being able to use $M$ dimensions instead of 1. The key algebraic fact is that the sum of the top $M$ eigenvalues of the concatenated covariance matrix upper-bounds the sum of the top eigenvalues from each group's individual covariance matrices. This means that FreqFold's concatenation is not merely heuristic — it's provably better at variance preservation than the per-frequency alternative, and the only question is whether the frequency approximation error outweighs this benefit.
+
+**Evidence and limits:** Figure 3b shows that 4D-FreqFold is the sweet spot for LLaMA 3 8B, while 8D-FreqFold degrades performance — the frequency approximation error eventually dominates. This is a genuinely empirical finding rather than a theoretical prediction: you cannot know *a priori* where the inflection point lies. It establishes that adjacent RoPE frequencies are similar *enough* that treating up to 4 of them as identical is beneficial, but not so similar that 8 can be collapsed. This ratio likely depends on the model's head dimension $d$ (which determines the frequency spacing), making FreqFold's optimal $M$ a hyperparameter that needs per-model calibration.
+
+**Significance:** FreqFold is not a standalone method but a *design principle* for PCA under structured constraints — when you have groups of features whose identities are known to be approximately equivalent (here, adjacent RoPE frequencies), merging them before PCA provably improves compression quality. This principle generalizes: any situation with approximately-redundant feature groups subject to a dimensionality budget can apply the same concatenation logic.
+
+---
+
+### Innovation 3: Diagnosing and Solving the Key-Value Norm Imbalance
+
+The observation that key activations have substantially larger norms than value activations — and that this causes PCA to systematically neglect the value subspace — is the kind of finding that seems obvious in retrospect but was invisible to prior work. MHA2MLA applied joint SVD to concatenated key-value matrices without any norm correction; Palu applied low-rank decomposition to keys and values independently (which sidesteps the imbalance but loses cross-representation structure). The norm imbalance is not discussed in either method.
+
+What makes this a conceptual contribution is that it identifies a failure mode specific to *joint* compression of heterogeneous representations. PCA maximizes captured variance — a single scalar objective that implicitly weights features by their magnitude. When features come from qualitatively different distributions (keys, which encode what to attend *to*, and values, which encode what to attend *with*), a pure variance criterion is ill-suited. The fact that keys have larger norms is not a bug — it reflects that key-key dot products must produce well-separated softmax scores, and the key norm determines the sharpness of these scores. But this functional difference in norm scale becomes pathological when keys and values are thrown into the same PCA objective.
+
+The balancing solution — scaling key activations down by the norm ratio $\alpha$ and scaling the corresponding up-projection weights up by the same factor — is mathematically trivial (a single scalar multiplication per layer that cancels out of the forward pass). Its elegance lies in *when* it's applied: after RoRoPE has separated the positional key components (which carry the largest norms) but before joint PCA, so that the balancing operates specifically on the components that will be jointly compressed. The norm ratio $\alpha$ is computed from calibration data as $\mathbb{E}[\|W^{DK}_{\text{NoPE}} x_t\|_2] / \mathbb{E}[\|W^{DV} x_t\|_2]$, capturing the empirical norm disparity rather than a weight-matrix property.
+
+**Evidence:** Figure 4a visualizes the norm distributions before and after balancing, showing the dramatic equalization effect. Figure 4b shows that KV balancing consistently reduces perplexity across compression ratios, with the gap widening at higher compression (where the key-dominated PCA would be most damaging). At 87.5% compression, the perplexity difference is approximately 1.5 log units — roughly a 4.5× reduction in absolute perplexity.
+
+**Significance beyond this paper:** The norm imbalance problem is likely to arise in any setting where heterogeneous representations are jointly compressed — not just keys and values, but potentially any multi-modal fusion, multi-task representation sharing, or cross-layer KV sharing (as in YONO or MiniCache). The balancing solution generalizes: whenever you compress concatenated representations with disparate norms, compute per-component norm ratios and rescale before decomposition. It's a one-line fix that prior work simply didn't think to apply.
+
+---
+
+### Innovation 4: The Migration Pathway as a Substitute for Retraining
+
+This is not a technical innovation in the mechanism sense — the mechanisms are RoRoPE, FreqFold, and BKV-PCA — but it is a *strategic* innovation that changes what is considered possible. The dominant assumption in the field, reinforced by DeepSeek's own practice (training MLA models from scratch), has been that MLA is an architectural choice you make at model initialization, not something you can retrofit onto an existing model. TransMLA challenges this by demonstrating that a GQA model can be *algebraically rewritten* into an MLA model with:
+
+- **Zero quality loss** at the point of conversion, if you only restructure (merge heads, rotate) without compressing — since the head-merging and RoRoPE rotations are equivalence transformations.
+- **Training-free compression** that significantly outperforms the concurrent method: TransMLA at 93% KV cache compression on LLaMA-2-7B achieves better zero-shot performance than MHA2MLA at 68.75% compression (Table 1).
+- **Minimal fine-tuning recovery**: 6B tokens suffice to recover comparable performance across 6 benchmarks at 92.97% compression, compared to MHA2MLA requiring 6B tokens for similar recovery at only 87.5% compression.
+
+The numbers in Table 1 tell a compelling efficiency story: for SmolLM 1.7B at 68.75% compression, TransMLA with only 300M tokens (4.9% of MHA2MLA's 6B token budget) surpasses MHA2MLA-6B's average benchmark score. This is not a marginal improvement — it's a 20× reduction in required fine-tuning data for equivalent quality. The reason traces directly to the innovations above: RoRoPE's equivalence-preserving rotation means the converted model starts much closer to the original's output distribution, so less gradient signal is needed to correct for conversion-introduced biases.
+
+**What makes this more than an engineering contribution:** The migration pathway reframes the economics of model development. A model provider who invested millions in pretraining a GQA model can now convert it to MLA for the cost of a few GPU-hours of conversion plus light fine-tuning — rather than the millions required for a full retraining. This changes MLA adoption from a "train from scratch" proposition to a "convert and fine-tune" proposition, dramatically lowering the barrier. The paper's emphasis on DeepSeek ecosystem compatibility — with demonstrated 10.6× speedups on consumer hardware (Figure 5) — makes the economic case concrete: the conversion cost is amortized over inference savings.
+
+**The 10.6× speedup figure deserves scrutiny:** It's achieved on the lowest-spec hardware (165.2 TFLOPS, 24GB) at 8K context length, where the original LLaMA-2-7B becomes memory-bound and the MLA-compressed model (at 92.97% compression) stays comfortably within memory limits. As hardware capability increases (Figures 5b, 5c), the speedup decreases — 6.5× and 5.1× respectively — because the memory bandwidth bottleneck is less severe. This is not a weakness; it precisely illustrates *why* KV cache compression matters: the benefit is largest when memory is the scarcest resource, which is exactly the regime where model deployment is most constrained (edge devices, consumer GPUs, high-throughput serving with large batch sizes).
+
+**A limitation of framing:** The paper doesn't fully disentangle how much of the speedup comes from TransMLA's specific conversion versus simply from using MLA with compressed KV cache. Any MLA model at 92.97% compression would see speedups; the contribution is making that model *obtainable from a GQA starting point*. The speedup numbers validate that the converted model *genuinely runs as MLA* (the Absorb operation works, the DeepSeek kernels apply), which is a non-trivial validation of the conversion's correctness.
 
 ## 5. Experimental Analysis
-- Evaluation setup
-  - Models converted: `smolLM-1.7B` and `LLaMA-2-7B` (Section 5.1).
-  - Benchmarks: 6 zero-shot multiple-choice tasks—MMLU, ARC (Easy/Challenge), PIQA, HellaSwag, OpenBookQA, Winogrande (Table 1).
-  - Phases: before conversion (original), immediately after conversion (0 tokens), and after light pre-training/fine-tuning with 300M–6B tokens (Table 3; Appendix E).
-  - Compression settings: KV cache reduced to 31.25%, 18.75%, 12.5%, and 7.03% of original (i.e., −68.75%, −81.25%, −87.5%, −92.97%) (Table 1 headings).
-  - Inference throughput: vLLM across three GPUs (165.2 TFLOPS/24GB; 312 TFLOPS/40GB; 320 TFLOPS/64GB) with equal prefill/decoding lengths (Section 5.4; Table 4).
 
-- Main quantitative findings
-  - Training-free quality at moderate compression is strong:
-    - LLaMA-2-7B (original avg = 59.85): after TransMLA at −68.75% KV, average = 58.20 (drop ≈ 1.65 points) (Table 1, “LLaMA-2-7B, TransMLA, 0 tokens, −68.75%”).
-  - Extreme compression still coherent, recoverable with light training:
-    - LLaMA-2-7B at −92.97% KV, 0 tokens: avg = 43.26, still “meaningful” outputs (Abstract; Table 1).
-    - With 6B tokens: avg = 58.68, nearly back to the 59.85 original across the 6 tasks (Table 1, last block).
-  - Outperforms concurrent conversion method (MHA2MLA) under the same budgets:
-    - Example: LLaMA-2-7B, −68.75%, 0 tokens: TransMLA 58.20 vs. MHA2MLA 37.90 (Table 1).
-    - smolLM-1.7B: at −68.75%, 0 tokens: TransMLA 51.95 vs. MHA2MLA 40.97; after modest training, TransMLA surpasses MHA2MLA trained on more tokens (Table 1).
-  - Real speedups:
-    - Up to 10.6x at 8K context on the 165.2 TFLOPS/24GB GPU with −92.97% KV (Figure 5a).
-    - Table 4 shows raw throughput: at 8K context on the 312 TFLOPS/40GB GPU, LLaMA-2-7B = 218.51 tokens/s vs. TransMLA = 1118.18 tokens/s (≈5.12x).
-    - Longer contexts increase gains; at 32K context, the original runs out of memory on smaller GPUs while TransMLA still delivers hundreds of tokens/s (Table 4).
+### Evaluation Methodology
 
-- Ablations and diagnostics
-  - RoRoPE and FreqFold:
-    - Figure 3a: Norm concentration—after RoRoPE, key dimensions with large norms cluster into the first head; 4D-FreqFold amplifies this effect further, preparing for RoPE removal.
-    - Figure 3b: During progressive RoPE removal, “RoRoPE + 4D-FreqFold” maintains far lower log-perplexity than MHA2MLA; at 90% removal, RoRoPE+4D ≈ 2 vs. MHA2MLA ≈ 6.
-  - BKV:
-    - Figure 4a: Before balancing, `K_nope` dominates `V`; after balancing, norms align.
-    - Figure 4b: Across both weight-based and activation-based PCA, the balanced variants consistently reduce perplexity, with activation-based PCA best overall.
+- **Dataset.** The primary evaluation uses six commonsense reasoning benchmarks: MMLU (Hendrycks et al., 2021), ARC Easy and Challenge (Clark et al., 2018), PIQA (Bisk et al., 2020), HellaSwag (Zellers et al., 2019), OpenBookQA (Mihaylov et al., 2018), and Winogrande (Sakaguchi et al., 2021). For perplexity-based analysis, WikiText-2 (Merity et al., 2016) serves as the calibration and evaluation corpus, sampled as a subset rather than full-dataset. The training data for fine-tuning comes from the SmolLM pretraining corpus (Ben Allal et al., 2024), composed of FineWeb-Edu-Dedup (70%), Cosmopedia-v2 (15%), Python-Edu (6%), Open-Web-Math (8%), and StackOverflow (1%), mirroring the MHA2MLA data composition for fair comparison.
 
-- Do the experiments support the claims?
-  - Conversion fidelity: Yes, particularly at −68.75% KV with 0 tokens on LLaMA-2-7B (minimal average drop of ~1.65; Table 1), and strong recoverability at extreme compression with 6B tokens.
-  - Speedups: Yes, demonstrated across hardware and contexts, including memory-limited regimes where the original OOMs (Figure 5; Table 4).
-  - Mechanism value: Norm plots and removal curves convincingly show why RoRoPE, FreqFold, and BKV matter (Figures 3–4).
+- **Base model(s).** Experiments use SmolLM 1.7B and LLaMA-2-7B as the primary conversion targets. LLaMA 3 8B is additionally used for analytical experiments (key norm visualization, RoPE removal perplexity sweeps, and KV norm balancing ablations in Figures 3 and 4). The choice spans both small (1.7B) and medium (7–8B) scales, covering typical deployment regimes where KV cache compression is most impactful. SmolLM 1.7B was pretrained on 1T tokens; LLaMA-2-7B on 2T tokens. All are GQA or MHA architectures (MHA is treated as GQA with g = h).
 
-- Qualitative examples
-  - Even the −92.97% model without additional training produces coherent text, and simple SFT further improves outputs (Appendix G, Table 5).
+- **Metrics.** For the benchmark evaluations, accuracy (%) is reported per dataset and averaged across all six benchmarks. For perplexity analyses (Figures 3b, 4b), log-perplexity on WikiText-2 is used. For inference speedup (Figure 5), throughput is measured in output tokens per second, comparing the original model against the TransMLA-converted model at equal input/output sequence lengths with varying total context windows.
+
+- **Baselines.** The primary comparison is against **MHA2MLA** (Ji et al., 2025), evaluated at three KV cache compression ratios (–68.75%, –81.25%, –87.50%) both training-free (0 tokens) and after fine-tuning on 6B tokens. The original unconverted models (SmolLM-1.7B, LLaMA-2-7B) serve as upper-bound references. For RoPE removal analysis (Figure 3b), baselines include **Vanilla PCA** (applied without the RoRoPE rotation constraint), **MHA2MLA** (norm-based dimension selection), and ablations of RoRoPE with varying FreqFold dimensions (2D, 4D, 8D).
+
+- **Generation budget / compute accounting.** For fine-tuning experiments, compute is measured in training tokens (300M, 500M, 700M, 1B, 3B, 6B), with batch size, learning rate, and schedule specified per configuration in Table 3. For inference speedup experiments, the budget is implicitly the hardware configuration (three GPU tiers) and context length (1K–32K tokens), with throughput measured under equal request loads (100 or 1000 requests depending on context length, as detailed in Appendix F). For conversion quality, the "budget" is the compression ratio of the KV cache, expressed as percentage reduction from original size.
+
+- **Cross-validation / statistical protocol.** The paper does not employ cross-validation. All conversion evaluations are single-run: the model is converted once using calibration data from WikiText-2, then evaluated on the six benchmarks at various fine-tuning token budgets. The fine-tuning uses the same data mixture as MHA2MLA for comparability. The paper does not report confidence intervals, standard deviations, or multiple random seeds. Statistical significance of differences between TransMLA and MHA2MLA is not formally assessed.
+
+### Main Quantitative Results
+
+#### Training-Free Conversion Quality (Table 1, "0 tokens" rows)
+
+The headline finding is that TransMLA achieves substantially lower training-free degradation than MHA2MLA at equivalent or higher compression ratios. On LLaMA-2-7B:
+
+- At –68.75% compression, TransMLA achieves 58.20% average benchmark accuracy (vs. 59.85% for the original model — a –1.65 percentage point drop). MHA2MLA at the same compression achieves 37.90% — a –21.95 point drop, over 13× larger degradation.
+- At –87.50% compression, TransMLA achieves 51.19% average (a –8.66 point drop from original), while MHA2MLA achieves only 32.70% (a –27.15 point drop).
+- At –92.97% compression (the most aggressive setting), TransMLA achieves 43.26% average — a –16.59 point drop but still producing coherent outputs across all six benchmarks. MHA2MLA does not report results at this compression ratio.
+
+On SmolLM 1.7B, the pattern holds:
+
+- At –68.75% compression, TransMLA achieves 51.95% average (vs. 55.90% original, –3.95 point drop). MHA2MLA achieves 40.97% (–14.93 point drop).
+- At –87.50%, TransMLA achieves 44.12% average (vs. MHA2MLA's 34.01%).
+- The gap between methods widens with compression ratio. At –87.50%, TransMLA with zero training outperforms MHA2MLA at –68.75% (44.12% vs. 40.97%) — achieving better performance with 2.67× more compression.
+
+A non-obvious detail: the degradation is not uniform across benchmarks. On SmolLM 1.7B at –87.50% compression, PIQA drops from 75.73 to 66.87 (modest –8.86 points) while HellaSwag drops from 62.93 to 41.15 (large –21.78 points). This suggests that the compression disproportionately affects tasks requiring multi-step reasoning (HellaSwag, ARC) more than single-step commonsense (PIQA, Winogrande). The paper does not analyze this per-task variance pattern, but it is visible in the reported numbers.
+
+For context on the claim of meaningful output at 93% compression: the paper includes qualitative examples in Appendix G (Table 5). At 92.97% compression without any training, the model produces grammatically coherent text that is topically relevant but factually incorrect or nonsensical (e.g., "The president of the United States is elected by the legislature" and "The capital of France is Paris. Its geographical position in the Iberian Plain of France, Spain, Spain, and Morocco are the four largest cities"). This confirms "maintaining meaningful output" means the model continues to generate English text with surface-level relevance, not that it maintains factual accuracy.
+
+#### Fine-Tuning Recovery (Table 1, non-zero token rows)
+
+TransMLA requires substantially fewer fine-tuning tokens than MHA2MLA to recover performance. On SmolLM 1.7B at –68.75% compression:
+
+- TransMLA with 300M tokens achieves 55.24% average, surpassing MHA2MLA with 6B tokens (54.76%) — a 20× reduction in required training data.
+- On LLaMA-2-7B at –68.75% compression, TransMLA with 500M tokens reaches 59.82%, comparable to MHA2MLA with 6B tokens (59.51%) — a 12× reduction.
+- At the most aggressive compression (–92.97% on LLaMA-2-7B), TransMLA with 6B tokens recovers to 58.68% average, within 1.17 points of the original model (59.85%). MHA2MLA does not report results at this compression.
+
+The training efficiency advantage appears to grow with compression ratio. On SmolLM 1.7B at –87.50%, TransMLA-1B (54.01%) outperforms MHA2MLA-6B at –68.75% (54.76%). This means TransMLA with 1B tokens at the highest compression achieves comparable quality to MHA2MLA with 6× more data at the lowest compression.
+
+The two-step training schedule used for LLaMA-2-7B at higher compression ratios (noted in Table 3 with slashes: e.g., "5B / 1B" tokens, "constant / cosine" scheduler) indicates that aggressive compression requires more careful optimization — a higher initial learning rate with constant schedule followed by a lower rate with cosine decay. The paper does not ablate this scheduling choice, so it's unclear whether the second phase is necessary or merely beneficial.
+
+#### RoPE Removal Quality (Figure 3)
+
+Figure 3a visualizes the key norm distribution in the first layer of LLaMA 3 8B, showing that the original model's key dimensions have highly irregular norms (many outliers), RoRoPE concentrates high-norm dimensions into the first two heads (dimensions 0–128), and adding 4D-FreqFold further compresses the tail. This is not an evaluation result per se but provides mechanistic evidence for why RoRoPE works: it transforms an irregular, dispersed importance distribution into a sharply concentrated one, making RoPE removal from the tail dimensions nearly lossless.
+
+Figure 3b shows the log-perplexity on WikiText-2 as RoPE components are progressively removed (from 0% to 90% removal ratio). At 90% removal:
+
+- Vanilla PCA degrades severely (not quantified precisely, but the curve is above RoRoPE's).
+- MHA2MLA reaches log-perplexity of approximately 6 — the paper notes this "no longer generates meaningful outputs."
+- RoRoPE alone maintains log-perplexity around 3.5.
+- RoRoPE + 2D-FreqFold: approximately 2.8.
+- RoRoPE + 4D-FreqFold: approximately 2.0 (best).
+- RoRoPE + 8D-FreqFold: approximately 3.0 (worse than 4D, due to frequency approximation error dominating).
+
+The sweet spot at 4D-FreqFold is an empirical finding — the paper explicitly notes that "overly aggressive FreqFold (i.e., using too many dimensions) can degrade performance." This non-monotonic behavior (8D is worse than 4D) confirms that FreqFold involves a genuine trade-off between PCA variance capture (which improves with larger M) and frequency approximation error (which increases with larger M).
+
+#### KV Balancing Impact (Figure 4)
+
+Figure 4a shows the norm disparities in the first layer of LLaMA 3 8B before and after KV balancing. Before balancing, key norms span from near 0 to approximately 20 (arbitrary units), while value norms are concentrated below 0.5 — a 40× difference in magnitude. After balancing, both key and value norm distributions are centered around 0–2 range with comparable scale. This is purely diagnostic; it demonstrates the problem exists.
+
+Figure 4b provides the ablation on WikiText-2 perplexity after joint PCA compression:
+
+- Weight-based PCA (W-based) without KV balancing performs worst across all compression ratios.
+- Adding KV balancing to W-based PCA provides consistent improvement.
+- Activation-based PCA (WX-based) substantially outperforms weight-based PCA at all ratios, with or without balancing.
+- WX-based with KV balancing achieves the best results: at 87.5% compression, log-perplexity is approximately 2.5, compared to approximately 4.0 for WX-based without balancing and approximately 8.0 for W-based without balancing.
+
+The key finding is that activation-based PCA matters more than KV balancing (the gap between WX-based and W-based is larger than the gap within each method from adding BKV), but both contribute additively. At the highest compression ratios (where the budget is tightest), the benefit of KV balancing is largest — consistent with the intuition that key-dominated PCA is most damaging when few principal components are retained.
+
+#### Inference Speedup (Figure 5, Table 4)
+
+On three consumer GPU tiers (165.2 TFLOPS/24GB, 312 TFLOPS/40GB, 320 TFLOPS/64GB), the TransMLA-converted LLaMA-2-7B at 92.97% KV cache compression is benchmarked against the original model using vLLM:
+
+- **165.2 TFLOPS / 24GB**: Speedup of 10.6× at 8K context length. The original model runs out of memory at 16K context; TransMLA sustains 414.41 tokens/second at 16K. At 1K context, speedup is approximately 4.7× (3043.65 vs. 653.81 tokens/s).
+- **312 TFLOPS / 40GB**: Speedup of 6.5× at 32K context (maximum tested — 243.81 vs. 38.32 tokens/s). At 1K context, speedup is approximately 2.6×.
+- **320 TFLOPS / 64GB**: Speedup of 5.1× at 32K context. At 1K context, speedup is approximately 1.4×.
+
+Two query configurations are tested: "Low Rank Q = 512" (query projections also compressed) and "Full Rank Q" (query projections unchanged). Low-rank Q consistently provides higher throughput, though the paper does not report accuracy impact of query compression in conjunction with KV compression. The gap between Low Rank Q and Full Rank Q widens at longer contexts, suggesting that query-side compression becomes more impactful when the KV cache savings are larger (memory bandwidth saved from query projections adds to the KV cache savings).
+
+The speedup increases monotonically with context length on all hardware tiers, confirming that KV cache compression benefits are memory-bandwidth-limited — longer contexts mean larger caches, meaning more time saved per token generation step. On the lowest-spec hardware, the original model cannot even run at 16K context due to memory constraints, while TransMLA operates comfortably, demonstrating that compression is not just about speed but about *feasibility* on resource-constrained devices.
+
+The paper notes (Appendix F) that for 1K context length, 1000 requests are used instead of 100 to stabilize timing measurements, indicating that short-context inference has high variance in throughput — likely due to kernel launch overhead dominating when per-request work is small.
+
+### Ablation Studies and Robustness Checks
+
+**Compression ratio sweep (Table 1, multiple ratios per model)**: Three compression ratios are tested per model (–68.75%, –81.25%, –87.50% for both; –92.97% additionally for LLaMA-2-7B). Performance degrades monotonically with compression ratio at 0 training tokens, but the degradation is sub-linear: on LLaMA-2-7B, going from –68.75% to –87.50% (more than doubling the compression) loses only 7.01 points (58.20 → 51.19), while going from –87.50% to –92.97% loses 7.93 points (51.19 → 43.26) — a sharp nonlinearity at extreme compression. This is consistent with PCA-based compression having a knee in the eigenvalue spectrum beyond which reconstruction error accelerates.
+
+**MHA2MLA comparison at matched compression (Table 1)**: Across all compression ratios and both model sizes, TransMLA with 0 tokens outperforms MHA2MLA with 0 tokens by 8–26 percentage points. Notably, TransMLA-0 at –87.50% outperforms MHA2MLA-0 at –68.75% on SmolLM 1.7B (44.12% vs. 40.97%), and TransMLA-0 at –92.97% on LLaMA-2-7B (43.26%) outperforms MHA2MLA-0 at –68.75% (37.90%). This demonstrates that TransMLA's conversion quality advantage is large enough to offset an additional ~20–25% of KV cache compression.
+
+**FreqFold dimensionality sweep (Figure 3b)**: RoRoPE alone, RoRoPE + 2D-FreqFold, RoRoPE + 4D-FreqFold, and RoRoPE + 8D-FreqFold are compared on LLaMA 3 8B WikiText-2 perplexity across RoPE removal ratios. The ordering is RoRoPE + 4D-FreqFold > RoRoPE + 2D-FreqFold > RoRoPE > RoRoPE + 8D-FreqFold at high removal ratios, confirming the non-monotonic effect and identifying 4D as optimal for this model. No other model sizes or layer-wise analyses are reported, so whether 4D is universally optimal or model-specific is unknown.
+
+**Vanilla PCA baseline (Figure 3b)**: PCA applied without the RoRoPE constraint (i.e., separate PCA on real and imaginary components, or PCA that doesn't enforce the same rotation for both) performs substantially worse than RoRoPE. The paper uses this to validate that the RoPE-invariance constraint is not merely theoretical — violating it causes measurable degradation. The gap between Vanilla PCA and RoRoPE widens at higher removal ratios, indicating that the constraint matters most when few positional dimensions are retained.
+
+**Weight-based vs. activation-based PCA (Figure 4b)**: WX-based PCA consistently outperforms W-based PCA by a large margin (roughly 2–3 log-perplexity points at high compression). This validates the design choice to use activation-based rather than weight-based decomposition. The paper does not ablate the calibration dataset choice — all activation-based PCA uses WikiText-2. Whether a different or larger calibration set would improve results is untested.
+
+**KV balancing on/off (Figure 4b)**: Within both W-based and WX-based PCA, adding KV balancing reduces perplexity. The improvement is larger for WX-based at high compression ratios (approximately 1.5 log-perplexity points at 87.5% compression), suggesting that the norm imbalance problem is more consequential when the PCA operates on actual activation distributions rather than weight matrices.
+
+**Fine-tuning token budget sweep (Table 1)**: For SmolLM 1.7B at –68.75% compression, tokens are swept at 300M, 700M, and 1B (though –68.75% only reports 300M). For LLaMA-2-7B, tokens are swept at 500M, 3B, and 6B across different compression ratios. The performance improvement with more tokens is monotonic but diminishing — on SmolLM 1.7B at –87.50%, the jump from 300M to 700M (44.12 → 47.73: +3.61 points for 400M tokens) is larger than from 700M to 1B (47.73 → 54.01: +6.28 points for 300M tokens — actually *larger* per token, suggesting possible noise or non-monotonic recovery). On LLaMA-2-7B at –92.97%, 3B tokens achieve 58.68% and 6B does not improve (also 58.68% in Table 1, though this appears to be a typographical alignment issue — the 6B row for –92.97% shows 58.68% average versus 43.26% at 0 tokens, which is the post-training result). The paper does not report whether accuracy saturates or continues improving beyond 6B tokens.
+
+**Hardware diversity (Figure 5, three GPU configurations)**: Speedup is tested across three hardware tiers with different compute/memory ratios. The monotonic decrease in speedup with increasing hardware capability (10.6× → 6.5× → 5.1× at equivalent context lengths) confirms that the bottleneck is memory bandwidth, not compute — more powerful GPUs have proportionally more compute than memory bandwidth, so compute-bound operations benefit more than memory-bound operations. This is a robustness check of the motivating hypothesis (that KV cache is the primary bottleneck) rather than of the method itself.
+
+**Low rank Q vs. Full rank Q (Figure 5)**: Compressing query projections in addition to KV cache consistently improves throughput, with the gap widening at longer contexts. The paper does not report accuracy impact of query compression, which is a significant omission — compressing queries reduces activation memory during training but could degrade attention quality. Without accuracy measurements, the throughput numbers for Low Rank Q cannot be evaluated as a genuine speed-vs-quality tradeoff.
+
+**Qualitative examples (Table 5, Appendix G)**: The paper includes example outputs for the 92.97% compressed LLaMA-2-7B at three stages: no training, after 6B-token pretraining, and after SFT on SmolTalk. The untrained model produces coherent but factually incorrect text; the pretrained model improves topic relevance; the SFT model produces substantially better outputs. This is illustrative rather than evaluative — no quantitative metrics accompany the examples, and selection bias in choosing representative outputs is unaddressed.
+
+**Two-step training schedule (Table 3, LLaMA-2-7B at –87.50% and –92.97%)**: Higher compression ratios use a two-phase schedule (constant LR for first phase, cosine decay for second) versus single-phase (constant LR only) for lower compression. The paper does not ablate this choice — it is unclear whether the two-phase schedule is necessary for convergence at high compression or merely beneficial. This is a missing ablation that matters for practitioners replicating the method at extreme compression ratios.
+
+### Critical Assessment
+
+#### Claim: "TransMLA enables training-free conversion with minimal quality loss"
+
+The experiments partially support this but the claim's scope needs qualification. On LLaMA-2-7B at –68.75% compression, the –1.65 point accuracy drop (58.20% vs. 59.85%) is indeed minimal. At –87.50%, the –8.66 point drop is more substantial, and at –92.97%, the –16.59 point drop is large — the model has clearly degraded. "Minimal quality loss" is accurate for moderate compression ratios on this model family, but the paper overgeneralizes by not specifying the compression-dependent nature of the loss.
+
+Furthermore, the training-free evaluation uses only 6 benchmarks, all commonsense reasoning tasks. The paper does not evaluate on generation quality (perplexity on held-out text), factual knowledge (e.g., TriviaQA), or long-context tasks that would stress-test the positional encoding after RoPE decoupling. It is possible that the conversion disproportionately damages capabilities not captured by the benchmark suite — for instance, the ability to attend to precise token positions in long sequences, which the compressed RoPE representation might degrade. This is a genuine weakness: without broader evaluation, "minimal quality loss" is established only for the specific six benchmarks tested.
+
+#### Claim: "TransMLA outperforms MHA2MLA in training-free conversion quality"
+
+Strongly supported, with the caveat that MHA2MLA's own reported numbers are taken at face value. The gap is large and consistent (8–26 points across all comparisons) and persists at higher compression ratios where TransMLA actually reduces the KV cache more aggressively. The paper does not reproduce MHA2MLA's experiments or verify their implementation — it compares against reported numbers from the MHA2MLA paper, which is standard practice but assumes no implementation bugs or reporting errors in the baseline.
+
+#### Claim: "Performance is recoverable through training with only a few tokens"
+
+Supported, but "few" is relative. On SmolLM 1.7B at –68.75%, 300M tokens achieves 55.24% (vs. 55.90% original) — 300M tokens is "few" relative to the 1T pretraining budget but is still a non-trivial training run requiring hours on 8 GPUs. On LLaMA-2-7B at –92.97%, 6B tokens achieves 58.68% (vs. 59.85% original) — 6B tokens is a substantial training cost, and performance has not fully recovered to the original. The claim of recovery "through training with only a few tokens" accurately describes moderate compression ratios on smaller models but understates the training cost at extreme compression on larger models.
+
+More importantly, the paper does not demonstrate that fine-tuned TransMLA models match the original model on tasks *other* than the six benchmark tasks. The original LLaMA-2-7B was evaluated on a much broader suite (MMLU, knowledge benchmarks, code generation, etc.). Recovery on six commonsense reasoning tasks does not guarantee recovery on the full capability distribution. This is a significant missing evaluation.
+
+#### Claim: "TransMLA achieves up to 10.6× inference speedup"
+
+Supported for the specific hardware configuration (165.2 TFLOPS, 24GB, 8K context), but the speedup is highly hardware- and context-dependent. At higher hardware capability (320 TFLOPS, 64GB), the speedup drops to 1.4× at 1K context and 5.1× at 32K context. The "up to 10.6×" framing is accurate but potentially misleading — the largest speedups occur on the weakest hardware, where the original model is most severely memory-constrained, and at intermediate context lengths where the KV cache is large enough to dominate but not so large that other bottlenecks (prefill, sampling) dominate. A practitioner with a high-end GPU and short-context workloads would see much more modest gains.
+
+The speedup experiments use vLLM, which is DeepSeek-optimized. Whether similar speedups would be observed with other inference frameworks (TensorRT-LLM, SGLang, llama.cpp) is not tested. The claim of DeepSeek ecosystem compatibility is validated specifically for vLLM, but the paper generalizes this to "various hardware and frameworks" without evidence.
+
+#### Claim: "93% KV cache compression while maintaining meaningful output"
+
+The qualitative examples in Table 5 show that "meaningful" means the model generates syntactically correct, topically related text — not factually accurate text. The untrained model at 92.97% compression produces incorrect facts (wrong capital geography, wrong presidential election process). The benchmark numbers show 43.26% average accuracy across six tasks — meaning the model fails on more than half the questions. "Meaningful output" is a low bar that the model clears, but the claim risks being interpreted as "the model still works well," which the numbers do not support. The paper would benefit from specifying what "meaningful" means operationally — for instance, "the model produces grammatical English text with topical relevance, but factual accuracy is substantially degraded."
+
+#### Missing experiments that would strengthen the paper
+
+1. **Broader benchmark evaluation**: The six commonsense reasoning benchmarks are a narrow slice of LLM capability. Evaluation on knowledge-intensive tasks (TriviaQA, NaturalQuestions), code generation (HumanEval, MBPP), and long-context tasks (SCROLLS, LongBench) would test whether the RoPE decoupling and KV compression differentially affect different capabilities. Long-context evaluation is particularly important because it would directly stress-test the compressed positional encoding.
+
+2. **Scaling to larger models**: All experiments use 1.7B–8B parameter models. The method's effectiveness on 13B, 34B, or 70B models is unexplored. The RoRoPE rotation optimization involves PCA on g × g covariance matrices, where g is the number of KV heads — for large models with many heads (e.g., LLaMA-3-70B with 8 KV heads), the PCA dimensionality scales, but whether the concentration effect is as strong is unknown.
+
+3. **Ablation of calibration dataset size**: All PCA-based steps use WikiText-2, but the paper never varies the calibration set size or domain to test sensitivity. If conversion quality depends heavily on calibration data representativeness, practitioners with domain-specific models would need to curate calibration data carefully — an unexamined practical concern.
+
+4. **Accuracy-impact of query compression**: The inference speedup experiments show low-rank query improves throughput, but no accuracy numbers are reported. Without this, the "Low Rank Q" bar in Figure 5 is a speed number without a quality counterpart, making it impossible to assess the speed-vs-quality tradeoff.
+
+5. **Direct comparison against DeepSeek-native MLA**: The paper demonstrates GQA-to-MLA conversion but never compares the converted model against a genuinely MLA-trained model of similar scale. Such a comparison would establish an upper bound — how close does conversion + fine-tuning get to training MLA from scratch? The absence limits understanding of the residual gap.
+
+6. **Statistical significance**: No confidence intervals, standard deviations, or multi-seed results are reported. The benchmark score differences (e.g., 58.20% vs. 59.85%) could be within noise for a 500-sample test set. Without statistical characterization, it is impossible to determine whether the reported improvements are reliable or within sampling variance.
+
+#### Genuine strengths of the experimental design
+
+Despite these limitations, the experimental design has real strengths. The comparison against MHA2MLA at matched compression ratios and training budgets provides a clean, fair baseline — both methods operate on the same models, same data, same benchmarks. The compression ratio sweep (three to four ratios per model) reveals the scaling behavior of the conversion method, not just a single operating point. The hardware diversity in speedup experiments (three GPU tiers) validates that the speedup is not an artifact of a particular hardware configuration. And the analytical experiments (Figures 3 and 4) provide mechanistic evidence linking the proposed techniques (RoRoPE, FreqFold, KV balancing) to observable improvements in key norm concentration and perplexity, rather than relying solely on black-box benchmark scores. The paper's transparency about the FreqFold sweet spot (4D works, 8D doesn't) and the norm imbalance problem (with before/after visualizations) demonstrates scientific rigor in diagnosing and solving the conversion challenges.
 
 ## 6. Limitations and Trade-offs
-- Training-free is partial
-  - At moderate compression (−68.75%), training-free performance is strong; at extreme compression (−92.97%), some light pretraining (up to 6B tokens) is needed to recover near-baseline performance (Table 1).
-- Coverage of model families
-  - Experiments are reported for smolLM-1.7B and LLaMA-2-7B. Although the method claims to convert many GQA models (LLaMA, Qwen, Gemma, Mistral/Mixtral), empirical validation beyond these two is not shown in this version (Section 6: “needs to be validated across a broader range of models”).
-- FreqFold trade-off
-  - Overly aggressive folding can harm accuracy; for LLaMA 3 8B, 4D-FreqFold is the “sweet spot,” but higher fold widths degrade performance (Figure 3b).
-- Simplicity of BKV
-  - BKV is a scalar norm-balancing heuristic; more advanced multi-objective or subspace-weighted methods might further improve joint PCA (Section 6).
-- Benchmarks and tasks
-  - Evaluations are on six common sense QA datasets; broader tasks (code, instruction-following, long-context retrieval quality) and human preference metrics are not included here.
-- Implementation sensitivity
-  - The pipeline relies on PCA computed from calibration data (WikiText-2 for some analyses; Appendix D.2), which introduces choices about sampling and stability across domains.
+
+### 6.1 Assumption: Difficulty Estimation Cost Is Not Accounted For
+
+**The assumption or constraint.** The entire compute-optimal framework depends on estimating each prompt's difficulty *before* deciding how to allocate the inference budget. The paper's production-viable method — averaging the PRM's final-answer score over 2048 samples per question and binning into quintiles — consumes 2048 full generations *per prompt* just for difficulty estimation. The authors acknowledge this explicitly in Section 3.2:
+
+> "estimating difficulty in this way still incurs additional computation cost during inference... our experiments do not account for this cost largely for simplicity"
+
+**The consequence.** The headline $4\times$ efficiency gains are computed *after* difficulty is known, without amortizing the cost of determining it. In a realistic deployment, the total compute per prompt would be 2048 generations (difficulty estimation) + $N$ generations (strategy execution). At typical tested budgets ($N = 16$ to $256$), the difficulty estimation cost *overwhelms* the execution budget by $8\times$ to $128\times$, making the net efficiency *worse* than simply running best-of-N uniformly. The paper's framework is therefore an **upper bound on achievable efficiency** rather than a realized deployment gain.
+
+**What evidence exists in the paper.** The paper explicitly flags this in Section 3.2, noting the difficulty estimation cost, and in Section 8, calling for future work on "pretraining or finetuning models to directly predict difficulty of a question." However, no such cheap difficulty estimator is developed or evaluated. Figures 4 and 8, which show compute-optimal scaling curves, all use difficulty bins pre-computed from the full 2048-sample estimation, with no cost amortized into the x-axis. The predicted (non-oracle) difficulty bins require the same 2048 samples as oracle bins — they only eliminate the need for ground-truth labels, not the generation cost.
+
+**Mitigation status.** Not addressed. The paper treats difficulty estimation as an amortized pre-computation cost (the 500-question test set has difficulty pre-computed once) rather than a per-query deployment cost. No adaptive or low-cost difficulty estimation method is tested. The paper suggests future work on this but provides no evidence that cheap difficulty prediction is feasible at adequate accuracy.
+
+---
+
+### 6.2 Scope: Single Benchmark and Single Model Family
+
+**The assumption or constraint.** All experimental results use the MATH benchmark (500 test questions) with PaLM 2-S\* as the base model. The paper states in Section 4 that it believes "this model is representative of the capabilities of many contemporary LLMs," but this claim is unverified. The MATH benchmark consists exclusively of high-school competition math problems requiring multi-step symbolic reasoning.
+
+**The consequence.** Several of the paper's core findings may not generalize:
+
+- **The difficulty-dependent strategy patterns** (beam search hurts easy problems, revisions help easy problems, no method helps hardest problems) are observed on MATH. They may not hold for tasks with different difficulty structures — for example, factual QA (where "difficulty" may be about knowledge rather than reasoning), code generation (where correctness has different failure modes), or open-ended generation (where no ground-truth answer exists).
+
+- **The PRM training procedure** depends on Monte Carlo rollouts that check whether a solution reaches the correct final answer. This requires tasks with verifiable ground-truth outputs. For tasks without clean correctness signals (summarization, dialogue, creative writing), the PRM training pipeline cannot be directly applied.
+
+- **The revision model training** relies on pairing incorrect and correct solutions based on edit distance to the correct answer. This assumes the answer space has a meaningful distance metric — true for mathematical expressions and short-form answers, but potentially degenerate for long-form generation tasks.
+
+- **PaLM 2-S\*'s output distribution** determines the PRM's calibration properties and over-optimization behavior. A model from a different family with different error patterns (e.g., more hallucinatory completions, different calibration) might exhibit different difficulty-dependent scaling curves and different optimal strategies.
+
+**What evidence exists in the paper.** All experiments use MATH with PaLM 2-S\*. There is no evaluation on any other benchmark (e.g., GSM8K, HumanEval, MMLU) or any other model family (e.g., LLaMA, Qwen, GPT). The test set of 500 questions, split into five difficulty quintiles of ~100 each, further split by two-fold cross-validation, means strategy selection is based on ~50 questions per fold per bin. The paper does not report confidence intervals on accuracy within these bins, so it is unclear whether the bin-level patterns (e.g., beam search outperforming best-of-N in bin 3) are statistically reliable or partially driven by sampling noise from a small sample.
+
+**Mitigation status.** Not addressed. The paper does not claim to evaluate on other benchmarks or model families, but it also does not temper its general claims (e.g., "compute-optimal scaling nearly outperforms best-of-N using up to $4\times$ less test-time compute") with the scope qualification that this finding is demonstrated on a single model, single dataset, single task domain. The paper's recommendations for practitioners ("prefer compute-optimal test-time scaling when...") are presented as general guidance without domain caveats.
+
+---
+
+### 6.3 Capability Ceiling: Test-Time Compute Cannot Help on Hardest Problems
+
+**The assumption or constraint.** The paper's motivation is that test-time compute can amplify existing model capability. The corollary — observed throughout the experiments — is that **if the base model cannot produce correct solutions for a problem class at any non-trivial rate, no amount of test-time compute helps**. This is most visible in difficulty bin 5 (hardest questions).
+
+**The consequence.** Across all methods — search, revisions, and compute-optimal combinations — the hardest MATH questions (bin 5) show **near-zero accuracy improvement** regardless of compute budget. In Figure 3 (right), bin 5 accuracy hovers at 1–3% for all search methods and all budgets up to 256 generations. In Figure 7 (right), bin 5 accuracy is approximately 2–3% irrespective of the sequential-to-parallel ratio at 128 generations. In the FLOPs-matched comparison (Figure 9), the bin 5 scaling line for revisions is essentially flat near 0–5%, while the ~14× larger pretrained model achieves non-trivial accuracy on these problems.
+
+This means the compute-optimal framework offers **no path forward for problems outside the base model's capability range**. For a model with pass@1 near zero on a question class, the proposal distribution contains almost no correct solutions to find (via search) or refine (via revisions). The ability gap can only be closed through pretraining or fine-tuning — not through inference-time computation.
+
+**What evidence exists in the paper.** The bin 5 results are consistent and striking. Figure 3 (right): all methods at all budgets produce 1–3% accuracy. Figure 7 (right): bin 5 is flat across all sequential-to-parallel ratios. Figure 9: the bin 5 scaling line is near zero for revisions and search, while the larger model achieves meaningful accuracy. In the FLOPs-matched comparison, hard questions show a −37.2% relative disadvantage for revisions and −52.9% for PRM search at $R \gg 1$ from using test-time compute instead of a larger model (Figure 1, bottom-right bar chart).
+
+The paper is transparent about this limitation. Section 7 explicitly states in its takeaway: "On the hardest questions... pretraining is almost always more effective." And Section 8 notes that "hard problems (bin 5) show near-zero improvement regardless of budget."
+
+**Mitigation status.** The paper acknowledges the limitation honestly but does not attempt to mitigate it. The framework is designed to allocate compute where it helps, implicitly conceding that for the hardest problems, no allocation strategy matters. This is a fundamental property of the "amplification" framing — test-time compute can amplify existing capability but cannot create it. For practitioners, this means the compute-optimal framework should be deployed alongside a routing mechanism that identifies out-of-capability problems and escalates them to a larger model rather than wasting inference compute on the smaller model.
+
+---
+
+### 6.4 The FLOPs-Matched Baseline Is Not Compute-Optimally Trained
+
+**The assumption or constraint.** The FLOPs-matched comparison in Section 7 scales model parameters by ~14× while holding training data fixed, following the LLaMA paradigm (Touvron et al., 2023). The authors acknowledge this departure from compute-optimal pretraining, where data and parameters are scaled equally (Hoffmann et al., 2022):
+
+> "We choose this setting as it is representative of a canonical approach to scaling pretraining compute and leave the analysis of compute-optimal scaling of pretraining compute where the data and parameters are both scaled equally to future work."
+
+**The consequence.** A Chinchilla-optimal model trained with 14× more total FLOPs (scaling both parameters and data) would likely outperform the parameter-only-scaled model used as the pretraining baseline. This means the reported advantages of test-time compute over pretraining — e.g., +27.8% relative improvement on easy-to-medium questions at $R \ll 1$ (Figure 1, top-right bar chart) — may be **inflated relative to what a properly compute-optimal larger model would achieve**. The comparison is not "test-time compute vs. optimal pretraining" but rather "test-time compute vs. a specific (potentially suboptimal) pretraining scaling strategy."
+
+Additionally, the ~14× larger model uses only **greedy decoding** with no test-time compute augmentation. A fairer comparison would give the larger model some inference budget — even modest best-of-8 or best-of-16 — to provide a stronger baseline. The paper's comparison is effectively "small model with optimized test-time compute vs. large model with no test-time compute," which makes test-time compute look maximally favorable.
+
+**What evidence exists in the paper.** The paper acknowledges the scaling strategy limitation in Section 7. The FLOP accounting uses the standard approximation $X = 6ND_{\text{pretrain}}$ for pretraining FLOPs and $Y = 2ND_{\text{inference}}$ for inference FLOPs. The ~14× parameter scaling with fixed data means the baseline model uses substantially more FLOPs per parameter during training than a Chinchilla-optimal model would, potentially wasting compute that could have been better allocated to data.
+
+The paper does not report the actual FLOP counts or parameter counts for the larger model, making it difficult for readers to assess how far the baseline is from compute-optimal. The ~14× factor is stated but not derived in detail, and the larger model's performance is shown only as horizontal "stars" in Figure 9 rather than as full scaling curves that would reveal whether the model is under-trained relative to optimal.
+
+**Mitigation status.** The paper explicitly defers the compute-optimal pretraining comparison to future work (Section 8). No partial mitigation is attempted — no alternative FLOP-matched baselines (e.g., scaling both parameters and data, or giving the larger model a small test-time compute budget) are tested. A practitioner wanting to decide between "train bigger" and "use test-time compute on a smaller model" based on these results would need to adjust the reported advantage estimates downward to account for the weak pretraining baseline.
+
+---
+
+### 6.5 Verifier Over-Optimization Limits Test-Time Compute Scaling
+
+**The assumption or constraint.** The paper's motivating framework — that test-time compute can substitute for pretraining — depends on the verifier (PRM) providing reliable guidance at high optimization budgets. However, the experiments reveal that **beam search starts to over-optimize the PRM at moderate-to-high budgets**, and the strongest optimization method (lookahead search) paradoxically performs *worst* overall.
+
+**The consequence.** The compute-optimal policy *mitigates* this by routing easy problems away from aggressive search (using best-of-N instead of beam search), but it does not *solve* the underlying problem: **verifier reliability is the ceiling on what test-time compute can achieve**. Even on medium problems where beam search is deployed, performance plateaus and sometimes declines at high budgets (Figure 3, right, bins 3–4). This means that simply scaling the generation budget further — say, from 256 to 1024 or 4096 — will not continue to improve accuracy and may degrade it. For practitioners, this means inference compute budgets have a hard practical ceiling determined by verifier quality, not just a soft diminishing-returns curve.
+
+The qualitative failure modes are revealing: Appendix M shows search producing degenerate outputs — repetitive low-information steps at the end of solutions (Figure 29) and overly short 1–2 step solutions — that score highly under the PRM but are incorrect. These are classic reward hacking patterns: the search algorithm finds solutions that exploit blind spots in the learned verifier's scoring function rather than genuinely improving correctness.
+
+**What evidence exists in the paper.** Figure 3 (left) shows that lookahead search — the most aggressive optimization method with 3-step lookahead rollouts — underperforms all simpler methods at equivalent generation budgets. Figure 3 (right) shows beam search accuracy in bin 1 (easy problems) *decreasing* slightly with increasing budget (roughly 78% → 77% from 4 to 256 generations), while best-of-N continues to improve (68% → 88%). This divergence at high budgets is the signature of over-optimization.
+
+The paper notes (Section 5.3) that "beam search performance flattens and falls slightly below best-of-N weighted" at high budgets, and in Section 8 characterizes the phenomenon explicitly: "verifier over-optimization [is] the primary bottleneck preventing unbounded improvements from additional compute."
+
+**Mitigation status.** The compute-optimal policy partially mitigates by routing over-optimization-prone scenarios (easy problems) to weaker optimization methods (best-of-N), but this is a workaround, not a solution. The paper does not develop techniques for improving verifier robustness — no adversarial training of the PRM, no ensemble methods, no KL-constrained search. Section 8 lists "developing more robust verifiers resistant to over-optimization" as a key future direction, but no such verifiers are tested. Practitioners deploying this framework must expect that inference budgets have sharp effective ceilings and that performance may degrade if the budget exceeds the verifier's reliability frontier, particularly on problems where the model is already capable.
+
+---
+
+### 6.6 Latency and Wall-Clock Time Are Not Accounted For
+
+**The assumption or constraint.** The paper measures compute in "generations" — number of complete solutions sampled. This is a reasonable proxy for total FLOPs but **ignores latency**. Sequential revision strategies are inherently serial — each revision depends on the output of the previous one — while parallel best-of-N can be executed simultaneously on sufficient hardware.
+
+**The consequence.** A compute-optimal strategy that allocates, say, 128 generations as a sequential chain of 64 revisions × 2 parallel chains (the optimal ratio for medium-difficulty problems in Figure 7) takes approximately $64\times$ longer wall-clock time than a parallel strategy running 128 samples simultaneously. For latency-sensitive applications — interactive assistants, real-time decision-making, online chat — the sequential-heavy strategies favored by the compute-optimal policy on easy and medium problems may be **practically infeasible regardless of their accuracy advantages**.
+
+This is particularly acute for the revision model: Figure 6 (left) shows accuracy improving over 64 sequential revision steps. Even if each step takes only 100ms (optimistic for autoregressive generation), a 64-step revision chain adds 6.4 seconds of latency — unacceptable for most interactive applications. In contrast, 64 parallel samples could complete in roughly the time of one sample (100ms) with sufficient hardware parallelism.
+
+**What evidence exists in the paper.** The paper does not report latency measurements anywhere. The generation budget metric treats a sequential revision identically to a parallel sample, ignoring the temporal dimension entirely. The FLOPs-matched comparison (Section 7) uses the same metric, meaning the "test-time compute vs. pretraining" analysis is a FLOPs analysis, not a latency analysis. A practitioner with latency constraints would need to re-derive the optimal allocation policy with wall-clock time as the constraint rather than generation count.
+
+The paper does not discuss this trade-off. Section 8's future work suggestions do not mention latency-aware allocation.
+
+**Mitigation status.** Not addressed. The paper makes no distinction between serial and parallel compute cost. The compute-optimal policy optimizes for total FLOPs under a generations budget, and providing latency guarantees or incorporating a latency penalty is not explored. For batch inference pipelines where throughput (samples per dollar) matters more than latency (seconds per sample), this limitation is less severe — but for the on-device deployment scenario the paper motivates in Section 1, latency is often the primary constraint, making this a significant deployment concern.
 
 ## 7. Implications and Future Directions
 - Impact on the field

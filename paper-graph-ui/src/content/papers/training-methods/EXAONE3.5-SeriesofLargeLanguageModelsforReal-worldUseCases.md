@@ -9,166 +9,533 @@ EXAONE 3.5 introduces a family of instruction-tuned bilingual (Korean–English)
 ---
 
 ## 1. Executive Summary
-EXAONE 3.5 is a family of instruction-tuned bilingual (Korean–English) large language models in three sizes (`32B`, `7.8B`, `2.4B`) optimized for real-world instruction following and long-context use (32K tokens). With a comparatively efficient training budget, the models deliver state-of-the-art or competitive results on seven real-world-use benchmarks and four long-context/RAG benchmarks, while remaining competitive on nine general-domain tasks (Tables 5–8; Sec. 3).
+
+This technical report introduces the EXAONE 3.5 instruction-tuned language models, a family of three decoder-only Transformer models at 32B, 7.8B, and 2.4B parameters developed by LG AI Research, and evaluates them against similarly-sized open models across real-world use cases, long-context comprehension, and general-domain benchmarks. The models employ a two-stage pre-training pipeline—first on diverse general-domain corpora followed by long-context fine-tuning with replay-based mitigation of catastrophic forgetting—combined with supervised fine-tuning built from an 8M-document knowledge taxonomy and a staged **preference optimization** process using direct alignment algorithms (DAAs such as DPO and SimPO with reward-model-filtered preference data) to strengthen instruction following and human alignment. The EXAONE 3.5 models achieve the highest average scores across seven real-world benchmarks (e.g., 74.3 for the 32B model, 70.7 for the 7.8B model) and four long-context benchmarks (e.g., 71.1 for the 32B model, 66.6 for the 7.8B model) while remaining competitive on nine general-domain benchmarks, with the 2.4B model notably outperforming all baselines of similar size and even several 7–9B models, establishing that bilingual instruction-tuned models trained at lower computational cost (the 32B model uses 2.77× fewer FLOPs than Qwen 2.5 32B) can surpass larger-budget competitors on instruction-following and long-context tasks while remaining competitive in mathematical reasoning and coding only when the evaluation scope is restricted to these specific domains.
 
 ## 2. Context and Motivation
-- Problem addressed
-  - Many users need models that (a) follow complex instructions in real settings, (b) process long contexts (e.g., full documents, large RAG contexts), and (c) are available at multiple sizes to fit deployment constraints (on-device to server-scale). This work targets all three needs at once (Sec. 1).
-- Why it matters
-  - Real-world assistants must handle diverse instructions, integrate retrieved evidence, and respect user constraints (e.g., output format, language). They often operate over long contexts in RAG systems. Providing strong small models is also important where GPUs are limited (Sec. 1).
-- Prior approaches and gaps
-  - Many open models either emphasize general benchmarks or lack long-context reliability; some have limited bilingual strength, and few provide strong small-size models tuned for long-context use. Moreover, compute cost can be prohibitive (Sec. 2.2.3; Table 3).
-- Positioning relative to existing work
-  - EXAONE 3.5 extends the EXAONE 3.0 line with:
-    - Three sizes, all supporting 32K tokens (Table 1).
-    - Emphasis on real-world instruction following (seven benchmarks) and long-context usage (four benchmarks).
-    - Competitive performance at lower training compute than some peers; e.g., Qwen 2.5 32B uses roughly 2.77× more training compute by the size×tokens proxy (Sec. 2.2.3; Table 3).
+
+### The Core Problem: Most LLM Evaluations Don't Reflect How People Actually Use Models
+
+The fundamental problem this paper addresses is a disconnect between how instruction-tuned language models are typically evaluated in academic literature and how they are actually used in practice. Most published model evaluations focus heavily on **general-domain benchmarks** — standardized tests like MMLU, GSM8K, HumanEval, and MATH that measure parametric knowledge, mathematical reasoning, and code generation under specific prompting regimes. While these benchmarks are valuable for tracking progress in narrow capabilities, they capture only a fraction of what users actually expect from a chatbot or assistant model.
+
+In real-world deployment, users submit queries that are fundamentally different from benchmark questions. They ask for explanations at varying levels of detail. They want models to follow formatting instructions precisely. They engage in multi-turn conversations where the model must track context and intent across exchanges. They issue instructions in languages and language mixtures that don't match the English-dominated benchmarks. They require the model to synthesize information from long documents, follow retrieval-augmented generation (RAG) workflows, and produce outputs in specific schemas. None of these capabilities is adequately captured by a standard suite of few-shot math and coding tests.
+
+This gap matters for two reasons. First, **model selection** in industry is often driven by benchmark leaderboards that emphasize general-domain scores, leading organizations to choose models that perform well on MMLU or GSM8K but may underperform on the instruction-following, long-context, and multi-turn conversational tasks that constitute the bulk of production traffic. Second, the **research community's incentives** are shaped by these benchmarks. If the field rewards improvements on math and knowledge tests disproportionately, model developers will optimize for those capabilities — potentially at the expense of the usability characteristics that matter to downstream users.
+
+The paper argues explicitly that there is at least a partial tradeoff between these categories. The EXAONE 3.5 models rank first in real-world use cases and long-context benchmarks among comparably-sized models but are only "competitive" in general domains, falling behind Qwen 2.5 32B by 3.9 points on the general-domain average (78.7 vs. 74.8) while leading by 4.5 points on real-world use cases (69.8 vs. 74.3). This pattern — and the paper's framing of it as a strength rather than a limitation — reflects a deliberate prioritization decision that is non-obvious if one only looks at standard leaderboards.
+
+### The Bilingual and Deployment-Specific Demands That Shape Practical LLM Use
+
+Beyond the benchmark-deployment gap, the paper is motivated by several concrete demands that LG AI Research received as feedback after releasing their previous model, EXAONE 3.0 7.8B. The introduction calls these out explicitly:
+
+**Demand for smaller, cheaper models.** Academic researchers, particularly those without access to large GPU clusters, emphasized the need for smaller models that can be trained and deployed on low-specification hardware. This is not just an inference-serving concern but also a fine-tuning concern: researchers want models they can adapt to their own domains without requiring datacenter-scale compute. The EXAONE 3.5 2.4B model is a direct response to this feedback — a model small enough to run on edge devices yet capable enough to outperform models 3–4× its size on several evaluation categories (the 2.4B model achieves a 61.1 average on real-world use cases compared to Llama 3.1 8B's 48.6 and Gemma 2 9B's 57.9).
+
+**Demand for larger-but-cost-effective models.** The industry side expressed strong demand for more capable models that remain cost-effective — meaning they outperform the previous generation but don't require the enormous training budgets of models like Qwen 2.5 32B (which uses 18T tokens and 2.77× more total compute than EXAONE 3.5 32B). This is the classic "more performance per dollar" requirement that drives enterprise adoption.
+
+**Demand for on-device deployment.** The mention of "smaller models suitable for on-device deployment" reflects a growing interest in privacy-preserving, low-latency inference scenarios where models must run locally on phones, laptops, or edge compute nodes rather than in the cloud. This imposes hard constraints on model size and memory footprint that are not captured by FLOPs-efficiency comparisons alone.
+
+**Demand for long-context handling because of RAG adoption.** The paper notes that "with the increasing adoption of retrieval-augmented generation (RAG) techniques, which generate answers based on reference documents or web search results, there has been substantial demand for models capable of effectively handling longer contexts." This is a crucial observation: RAG is perhaps the most widely deployed pattern for grounding LLM outputs in external knowledge and reducing hallucination, but it requires models that can process and reason over documents that may span thousands of tokens. The previous EXAONE 3.0 model supported only 4,096 tokens of context — a limitation that made it impractical for many RAG workflows. EXAONE 3.5 extends this to 32,768 tokens, an 8× increase that brings the models into the range where realistic RAG pipelines become feasible.
+
+### The Bilingual Dimension: Korean and English Are Not Equally Served by Existing Models
+
+A substantial portion of the paper's motivation is bilingual — specifically, the need for models that perform well in both Korean and English. This is not a niche requirement. South Korea has a population of over 50 million, a highly developed technology sector, and active AI research communities in both academia and industry. Yet most major open-weight language models are developed in English-first contexts and evaluated primarily or exclusively on English benchmarks.
+
+The paper uses multiple Korean-specific evaluation benchmarks — KoMT-Bench, LogicKor, KMMLU, Ko-LongRAG, and Ko-WebRAG — and a Korean-language extension of the Needle-in-a-Haystack test. The vocabulary composition (roughly 50% Korean, 50% English, with a total vocabulary size of 102,400 tokens) reflects a deliberate design choice to allocate tokenizer capacity equally between the two languages rather than treating Korean as an afterthought.
+
+This matters because bilingual performance is not guaranteed by simply training on mixed-language data. A model could theoretically achieve strong English scores while underperforming in Korean due to tokenizer imbalance, insufficient Korean training data, or optimization targets that implicitly prioritize English. The paper's extensive Korean evaluation — including in-house benchmarks specifically designed to test real-world Korean RAG scenarios — establishes that EXAONE 3.5 models have been designed and validated as genuinely bilingual systems rather than English models that happen to handle Korean.
+
+### Where Existing Model Evaluations Fall Short
+
+The paper's evaluation framework is designed to address specific limitations in how LLM capabilities are typically measured:
+
+**General-domain benchmarks don't capture instruction-following.** A model that achieves 90% on GSM8K may still fail to format its answer as requested, ignore constraints in the user's prompt, or produce correct answers in an unusable structure. Benchmarks like IFEval specifically test instruction adherence (e.g., "respond in JSON format," "include exactly three bullet points"), and performance on these benchmarks does not necessarily correlate with math or coding scores. The EXAONE 3.5 models' strong IFEval results (81.7 for 32B, 78.9 for 7.8B, 73.6 for 2.4B) measure a capability that standard knowledge benchmarks miss entirely.
+
+**Most long-context benchmarks are synthetic or English-only.** The Needle-in-a-Haystack test, while the most widely used long-context evaluation, is highly synthetic — it tests whether a model can locate a specific fact embedded in long text, but it doesn't test reasoning across multiple document sections, answer synthesis, or RAG-specific failure modes. The paper complements NIAH with LongBench (four sub-categories spanning single-doc QA, multi-doc QA, summarization, and few-shot learning), an extended LongRAG benchmark that includes unanswerable cases (forcing the model to recognize when retrieved documents don't contain the answer), and two in-house Korean RAG benchmarks (Ko-LongRAG and Ko-WebRAG). This combination provides a richer picture of long-context capability than NIAH alone.
+
+**Multi-turn conversation quality is expensive to measure and therefore often neglected.** Benchmarks like MT-Bench and KoMT-Bench evaluate models across multi-turn exchanges using an LLM-as-a-judge methodology, which is more expensive and noisier than ground-truth matching but captures conversational flow, context tracking, and response quality in ways that single-turn benchmarks cannot. The paper's inclusion of these benchmarks — and its careful specification of judge models (gpt-4o-2024-08-06 for MT-Bench and KoMT-Bench, gpt-4-1106-preview for Arena-Hard and AlpacaEval) — signals an investment in evaluating the dimensions of model quality that matter most in chat deployments.
+
+**Contamination undermines the validity of benchmark scores.** The paper discusses decontamination at unusual length (Section 2.2.2 and Appendix C), applying what it describes as a "stricter" version of the GPT-4 substring-matching method with 10 random samples per training document rather than fewer. This reflects awareness that contaminated benchmarks produce inflated scores that mislead users and damage the credibility of model comparisons. By detailing the decontamination procedure — including concrete examples of contaminated web corpora in Table 10 — the paper preempts skepticism about its reported scores and distinguishes itself from models whose training data may have inadvertently included benchmark test sets.
+
+### How This Paper Positions Itself Relative to Prior Work
+
+The paper's positioning is pragmatic rather than theoretical. It does not introduce a new architecture, training objective, or algorithmic innovation. Instead, it positions the EXAONE 3.5 family as an **engineering contribution** — a carefully executed set of models that prioritizes the capabilities users actually need over the capabilities that dominate benchmark leaderboards.
+
+This choice is reflected in several specific design decisions:
+
+**Training efficiency over training scale.** Table 3 explicitly compares the total computational cost of pre-training EXAONE 3.5 32B against Qwen 2.5 32B (2.77× more FLOPs for Qwen) and Gemma 2 27B (1.69× more FLOPs). The paper frames this as a feature rather than a disadvantage: "One of the noticeable characteristics of the EXAONE 3.5 language models is that they demonstrate high performance despite being trained at lower costs than the other baseline models." This is a deliberate departure from the "scale is all you need" narrative that has driven much recent LLM development.
+
+**Model size diversity as a response to user demand.** Rather than releasing a single flagship model, the paper releases three sizes spanning an order of magnitude (2.4B to 32B), explicitly linking each size to a specific use case: edge deployment for 2.4B, upgraded general-purpose capability for 7.8B, and maximum performance for 32B. This is a user-needs-driven approach rather than a research-driven one, and it positions the release as a **product family** rather than a research artifact.
+
+**Long-context as a practical necessity, not a research milestone.** The context length extension from 4K to 32K is presented matter-of-factly (Section 2.2.1) as a response to RAG adoption, using established techniques (positional interpolation, replay-based catastrophic forgetting mitigation) rather than novel methods. The paper is explicit that this is engineering motivated by user demand, not a contribution to the long-context research literature.
+
+**Safety and compliance as first-class concerns.** Section 4 and the detailed license agreement in Appendix B are unusually extensive for a technical report. The paper details a "Responsible AI Development Framework," an AI ethical impact assessment, de-identification processes, third-party safety evaluations on 10,000 Korean-language test cases, and a legally binding license agreement with specific provisions for commercial use, derivatives, and output ownership. This reflects the reality that releasing open-weight models — even under a non-commercial license — carries legal and reputational risks that must be managed explicitly. The positioning is: these models are safe enough, compliant enough, and legally clear enough to be used in serious applications without exposing the releasing organization to unacceptable liability.
+
+### The Missing Context: What the Paper Doesn't Compare Against
+
+A limitation of the paper's positioning that deserves mention is the **absence of proprietary model comparisons**. The baselines are all open-weight models released between May and September 2024. There are no comparisons to GPT-4, Claude, or other commercial frontier models. This is understandable — the paper's models are open research releases, and comparing them against API-only models with unknown training details would be methodologically fraught — but it means the absolute ceiling of performance is not established. When the 32B model achieves 74.3 on real-world benchmarks, we don't know whether this is close to state-of-the-art or still substantially behind proprietary systems.
+
+Similarly, the paper's focus on similarly-sized models means it doesn't explore whether a 32B model with strong instruction-following can compete with much larger models on those dimensions. The 32B model outperforms the 34B Yi 1.5 (46.9 vs. 74.3 on real-world use cases), but Yi 1.5 is a notably dated baseline at this point. The comparison captures relative standing within the open-weight size class but not the broader capability landscape.
 
 ## 3. Technical Approach
-This section unpacks the architecture, training pipeline, data safeguards, and alignment process.
 
-- Model architecture (Table 1; Sec. 2.1)
-  - Transformer, decoder-only, pre-norm, `SwiGLU` feed-forward.
-    - `SwiGLU`: a gated activation function designed to improve optimization and expressivity in feed-forward layers.
-  - `GQA` (Grouped Query Attention): shares key/value projections among groups of attention heads to reduce memory and improve efficiency while retaining most multi-head benefits.
-  - `RoPE theta = 1,000,000`: RoPE is rotary positional embedding; the `theta` controls the base frequency. Larger `theta` helps stabilize very long positions, enabling 32K-token contexts without heavy degradation.
-  - Tokenizer: `BBPE` (byte-level BPE) with 102,400 vocab items, roughly 50% Korean and 50% English coverage, improving bilingual tokenization efficiency.
-  - Sizes
-    - `32B`: 64 layers, d_model 5,120, 40 heads (8 KV heads), max length 32,768.
-    - `7.8B`: 32 layers, d_model 4,096.
-    - `2.4B`: 30 layers, d_model 2,560; uses tied embeddings to save parameters.
+This is an engineering-focused technical report that describes the construction and evaluation of the EXAONE 3.5 family of instruction-tuned language models; the core idea is that by making deliberate, practically-motivated design choices across model scaling, data construction, and post-training optimization, a family of bilingual (Korean-English) models can achieve superior performance on real-world instruction-following and long-context comprehension tasks while remaining competitive on general-domain benchmarks, all at substantially lower training cost than comparably-sized alternatives.
 
-- Two-stage pre-training with long-context extension (Sec. 2.2; 2.2.1)
-  - Stage 1: train on a large, diverse web corpus to build general capability.
-  - Stage 2: target weaknesses revealed by evaluation—especially long-context skills.
-    - Long-context fine-tuning uses the positional-interpolation style method (cited as [7]) and trains on full-length documents without chunking.
-    - To avoid catastrophic forgetting (forgetting prior knowledge during long-context fine-tuning), a `replay-based method` is used: Stage-1 data is replayed (mixed back) during Stage-2.
-      - Replay means interleaving a portion of original short-context data to maintain competencies learned previously.
+### 3.1 Reader Orientation
 
-- Training budget (Table 2; Sec. 2.2)
-  - Training tokens: `32B` uses 6.5T tokens; `7.8B` uses 9T; `2.4B` uses 6.5T.
-  - The 32B model’s compute (by size×tokens) is lower than some peers (Table 3), yet it remains competitive, especially on real-world and long-context tasks.
+The EXAONE 3.5 system is a family of three decoder-only Transformer language models — at 32 billion, 7.8 billion, and 2.4 billion parameters — that have been pre-trained, fine-tuned, and preference-optimized to follow user instructions effectively in both Korean and English across diverse scenarios including multi-turn conversation, long-document reasoning, and retrieval-augmented generation (RAG). The problem it solves is the mismatch between how most open-weight language models are evaluated (general-domain benchmarks like MMLU and GSM8K) and how users actually deploy them in practice (multi-turn chat, long-context RAG pipelines, instruction-following tasks), with the "shape" of the solution being a vertically-integrated training pipeline that emphasizes data quality, bilingual balance, efficient pre-training, and a staged post-training process that prioritizes instruction adherence and human preference alignment over raw knowledge benchmarks.
 
-- Decontamination (Sec. 2.2.2; Appendix C, Figure 4; Table 10)
-  - To reduce benchmark leakage, a strict substring-based filter is applied.
-  - Process:
-    - Normalize benchmark test items; extract all unique substrings using a sliding window `S=50`, stride 1.
-    - For each training example, randomly sample `N=10` substrings and check membership in the test substrings pool.
-    - If matches appear, remove the contaminated training item.
-  - The method is simple but strict; examples of removed items are shown in Table 10.
+### 3.2 Big-Picture Architecture (Diagram in Words)
 
-- Supervised fine-tuning (SFT) with instruction evolution (Sec. 2.3.1; Figure 1)
-  - From ~8M web pages, a domain taxonomy is extracted (Math/Arts/Sciences, etc.). The team generates instruction–response pairs guided by this taxonomy.
-  - An instruction evolution (akin to Evol-Instruct) increases difficulty and variety, producing a curriculum that spans simple to complex tasks (Figure 1).
+The system is built through a sequential pipeline with five major components:
 
-- Preference optimization with DAAs (direct alignment algorithms) (Sec. 2.3.2; Figure 2)
-  - `DAA` refers to algorithms that train directly from preference pairs rather than scalar rewards. Two specific methods are cited:
-    - `DPO` (Direct Preference Optimization).
-    - `SimPO` (Simple Preference Optimization), which removes the need for a fixed reference model in the reward.
-  - Preference data creation (Figure 2, top):
-    - For each prompt `x`, sample multiple responses from multiple models.
-    - Rank them using a reward model, pick best `y_w` and worst `y_l`.
-    - Validate rankings by a second reward model; discard low-agreement pairs.
-  - Staged alignment (Figure 2, bottom):
-    - Start from the SFT model `M0`, then apply DAAs in multiple stages to obtain `M1`, `M2`.
-    - Staging mitigates over-optimization (reward hacking) observed in preference-training regimes.
+1. **Pre-training Corpus Construction and Decontamination** — collects diverse web-crawled data, applies a substring-matching decontamination process against benchmark test sets, and produces clean training corpora for two pre-training stages.
 
-- Ethics/compliance and license (Sec. 2.4; Appendix B)
-  - Data undergoes compliance reviews (copyright, privacy).
-  - License is research-only (non-commercial). Notably, Appendix B Sec. 4.2 assigns ownership of generated `Output` to the Licensor, permitting Licensee use and distribution only for research purposes. This affects practical deployment (discussed in Sec. 6).
+2. **First-Stage Pre-training** — trains the base Transformer model on general-domain corpora to acquire broad linguistic knowledge, reasoning capability, and bilingual proficiency; this stage produces the largest fraction of the model's capabilities and consumes the majority of the training FLOPs.
+
+3. **Second-Stage Pre-training with Context Length Extension** — continues training on a mixture of original-length data (for replay-based retention of first-stage knowledge) and longer-document data processed without chunking, using positional interpolation to extend the maximum context length from 4,096 to 32,768 tokens.
+
+4. **Supervised Fine-Tuning (SFT)** — constructs instruction-response pairs from an 8M-document taxonomic knowledge extraction process (Figure 1), applies instruction evolution to diversify difficulty levels, and fine-tunes the pre-trained model on these pairs to establish strong instruction-following behavior.
+
+5. **Staged Preference Optimization** — creates preference data using reward model scoring of multiple model generations, filters for agreement between two reward models, and applies sequential direct alignment algorithm (DAA) training to align the SFT model with human preferences while mitigating over-optimization through a multi-stage training process (Figure 2).
+
+Information flows from web-crawled data through decontamination filters, into the pre-training pipeline where the base model acquires its fundamental capabilities, then through supervised fine-tuning where instruction-response pairs teach the model to follow user intent, and finally through preference optimization where the model is refined to produce outputs aligned with human judgments. The resulting models support up to 32K tokens of context, operate bilingually in Korean and English, and are released under a research-only license with explicit provisions for commercial licensing inquiries.
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First**, the model configurations (architecture details, hyperparameters, and sizing decisions) because they define the computational envelope and establish what is shared versus what differs across the three model sizes.
+
+- **Second**, the first-stage pre-training process (data sources, training scale, and the rationale for training token counts) because this is where the models acquire their foundational capabilities and where the paper claims significant computational efficiency advantages over competitors.
+
+- **Third**, the context length extension procedure (positional interpolation, replay-based catastrophic forgetting mitigation, and the two-stage data strategy) because the jump from 4K to 32K tokens is the primary architectural change from EXAONE 3.0 and directly enables the long-context use cases that the paper's evaluation emphasizes.
+
+- **Fourth**, the decontamination methodology (substring matching with stricter criteria than prior work) because it is the mechanism the paper uses to establish the credibility of its benchmark scores and to prevent training-test overlap from inflating reported performance.
+
+- **Fifth**, the supervised fine-tuning data construction process (knowledge taxonomy extraction from 8M web documents, instruction evolution for difficulty diversification) because this is the primary mechanism for instilling instruction-following capability, and the paper provides unusual detail about its data curation strategy.
+
+- **Sixth**, the preference optimization pipeline (reward model scoring, preference data filtering, and staged DAA training) because this is the final alignment stage and the paper's specific design choices — multiple stages, agreement-based filtering, and the sequencing of DPO/SimPO — are non-obvious and motivated by over-optimization concerns.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+#### Model Configurations and Architecture
+
+The EXAONE 3.5 models are based on a standard decoder-only Transformer architecture with SwiGLU non-linearity, Grouped-Query Attention (GQA), and Rotary Position Embedding (RoPE), as detailed in Table 1. The models are "identical in structure to the EXAONE 3.0 7.8B model but mainly differ in their configurations related to sizes," meaning the architectural choices are inherited from the prior generation with scaling applied to depth, width, and feed-forward dimensions.
+
+**The 32B model** uses a hidden dimension (`d_model`) of 5,120 with 64 Transformer layers, a feed-forward dimension of 27,392, 40 attention heads, 8 key-value heads (GQA with a 5:1 ratio of query heads to KV heads), and a head size of 128. The maximum sequence length is 32,768 tokens, the RoPE base frequency (theta) is 1,000,000, the vocabulary size is 102,400 tokens (roughly 50% Korean and 50% English), and word embeddings are not tied between input and output.
+
+**The 7.8B model** uses a hidden dimension of 4,096 with 32 layers, a feed-forward dimension of 14,336, 32 attention heads with 8 KV heads, and head size 128. This architecture is effectively the EXAONE 3.0 model design with the context length extended. The embedding dimension and layer count are scaled down proportionally from the 32B model.
+
+**The 2.4B model** uses a hidden dimension of 2,560 with 30 layers, a feed-forward dimension of 7,168, 32 attention heads with 8 KV heads, and a notable difference: the head size is 80 (compared to 128 for the larger models). This smaller head size reduces the per-attention-head computational cost and memory footprint. Additionally, the 2.4B model uses **tied word embeddings** (input and output embedding matrices are shared), which the larger models do not — a design choice that saves memory in the smaller model at the potential cost of slightly reduced output representation flexibility.
+
+**Why this architecture?** The use of GQA (with 8 KV heads shared across 32 or 40 query heads) reduces the key-value cache size during inference, which is particularly important for long-context processing because the KV cache grows linearly with sequence length. With 32K tokens, standard multi-head attention with 32 full key-value heads would require storing 32 × 32,768 × 128 floating-point values for keys and the same for values; GQA with 8 KV heads reduces this by a factor of 4. The SwiGLU non-linearity (a gated variant of the GLU activation family) is chosen over standard ReLU or GELU because it has become the de facto standard in modern LLMs, offering better training stability and downstream performance. The RoPE theta of 1,000,000 is a large base frequency that improves the model's ability to handle long-range positional relationships, which is essential for the 32K context length target.
+
+The vocabulary size of 102,400 is a byte-level byte-pair encoding (BBPE) tokenizer, shared across all three models. The 50/50 Korean-English split in the vocabulary is a deliberate design choice reflecting the bilingual deployment target: rather than building a vocabulary dominated by English with Korean tokens grafted on (which would result in Korean text being split into many sub-optimal subword units, increasing sequence length and reducing efficiency), the vocabulary is constructed to represent both languages roughly equally, ensuring that Korean text is tokenized as efficiently as English text.
+
+#### First-Stage Pre-training: Data Scale and Efficiency
+
+The first-stage pre-training is the primary capability-acquisition phase. Table 2 reports the training data scale and computational cost for each model size:
+
+- **32B model:** trained on 6.5 trillion tokens, consuming `$1.25 \times 10^{24}$` FLOPs.
+- **7.8B model:** trained on 9 trillion tokens, consuming `$4.21 \times 10^{23}$` FLOPs.
+- **2.4B model:** trained on 6.5 trillion tokens, consuming `$9.36 \times 10^{22}$` FLOPs.
+
+The training data is described as "collected and processed from as diverse sources as possible aimed to increase the performance on general domains" — a standard web-crawl-based approach. The paper does not provide detailed corpus composition statistics (ratios of code, math, web text, books, etc.), which limits reproducibility but is consistent with the engineering-report genre.
+
+**The 7.8B model trains on more tokens (9T) than the 32B model (6.5T).** This is a non-obvious choice that reflects a compute-budget optimization. Pre-training FLOPs scale roughly as `$6 \times N \times D$` (parameters × tokens), so the 7.8B model at 9T tokens uses approximately one-third the compute of the 32B model at 6.5T tokens (`$6 \times 7.8\text{B} \times 9\text{T} \approx 4.21 \times 10^{23}$` vs `$6 \times 32\text{B} \times 6.5\text{T} = 1.25 \times 10^{24}$`). The decision to train the 7.8B model on more tokens is consistent with Chinchilla-style compute-optimal scaling: given a fixed compute budget, smaller models should be trained on proportionally more tokens to maximize performance. The 7.8B model gets roughly 1,154 tokens per parameter, while the 32B model gets 203 tokens per parameter — the smaller model is being trained closer to its "saturation" point.
+
+Table 3 provides the critical efficiency comparison. The paper approximates total computational cost as the product of model size and training tokens, following Kaplan et al. and Hoffmann et al.:
+
+- EXAONE 3.5 32B: `$32\text{B} \times 6.5\text{T} = 1.00$` (reference, normalized)
+- Qwen 2.5 32B: `$32\text{B} \times 18\text{T} = 2.77$` (× relative cost)
+- Gemma 2 27B: `$27\text{B} \times 13\text{T} = 1.69$` (× relative cost)
+- Yi 1.5 34B: `$34\text{B} \times 3.6\text{T} = 0.59$` (× relative cost)
+
+**Why this comparison matters:** The paper frames training efficiency as a feature, not a limitation. The EXAONE 3.5 32B model achieves superior results on real-world use cases (74.3 vs. Qwen 2.5 32B's 69.8) and long-context benchmarks (71.1 vs. Qwen 2.5 32B's 66.9) while using 2.77× less total compute. This is not presented as a scientific finding about scaling laws but as a practical demonstration that careful data curation, bilingual optimization, and targeted post-training can substitute for raw training scale on the metrics that matter for deployment.
+
+#### Context Length Extension: Positional Interpolation with Replay
+
+The extension of maximum context length from 4,096 to 32,768 tokens is the most significant architectural departure from EXAONE 3.0. Section 2.2.1 describes the procedure as using "long-context fine-tuning" with reference to Chen et al. (2023), which introduced positional interpolation — a technique that compresses the positional indices of the original pre-training into a smaller range so that the model can handle sequences longer than those seen during pre-training without catastrophic degradation.
+
+The procedure consists of two key elements:
+
+**1. Positional interpolation.** During second-stage pre-training, the RoPE position embeddings are interpolated so that the maximum positional index that was originally assigned to token position 4,096 is now assigned to position 32,768. This means the model's positional encodings are "stretched" to cover 8× the original range. Because RoPE encodes relative positions through rotation, the interpolation effectively reduces the rotation rate, making the model sensitive to longer-range positional relationships. The RoPE theta of 1,000,000 (already large) provides a good starting point for this interpolation, as higher theta values make the rotation frequencies lower, which naturally supports longer sequences.
+
+**2. Replay-based catastrophic forgetting mitigation.** The paper explicitly addresses the problem that fine-tuning on long-context data alone would cause the model to forget what it learned during first-stage pre-training — a phenomenon known as catastrophic forgetting. The solution is a replay-based method: "during the second-stage pre-training, we reuse a portion of the data used in the first-stage." This means the model sees both the original first-stage data (maintaining general capabilities) and new long-document data (acquiring long-context processing ability) during the second stage.
+
+**The data processing change.** In the first stage, "documents exceeding the maximum context length is split into smaller chunks" — standard practice for pre-training with a fixed context window. In the second stage, "the original corpus are trained without being divided into chunks." This means the model now sees documents in their full form, learning to attend across spans that were previously separated by chunk boundaries. This is a crucial capability for RAG applications, where retrieved documents may be coherent multipage texts that the model must synthesize holistically.
+
+**Why not just train from scratch with 32K context?** Pre-training with long contexts from the start is extremely expensive because the self-attention cost scales quadratically with sequence length. The two-stage approach amortizes this cost: the model learns its core capabilities efficiently at 4K context, then adapts to longer sequences with significantly less computation during the second stage. The replay mechanism ensures that this adaptation doesn't come at the cost of degrading general performance.
+
+#### Decontamination Methodology
+
+Section 2.2.2 and Appendix C describe the decontamination process in unusual detail, reflecting its importance for establishing credible benchmark scores. The method is described as "a simple yet powerful substring-level matching method" borrowed from GPT-4's approach but "with stricter criteria."
+
+**The procedure (Figure 4):**
+
+1. **Normalization:** All test-set examples from targeted benchmarks are normalized by removing all characters except alphabets and numbers. This strips away formatting differences, punctuation, and whitespace variations that could cause false negatives in substring matching.
+
+2. **Substring extraction:** From each normalized test example, all unique substrings of a sliding window size `$S = 50$` characters with a stride of 1 are extracted and stored in a substring pool. This produces an exhaustive set of all 50-character contiguous spans from the test data.
+
+3. **Training example screening:** For each training example, the text is first normalized, then `$N = 10$` substrings are randomly sampled from the normalized training text. If any of these 10 sampled substrings appears in the substring pool (i.e., matches any 50-character span from any test example), the training example is considered contaminated and is removed from the training pipeline.
+
+**Why `$N = 10$` and `$S = 50$`?** The paper describes this as "stricter" than the original GPT-4 method. Using `$N = 10$` random samples (rather than, say, checking all possible substrings, which would be computationally infeasible, or using a single sample) increases the probability of detecting contamination: if a training example contains test-set overlap, sampling 10 random 50-character windows from it has a high probability of hitting the contaminated region. The window size `$S = 50$` is long enough that random matches are extremely unlikely (the probability of two documents sharing a specific 50-character sequence by chance, even after alphabet-only normalization, is negligible) while short enough that it catches partial overlaps.
+
+Table 10 provides concrete examples: an MMLU math question about sticker distribution that appears verbatim in a web corpus (the contaminated document retains the full question text including answer choices and the answer label), and a KMMLU question about the Korean national pension system whose text appears embedded in a longer Korean-language document. These examples demonstrate that web-crawled training data frequently contains verbatim benchmark content, and without decontamination, the model would have seen the test questions during training, making benchmark scores uninterpretable.
+
+**What this enables:** Decontamination ensures that the reported benchmark scores reflect genuine generalization rather than memorization of test-set examples seen during training. This is particularly important for the paper's claim of superior real-world and long-context performance: if the EXAONE models had been trained on contaminated data, their benchmark advantage might reflect data leakage rather than genuine capability. The detailed documentation of the decontamination procedure serves as a credibility mechanism.
+
+#### Supervised Fine-Tuning: Knowledge Taxonomy and Instruction Evolution
+
+The supervised fine-tuning (SFT) phase is where the pre-trained base model acquires its instruction-following behavior. Section 2.3.1 describes a data construction pipeline that is unusual in its emphasis on structured knowledge extraction and instruction difficulty diversification.
+
+**Step 1: Taxonomic knowledge extraction from web corpora.** The paper extracts "core knowledge from 8M web corpora using a taxonomic system," as illustrated in Figure 1. The taxonomy is a hierarchical classification of knowledge domains: for example, "Domain: Math → Algebra → Exponential functions → Arithmetic sequence" and "Domain: Arts → Music → Jazz history → Compilation albums, recording." This is not a simple keyword extraction; it is a structured categorization that maps raw web content into a predefined ontology of knowledge types.
+
+**Why a taxonomic approach?** Generic SFT data scraped from the web or generated by prompting often skews toward common, simple instruction types. The taxonomy ensures coverage across diverse domains and allows controlled sampling from underrepresented areas. It also enables the construction of instruction-response pairs that are grounded in specific knowledge areas, which helps the model learn to provide domain-appropriate responses rather than generic templates.
+
+**Step 2: Instruction generation based on knowledge taxonomy.** From the extracted and classified knowledge, instruction-tuning data is generated. The paper does not specify the exact generation method (whether human-written, template-based, or model-generated), but the examples in Figure 1 show varying complexity: from simple factual questions ("Is the following statement true? The next term in the arithmetic sequence -8, -14, -20, -26 is -32.") to more complex reasoning questions ("How did the advent of compilation albums alter the perception and dissemination of jazz music throughout its history?").
+
+**Step 3: Instruction evolution for complexity diversification.** The paper leverages an instruction evolution method stemming from Zeng et al. (2024). Instruction evolution takes an existing instruction as a seed and applies transformation rules to create more complex variants. The examples in Figure 1 show this clearly:
+
+- **Seed instruction:** "Summarize the key structural components that differentiate bacteria from eukaryotic cells, and explain how these differences contribute to the functional capabilities of bacteria in various environments."
+
+- **Evolved instruction:** "Explain the unique biochemical pathways in extremophilic archaea that facilitate their survival and metabolic functions in hyperthermal environments, including any novel enzymes that are not found in bacteria or eukaryotes."
+
+The evolved version adds specificity (extremophilic archaea, hyperthermal environments), introduces a comparison element (not found in bacteria or eukaryotes), and shifts from structural description to biochemical pathway explanation. This transformation deepens the reasoning required and broadens the knowledge domain.
+
+**Another example from Figure 1:**
+
+- **Seed:** "How did the advent of compilation albums alter the perception and dissemination of jazz music throughout its history?"
+
+- **Evolved:** "How did the sociopolitical dynamics of 1950s America influence the arrangement and reception of songs in compilation albums, specifically in jazz, and how did these albums subsequently impact the cultural identity formation of their primary audiences?"
+
+The evolution adds temporal specificity (1950s America), introduces a causal mechanism (sociopolitical dynamics → arrangement and reception), and extends the outcome scope (perception and dissemination → cultural identity formation). This creates a multi-hop reasoning task from what was originally a single-hop question.
+
+**Why instruction evolution?** The goal is to create a dataset that covers "various complexities and difficulties" so that the SFT model learns to handle both simple instruction-following (e.g., "format this answer as JSON") and complex reasoning (e.g., "explain the causal relationship between X and Y, constrained by Z"). A model trained only on simple instructions will produce shallow responses even when the user asks a complex question; training on evolved instructions teaches the model to match its response depth to the query complexity.
+
+**The scale of the SFT data is not explicitly stated.** The paper mentions "8M web corpora" as the source for knowledge extraction but does not specify how many instruction-response pairs were ultimately generated or what the distribution of difficulty levels looks like quantitatively. This is a significant omission for reproducibility.
+
+#### Preference Optimization: Staged Direct Alignment with Reward Model Filtering
+
+The final training phase is preference optimization, described in Section 2.3.2 and illustrated in Figure 2. The goal is to align the SFT model's outputs with human preferences — making responses more helpful, harmless, and honest — using direct alignment algorithms (DAAs) that optimize the model directly against preference data without requiring a separate reward model during training.
+
+**The preference data construction pipeline (Figure 2, top):**
+
+1. **Prompt collection:** Prompts `$x$` are drawn from a pre-collected pool. The paper describes these as "collected prompts" without specifying their source, domain distribution, or quantity.
+
+2. **Response generation:** For each prompt `$x$`, `$N$` responses are sampled from multiple models. The use of multiple models (rather than a single SFT model) is a deliberate choice — it increases response diversity and ensures that the preference data covers a range of quality levels, not just variations from a single policy.
+
+3. **Reward model scoring:** A reward model scores each response. The reward model is trained separately (the paper does not describe its training procedure or architecture) to predict human preference judgments.
+
+4. **Preference pair selection:** The best response (`$y_w$`, the "winner") and the worst response (`$y_l$`, the "loser") are selected based on reward model scores. This creates a preference data triple: `$\{x, y_w, y_l\}$`.
+
+5. **Agreement-based filtering:** A second reward model independently scores the same responses, and the agreement between the two reward models' rankings is computed. Data where the agreement falls "below the threshold" (threshold value not specified in the paper) is filtered out. This is a quality control mechanism: when two independently trained reward models disagree about which response is better, the preference signal is ambiguous and may be noisy or incorrect. Filtering these cases ensures that the preference data contains only high-confidence preference pairs.
+
+**Why two reward models?** A single reward model can have blind spots, biases, or calibration errors. By requiring agreement between two independently trained reward models, the paper implements a simple ensemble verification that increases the reliability of the preference labels. This is especially important because preference optimization algorithms like DPO can be sensitive to label noise: an incorrectly labeled preference pair can cause the model to optimize toward worse behavior.
+
+**The staged DAA training process (Figure 2, bottom):**
+
+The preference optimization pipeline operates in multiple sequential stages:
+
+1. **Stage 0:** The SFT model serves as the initial model `$M_0$`.
+
+2. **Stage 1:** `$M_0$` is trained using a direct alignment algorithm on the preference data to produce `$M_1$`. The specific DAA (DPO or SimPO) and training hyperparameters are not specified in detail.
+
+3. **Stage 2:** `$M_1$` is further trained using a DAA (which could be the same algorithm or a different one) to produce `$M_2$`, the final model.
+
+**Why staged training?** The paper states that "the staged pipeline enables us to mitigate over-optimization that may occur during the DAAs' training process." Over-optimization in preference optimization refers to the phenomenon where continued DAA training eventually degrades performance — the model learns to exploit the reward signal in ways that don't correspond to genuine quality improvements. This is analogous to reward hacking in reinforcement learning from human feedback (RLHF). By training in stages, the process can be stopped at intermediate checkpoints (e.g., `$M_1$`) and evaluated before proceeding, preventing the model from crossing the over-optimization threshold. The paper cites Rafailov et al. (2024) on scaling laws for reward model over-optimization, indicating awareness of this failure mode.
+
+**DPO and SimPO.** The paper mentions both Direct Preference Optimization (DPO; Rafailov et al., 2023) and Simple Preference Optimization (SimPO; Meng et al., 2024) as the DAAs used. DPO reparameterizes the RLHF objective to directly optimize the policy against preference data without training a separate reward model, using the implicit reward `$r(x, y) = \beta \log \frac{\pi_\theta(y|x)}{\pi_{\text{ref}}(y|x)}$` where `$\pi_\theta$` is the current policy, `$\pi_{\text{ref}}$` is the reference (SFT) policy, and `$\beta$` controls the divergence penalty. SimPO is a reference-free variant that uses the average log probability of the response as the implicit reward, eliminating the need for a reference model and simplifying the training objective. Both algorithms are applied as black-box optimization tools; the paper does not discuss their relative merits or report which stages used which algorithm.
+
+#### Training Cost and Efficiency Design Choices
+
+Although not presented as a separate "component," the paper's training efficiency choices constitute a design philosophy that pervades the technical approach. Table 3 quantifies this: EXAONE 3.5 32B uses 2.77× fewer FLOPs than Qwen 2.5 32B while outperforming it on the benchmarks the paper prioritizes. This efficiency comes from several interacting choices:
+
+- **Training on fewer tokens (6.5T vs. 18T for Qwen 2.5 32B).** This is the primary source of compute savings. The paper implicitly bets that data quality and post-training optimization can compensate for reduced pre-training scale on instruction-following and long-context tasks, even if general-domain benchmarks see some degradation (74.8 vs. 78.7 for the 32B model).
+
+- **The two-stage pre-training strategy.** Rather than pre-training from scratch with long contexts, which would increase the per-token training cost due to quadratic attention scaling, the model learns long-context handling in a shorter second stage. This front-loads efficient short-context training and adds long-context capability as a "delta" on top of already-acquired general capabilities.
+
+- **Bilingual vocabulary design.** By allocating 50% of the 102,400-token vocabulary to Korean, the model achieves efficient tokenization for both languages. Without this, Korean text would be split into more tokens per character, effectively reducing the model's usable context length for Korean documents and increasing inference cost for Korean-language applications.
+
+- **Model size diversity.** Training three models at different scales allows users to select the size that matches their compute constraints, rather than being forced to deploy the largest model for all tasks. The 2.4B model, in particular, is designed for edge deployment where the 32B model would be impractical — yet its benchmark performance (63.3 average on general domains, 61.1 on real-world use cases) approaches that of much larger models, suggesting that the post-training pipeline is effective at extracting capability even from a small parameter budget.
+
+#### Summary of Design Choices and Their Justifications
+
+- **GQA with 8 KV heads across all model sizes:** reduces KV cache memory for long-context inference by 4–5× compared to full multi-head attention, which is essential for practical 32K context deployment on consumer hardware.
+
+- **RoPE theta = 1,000,000:** a large base frequency that improves long-range position sensitivity, chosen to support the 32K context length target without requiring architectural modifications to the attention mechanism.
+
+- **BBPE tokenizer with 102,400 vocabulary size and 50/50 Korean-English split:** ensures that both target languages are tokenized efficiently, avoiding the common failure mode where non-English languages are split into many sub-optimal subword units, which wastes context length and increases computational cost.
+
+- **Two-stage pre-training with replay:** amortizes the cost of learning long-context handling by building on a general-purpose base model rather than training from scratch, while the replay mechanism prevents catastrophic forgetting of short-context capabilities.
+
+- **Substring decontamination with `$S = 50$` and `$N = 10$`:** stricter than prior work (specifically GPT-4's method), chosen to provide high confidence that benchmark scores are uncontaminated and therefore interpretable as genuine capability measures.
+
+- **Taxonomic SFT data construction:** ensures domain coverage and enables controlled difficulty diversification, chosen to produce a model that can handle diverse, real-world instructions rather than only simple templated queries.
+
+- **Instruction evolution for complexity diversification:** creates a multi-difficulty training distribution, chosen so the model learns to match response depth to query complexity — a capability that standard SFT on flat instruction datasets does not reliably produce.
+
+- **Two-stage preference optimization with ensemble agreement filtering:** mitigates over-optimization by enabling early stopping in the DAA process and increases preference label reliability by requiring agreement between independently trained reward models, chosen because DAA over-optimization is a known failure mode (Rafailov et al., 2024) that can degrade model quality if unchecked.
+
+- **Three model sizes spanning an order of magnitude (2.4B, 7.8B, 32B):** responds directly to user feedback requesting both smaller models for resource-constrained deployment and larger models for maximum capability, chosen to make the model family useful across deployment scenarios rather than optimized for a single benchmark leaderboard.
 
 ## 4. Key Insights and Innovations
-- Long-context capability across all sizes with simple but effective ingredients
-  - What’s new: all three models support 32K tokens via a combination of RoPE scaling (`theta=1e6`) and Stage-2 long-context fine-tuning on full documents (Sec. 2.1–2.2.1).
-  - Why it matters: long-context strength is central to modern RAG systems. Figure 3 shows near-perfect “Needle-in-a-Haystack” retrieval across lengths and positions in both English and Korean.
 
-- Replay-based long-context extension to reduce forgetting
-  - What’s different: rather than fine-tuning only on long sequences, the team mixes Stage-1 data back in (replay) during Stage-2 (Sec. 2.2.1), explicitly targeting catastrophic forgetting.
-  - Significance: helps preserve general skills, contributing to strong real-world and general results despite the focus on long context.
+### Innovation 1: Reframing LLM Evaluation Around Deployment-Centric Capability Categories
 
-- Instruction data built from a knowledge taxonomy plus instruction “evolution”
-  - What’s different: SFT data is derived from taxonomy-extracted knowledge, then “evolved” to systematically grow complexity (Figure 1; Sec. 2.3.1).
-  - Significance: produces robust instruction following, reflected in top-tier MT-Bench/Arena-Hard and Korean benchmarks (Table 6).
+The paper's most conceptually distinctive contribution is not any individual architectural or algorithmic choice but rather the **evaluation framework** it constructs — one that partitions model capability into three categories (Real-world Use Cases, Long Context, General Domain) and unapologetically prioritizes the first two over the third. This is a departure from the de facto standard in the open-weight LLM literature, where the dominant evaluation narrative has been organized around general-domain benchmarks (MMLU, GSM8K, HumanEval, MATH) with instruction-following and long-context performance treated as secondary or supplemental.
 
-- Staged preference optimization with dual reward-model validation
-  - What’s different: preference pairs are filtered by agreement of two reward models, and alignment proceeds in stages (M0→M1→M2) to avoid over-optimization (Sec. 2.3.2; Figure 2).
-  - Significance: improves real-world instruction adherence (e.g., IFEval prompt-strict) and win rates (Arena-Hard) without collapsing style diversity.
+Prior work — including the technical reports for Llama 3.1, Qwen 2.5, Gemma 2, and Phi-3 — places general-domain benchmarks at the center of their evaluation sections and reports instruction-following results (MT-Bench, AlpacaEval) as auxiliary metrics. The implicit assumption is that a model's quality is primarily determined by its parametric knowledge and reasoning capability, with instruction-following and conversational ability being downstream properties that correlate with scale and general-domain performance. The EXAONE 3.5 report inverts this: the "Overall Performance" table (Table 5) places Real-world Use Cases and Long Context as co-equal primary categories alongside General Domain, and the results demonstrate that these categories are not redundant — the model that scores highest on general-domain benchmarks (Qwen 2.5 32B at 78.7) is not the model that scores highest on real-world use cases (EXAONE 3.5 32B at 74.3). There is a genuine **capability tradeoff** being surfaced, not just a different weighting of correlated metrics.
 
-- Efficient training relative to peers with competitive outcomes
-  - Evidence: Table 3 shows the 32B model’s size×tokens compute is 1.00 (baseline), while Qwen 2.5 32B is 2.77 and Gemma 2 27B is 1.69. Despite this, EXAONE 32B wins the Real-world and Long-context category averages (Table 5).
+What makes this a genuine innovation rather than a marketing decision is the **specificity** with which the evaluation categories are constructed. The Real-world Use Cases category (Section 3.3) is not a grab-bag of instruction-following scores but a coherent set of seven benchmarks selected to capture distinct aspects of deployment-relevant behavior: multi-turn conversation quality in both English (MT-Bench) and Korean (KoMT-Bench, LogicKor), instruction adherence (IFEval), response quality relative to GPT-4-class models (Arena-Hard, AlpacaEval), and contamination-resistant evaluation of diverse real-world prompts (LiveBench). Each benchmark in this category measures something that a standard knowledge test does not, and the paper provides enough detail about evaluation methodology — including judge model versions and the specific scoring protocols — that the measurements are interpretable and reproducible.
+
+The Long Context category (Section 3.4) is equally deliberate. Rather than relying solely on Needle-in-a-Haystack (the most common long-context evaluation, but one that the paper itself demonstrates is essentially saturated by all three model sizes, achieving near-perfect accuracy in Figure 3), the paper constructs a multi-faceted evaluation suite: LongBench (covering single-doc QA, multi-doc QA, summarization, and few-shot learning), an extended version of LongRAG that adds unanswerable cases (forcing the model to recognize when retrieved documents lack supporting evidence), and two in-house Korean RAG benchmarks (Ko-LongRAG and Ko-WebRAG) that test long-context reasoning in realistic retrieval scenarios. The inclusion of unanswerable cases in LongRAG and Ko-LongRAG is a particularly sharp diagnostic move: it reveals that some models (e.g., Phi-3 Small, which scores 7.7 on Ko-LongRAG; Qwen 2.5 3B at 40.5) achieve deceptively high scores on answerable cases but collapse when required to recognize missing information. The EXAONE models' strong performance on unanswerable cases (e.g., 100% on Ko-LongRAG unanswerable single-doc QA for both the 32B and 2.4B models, Table 15) demonstrates a capability — knowing when to decline to answer — that is invisible in standard benchmark evaluations but critically important for RAG deployments where retrieved documents may not contain the answer.
+
+The significance of this reframing extends beyond the specific numbers. By making deployment-centric evaluation a first-class concern and demonstrating that it reveals capability dimensions orthogonal to general-domain scores, the paper provides an **evaluation template** that future model releases can adopt or critique. It argues, implicitly but forcefully, that the field's current evaluation norms — centered on knowledge and reasoning benchmarks constructed for academic purposes — are insufficient for characterizing the models that users actually interact with, and that a richer evaluation ecosystem organized around deployment scenarios is both feasible and informative.
+
+### Innovation 2: Demonstration That Training Efficiency Gains Are Non-Uniform Across Capability Categories
+
+The paper's second conceptual contribution is an empirical finding with significant implications for how organizations allocate pre-training compute: **training efficiency advantages are not uniform across all capability categories**, and a model trained with substantially less compute can selectively dominate on capabilities that matter for deployment while remaining merely competitive on standard benchmarks.
+
+Table 3 establishes the cost differential: EXAONE 3.5 32B is trained with 2.77× fewer FLOPs than Qwen 2.5 32B (normalized cost ratio of 1.00 vs. 2.77) and 1.69× fewer than Gemma 2 27B. The standard expectation in the scaling laws literature — from Kaplan et al. (2020) through Hoffmann et al. (2022) — is that more training compute produces better performance across the board, with the primary question being how to allocate that compute between model size and data quantity for optimal returns. Under this expectation, a model trained with 2.77× less compute should be substantially worse across all evaluation categories. But the results in Table 5 tell a more nuanced story:
+
+- On Real-world Use Cases, EXAONE 3.5 32B **leads** Qwen 2.5 32B (74.3 vs. 69.8, a 4.5-point advantage).
+- On Long Context, EXAONE 3.5 32B **leads** Qwen 2.5 32B (71.1 vs. 66.9, a 4.2-point advantage).
+- On General Domain, EXAONE 3.5 32B **trails** Qwen 2.5 32B (74.8 vs. 78.7, a 3.9-point deficit).
+
+The pattern is consistent at the 7.8B scale: EXAONE 3.5 7.8B leads Qwen 2.5 7B by 18.0 points on Real-world Use Cases and 10.5 points on Long Context, while trailing by 0.8 points on General Domain. And it holds at the 2.4B scale, where EXAONE 3.5 2.4B leads all baselines of similar size (and even several 7-9B models) on Real-world Use Cases and Long Context while being competitive on General Domain (63.3 vs. Qwen 2.5 3B's 62.1, a 1.2-point lead).
+
+What this demonstrates is that **pre-training compute is not a fungible resource that translates uniformly into all capabilities**. Certain capabilities — particularly those associated with instruction-following, multi-turn conversation, and long-context reasoning — appear to be more heavily influenced by factors other than raw pre-training scale: data composition, bilingual optimization, the quality and diversity of SFT data, and the specifics of preference optimization. The paper's post-training pipeline (taxonomic SFT data construction, instruction evolution, staged DAA training with agreement filtering) appears to be more effective at extracting instruction-following and long-context capability from a given pre-training budget than the pipelines used by competitors, even when those competitors have substantially larger pre-training budgets.
+
+This finding is significant beyond the specific model comparison because it challenges the implicit assumption that scaling pre-training compute is the primary lever for improving all dimensions of model quality. If post-training methodology can compensate for a 2.77× pre-training compute deficit on the capabilities that matter most for deployment, then the optimal allocation of research and engineering effort may shift toward improving post-training pipelines rather than simply scaling pre-training further. This is not to say pre-training scale doesn't matter — the 32B model outperforms the 7.8B model across all categories, and the general-domain deficit against Qwen 2.5 32B suggests that some knowledge-intensive capabilities are indeed bottlenecked by pre-training scale. But the **selectivity** of the advantage — large gains on deployment-relevant metrics, small deficits on academic benchmarks — is a pattern that the field's evaluation norms have not been designed to detect, and the paper's three-category evaluation framework makes it visible for the first time at this level of detail.
+
+### Innovation 3: The Diagnostic Value of Unanswerable Cases in Long-Context RAG Evaluation
+
+A smaller but methodologically sharp contribution is the paper's extension of the LongRAG benchmark to include **unanswerable cases** — queries for which the retrieved documents do not contain sufficient information to produce a correct answer — and the demonstration that this extension reveals capability differences that standard answerable-only benchmarks miss.
+
+The original LongRAG benchmark (Jiang et al., 2024) evaluates retrieval-augmented generation by providing models with retrieved document chunks and measuring whether they can extract correct answers. This is a standard RAG evaluation paradigm that tests a model's ability to synthesize information from provided context. However, it has a blind spot: a model that always attempts to answer — even when the context lacks supporting evidence — can achieve high scores on answerable cases while being dangerously unreliable in real deployment, where retrieved documents frequently fail to contain the answer. The EXAONE 3.5 paper's extension adds cases where the `is_retrieval` function determines that the context does not contain sufficient evidence, and the ground-truth answer is modified to indicate unanswerability. The model must then recognize this and respond with "Unanswerable" rather than hallucinating an answer based on partial or irrelevant information.
+
+The diagnostic power of this extension is visible in Tables 14 and 15. On the LongRAG HotpotQA subset (Table 14), most models perform adequately on answerable cases — but their performance on unanswerable cases varies dramatically:
+
+- EXAONE 3.5 7.8B achieves 74.3 on answerable HotpotQA and 53.9 on unanswerable.
+- Llama 3.1 8B achieves 67.4 on answerable and 16.4 on unanswerable.
+- Phi 3 Small achieves 60.2 on answerable and 7.1 on unanswerable.
+
+The unanswerable score is not simply correlated with the answerable score. Phi 3 Small, which scores 66.8 on answerable NQ (higher than EXAONE 3.5 7.8B's 72.0? No — actually lower in this case, but the Ko-LongRAG results in Table 15 show an even starker divergence: Phi 3 Small scores 8.0 on answerable single-doc QA and 14.0 on unanswerable, meaning it essentially cannot handle the task at all in Korean, while EXAONE 3.5 2.4B scores 80.8 on answerable and 100.0 on unanswerable). The critical insight is that **a model's ability to recognize when it should not answer is a distinct capability from its ability to answer when evidence is present**, and standard RAG benchmarks that only test answerable cases provide an incomplete — and potentially misleading — picture of model reliability.
+
+This contribution is methodologically incremental (adding unanswerable cases to an existing benchmark is not a novel evaluation paradigm) but **diagnostically fundamental**: it demonstrates that the standard evaluation practice of filtering for answerable cases systematically overestimates model reliability for RAG deployment, and it provides a concrete, reproducible template for how benchmarks should be extended to capture this failure mode. The paper's own models' strong performance on unanswerable cases — particularly the 2.4B model achieving 100% on Ko-LongRAG unanswerable single-doc QA — suggests that the post-training pipeline (perhaps through the instruction evolution process, which could include training examples where the correct response is to decline to answer) has been designed with this capability in mind.
 
 ## 5. Experimental Analysis
-- Evaluation setup (Sec. 3; Table 4)
-  - Three categories:
-    - Real-world Use: MT-Bench, LiveBench (2024-08-31), Arena-Hard v0.1, AlpacaEval 2.0 Length-Controlled (LC), IFEval (prompt-level strict), plus Korean KoMT-Bench and LogicKor.
-    - Long Context: Needle-in-a-Haystack (NIAH) in English/Korean; LongBench (English); LongRAG (extended with unanswerable cases) and Korean Ko-LongRAG (in-house) plus Ko-WebRAG (in-house real web RAG).
-    - General Domain: nine benchmarks, all in zero-shot, with explicit prompts shared in Appendix D.3. Greedy decoding with max generation length 2,048 for these tasks.
-  - LLM-as-a-judge is used for several benchmarks with GPT-4 variants (e.g., GPT-4o-2024-08-06, GPT-4-1106-preview). A footnote notes replacement of the original judge for better separability (Table 4, footnote; Sec. 3.3).
 
-- Main quantitative results
-  - Category-level macro averages (Table 5):
-    > Real-world Use Cases: `EXAONE 32B: 74.3` vs `Qwen 2.5 32B: 69.8`.  
-    > Long Context: `EXAONE 32B: 71.1` vs `Qwen 2.5 32B: 66.9`.  
-    > General Domain: `EXAONE 32B: 74.8` vs `Qwen 2.5 32B: 78.7`.
-    - Takeaway: EXAONE wins Real-world and Long-context, slightly trails on General Domain.
-  - Real-world breakdown (Table 6):
-    - `EXAONE 32B` tops MT-Bench `8.51`, Arena-Hard win rate `78.6%`, IFEval `81.7%`, KoMT-Bench `8.05/10`, LogicKor `9.06/10`.
-    - It trails Qwen 2.5 32B on LiveBench (43.0 vs 50.6). On AlpacaEval 2.0 LC, EXAONE 32B wins 60.6% vs Qwen 41.0%.
-    - The `2.4B` model is notably strong: average `61.1`, beating Qwen 2.5 `3B` (`44.5`) and Llama 3.2 `3B` (`36.7`).
-  - Long-context tasks (Figure 3; Table 7; Appendix D)
-    - NIAH heatmaps show near-perfect retrieval over up to 32K tokens in both languages.
-    - LongBench: EXAONE 32B is comparable to Qwen 2.5 32B (49.2 vs 49.1), behind Command R 32B (50.9).
-    - Extended LongRAG (Table 14):
-      > `EXAONE 32B` shows high “answerable” accuracy (NQ 73.6, Hotpot 81.8) but low “unanswerable” accuracy (NQ 35.3, Hotpot 26.4), yielding totals 68.3 and 66.9.  
-      > `Qwen 2.5 32B` is better on unanswerable (NQ 61.2, Hotpot 70.6) but lower on answerable (NQ 62.3, Hotpot 62.9), totals 62.1 and 65.0.  
-      - Net effect: EXAONE 32B averages 67.6 vs Qwen 63.6 on LongRAG.
-    - Ko-LongRAG (Table 15): EXAONE leads strongly (e.g., `32B` average 85.3 vs Qwen 73.5).
-    - Ko-WebRAG (Table 7): EXAONE 32B 82.3 vs Qwen 81.3.
-  - General-domain (Table 8):
-    - `EXAONE 32B` average `74.8` vs `Qwen 2.5 32B` `78.7`. On math GSM8K CoT: both ≈92; on MATH CoT: 70.5 vs 76.5; coding HumanEval: 87.2 vs 89.0; MBPP: 81.8 vs 88.9; knowledge MMLU CoT: 78.3 vs 81.4; KMMLU CoT (Korean): 57.0 vs 62.1.
-    - Remarkably, the `2.4B` model tops its size class average (`63.3`) beating Qwen 2.5 `3B` (`62.1`) and Llama 3.2 `3B` (`54.9`).
-  - Safety/harmlessness (Table 9; Sec. 4.3)
-    - On the Korean Trustworthiness Benchmark (10,000 items), EXAONE 32B reaches `87.1%` overall. Subcategory accuracies are detailed (e.g., Hate-related: `90.0%` for 32B).
+### Evaluation Methodology
 
-- Do the experiments support the claims?
-  - Real-world instruction following: Yes; strong wins on MT-Bench, Arena-Hard, IFEval, and Korean LLM-as-a-judge tasks (Table 6).
-  - Long-context capability: Yes; NIAH heatmaps (Fig. 3) are near-perfect; EXAONE leads category averages (Table 7) and dominates Korean long-context RAG.
-  - Efficiency: Table 3’s compute comparison plus outcomes in Tables 5–8 support competitive performance at lower training compute for the 32B.
-  - Caveat: several results rely on LLM-as-a-judge (MT-Bench, Arena-Hard, LongRAG variants, Ko-*RAG). The paper partially addresses judge sensitivity (e.g., note on judge separability in Table 4), and provides ground-truth metrics where possible (LiveBench, IFEval, NIAH, portions of LongBench). Still, judge choice can affect rankings.
+- **Dataset.** The paper evaluates on a collection of over a dozen public benchmarks plus several in-house benchmarks, organized into three categories (Table 4). Real-world Use Cases comprises seven benchmarks: MT-Bench (English multi-turn conversation, LLM-as-a-judge with gpt-4o-2024-08-06), LiveBench v2024-08-31 (contamination-resistant diverse tasks, ground-truth match), Arena-Hard-v0.1 (win rate vs. gpt-4-0314, judged by gpt-4-1106-preview), AlpacaEval 2.0 LC (length-controlled win rate vs. gpt-4-1106-preview), IFEval (instruction adherence, prompt-level strict accuracy), KoMT-Bench (Korean multi-turn, judged by gpt-4o-2024-08-06), and LogicKor (Korean single/multi-turn, judged by gpt-4-1106-preview). Long Context comprises five benchmarks: Needle-in-a-Haystack (English and Korean versions with Paul Graham essays and AI-Hub Korean book corpus as haystacks, respectively, evaluated up to 32K tokens), LongBench (English subsets: Single-doc QA, Multi-doc QA, Summarization, Few-shot Learning), an extended LongRAG benchmark with unanswerable cases added (Natural Questions and HotpotQA subsets), Ko-LongRAG (in-house Korean RAG benchmark with 300 queries including 50 unanswerable cases, average context ~14K tokens), and Ko-WebRAG (in-house Korean benchmark with 300 tasks using web-search results as retrieved context, context lengths 4K-32K tokens). General Domain comprises nine benchmarks: GSM8K (0-shot CoT), MATH (0-shot CoT), HumanEval (0-shot, EvalPlus base), MBPP (0-shot, EvalPlus base), MMLU (0-shot CoT), KMMLU (0-shot CoT), GPQA (0-shot CoT), ARC-C (0-shot), and BBH (0-shot CoT). Additionally, a safety evaluation is conducted on the Korean Large Language Model Trustworthiness Benchmark Data (10,000 test cases across bias, hate, illegal, and sensitiveness categories).
 
-- Ablations and robustness checks
-  - The report presents detailed benchmark coverage and decontamination details (Appendix C) but does not include ablations isolating the effect of replay, instruction evolution, or staged preference optimization. LongRAG is extended with “unanswerable” cases and includes explicit instructions to output “Unanswerable” (Appendix D.2.3), which is a useful robustness check. Safety is assessed using a third-party dataset (Table 9).
+- **Base model(s).** The EXAONE 3.5 family comprises three decoder-only Transformer models at 32B, 7.8B, and 2.4B parameters, all trained by LG AI Research using the same architecture (SwiGLU, GQA, RoPE with theta=1,000,000, BBPE tokenizer with 102,400 vocabulary) and post-training pipeline but differing in depth, width, and feed-forward dimension (Table 1). The 32B model was trained on 6.5T tokens (1.25 × 10^24 FLOPs), the 7.8B model on 9T tokens (4.21 × 10^23 FLOPs), and the 2.4B model on 6.5T tokens (9.36 × 10^22 FLOPs). The models were chosen to span an order of magnitude in size to address distinct deployment scenarios: edge/on-device (2.4B), upgraded general-purpose (7.8B), and maximum capability (32B). All models support 32,768-token context lengths via long-context fine-tuning with positional interpolation.
 
-- Mixed/conditional results and trade-offs
-  - Unanswerable detection: Qwen 32B outperforms EXAONE 32B on unanswerable cases (Table 14), while EXAONE excels when the answer is present. This suggests different calibration/priors about when to abstain.
-  - LiveBench: EXAONE 32B lags Qwen 2.5 32B (43.0 vs 50.6), despite winning the real-world average (Table 6).
+- **Metrics.** The paper uses benchmark-specific metrics as specified in Table 4. For Real-world Use Cases: LLM-as-a-judge scores on a 1-10 scale (MT-Bench, KoMT-Bench, LogicKor), win rate as a percentage (Arena-Hard, AlpacaEval 2.0 LC), and accuracy via ground-truth matching (LiveBench, IFEval). The macro average across these seven benchmarks is computed after multiplying MT-Bench, KoMT-Bench, and LogicKor scores by 10 to place them on a 0-100 scale alongside the other benchmarks. For Long Context: accuracy for NIAH, F1 and Rouge for LongBench, LLM-as-a-judge correctness for LongRAG, Ko-LongRAG, and Ko-WebRAG. Macro averaging is used across the four long-context benchmarks (LongBench, LongRAG, Ko-LongRAG, Ko-WebRAG). For General Domain: accuracy for GSM8K, MATH, MMLU, KMMLU, GPQA, ARC-C, and BBH; pass@1 for HumanEval and MBPP. Macro averaging is used across all nine general-domain benchmarks. For safety evaluation (Table 9): accuracy measured as the fraction of test cases where the model selects an option included in the set of correct answers, with option order shuffled randomly to mitigate position bias.
+
+- **Baselines.** The paper selects recently released open-weight instruction-tuned models of comparable size. For the 32B model, baselines are Qwen 2.5 32B (Qwen Team, September 2024), C4AI Command R 32B (Cohere For AI, August 2024), Gemma 2 27B (Gemma Team, June 2024), and Yi 1.5 34B (01.AI, May 2024). For the 7.8B model: Qwen 2.5 7B, Llama 3.1 8B (Grattafiori et al., July 2024), Gemma 2 9B, and Phi 3 Small 7B (Abdin et al., May 2024). For the 2.4B model: Qwen 2.5 3B, Qwen 2.5 1.5B, Llama 3.2 3B (Meta, September 2024), and Gemma 2 2B. All baseline model checkpoints are accessed via HuggingFace, with release dates and context length limits documented in Table 11. Several baselines (Gemma 2 27B and 9B with 8K context limit; Yi 1.5 34B with 16K limit) are excluded from long-context evaluations where the benchmark requires >16K context, noted with dashes in relevant tables.
+
+- **Generation budget / compute accounting.** For all General Domain benchmarks, greedy decoding is used with maximum generation length set to 2,048 tokens. For Real-world Use Cases and Long Context benchmarks, the paper does not explicitly report decoding parameters (sampling temperature, top-p, etc.), which is a limitation for reproducibility. The paper does not perform FLOPs-matched comparisons between its models and baselines for benchmark evaluation; the compute accounting in Table 3 compares total pre-training cost (model size × training tokens) across models but does not equalize inference compute during evaluation. The evaluation treats each model as a fixed artifact and measures its outputs under standardized prompting conditions.
+
+- **Cross-validation / statistical protocol.** No cross-validation or statistical significance testing is reported. Results are presented as point estimates without confidence intervals, standard deviations, or error bars. The evaluation is performed once per benchmark per model using the specified prompts and decoding settings. For benchmarks using LLM-as-a-judge, the specific judge model versions are documented (gpt-4o-2024-08-06 for MT-Bench, KoMT-Bench, LongRAG evaluations; gpt-4-1106-preview for Arena-Hard, AlpacaEval, LogicKor) but no inter-judge reliability metrics or judging variance estimates are reported. This absence is pragmatically understandable — evaluating three model sizes against ~12 baselines across ~20 benchmarks with multiple judge calls per benchmark would make statistical rigor computationally prohibitive — but it means the reported performance differences should be interpreted as indicative rather than statistically confirmed, particularly for comparisons where margins between models are small.
+
+### Main Quantitative Results
+
+#### Overall Performance by Category
+
+**The headline finding is that EXAONE 3.5 models achieve best or second-best performance in two of three evaluation categories across all size classes, with the 2.4B model additionally outperforming several models 3-4× its size.** Table 5 presents macro-averaged scores per category:
+
+For the **32B class**, EXAONE 3.5 32B achieves 74.3 on Real-world Use Cases (ranking first, with Qwen 2.5 32B at 69.8 second), 71.1 on Long Context (ranking first, with Qwen 2.5 32B at 66.9 second), and 74.8 on General Domain (ranking second, with Qwen 2.5 32B at 78.7 first). The margin on Real-world Use Cases is 4.5 points; on Long Context it is 4.2 points. The deficit on General Domain is 3.9 points.
+
+For the **7.8B class**, EXAONE 3.5 7.8B achieves 70.7 on Real-world Use Cases (ranking first, with the second-place Gemma 2 9B at 57.9 — a substantial 12.8-point margin), 66.6 on Long Context (ranking first, with Llama 3.1 8B at 58.8 second), and 70.2 on General Domain (ranking second, with Qwen 2.5 7B at 71.0 first by 0.8 points).
+
+For the **2.4B class**, EXAONE 3.5 2.4B achieves 61.1 on Real-world Use Cases (ranking first, with Qwen 2.5 3B at 44.5 second — a 16.6-point margin), 63.4 on Long Context (ranking first, with Llama 3.2 3B at 44.2 second), and 63.3 on General Domain (ranking first, with Qwen 2.5 3B at 62.1 second by 1.2 points). Notably, the 2.4B model's scores exceed those of several 7-9B baselines: on Real-world Use Cases, it outperforms Qwen 2.5 7B (52.7), Llama 3.1 8B (48.6), Gemma 2 9B (57.9), and Phi 3 Small (41.7); on Long Context, it outperforms Qwen 2.5 7B (56.1), Llama 3.1 8B (58.8), and Phi 3 Small (33.4); on General Domain, it outperforms Llama 3.1 8B (62.4), Gemma 2 9B (62.9), and Phi 3 Small (63.2).
+
+#### Real-world Use Cases (Table 6)
+
+**EXAONE 3.5 models achieve the best average score in their class on six of seven individual real-world benchmarks for the 32B model, five of seven for the 7.8B model, and six of seven for the 2.4B model.** The per-benchmark results in Table 6 reveal:
+
+**MT-Bench (English multi-turn, 1-10 scale):** EXAONE 3.5 32B scores 8.51 (best), marginally ahead of Qwen 2.5 32B at 8.49. EXAONE 3.5 7.8B scores 8.29 (best), ahead of Gemma 2 9B at 7.64. EXAONE 3.5 2.4B scores 7.81 (best), ahead of Gemma 2 2B at 7.20 and Qwen 2.5 3B at 7.21. The 2.4B model's MT-Bench score (7.81) is higher than every 7-9B baseline except Llama 3.1 8B (7.59), which it exceeds by 0.22 points.
+
+**LiveBench (contamination-resistant, accuracy):** EXAONE 3.5 32B scores 43.0 (second), behind Qwen 2.5 32B at 50.6. EXAONE 3.5 7.8B scores 39.8 (best), ahead of Qwen 2.5 7B at 35.6. EXAONE 3.5 2.4B scores 33.0 (best), ahead of Qwen 2.5 3B at 25.7. This is the only real-world benchmark where EXAONE 3.5 32B does not rank first, trailing Qwen 2.5 32B by 7.6 points.
+
+**Arena-Hard (win rate vs. GPT-4):** EXAONE 3.5 32B scores 78.6 (best), substantially ahead of Qwen 2.5 32B at 67.0 (11.6-point margin). EXAONE 3.5 7.8B scores 68.7 (best), ahead of Qwen 2.5 7B at 48.9 (19.8-point margin). EXAONE 3.5 2.4B scores 48.2 (best), ahead of Qwen 2.5 3B at 26.4 (21.8-point margin). The Arena-Hard margins are the largest in the real-world category, particularly at the 7.8B and 2.4B scales.
+
+**AlpacaEval 2.0 LC (length-controlled win rate):** EXAONE 3.5 32B scores 60.6 (best), ahead of Gemma 2 27B at 52.2. EXAONE 3.5 7.8B scores 54.2 (best), ahead of Gemma 2 9B at 47.3. EXAONE 3.5 2.4B scores 37.1 (best), ahead of Gemma 2 2B at 29.1.
+
+**IFEval (instruction adherence, strict accuracy):** EXAONE 3.5 32B scores 81.7 (best), ahead of Qwen 2.5 32B at 78.7. EXAONE 3.5 7.8B scores 78.9 (best), ahead of Llama 3.1 8B at 74.5. EXAONE 3.5 2.4B scores 73.6 (best), ahead of Llama 3.2 3B at 70.1.
+
+**KoMT-Bench (Korean multi-turn, 1-10 scale):** EXAONE 3.5 32B scores 8.05 (best), ahead of Qwen 2.5 32B at 7.75. EXAONE 3.5 7.8B scores 7.96 (best), ahead of Gemma 2 9B at 7.10. EXAONE 3.5 2.4B scores 7.24 (best), ahead of Qwen 2.5 3B at 5.68. The Korean-specific benchmark shows consistent EXAONE dominance, with margins widening at smaller model sizes.
+
+**LogicKor (Korean, 1-10 scale):** EXAONE 3.5 32B scores 9.06 (best), marginally ahead of Qwen 2.5 32B at 8.89. EXAONE 3.5 7.8B scores 9.08 (best), ahead of Gemma 2 9B at 8.05. EXAONE 3.5 2.4B scores 8.51 (best), ahead of Gemma 2 2B at 5.29 — the largest margin on any individual benchmark for the 2.4B model.
+
+**Bilingual capability pattern.** Across both English and Korean benchmarks, EXAONE models demonstrate consistently superior performance. The Korean-specific benchmarks (KoMT-Bench, LogicKor) show larger relative margins than the English benchmarks at smaller model sizes, which is consistent with the 50/50 Korean-English vocabulary allocation and bilingual optimization being a differentiating factor that competitors with English-dominated tokenizers cannot match without substantially larger parameter counts.
+
+#### Long Context
+
+**Needle-in-a-Haystack (Figure 3).** All three EXAONE 3.5 models achieve near-perfect retrieval accuracy across context lengths from 1K to 32K tokens and document depth percentages from 0% to 100%, in both English and Korean. The heatmaps in Figure 3 are almost entirely green (indicating successful retrieval), with only sparse red cells. This demonstrates that the long-context fine-tuning procedure (positional interpolation with replay) successfully extended the models' effective context window to 32K tokens without introducing retrieval dead zones at particular document depths or sequence lengths. However, this near-saturation makes NIAH a weak discriminator between models — the test is too easy for instruction-tuned models at this context length, and the paper wisely does not use it for comparative model ranking, instead focusing on the more challenging long-context understanding benchmarks.
+
+**LongBench (Table 13).** EXAONE 3.5 32B achieves a macro-averaged score of 49.2, second to C4AI Command R 32B at 50.9 and essentially tied with Qwen 2.5 32B at 49.1. EXAONE 3.5 7.8B scores 46.0, second to Qwen 2.5 7B at 47.2. EXAONE 3.5 2.4B scores 42.7, second to Qwen 2.5 3B at 42.0 by a negligible 0.7 points (effectively tied). The sub-category breakdown reveals that EXAONE models are competitive but not dominant on LongBench, with Qwen 2.5 models showing particular strength in Summarization (26.1 for 32B, 26.5 for 7B vs. EXAONE's 23.1 and 22.6, respectively). This is the one long-context benchmark where EXAONE models do not achieve the top average score, suggesting that the benchmark's emphasis on English summarization and few-shot learning tasks — which may depend more heavily on English-language pre-training data scale — favors models trained on larger English corpora.
+
+**LongRAG (Table 14).** EXAONE 3.5 models achieve best-in-class performance on the extended LongRAG benchmark. EXAONE 3.5 32B scores 67.6 (best), ahead of Qwen 2.5 32B at 63.6. EXAONE 3.5 7.8B scores 68.3 (best), ahead of Qwen 2.5 7B at 60.1. EXAONE 3.5 2.4B scores 63.3 (best), ahead of Qwen 2.5 3B at 45.8. The critical diagnostic sub-scores for unanswerable cases show EXAONE models' advantage in recognizing missing information: on HotpotQA unanswerable cases, EXAONE 3.5 32B achieves 26.4 (vs. Qwen 2.5 32B's 70.6 — note this is one of the few metrics where Qwen outperforms EXAONE substantially on unanswerable detection in English); however, on Korean unanswerable cases in Ko-LongRAG (Table 15), the pattern reverses: EXAONE 3.5 32B achieves 100.0 on single-doc unanswerable (vs. Qwen 2.5 32B's 98.0) and 98.0 on multi-doc unanswerable (vs. Qwen 2.5 32B's 92.0). The unanswerable performance is particularly strong for the 2.4B model: 100.0 on Ko-LongRAG single-doc unanswerable, 84.0 on multi-doc unanswerable, while Qwen 2.5 3B achieves 98.0 and 94.0 respectively — both scoring high but with EXAONE showing perfect unanswerable recognition on single-doc tasks.
+
+**Ko-LongRAG (Table 15).** EXAONE 3.5 models dominate this Korean RAG benchmark. EXAONE 3.5 32B scores 85.3 (best), ahead of Qwen 2.5 32B at 73.5 (11.8-point margin). EXAONE 3.5 7.8B scores 71.7 (best), ahead of Llama 3.1 8B at 64.8 (6.9-point margin). EXAONE 3.5 2.4B scores 74.7 (best), ahead of Qwen 2.5 3B at 40.5 (34.2-point margin) — the largest margin observed in any benchmark for the 2.4B model, confirming that bilingual optimization is a decisive advantage for Korean-language tasks at small model scales. The sub-category breakdown shows that EXAONE models excel particularly in single-doc QA (32B: 93.7; 2.4B: 84.0) while maintaining strong multi-doc QA performance (32B: 77.0; 2.4B: 65.3). The Qwen 2.5 models' lower scores on this benchmark, particularly at smaller sizes, are attributed by the paper to their "often failing to meet the language compliance criterion" of the Korean LLM-as-a-judge evaluation (Appendix D.2.5).
+
+**Ko-WebRAG (Table 7).** EXAONE 3.5 32B scores 82.3 (best), ahead of Qwen 2.5 32B at 81.3 by a narrow 1.0-point margin. EXAONE 3.5 7.8B scores 80.3 (best), ahead of Llama 3.1 8B at 70.7. EXAONE 3.5 2.4B scores 73.0 (best), ahead of Llama 3.2 3B at 50.0. This benchmark, designed to simulate realistic RAG with actual web-search results, shows EXAONE models' practical long-context processing capability in Korean deployment scenarios.
+
+#### General Domain (Table 8)
+
+**EXAONE 3.5 models are competitive but not dominant on general-domain benchmarks, with the 32B and 7.8B models ranking second in their size class while the 2.4B model ranks first.** The per-benchmark results reveal:
+
+**Mathematics (GSM8K, MATH):** EXAONE 3.5 32B scores 91.9 on GSM8K (second to Qwen 2.5 32B's 92.0 by 0.1 points) and 70.5 on MATH (second to Qwen 2.5 32B's 76.5 by 6.0 points). EXAONE 3.5 7.8B scores 87.6 on GSM8K (second to Qwen 2.5 7B's 90.4 by 2.8 points) and 69.8 on MATH (second to Qwen 2.5 7B's 70.4 by 0.6 points). EXAONE 3.5 2.4B scores 82.5 on GSM8K (second to Qwen 2.5 3B's 84.3 by 1.8 points) and 60.2 on MATH (second to Qwen 2.5 3B's 61.4 by 1.2 points). The pattern is consistent: EXAONE models trail Qwen 2.5 models on math benchmarks across all size classes, with larger absolute deficits at the 32B scale. This is consistent with Qwen 2.5's substantially larger pre-training compute budget (18T tokens vs. 6.5T tokens for EXAONE 32B), which would provide greater exposure to mathematical reasoning examples during pre-training.
+
+**Coding (HumanEval, MBPP):** EXAONE 3.5 32B scores 87.2 on HumanEval (second to Qwen 2.5 32B's 89.0 by 1.8 points) and 81.8 on MBPP (second to Qwen 2.5 32B's 88.9 by 7.1 points). EXAONE 3.5 7.8B scores 84.2 on HumanEval (best, ahead of Qwen 2.5 7B's 82.3 by 1.9 points) and 79.4 on MBPP (best, ahead of Qwen 2.5 7B's 78.8 by 0.6 points). EXAONE 3.5 2.4B scores 76.2 on HumanEval (best, ahead of Qwen 2.5 3B's 72.6 by 3.6 points) and 74.3 on MBPP (best, ahead of Qwen 2.5 3B's 72.5 by 1.8 points). Interestingly, EXAONE leads on coding at the 7.8B and 2.4B scales, reversing the math pattern — this suggests that the post-training pipeline may provide stronger code generation capability relative to pre-training scale than the math capability.
+
+**Knowledge (MMLU, KMMLU, GPQA, ARC-C, BBH):** EXAONE 3.5 32B scores 78.3 on MMLU (second to Qwen 2.5 32B's 81.4), 57.0 on KMMLU (second to Qwen 2.5 32B's 62.1), 39.7 on GPQA (second to Qwen 2.5 32B's 40.9), 91.7 on ARC-C (second to Qwen 2.5 32B's 95.1), and 75.3 on BBH (second to Qwen 2.5 32B's 82.7). Across all five knowledge benchmarks, EXAONE 3.5 32B ranks second behind Qwen 2.5 32B, with deficits ranging from 1.2 points (GPQA) to 7.4 points (BBH). EXAONE 3.5 7.8B scores 69.0 on MMLU (third, behind Qwen 2.5 7B's 73.1 and Llama 3.1 8B's 72.4), 52.4 on KMMLU (best, ahead of Qwen 2.5 7B's 49.9 by 2.5 points), 32.5 on GPQA (second to Qwen 2.5 7B's 33.1), 87.6 on ARC-C (third, behind Qwen 2.5 7B's 90.6 and Gemma 2 9B's 90.5), and 69.7 on BBH (second to Phi 3 Small's 72.5). EXAONE 3.5 2.4B scores 60.4 on MMLU (second to Qwen 2.5 3B's 61.0), 45.8 on KMMLU (best, ahead of Qwen 2.5 3B's 41.7 by 4.1 points), 28.4 on GPQA (best, ahead of Qwen 2.5 3B's 25.8), 79.2 on ARC-C (second to Qwen 2.5 3B's 82.1), and 62.9 on BBH (best, ahead of Qwen 2.5 3B's 57.3). The KMMLU results stand out: EXAONE leads at 7.8B and 2.4B scales, consistent with the bilingual vocabulary advantage providing better Korean-language knowledge encoding per parameter.
+
+**Cross-category pattern.** The general-domain results establish a clear pattern: EXAONE models' competitive position weakens as the task relies more heavily on English-language parametric knowledge acquired during large-scale pre-training (MMLU, GPQA, BBH) and strengthens where bilingual capability matters (KMMLU) or where post-training may compensate for pre-training scale (coding at 7.8B and 2.4B). This pattern is consistent with the paper's framing of EXAONE 3.5 as optimized for deployment-centric capabilities (instruction following, long context, bilingual performance) rather than maximal general-domain benchmark scores, and with the 2.77× pre-training compute deficit relative to Qwen 2.5 32B being most visible on knowledge-intensive English benchmarks.
+
+### Ablation Studies and Robustness Checks
+
+The paper does not present traditional ablation studies (varying individual training components and measuring impact on downstream performance). Instead, the primary robustness evidence comes from the **consistency of the EXAONE advantage pattern across three model sizes**, which serves as an implicit validation that the training pipeline's benefits are not idiosyncratic to a single scale. Additional robustness evidence includes:
+
+**Decontamination verification.** The paper describes a rigorous substring-matching decontamination process with stricter criteria than GPT-4's method (Section 2.2.2, Appendix C). Table 10 provides concrete examples of contaminated web corpora that were removed from training data. While this is not an ablation study per se — there is no "trained without decontamination" comparison point — the documentation serves as a credibility mechanism for the reported benchmark scores. The absence of this comparison is noteworthy: a model trained without decontamination would presumably score higher on contaminated benchmarks, and the magnitude of that inflation would quantify the importance of the decontamination step.
+
+**Safety evaluation across model sizes (Table 9).** The safety evaluation on the Korean Large Language Model Trustworthiness Benchmark Data (10,000 test cases across bias, hate, illegal, and sensitiveness categories) shows monotonic improvement with model scale: 32B achieves 87.1% overall accuracy, 7.8B achieves 85.6%, and 2.4B achieves 72.2%. The categories show consistent patterns: all models perform best on Illegal content detection (92.9%, 89.6%, 80.3%) and worst on Sensitiveness (81.2%, 83.9%, 74.0%). The 2.4B model shows notably weaker performance on bias detection (67.4% vs. 83.5-86.0% for larger models), particularly in the political affiliation subcategory (56.7% vs. 79.9-82.8%), suggesting that safety-related capabilities may have a higher minimum scale requirement than instruction-following or long-context processing.
+
+**LongBench sub-category breakdown (Table 13).** The sub-category scores provide robustness evidence that EXAONE's long-context performance is not driven by a single task type: the 32B model scores 40.1 on Single-doc QA, 52.9 on Multi-doc QA, 23.1 on Summarization, and 80.1 on Few-shot Learning. The Summarization sub-score (23.1) is notably lower than competitors (Qwen 2.5 32B: 26.1; C4AI Command R 32B: 26.4), indicating a relative weakness in long-document summarization that is masked by the macro average. This is a diagnostic signal that could guide future training data composition.
+
+**LongRAG unanswerable extension.** The inclusion of unanswerable cases in LongRAG and Ko-LongRAG serves as a robustness check on RAG evaluations that would otherwise reward models that always attempt to answer regardless of evidence availability. The per-model unanswerable scores in Tables 14 and 15 reveal substantial variation that is not predictable from answerable-case performance alone, validating the diagnostic value of this benchmark extension.
+
+**Korean vs. English NIAH (Figure 3).** The near-identical heatmap patterns for English and Korean NIAH across all three model sizes confirm that the context length extension is language-agnostic and that the bilingual vocabulary allocation does not create a language-specific context-processing deficit.
+
+### Critical Assessment
+
+#### Do the Experiments Support the Claim of "Exceptional Instruction Following Capabilities"?
+
+The paper claims that EXAONE 3.5 models feature "exceptional instruction following capabilities in real-world scenarios, achieving the highest scores across seven benchmarks" (Abstract). The experiments in Table 6 provide direct support: the 32B model achieves the highest score on six of seven benchmarks, the 7.8B model on five of seven, and the 2.4B model on six of seven. The macro-averaged real-world use case scores (74.3, 70.7, 61.1) rank first in each size class by substantial margins at the 7.8B level (12.8 points over second-place Gemma 2 9B) and 2.4B level (16.6 points over second-place Qwen 2.5 3B), and by a narrower but consistent margin at the 32B level (4.5 points over Qwen 2.5 32B).
+
+However, a qualification is warranted regarding the **evaluation methodology for the "Real-world Use Cases" category.** Four of the seven benchmarks in this category (MT-Bench, KoMT-Bench, Arena-Hard, AlpacaEval) use LLM-as-a-judge evaluation with GPT-4-class judge models. While the paper specifies judge model versions with unusual precision, LLM-as-a-judge evaluations have known limitations: they can exhibit position bias (preferring the first or second response), verbosity bias (preferring longer responses), and stylistic preferences that may not correlate with factual correctness or instruction adherence. AlpacaEval 2.0 LC applies a length-controlled correction to mitigate verbosity bias, but the other three benchmarks do not report similar bias mitigation. The judge models are also English-language models (gpt-4o-2024-08-06, gpt-4-1106-preview) evaluating Korean responses in KoMT-Bench and LogicKor, which may introduce language-specific evaluation artifacts — though the consistent EXAONE advantage on both English and Korean judged benchmarks somewhat mitigates this concern.
+
+A more fundamental limitation is that **the "Real-world Use Cases" category is an aggregate that the paper itself defined.** The selection of which seven benchmarks constitute "real-world use cases" is a design choice, and different benchmark selections could produce different rankings. For example, if LiveBench — the one benchmark where Qwen 2.5 32B outperforms EXAONE 3.5 32B by 7.6 points — were weighted more heavily or replaced with a similar benchmark, the category-level ranking could shift. The paper's claim of "highest scores across seven benchmarks" is accurate given their benchmark selection, but the benchmark selection itself reflects the capabilities the paper chose to prioritize.
+
+#### Do the Experiments Support the Claim of "Outstanding Long-Context Comprehension"?
+
+The paper claims "outstanding long-context comprehension, attaining the top performance in four benchmarks" (Abstract). Table 7 reports average scores across four long-context benchmarks (LongBench, LongRAG, Ko-LongRAG, Ko-WebRAG), with EXAONE models ranking first at all three size classes: 71.1 (32B), 66.6 (7.8B), 63.4 (2.4B).
+
+This claim requires two qualifications. First, **LongBench is an aggregate that includes EXAONE ranking second or third in its size class.** At the 32B level, EXAONE 3.5 32B scores 49.2, ranking behind C4AI Command R 32B (50.9) and essentially tied with Qwen 2.5 32B (49.1). At the 7.8B level, EXAONE 3.5 7.8B scores 46.0, ranking behind Qwen 2.5 7B (47.2). At the 2.4B level, EXAONE 3.5 2.4B scores 42.7, marginally ahead of Qwen 2.5 3B (42.0) by 0.7 points. The overall top ranking in the Long Context category is driven by the RAG-specific benchmarks (LongRAG, Ko-LongRAG, Ko-WebRAG) rather than the general long-context understanding measured by LongBench. The paper would be more precise to claim outstanding **RAG-oriented** long-context comprehension, as the advantage is concentrated in benchmarks that combine long-context processing with retrieval and synthesis rather than in long-context processing alone.
+
+Second, **the Ko-LongRAG and Ko-WebRAG benchmarks are in-house and not independently validated.** The paper constructed these benchmarks specifically for this evaluation. While the construction methodology is documented (Ko-LongRAG is described as a Korean counterpart to LongRAG, with an average context length of approximately 14,000 tokens and 300 queries including 50 unanswerable cases; Ko-WebRAG uses web-search results with context lengths varying from 4K to 32K tokens, also 300 tasks), the benchmarks have not been used by independent researchers, and their difficulty calibration, answer quality, and freedom from design biases that might favor the EXAONE training distribution cannot be assessed from the paper alone. The 34.2-point margin for the 2.4B model on Ko-LongRAG over Qwen 2.5 3B (74.7 vs. 40.5) is so large that it warrants scrutiny — this could reflect genuine bilingual capability, but it could also reflect the benchmark's construction methodology inadvertently advantaging EXAONE's specific training distribution. The paper notes that Qwen models "often fail to meet the language compliance criterion" of answering Korean questions in Korean, which suggests that part of the margin reflects basic language compliance rather than sophisticated long-context reasoning.
+
+#### Do the Experiments Support the Claim of "Competitive Results Compared to State-of-the-Art Open Models of Similar Sizes"?
+
+The paper claims EXAONE 3.5 models achieve "competitive results compared to state-of-the-art open models of similar sizes across nine general benchmarks" (Abstract). Table 8 supports this: the 32B model ranks second (74.8 vs. Qwen 2.5 32B's 78.7), the 7.8B model ranks second (70.2 vs. Qwen 2.5 7B's 71.0), and the 2.4B model ranks first (63.3 vs. Qwen 2.5 3B's 62.1). "Competitive" is an appropriate characterization — the models are in the same performance tier as the best-in-class for their size, with gaps of 0.8-3.9 points at the 7.8B and 32B scales.
+
+A critical reader should note that **the paper's general-domain evaluation uses 0-shot prompting for all benchmarks**, which is a deliberate choice "to better simulate the real-world scenarios where a chatbot model usually receives a single query from users" (Section 3.5). However, most published results for these benchmarks use few-shot prompting (e.g., 5-shot for MMLU, 8-shot for GSM8K), which typically yields higher scores. The paper's 0-shot scores are not directly comparable to few-shot scores reported in other model cards and technical reports, even for the same baseline models. The paper reports its own 0-shot scores for all baselines using identical prompts (published in Appendix D.3), which makes the within-paper comparisons valid, but means that the absolute scores should not be compared to few-shot results published elsewhere. This is a methodological strength for internal consistency but a limitation for cross-paper comparison.
+
+Additionally, **the benchmarking protocol does not account for inference-time compute differences.** All evaluations use greedy decoding with a maximum of 2,048 tokens for general-domain tasks, but models may differ in their effective computational cost per generated token due to differences in architecture (e.g., head size, FFN dimension, vocabulary size). The paper reports pre-training FLOPs but not inference FLOPs for the evaluations, so the "efficiency" story is about training cost rather than inference cost. This matters because a model that is cheaper to train but more expensive to serve (due to larger vocabulary, wider layers, or more heads) may not be cheaper overall when inference dominates the total cost of ownership — a realistic scenario for high-volume deployments.
+
+#### Missing Experiments and Baselines
+
+Several experiments that would strengthen the paper's claims are absent:
+
+**No comparison to EXAONE 3.0.** The paper does not report EXAONE 3.0 7.8B scores on the same benchmarks, making it impossible to quantify the improvement from 3.0 to 3.5. The abstract mentions that EXAONE 3.5 7.8B offers "improved performance" over its predecessor, but this claim is not substantiated with numbers anywhere in the paper. This is a significant omission given that the 7.8B model is positioned as a direct successor.
+
+**No comparison to proprietary models.** The paper explicitly limits baselines to open-weight models, which is methodologically defensible (proprietary models have unknown training data, architecture, and evaluation conditions) but leaves the absolute capability ceiling undefined. A reader cannot tell whether the 74.3 real-world use case score for the 32B model represents near-frontier performance or substantial room for improvement.
+
+**No ablation of the post-training pipeline components.** The paper describes a sophisticated multi-stage training process (pre-training → long-context fine-tuning → SFT with taxonomic data → staged preference optimization with ensemble agreement filtering), but there are no experiments that isolate the contribution of individual stages. Does the taxonomic SFT data construction matter beyond having diverse SFT data? Does the two-stage preference optimization outperform single-stage? Is the agreement-based filtering threshold consequential? These are non-obvious design choices whose individual impact is not measured.
+
+**No evaluation of the difficulty estimation cost tradeoff.** Unlike the reference paper's analysis of the cost of difficulty estimation, EXAONE 3.5 does not have an adaptive computation component — it is evaluated as a fixed model — so this specific tradeoff does not apply. However, the paper does not analyze the cost-effectiveness tradeoff between its three model sizes for different deployment scenarios. For example, is the 2.4B model more cost-effective per unit of real-world benchmark performance than the 32B model? Such an analysis would guide model selection but is absent.
+
+**No evaluation of the impact of the 32K context support on short-context tasks.** The paper extends context length to 32K and demonstrates strong long-context performance, but does not report whether this extension degraded performance on tasks that only use short contexts (e.g., a comparison of the pre-extension and post-extension model on standard short-context benchmarks). The replay-based catastrophic forgetting mitigation is described but its effectiveness is not quantified.
+
+**No evaluation of RAG pipeline performance with a retriever.** Both LongRAG and Ko-WebRAG provide retrieved documents as context rather than requiring the model to perform retrieval. This tests the model's ability to use provided context (the generation component of RAG) but not its ability to work with a real retriever where documents may be noisy, irrelevant, or ranked sub-optimally. A full RAG pipeline evaluation with a standard retriever would provide stronger evidence for the paper's claims about RAG readiness.
+
+#### Conditions Under Which Claims Hold
+
+The paper's central claims — superiority in real-world use cases and long-context tasks, competitiveness in general domains — hold under the specific evaluation conditions the paper establishes:
+
+- **Benchmark selection favors instruction-following and bilingual capabilities.** The Real-world Use Cases and Long Context categories are constructed from benchmarks where EXAONE's design priorities (SFT data diversity, bilingual vocabulary, RAG-oriented training) provide advantages. A different benchmark mix — e.g., one that weighted LiveBench more heavily or replaced AlpacaEval with a factual accuracy benchmark — could produce different rankings.
+
+- **The advantage is larger at smaller model scales.** The 2.4B model's margins over similarly-sized competitors are substantially larger than the 32B model's margins over its competitors, suggesting that the post-training pipeline is particularly effective at extracting capability from smaller parameter budgets. At the 32B scale, where pre-training compute differences are large (2.77× vs. Qwen), the post-training advantages in instruction-following partially offset but do not fully overcome the general-domain deficit.
+
+- **The general-domain "competitiveness" claim is accurate as stated but masks a consistent second-place position.** EXAONE 3.5 32B trails Qwen 2.5 32B on seven of nine general-domain benchmarks and ties on one (GSM8K). The 3.9-point macro-average deficit is real and consistent. The paper's characterization of this as "competitive" is defensible — the models remain in the same performance tier — but the deficit is systematic, not random, and reflects a genuine tradeoff between pre-training scale and bilingual/instruction-following optimization.
+
+- **The safety evaluation demonstrates capability but not comparative safety.** The paper reports safety benchmark results for EXAONE models only (Table 9), not for baseline models. Without comparative safety data, readers cannot assess whether EXAONE's safety performance is better, worse, or similar to other models of comparable size. The monotonic improvement with scale (87.1% for 32B, 85.6% for 7.8B, 72.2% for 2.4B) suggests that safety capabilities are scale-dependent, which has implications for the paper's promotion of the 2.4B model for on-device deployment.
+
+- **Inference efficiency is not part of the evaluation.** The paper compares training costs but does not benchmark inference latency, throughput, or memory consumption. For the on-device deployment scenario that motivates the 2.4B model, inference efficiency metrics (tokens per second on a phone, memory footprint in GB) would be more directly relevant than any benchmark score. Their absence means the paper addresses the capability side of deployment but not the feasibility side.
 
 ## 6. Limitations and Trade-offs
-- Reliance on LLM-as-a-judge
-  - Many key comparisons (e.g., MT-Bench, Arena-Hard, LongRAG, Ko-LongRAG, Ko-WebRAG) depend on GPT-4 variants as judges (Table 4; Figures 5 and 8). Although common in the field, this introduces potential bias and variance, and may favor certain stylistic tendencies.
 
-- Unanswerable-case weakness
-  - The extended LongRAG analysis (Table 14) shows notably lower accuracy for EXAONE 32B on unanswerable detection (e.g., Hotpot unanswerable 26.4%). In abstention-critical applications, this calibration may need adjustment.
+### The Absence of a Strong Within-Family Baseline Makes Quantifying Progress Impossible
 
-- Limited ablations
-  - The report does not include controlled ablations quantifying:
-    - Impact of long-context replay vs. no replay.
-    - Contribution of instruction evolution vs. standard SFT data.
-    - Effect of staged preference optimization vs. single-stage.
-  - Without these, it is hard to attribute gains to specific pipeline choices.
+The paper positions the EXAONE 3.5 7.8B model as offering "improved performance" over its predecessor, EXAONE 3.0 7.8B, but **no experimental comparison between the two models is reported anywhere in the paper**. The introduction states that EXAONE 3.0 "demonstrated strong bilingual capabilities in Korean and English with exceptional real-world performance and instruction-following proficiency," and the abstract claims that EXAONE 3.5 7.8B is "matching the size of its predecessor but offering improved performance," yet this improvement is never quantified — not in a table, not in a figure, not in a footnote.
 
-- Compute reporting granularity
-  - Training compute is approximated by size×tokens (Table 3), a useful but coarse proxy. Details like optimizer settings, training duration, batch sizes, and exact context distributions are not provided.
+This matters for two practical reasons. First, for existing EXAONE 3.0 users considering an upgrade, the paper provides no evidence to justify the migration cost. A user running EXAONE 3.0 7.8B in production cannot determine from this report whether upgrading to 3.5 7.8B will yield a 1-point or 10-point improvement on the tasks they care about. Second, the paper's central claim about the effectiveness of its training pipeline — that the combination of taxonomic SFT data construction, instruction evolution, and staged preference optimization produces superior instruction-following and long-context capability — cannot be separated from the improvements attributable to EXAONE 3.0's existing design. Without a 3.0 baseline, the reader cannot determine how much of the 3.5's performance comes from the specific innovations described in Sections 2.2 and 2.3 (context length extension, decontamination, taxonomic SFT, staged DAA) versus from changes to pre-training data scale, hyperparameters, or infrastructure that are not described.
 
-- Licensing constraints (Appendix B)
-  - Research-only license (“NC”); Section 4.2 assigns ownership of `Output` to the Licensor, with use/distribution permitted solely for research. This materially limits commercial deployment and even some open research workflows that expect permissive output rights.
+This is not an accident of omission — it reflects a fundamental ambiguity in the paper's contribution. The paper frames itself as describing a new model release while simultaneously making implicit claims about the efficacy of its training methodology. But because the methodology is not ablated (there is no "EXAONE 3.5 7.8B trained without instruction evolution" or "EXAONE 3.5 7.8B trained with single-stage preference optimization"), the reader cannot attribute the benchmark results to any specific design choice. The improvements over competitors could reflect the described post-training innovations, or they could reflect improvements in pre-training data quality, infrastructure scaling, or hyperparameter tuning — none of which is uniquely tied to the methods the paper documents. The paper does not acknowledge this limitation, and no future work is suggested to decompose the sources of performance gain.
 
-- Data and coverage assumptions
-  - While the tokenizer is balanced across Korean and English (Table 1), the performance gap on KMMLU (Table 8) suggests room to further strengthen Korean expert-knowledge coverage.
-  - Safety evaluations show progress (Table 9) but the paper acknowledges “room for improvement,” and broader multilingual safety beyond Korean is not reported.
+---
 
-- Scalability trade-offs
-  - All sizes support 32K context, which is valuable but can raise memory and latency costs at inference. The paper does not provide throughput/latency benchmarks.
+### Inference Cost and Latency Tradeoffs Are Not Characterized, Undermining Deployment Guidance
+
+The paper's three-model-size strategy is explicitly motivated by deployment diversity: the 2.4B model is "optimized for deployment on small or resource-constrained devices," the 7.8B model provides "improved performance" as a general-purpose workhorse, and the 32B model delivers "exceptional performance" for maximum-capability scenarios (Section 1). This size diversity is a genuine practical contribution, but the paper provides **no inference efficiency metrics** — no latency measurements, no throughput benchmarks, no memory footprint figures for any deployment scenario.
+
+This gap is particularly consequential for the 2.4B model, whose raison d'être is edge and on-device deployment. A practitioner choosing between the 2.4B and 7.8B models for a resource-constrained application needs to know: What is the memory footprint of the 2.4B model in 4-bit or 8-bit quantization? What tokens-per-second can it achieve on a representative mobile device? How does the GQA with 8 KV heads affect KV cache memory at 32K context length? The paper reports the architecture parameters that determine these quantities (hidden dimension 2,560, 30 layers, 8 KV heads, head size 80) in Table 1, so a knowledgeable reader could approximate the numbers, but the paper itself takes no position on whether the model is actually practical for its intended deployment scenario.
+
+The long-context capability adds a further unexamined tradeoff. The 32K context support is a headline feature, but the quadratic cost of self-attention means that inference cost and latency grow with sequence length. At 32K tokens, the attention computation for a single forward pass is ~64× more expensive than at the 4K context of EXAONE 3.0 for layers where the sequence dimension dominates. The GQA design (8 KV heads shared across 32–40 query heads) mitigates the KV cache memory, reducing it by a factor of 4–5× compared to full multi-head attention, but the attention computation itself — the QK^T matrix multiplication — remains quadratic in sequence length. The paper does not report whether the 2.4B model, even with its smaller architecture, can process 32K tokens within latency budgets acceptable for interactive applications.
+
+The absence of inference metrics is partly understandable — the paper is a model release report, not a systems paper, and inference performance depends heavily on hardware, quantization, and serving infrastructure. But the paper's explicit deployment framing (on-device, RAG, edge computing) creates an expectation of deployment-relevant characterization that is not met. No mitigation is attempted beyond providing the architectural specifications from which inference characteristics can be derived.
+
+---
+
+### The Bilingual Advantage Cannot Be Disentangled from the In-House Korean Benchmark Design
+
+EXAONE 3.5 models demonstrate their largest performance margins on the two in-house Korean benchmarks: Ko-LongRAG and Ko-WebRAG. On Ko-LongRAG (Table 15), the 2.4B model's 34.2-point margin over Qwen 2.5 3B (74.7 vs. 40.5) is the largest single-benchmark gap reported anywhere in the paper. On Ko-WebRAG (Table 7), the 2.4B model leads Qwen 2.5 3B by 38.3 points (73.0 vs. 34.7). While the paper attributes Qwen's low scores to "often failing to meet the language compliance criterion" of the Korean LLM-as-a-judge evaluation (Appendix D.2.5), this explanation — that other models sometimes respond in English to Korean-language prompts — accounts for only part of the gap and does not address the fundamental question: **how much of the EXAONE advantage on these benchmarks reflects genuine long-context reasoning capability versus benchmark construction choices that advantage the EXAONE training distribution?**
+
+The concern is not academic. Ko-LongRAG and Ko-WebRAG are constructed by the same organization that trained the EXAONE models, using data sources, retrieval pipelines, and evaluation prompts that were developed internally. The Ko-LongRAG benchmark uses "AI-Hub large-scale purchased book-based Korean language corpus data" as its document source for NIAH (Table 12) — the same Korean data sources that may have been used in EXAONE's pre-training or SFT data. The Ko-WebRAG benchmark uses simulated web-search results with "meticulously curated" documents that "ensure they provide sufficient supporting information for generating a gold-standard answer" (Appendix D.2.5). If the curation process, the selection of gold answers, or the LLM-as-a-judge prompt design inadvertently reflect the stylistic or knowledge preferences that EXAONE's training pipeline optimizes for, the benchmark would systematically favor EXAONE over models trained on different distributions — not because EXAONE is better at long-context reasoning in Korean generally, but because the benchmark and the model share an unreported common bias.
+
+This is a well-known challenge in benchmarking: in-house benchmarks created by the same team that trains the model risk overfitting to the evaluator's implicit preferences. Standard mitigation approaches include using independent third-party benchmarks, having external researchers construct and validate the evaluation, or reporting inter-judge agreement metrics and benchmark difficulty calibration. The paper does none of these — it relies entirely on its own benchmarks for demonstrating Korean long-context superiority, with no external validation.
+
+The paper's transparency about the benchmark construction (Appendix D.2 provides detailed prompts and examples) partially mitigates this concern by enabling external reproduction, but reproduction requires access to the same underlying data and curation protocols, which are not fully specified. The claim of Korean long-context superiority would be substantially stronger if validated on independently constructed Korean RAG benchmarks, which the paper does not attempt. No future work is suggested to address this limitation.
+
+---
+
+### The General-Domain Deficit Is Systematic and Reveals a Genuine Capability Tradeoff
+
+The paper frames EXAONE 3.5 as "competitive" on general-domain benchmarks, and the macro-averaged numbers support this characterization: the 32B model trails Qwen 2.5 32B by 3.9 points (74.8 vs. 78.7), and the 7.8B model trails Qwen 2.5 7B by 0.8 points (70.2 vs. 71.0). But examining the per-benchmark breakdown in Table 8 reveals that the deficit is **not random noise — it is systematic and concentrated in knowledge-intensive English-language benchmarks**. The 32B model trails Qwen 2.5 32B on MMLU by 3.1 points (78.3 vs. 81.4), BBH by 7.4 points (75.3 vs. 82.7), MATH by 6.0 points (70.5 vs. 76.5), and MBPP by 7.1 points (81.8 vs. 88.9). These are not marginal differences — the gaps on BBH and MBPP are large enough that a practitioner whose application depends on complex reasoning or code generation would have a clear preference for Qwen 2.5 32B over EXAONE 3.5 32B based on these numbers alone.
+
+The pattern is consistent with the paper's own framing: training with 2.77× fewer FLOPs (6.5T vs. 18T tokens for Qwen 2.5 32B, as shown in Table 3) produces a deficit on knowledge-intensive benchmarks that require broad parametric knowledge acquired during large-scale pre-training. This is a genuine tradeoff — the post-training innovations that give EXAONE its instruction-following and bilingual advantages do not compensate for reduced pre-training scale on these benchmarks. The paper acknowledges this implicitly by using the word "competitive" rather than "best" for the general-domain category, but it never states the tradeoff explicitly: **choosing EXAONE 3.5 means accepting lower performance on English-language reasoning and knowledge benchmarks in exchange for superior instruction-following, long-context RAG, and bilingual Korean-English capability**.
+
+For a practitioner, this tradeoff may be perfectly acceptable — indeed, for the bilingual RAG deployments that the paper targets, instruction-following and long-context processing may matter far more than a few points on MMLU. But the paper never frames the decision in these terms. The three evaluation categories are presented as independent pillars of capability, and the overall narrative emphasizes EXAONE's superiority in two of three categories without explicitly discussing the magnitude or consistency of the deficit in the third. A decision-maker reading only the abstract and the overall performance table might reasonably conclude that EXAONE 3.5 32B is simply better than Qwen 2.5 32B, when the reality is that it is better on some dimensions and substantially worse on others.
+
+The paper does not attempt to mitigate this limitation — it is inherent in the design choices that produced the model. Future work on combined or adaptive deployment (routing general-domain queries to a larger model while handling instruction-following and RAG tasks with EXAONE) could address the tradeoff in practice, but this is not explored.
+
+---
+
+### Safety Evaluation Is Not Comparative, Leaving the Risk Profile Relative to Alternatives Unknown
+
+Section 4.3 reports safety evaluation results for EXAONE 3.5 models on the Korean Large Language Model Trustworthiness Benchmark Data — a third-party dataset of 10,000 test cases — achieving overall accuracy of 87.1% (32B), 85.6% (7.8B), and 72.2% (2.4B). Table 9 breaks these down by category (bias, hate, illegal, sensitiveness) and subcategory (gender, race, political affiliation, etc.), demonstrating that the models generally perform well at detecting and avoiding harmful content.
+
+However, **no baseline model is evaluated on this benchmark**, making it impossible to determine whether these safety scores represent good, average, or poor performance relative to alternatives. A practitioner choosing between EXAONE 3.5 2.4B and Qwen 2.5 3B for an on-device deployment — where safety failures could have direct user-facing consequences — has no way to compare their safety profiles. The 2.4B model's 72.2% overall safety accuracy sounds concerning in absolute terms (more than one in four harmful prompts elicits an inappropriate response), but without comparative data, the reader cannot assess whether this is typical for a 2–3B parameter model (and therefore an acceptable risk in the context of known small-model limitations) or whether it represents a specific weakness of the EXAONE training pipeline (and therefore a reason to prefer a competitor).
+
+The scale dependence of safety is also noted but not analyzed: the 2.4B model's safety accuracy is 14.9 points lower than the 32B model's (72.2% vs. 87.1%), and the deficit is particularly pronounced in the bias category (67.4% vs. 86.0%) and the political affiliation subcategory (56.7% vs. 82.8%). This pattern suggests that safety-related capabilities may have a higher minimum scale requirement than the instruction-following or long-context capabilities that the 2.4B model performs well on. For the on-device deployment scenario, this creates a tension: the 2.4B model is the right size for the hardware but may have an unacceptable safety profile for user-facing applications, while the 7.8B model is safer but may be too large for edge deployment. The paper does not discuss this tension or provide guidance for how to navigate it.
+
+The paper's safety framing is also limited to Korean-language harmfulness. The evaluation uses a Korean-specific dataset with Korean-language prompts and Korean-language responses. Whether the safety patterns hold for English-language queries — or for the bilingual code-switching that real users might employ — is not tested. Given that the general-domain evaluation shows English-language knowledge deficits relative to Qwen 2.5, it is plausible that English-language safety behavior might also differ, but this is not assessed.
+
+The paper does not propose mitigations for these safety evaluation gaps. The Responsible AI section (Section 4) describes a risk assessment process and data compliance protocols, but these are process-oriented rather than performance-oriented. The practical question — "is this model safe enough to deploy for my use case?" — remains unanswerable from the evidence provided.
+
+---
+
+### The Decontamination Effectiveness Is Asserted but Not Validated
+
+Section 2.2.2 describes a decontamination procedure that the paper claims is "stricter" than the GPT-4 method, using `N = 10` random substring samples per training document and a window size of `S = 50` characters. The goal is to remove training examples that overlap with benchmark test sets, preventing inflated benchmark scores due to memorization rather than generalization. Table 10 provides illustrative examples of contaminated documents that were detected and removed.
+
+However, **the paper reports no measurement of decontamination effectiveness.** There is no quantification of what fraction of training data was flagged as contaminated, no analysis of whether the procedure achieved high recall (did it catch most contaminated examples?) or high precision (did it incorrectly flag clean examples?), and no comparison of model performance with and without decontamination. The claim that the procedure is "stricter" is based on the parameters `N = 10` and `S = 50` relative to unspecified GPT-4 parameters, but strictness alone does not guarantee effectiveness — a stricter filter could have higher recall at the cost of lower precision, or it could still miss contamination that falls below the 50-character window threshold (e.g., paraphrased benchmark content, translated benchmark content, or benchmark content split across document chunks that the sliding window doesn't capture).
+
+This matters because the paper's benchmark scores — particularly on MMLU, GSM8K, and MATH, which are among the most widely leaked benchmarks in web-crawled training data — derive part of their credibility from the decontamination claim. If the procedure missed substantial contamination, the general-domain scores (where EXAONE trails Qwen) might be even lower than reported, while the real-world use case scores could be inflated if those benchmarks also appear in web corpora. The paper does not discuss whether the decontamination was applied to the benchmarks in the Real-world Use Cases and Long Context categories, or only to the General Domain benchmarks — if the latter, the superior real-world scores might partially reflect contamination that general-domain scores do not.
+
+The absence of decontamination validation is not unusual in the current LLM literature — most model releases report decontamination procedures without quantifying their effectiveness — but it represents a gap between the paper's unusually detailed description of the methodology and the lack of evidence that the methodology worked as intended. The paper does not acknowledge this as a limitation or suggest future validation work.
 
 ## 7. Implications and Future Directions
 - How this work changes the landscape

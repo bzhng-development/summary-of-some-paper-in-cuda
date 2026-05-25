@@ -8,212 +8,869 @@ Intern-S1 defines a new open-source standard for scientific AI by unifying a mas
 
 ---
 
-## 1. Executive Summary (2–3 sentences)
-Intern‑S1 is an open‑source, scientific multimodal foundation model that integrates a large Mixture‑of‑Experts language model with vision and time‑series encoders, plus a new dynamic tokenizer for scientific strings. Trained on 5T tokens (over 2.5T from science) and post‑trained with a Mixture‑of‑Rewards online reinforcement learning framework, it achieves top open‑source performance on general reasoning and state‑of‑the‑art performance on many scientific text and image‑text benchmarks (Tables 2–4), substantially narrowing the gap with leading closed‑source systems.
+## 1. Executive Summary
+
+This report introduces **Intern-S1**, a multimodal Mixture-of-Experts model with 28 billion activated parameters (241 billion total) that is continually pre-trained on 5 trillion tokens—including over 2.5 trillion tokens from scientific domains—and post-trained with offline and online reinforcement learning to achieve specialist-level scientific reasoning while maintaining general reasoning capabilities. The model employs a **dynamic tokenizer** that applies modality-specific splitting strategies and orthogonal embeddings to scientific data formats like SMILES and FASTA (achieving over 70% higher compression ratios than Qwen3, DeepSeek-R1, and GPT-OSS), and is trained through a **Mixture-of-Rewards (MoR)** framework that harmonizes feedback from more than 1,000 tasks by treating hard-to-verify tasks with the POLAR reward model and easy-to-verify tasks with combinations of verifiers, rules, and environmental feedback. Intern-S1 surpasses closed-source state-of-the-art models on professional scientific tasks—including molecular synthesis planning, reaction condition prediction, and crystal thermodynamic stability prediction—while achieving competitive performance on general reasoning benchmarks among open-source models, and its RL training process reduces cost by roughly 10× compared to publicly available baselines. The paper establishes that pre-training on over 2.5 trillion scientific tokens combined with the MoR framework enables a model to outperform even closed-source systems on scientific benchmarks, but only when scientific modalities are handled with dedicated tokenization and encoding strategies rather than treated identically to natural language.
 
 ## 2. Context and Motivation
-- Problem addressed
-  - Progress in open‑source models has been fast for popular domains (math, code, natural images), yet capability in scientific domains (chemistry, materials, life sciences, physics, earth science) lags behind and still often relies on expert systems or closed models (Introduction; Fig. 1–2).
-  - Scientific data are low‑resource, diverse in modality (molecules, protein sequences, formulas, tables, figures, time series), and require long, rigorous reasoning (Introduction).
 
-- Why it matters
-  - Better scientific models can accelerate hypothesis testing, experimental design, and discovery across high‑value domains like drug design, materials discovery, and climate/earth observation (Introduction).
+### The Core Problem: Open-Source Models Lag Badly in Scientific Domains
 
-- Shortcomings of prior approaches
-  - Open‑source multimodal models mainly target natural images and general VQA; they underperform on science‑specific content (e.g., chemistry strings, document equations) and low‑resource modalities (Fig. 2).
-  - Static tokenizers treat scientific strings like ordinary text, leading to poor compression and ambiguous embeddings (Sec. 2.2). PDF parsing and web data pipelines are not optimized for scientific structure (Sec. 4.1.1).
-  - RL for reasoning is largely validated on dense models; applying GRPO‑style methods to large MoE models is unstable due to expert routing mismatch between inference and training (Sec. 5.2.3).
+The fundamental problem this paper addresses is deceptively simple to state but extraordinarily difficult to solve: **open-source foundation models have made rapid, impressive progress on popular benchmarks like math and coding, but they remain far behind closed-source models in scientific domains—and nobody has a scalable recipe for closing that gap.**
 
-- Positioning
-  - Intern‑S1 tackles the full stack: data, architecture, training system, and RL, with a science‑first orientation:
-    - 2.5T+ scientific tokens via specialized data pipelines (Sec. 4.1; Fig. 6–9).
-    - A dynamic tokenizer that recognizes scientific substrings (SMILES, FASTA) and assigns modality‑specific embeddings (Sec. 2.2; Fig. 4).
-    - A multimodal architecture that adds vision and time‑series encoders (Sec. 2; Fig. 3).
-    - A scalable online RL setup using a Mixture‑of‑Rewards across 1000+ verifiable tasks, stabilized for MoE (Sec. 5.2; Fig. 12).
+This is not just a matter of "open-source needs to catch up." The paper identifies a structural asymmetry in how AI capabilities have been advancing. Figure 2 makes this asymmetry quantitative. On the x-axis, the authors plot performance on three popular general benchmarks (MMLU-Pro, GPQA, AIME2025) for recent top-tier open-source LLMs, including DeepSeek-R1-0120, DeepSeek-R1-0528, Qwen3-235B-2504, and Qwen3-235B-think-2507. On the y-axis, they plot the same models' performance on three scientific benchmarks (SmolInstruct, ChemBench, MatBench). The trajectory is striking: as general capabilities have climbed from roughly 72 to 88 on the x-axis over successive model releases, scientific performance has barely budged—hovering between 50 and 60. The models are getting smarter at math and reasoning, but their ability to handle domain-specific scientific tasks is effectively flat.
+
+The paper puts this observation in stark terms:
+
+> "Although the top-tier open-source LLMs raised their performance on popular tasks rapidly, their performance on science tasks does not increase."
+
+This decoupling exposes a deeper problem. The community's standard recipes for scaling—more parameters, more pretraining data, better post-training—work remarkably well for general reasoning and widely studied domains. But they do not transfer proportionally to low-resource, high-value scientific fields. The paper frames this as the central research question:
+
+> "How can we enhance a model's capability to tackle low-resource tasks in a scalable way?"
+
+The word *scalable* is doing heavy work here. In popular domains, practitioners can afford to design heuristic pipelines, hand-crafted prompts, and domain-specific fine-tuning recipes for individual benchmarks because the demand and available data justify the investment. Scientific domains are different: there are hundreds of subfields, each with its own data formats, reasoning patterns, and evaluation criteria. Building a bespoke solution for each one is not viable. The paper therefore sets itself the challenge of developing methods that generalize *across* scientific modalities without relying on per-task heuristics.
+
+### Why This Problem Matters: The AGI Bottleneck and Practical Deployment Barrier
+
+The paper's motivation operates on two levels—one aspirational and one intensely practical.
+
+**The aspirational level** is about the role of scientific reasoning in the pursuit of artificial general intelligence (AGI). The authors open the paper by positioning scientific research as "one of the ultimate goals in the development of AGI due to its potential to drive fundamental breakthroughs in human society." They argue that scientific reasoning imposes uniquely stringent demands on AI systems that push beyond what current benchmarks test:
+
+- **Understanding diverse, low-resource-distributed modalities**: Scientific data takes forms that general-purpose models rarely encounter during pretraining—molecular structures in SMILES notation, protein sequences in FASTA format, time-series signals from seismic or gravitational wave detectors, microscopy images, crystallographic data. These modalities follow their own grammars, have their own semantic structures, and appear with vastly lower frequency than natural language or natural images in web-crawled corpora.
+- **Performing long-term, rigorous reasoning**: Scientific tasks—hypothesis validation, experimental design optimization, multi-step synthesis planning—require chains of reasoning that are both longer and more logically constrained than typical question-answering or code generation. A single wrong step in a molecular synthesis pathway invalidates the entire plan.
+
+If open-source models cannot handle these demands, then the path to AGI via open research is blocked at a critical bottleneck. The paper implicitly positions itself against a narrative that says "we're almost there—just scale up what we already have." By showing the flatlining of scientific performance in Figure 2, the authors argue that something fundamentally different is required.
+
+**The practical level** concerns who gets to use capable AI systems for scientific work. Closed-source models from OpenAI, Google DeepMind, and xAI show strong performance on scientific benchmarks (as documented in Tables 3 and 4 of the paper). But closed-source access creates several problems:
+
+- **Reproducibility**: Scientific research demands that methods be inspectable and reproducible. A proprietary model that produces answers without transparent reasoning is incompatible with the norms of scientific verification.
+- **Domain adaptation**: Researchers in specialized subfields (e.g., crystallography, protein engineering, atmospheric science) need to fine-tune models on their own data. Closed-source APIs may not permit this, or may charge prohibitive costs.
+- **Data privacy**: Scientific data—unpublished experimental results, proprietary compound libraries, patient-derived genomic sequences—often cannot be sent to third-party APIs for confidentiality or regulatory reasons.
+
+The paper's Figure 1 visualizes the current state: open-source models cluster in the lower-left of the performance space (weaker on both general and scientific tasks), while closed-source models occupy the upper-right. Intern-S1 is positioned to break into that upper-right quadrant specifically on scientific tasks, demonstrating that open-source models *can* compete with closed-source systems when the training pipeline is designed with scientific modalities in mind.
+
+### Where Prior Approaches Fall Short
+
+The paper identifies several categories of prior work that, while individually successful, fail to address the scientific-domain problem:
+
+**1. General-domain multimodal models lack scientific depth.** Models like InternVL3-78B and Qwen2.5-VL-72B represent the state of the art in open-source vision-language modeling. Tables 2–4 show their strong performance on general multimodal benchmarks (MathVista, MMMU, MMStar). But on scientific text-only benchmarks, they are dramatically weaker than both Intern-S1 and closed-source models. InternVL3-78B scores 19.4 on SmolInstruct and 49.3 on MatBench; Qwen2.5-VL-72B scores 21.0 and 51.5 respectively. Compare this to Intern-S1's 51.0 and 75.0. The gap is not marginal—it is 2–3×.
+
+The paper does not attribute this to architectural failings of those models. Rather, the issue is **data distribution and representation**. General-purpose VLMs are trained predominantly on natural images (photographs, documents, charts) paired with natural language. Scientific images—microscopy, remote sensing, spectral plots—and scientific text modalities—SMILES, FASTA, time series—appear in such low proportions that the model never learns their internal structure. The visual tokenizer and text tokenizer are optimized for the dominant modalities, creating a compounding efficiency penalty for scientific data.
+
+**2. Text-only reasoning models are not designed for scientific modalities.** Table 3 includes text-only LLMs like DeepSeek-R1-0528, Qwen3-235B-A22B, and Kimi-K2-Instruct. These models have strong general reasoning (AIME2025 scores of 87.5, 81.5, and 51.4 respectively) and even show nontrivial scientific performance (ChemBench scores of 75.6, 75.8, 75.3). But they hit a ceiling that Intern-S1 breaks through (ChemBench 83.4, SmolInstruct 51.0 vs. 30.7 for the best text-only baseline). More importantly, these models cannot process multimodal scientific inputs—microscopy images, remote sensing data, molecular diagrams—at all. They are evaluated only on text-only scientific benchmarks, leaving the multimodal scientific tasks entirely unaddressed. Intern-S1 fills this gap by design.
+
+**3. Static tokenizers penalize scientific data formats.** This is one of the paper's most concrete technical critiques of prior work. Standard LLM tokenizers (BPE, SentencePiece) are trained to optimize compression for natural language text. When they encounter scientific formats like SMILES, the same splitting strategy is applied indiscriminately. Since scientific sequences contain character-level patterns that differ from natural language morphology, the tokenizer produces inefficient segmentations—many more tokens than semantically necessary.
+
+The paper makes this quantitative in Figure 4 (right panel). On SMILES-format chemical data, Qwen3's tokenizer achieves a compression ratio of 1.44 characters per token; DeepSeek-R1 achieves 1.51; OpenAI's GPT-OSS achieves 1.44. Intern-S1's dynamic tokenizer achieves 2.64—an improvement of over 70%. This is not a minor efficiency tweak. Lower compression means that for the same context window, the model can see less scientific content; for the same scientific content, it consumes more compute. The efficiency penalty compounds across millions of training examples.
+
+Beyond efficiency, the paper identifies a **representation problem** with shared embeddings. The character "C" appears in a DNA sequence (as cytosine), in a SMILES string (as a carbon atom), and in a multiple-choice question (as an answer option). When these uses share the same embedding vector, the most frequent usage dominates the learned representation. The DNA-level semantics of "C" are drowned out by its natural language occurrences. The dynamic tokenizer addresses this by assigning orthogonal embedding spaces per modality.
+
+Previous work on dynamic tokenization (Feher et al., 2024) recognized these limitations but suffered from "robustness issues, such as the splitting strategy being sensitive to small contextual changes" and "slower convergence speed than standard tokenization methods." The paper's key insight is that scientific modalities *escape these robustness concerns* because they are precisely identifiable. SMILES strings, FASTA sequences, chemical formulas—these follow well-defined syntaxes that can be detected with rule-based parsers (or user-provided tags) with near-perfect accuracy. The contextual sensitivity that plagues general-purpose dynamic tokenizers is irrelevant when the modality boundaries are unambiguous.
+
+**4. Reinforcement learning for reasoning has focused on dense models with limited task diversity.** The paper engages with a specific technical limitation of recent RL-for-reasoning work. Methods like GRPO and its variants (DAPO, Dr. GRPO) have demonstrated impressive gains on math reasoning benchmarks when applied to dense models. But the paper observes:
+
+> "Most of these studies are primarily validated on dense models, leaving the unique challenges of applying RL to MoE models underexplored."
+
+The challenge is not merely that MoE models are bigger. The paper identifies a *computational discrepancy* between inference and training engines that is amplified by MoE routing and FP8 quantization. During RL training, the model generates rollouts (inference), then updates its parameters (training). If the kernels used in these two phases differ—as they typically do for efficiency—the expert routing decisions can diverge. This makes the training process "more off-policy than intended" and can cause training instability or collapse.
+
+The paper cites contemporary work (MiniMax-M1, GSPO) that identified similar issues, both arriving at the insight that token-level importance sampling ratios become unreliable for MoE models. The solution space explored by prior work—replacing token-level clipping with sequence-level or importance-weight-based alternatives—is extended by Intern-S1's adoption of the OREAL algorithm, which inherently avoids token-level probability ratios.
+
+**5. No prior system has combined domain-specific tokenization, diverse-modality encoding, and large-scale multi-task RL for scientific reasoning.** This is less a critique of any individual prior work and more a statement about the integration challenge. Components exist: InternViT for visual encoding, specialized tokenizers for scientific strings, time-series encoders, process reward models, GRPO-style RL algorithms. But no prior system has assembled them into a unified architecture, trained them jointly on multi-modal data with more than 2.5 trillion scientific tokens, and deployed them under a Mixture-of-Rewards framework that simultaneously optimizes for correctness on verifiable scientific tasks and human preference alignment on open-ended dialogue.
+
+### How This Paper Positions Itself
+
+The paper positions Intern-S1 not as a single novel method but as a **system-level contribution** that demonstrates what is possible when scientific modalities are treated as first-class citizens throughout the entire model development pipeline—architecture design, pre-training data curation, and post-training optimization.
+
+The paper makes several explicit framing choices that define its contribution:
+
+**First**, it argues that the community's focus on popular benchmarks has created a blind spot. The rapid ascent of open-source models on MMLU, GPQA, and AIME (Figure 2, x-axis) has generated a narrative of steady, scalable progress toward AGI. The flat scientific performance (Figure 2, y-axis) contradicts that narrative. The paper uses this empirical observation to motivate a shift in attention: rather than chasing further gains on saturated benchmarks, invest effort in understanding why low-resource scientific domains resist the standard scaling recipes, and develop countermeasures.
+
+> "We believe it's important to discuss the problem, How can we enhance a model's capability to tackle low-resource tasks in a scalable way? Note that the scalability is essential. Unlike in popular domains, we can not heavily rely on heuristics and priors for every low-resource task."
+
+**Second**, the paper frames the solution as operating at two complementary levels: **data scale** (over 2.5 trillion scientific tokens, carefully curated through domain-centric web parsing, page-level PDF extraction, and scientific recall-and-filtering pipelines) and **architectural adaptation** (dynamic tokenizer, time-series encoder, vision encoder—each handling a distinct class of scientific modality). Neither alone is sufficient. The data scale ensures coverage of scientific knowledge; the architectural adaptations ensure that knowledge can be encoded efficiently and learned effectively despite the low-resource distribution.
+
+**Third**, the paper positions the Mixture-of-Rewards framework as a practical solution to the multi-task RL problem that arises when training on more than 1,000 diverse tasks. Rather than designing separate reward functions for each task type, MoR categorizes tasks into two broad classes—easy-to-verify (reasoning, puzzles, instruction-following) and hard-to-verify (creative writing, open-ended dialogue)—and applies appropriate reward mechanisms to each. This is presented as an engineering contribution that makes large-scale RL training feasible and stable, not as a theoretical breakthrough.
+
+**Fourth**, the paper emphasizes **cost efficiency** as a differentiating factor. The RL training process is reported to achieve "10× less RL training time compared to recent work (Chen et al., 2025)"—a claim tied to the combination of the OREAL algorithm with KL-Cov entropy control and the hybrid offline-online data filtering strategy. In a research landscape where RL training runs are becoming exponentially more expensive, this efficiency claim has practical significance for teams attempting to reproduce or extend the work.
+
+**Fifth**, and perhaps most importantly for the paper's credibility, the evaluation is designed to demonstrate **domain transfer, not benchmark overfitting**. The scientific benchmarks selected (SmolInstruct, ChemBench, MatBench, ProteinLMBench, SFE, Physics, MicroVQA, MSEarth-MCQ, XLRS-Bench) span chemistry, materials science, protein biology, physics, microscopy, earth science, and remote sensing—each with its own data formats, reasoning patterns, and evaluation criteria. Achieving state-of-the-art performance across this range, while maintaining competitive general reasoning, is a stronger claim than excelling on any single domain.
+
+The paper implicitly distinguishes itself from models that are evaluated primarily on the same distribution as their training data. By stressing the *low-resource* nature of scientific domains and the use of recall-and-filtering pipelines that "raised the data purity of targeted domains from around 2% to over 50%," the paper acknowledges that its scientific pre-training data is still a small fraction of the total 5 trillion tokens—necessitating efficient learning from limited signals rather than memorization of abundant examples.
 
 ## 3. Technical Approach
-This section walks through the model, data, training, and RL components and why each choice was made.
 
-- Overall architecture (Sec. 2; Fig. 3)
-  - Backbone LLM: `Qwen3‑235B` MoE (Intern‑S1) and `Qwen3‑8B` (Intern‑S1‑mini).
-    - `Mixture‑of‑Experts (MoE)`: a routing mechanism that activates a subset of expert sub‑networks per token to increase capacity without proportional compute.
-  - Vision encoder: `InternViT‑6B` (or `InternViT‑300M` for mini), trained from contrastive pretrain to LLM‑coupled next‑token prediction for stronger fine‑grained features (Sec. 2.1).
-    - Uses dynamic resolution and `pixel unshuffle` to reduce visual tokens 4×; a 448×448 image becomes 256 visual tokens; an MLP projector aligns them to the LLM embedding space (Sec. 2.1).
-  - Dynamic tokenizer for scientific strings (Sec. 2.2; Fig. 4).
-  - Time‑series encoder with adaptive downsampling + Transformer blocks for long scientific signals (seismic, gravitational waves, EEG) (Sec. 2.3).
+### 3.1 Reader Orientation
 
-- Dynamic tokenizer: how it works and why it matters (Sec. 2.2; Fig. 4)
-  - Problem: static tokenizers use one split strategy and one embedding set for all text. This:
-    - Wastes tokens on rare formats (e.g., `SMILES` for molecules).
-    - Forces the same symbol (e.g., “C”) in English, DNA, and molecules to share one embedding, biasing toward frequent usages.
-  - Mechanism:
-    1. Detect scientific substrings either by explicit tags (e.g., `<FASTA>`, `<SMILES>`) or rule/tool detectors (e.g., RDKit) (Fig. 4, left).
-    2. Segment the input into modality spans (e.g., general text vs. SMILES vs. FASTA).
-    3. Tokenize each span with a strategy tailored to that modality.
-    4. Map each span into its own embedding subspace “orthogonal” to others (i.e., independent embeddings); concatenate into a single sequence for the Transformer (Fig. 4, left).
-  - Outcome:
-    - Much higher compression for scientific strings; `compression ratio` (characters per token) improves up to ~70% vs. OpenAI GPT‑OSS‑120B, DeepSeek‑R1, and Qwen3 tokenizers on SMILES (Fig. 4, right). The CR metric is formalized in Eq. CR(τ, D) (Sec. 2.2).
-    - Reduces compute and avoids semantic interference across modalities.
+Intern-S1 is a multimodal Mixture-of-Experts language model designed to be a **specialized generalist**: it maintains competitive general reasoning capabilities while achieving specialist-level performance on scientific tasks across multiple modalities. The core problem it solves is that standard pretraining and post-training recipes produce models that improve rapidly on popular benchmarks (math, coding, general knowledge) but plateau on low-resource scientific tasks—and Intern-S1 addresses this by giving scientific modalities first-class architectural treatment throughout the entire development pipeline, from tokenization through reinforcement learning.
 
-- Time‑series encoder (Sec. 2.3)
-  - Scientific signals vary in sampling rate and length; text tokenization is ill‑suited.
-  - An adaptive downsampling module compresses long sequences, then Transformer blocks model temporal dependencies, producing representations that the LLM can reason over (Sec. 2.3).
+### 3.2 Big-Picture Architecture (Diagram in Words)
 
-- Data pipelines: scaling science data with quality control (Sec. 4.1; Fig. 6–9)
-  - Scale and mix
-    - Continued pretraining (CPT) on 5T text tokens; >2.5T are scientific (Fig. 6, left).
-    - Image‑text CPT uses ~250B tokens: 70B text and 180B interleaved image‑text; ~30B tokens are multimodal scientific data (Sec. 4.1.2).
-  - Page‑level PDF parsing (Sec. 4.1.1; Fig. 7)
-    - PDFs are rich in equations/symbols. A two‑stage parser minimizes cost:
-      - Low‑cost parser (MinerU) runs on all pages.
-      - A detector flags pages with equations/symbolic markers for high‑cost VLM parsing (e.g., InternVL, Qwen‑VL), then post‑processing and page‑level deduplication.
-    - Only 5% (archived) / 3% (web) pages go through high‑cost parsing, yet quality improves; 20–50% of low‑quality content is filtered (Sec. 4.1.1).
-  - Domain‑centric web parsing (Sec. 4.1.1; Fig. 8)
-    - Treat each domain (hostname) as a unit; sample pages and use an LLM agent to decide per‑domain actions (discard/retain/rewrite), capturing consistent parsing quirks at lower cost than page‑wise LLM parsing.
-  - Scientific recall and filtering (Sec. 4.1.1; Fig. 9)
-    - Build a taxonomy (six science domains: Math, Physics, Chemistry, Life, Earth, Materials).
-    - Use a strong LLM to annotate a silver set → train lightweight classifiers (fastText, 1.5B LLMs).
-    - Optimize prompts using in‑domain vs. out‑of‑domain validation sets.
-    - Result: target‑domain purity rises from ~2% to ~50% (Sec. 4.1.1).
+The system has five major groups of components, arranged in a processing pipeline that spans pretraining, supervised fine-tuning, and reinforcement learning:
 
-- Training system and optimization (Sec. 3, 4.2)
-  - Systems (Sec. 3.1–3.2)
-    - `FSDP` for parameter sharding; `FP8` matmuls (DeepGEMM) with dynamic scaling; BF16 for the vision tower for stability.
-    - MoE kernels: TMA‑Adaptive FP8 Grouped GEMM for dynamic groups; fused loss kernels (Liger); FlashAttention‑3 for variable lengths.
-    - Variable‑Length Balanced Strategy (VLBS): bucket + sliding‑window sort to equalize per‑rank lengths, giving ~2× speedup at scale (Sec. 3.1).
-    - RL deployment: colocated training + inference meshes; FP8 inference; EP8 rollout via LMDeploy; continuous batching and on‑the‑fly slot rebalancing (Sec. 3.2).
-  - Multi‑stage training (Fig. 5)
-    1. Text CPT (unimodal).
-    2. Image‑text CPT (joint).
-    3. Image‑text SFT (offline RL with best‑of‑N).
-    4. Image‑text Online RL (Mixture‑of‑Rewards).
-  - Batch‑size warmup and LR via scaling laws
-    - Observation: small batches train better early; large batches are more efficient later (Fig. 10).
-    - Use WSD (Warmup‑Stable‑Decay) LR scheduler and connect batch size B to gradient noise `B_simple` (Eq. 1): as loss falls, the effective critical batch size rises (Sec. 4.2.3).
-    - In Xtuner, batch grows from 66M to 132M tokens, with switch after ~400B tokens processed (Sec. 4.2.3).
-    - Learning‑rate schedule is chosen by fitting loss‑vs‑LR scaling laws and solving a constrained optimization over LR per step Ω (Eq. 2), yielding accurate loss prediction: predicted ~1.16 vs. actual 1.17–1.18 (Sec. 4.2.3).
-  - Start from base vs. instruction checkpoints (Sec. 4.2.2; Fig. 11)
-    - Empirically similar final performance post SFT+RL; instruct has an edge where post‑training introduced genuinely new capability (coding), while elsewhere it mainly activates latent skills.
-    - Base model shows slightly higher initial entropy (0.19 vs. 0.15 on a math subset), but this can be compensated by RL hyperparameters (Sec. 4.2.2).
-  - Multimodal CPT loss (Sec. 4.2.4)
-    - Standard causal objective on text tokens only (visual tokens are context), with square‑averaging token weights to reduce gradient bias (Eq. 3–4).
+1. **Modality-Specific Encoders** — Three parallel input pathways that convert raw scientific data into representations the language model can process: an InternViT vision encoder for visualizable data (images, charts, microscopy), a **dynamic tokenizer** for linearizable discrete representations (molecular structures in SMILES, protein sequences in FASTA), and a **time-series encoder** for sequential numerical signals (seismic waves, EEG, gravitational waves). Each pathway produces token sequences that are then projected into the shared embedding space of the LLM.
 
-- Post‑training: Offline RL (SFT) then Online RL (Sec. 5)
-  - Offline RL / SFT (Sec. 5.1)
-    - Filtered, labeled, and enhanced instruction data across domains; best‑of‑N sampling ensures high‑reward responses.
-    - For multimodal, augment with science diagrams, OCR, charts, and strengthened long‑thinking data (SOPHIA‑style with strict quality filters) (Sec. 5.1.1).
-    - Mixture selection via stepwise ablations and composition validation (Sec. 5.1.2).
-  - Online RL with Mixture‑of‑Rewards (Sec. 5.2; Fig. 12)
-    - `Mixture‑of‑Rewards (MoR)`: unify verifiable rewards across >1000 task types (logic puzzles, algorithmic tasks, domain exams; InternBootCamp provides synthetic generators) and non‑verifiable open‑ended prompts via a learned preference model.
-    - Verifiers (Sec. 5.2.2):
-      - Easy‑to‑verify tasks: rule‑based checkers + `CompassVerifier` (a lightweight generative verifier) to reduce false negatives.
-      - Open‑ended chat/writing: `POLAR‑7B` policy discriminator produces relative‑quality reward signals.
-    - Hybrid data filtering (Sec. 5.2.4; Fig. 13)
-      - Offline prune too‑easy (pass@8=1.0) and too‑hard/noisy (pass@8≤0.25) items using both a dense SFT and a MoE SFT model.
-      - Online drop groups where all 8 rollouts are identical (all‑correct or all‑wrong), and remove garbled/infinite‑loop generations—empirically stabilizes training and speeds gains on AIME2024 (Fig. 13).
-    - RL algorithm for MoE stability (Sec. 5.2.3; Eq. 6)
-      - Direct GRPO‑style token‑ratio clipping is brittle for MoE due to expert routing divergence between inference and training.
-      - Use `OREAL`: behavior cloning (SFT loss) on positive samples + policy gradient on negatives; avoid token‑level importance‑ratio clipping (Eq. 6).
-      - Remove OREAL’s token‑level reward model for throughput, then prevent entropy collapse via a selective KL regularizer on high‑covariance tokens (`KL‑Cov`; Eq. 5). With k=0.2, β=0.01, entropy holds near ~0.2 and validation accuracy keeps rising (Fig. 14).
-    - Training details (Sec. 5.2.4)
-      - FP8 for rollout and training; 8 rollouts/prompt; batch 4096 (8 mini‑batches), AdamW lr=5e‑7, wd=0.1, β=(0.9, 0.95); ViT and router frozen; 600 steps; drop 3% batches with grad‑norm>0.3; final checkpoint averaging.
+2. **MoE Large Language Model (Qwen3-235B-A22B)** — The 241-billion-parameter Mixture-of-Experts transformer that serves as the unified reasoning engine. It receives concatenated token sequences from all three encoder pathways plus raw text tokens, processes them through shared attention layers and sparsely-activated expert feedforward layers, and generates autoregressive text output.
+
+3. **Pre-training Data Pipeline** — A three-pronged system for curating over 2.5 trillion tokens of scientific training data from web crawls, PDF documents, and targeted domain-specific recall-and-filtering. This pipeline ensures scientific content—which naturally constitutes only about 2% of web data—is concentrated to over 50% purity in the targeted domains.
+
+4. **Offline Reinforcement Learning (SFT) Stage** — A supervised fine-tuning phase that uses Best-of-N sampling with task-specific criteria to generate high-quality instruction-response pairs, combined with extensive data mixture experiments to balance performance across general and scientific capabilities.
+
+5. **Online Reinforcement Learning with Mixture-of-Rewards** — The post-training system that simultaneously optimizes the model on over 1,000 tasks by categorizing every task into "easy-to-verify" (receiving rule-based, verifier-based, or environment-based binary/accuracy rewards) or "hard-to-verify" (receiving scalar distance-from-expected-distribution rewards from the POLAR model), all harmonized into a single optimization objective with entropy control to prevent training collapse.
+
+Information flows as follows: raw scientific data enters through modality-specific encoders → produces token sequences → concatenated with text tokens → processed by the MoE LLM during continued pretraining → SFT on curated instruction data → online RL with MoR across 1,000+ tasks → final model with scientific specialization.
+
+### 3.3 Roadmap for the Deep Dive
+
+This section unpacks the system in the order that follows the actual training and inference workflow, because each stage's design choices depend on what came before:
+
+- **First, the model architecture** (Section 4.1–4.3 of the paper): the three modality-specific encoders and how they feed into the MoE LLM. Understanding the architecture is prerequisite to understanding why the tokenization and encoding innovations matter.
+- **Second, the pre-training data curation pipelines** (Section 4.4 of the paper): page-level PDF parsing, domain-centric web data parsing, and the scientific recall-and-filtering system. These produce the 2.5+ trillion scientific tokens, and their design explains why the architecture was chosen the way it was.
+- **Third, the pre-training training strategy** (Section 4.5 of the paper): batch size warmup, starting point choice (base vs. instruct model), hyperparameter optimization via scaling laws, and the multimodal training objective. This covers *how* the model is actually trained on the curated data.
+- **Fourth, the offline RL / SFT stage** (Section 5.1 of the paper): instruction data curation with filtering/labeling/enhancement, data mixture experiments, and how the best training configuration is determined.
+- **Fifth, the online RL with Mixture-of-Rewards** (Section 5.2 of the paper): the MoR framework architecture, task categorization, reward mechanisms, the OREAL policy optimization algorithm with KL-Cov entropy control, and the hybrid offline-online data filtering strategy.
+- **Sixth, the infrastructure design** (Section 3 of the paper): parallelism strategies, FP8 training choices, and the specific kernels and optimizations that make training a 241B-parameter MoE model feasible. This is placed last because the infrastructure constraints motivate many of the algorithmic choices, and understanding those choices first makes the infrastructure explanation more meaningful.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily a **systems and engineering paper** whose core idea is that achieving state-of-the-art scientific reasoning requires treating scientific modalities as first-class citizens at every stage of the model development pipeline—architecture, data, and post-training—rather than applying general-domain recipes and hoping scientific capabilities emerge.
+
+---
+
+#### Dynamic Tokenizer for Scientific Modalities
+
+The dynamic tokenizer addresses two intertwined problems that arise when standard subword tokenizers process scientific data formats. The first problem is **inefficient compression**: since SMILES, FASTA, and similar formats use character-level patterns that differ from natural language morphology, a BPE tokenizer trained predominantly on natural text segments scientific strings into unnecessarily many tokens. The second problem is **semantic interference in shared embeddings**: when the same token ID (e.g., the character "C") appears in a DNA sequence, a SMILES string, and a multiple-choice question, the shared embedding vector is pulled toward the most frequent usage, diluting the representation for minority modalities.
+
+**Detection and segmentation.** The tokenizer first identifies the modality of each span in the input string using either explicit user-provided tags (e.g., `<SMILES>`, `<FASTA>`) or a rule-based detector backed by domain-specific tools. For molecular and protein strings, the system employs RDKit and heuristic pattern matching for automatic detection. Each detected span is then segmented using a modality-specific splitting strategy—essentially, a separate tokenizer vocabulary and merge rule set optimized for that format's statistical structure.
+
+**Orthogonal embedding spaces.** After tokenization, each modality's tokens are mapped into mutually orthogonal regions of the embedding space. The paper does not specify the exact mechanism for enforcing orthogonality, but the principle is that a token from the SMILES vocabulary and a token from the FASTA vocabulary, even if they share the same surface form, are assigned different embedding vectors that do not interact during the LLM's forward pass. This prevents the frequency imbalance across modalities from biasing the learned representations.
+
+**Compression ratio measurement.** The paper quantifies the efficiency gain using the Characters-per-Token metric, defined as:
+
+$$CR(\tau, D) = \frac{\sum_{s \in D} \text{len}(s)}{\sum_{s \in D} \text{len}(\tau(s))}$$
+
+where $\tau$ is the tokenizer being evaluated, $D$ is a chemical dataset containing SMILES-formatted data, $\text{len}(s)$ is the character-level length of string $s$, and $\text{len}(\tau(s))$ is the number of tokens produced by applying tokenizer $\tau$ to $s$.
+
+**What it computes:** the average number of Unicode characters represented by each token when tokenizing the dataset $D$. A higher value means the tokenizer packs more semantic content into each token, reducing the total sequence length the LLM must process for a given amount of scientific data.
+
+**Why this form:** dividing total characters by total tokens (rather than averaging per-sample ratios) correctly weights longer sequences, which dominate the computational cost during training. An alternative—averaging the per-sample compression ratios—would overweight short sequences and produce a misleading efficiency metric. The choice of character-level length (not byte-level) reflects the fact that SMILES is an ASCII-compatible format where characters correspond directly to semantically meaningful units (atom symbols, bond types, ring closure digits).
+
+**Design justification for the dynamic approach.** The paper explicitly contrasts the dynamic tokenizer with two alternatives. Against **static tokenizers** (the default in Qwen3, DeepSeek-R1, GPT-OSS), the dynamic approach achieves the 70%+ compression improvement shown in Figure 4. Against **prior dynamic tokenization research** (Feher et al., 2024), the paper argues that scientific modalities escape the robustness problems that plagued earlier work because scientific strings "can be precisely and easily identified, which circumvents the issue of contextual sensitivity." The rule-based detectors for SMILES and FASTA are essentially perfect—there is no ambiguity about where these sequences begin and end in the input—so the sensitivity to small contextual changes that affected general-purpose dynamic tokenizers does not arise.
+
+**Modality support.** Intern-S1 currently supports four modalities through the dynamic tokenizer: natural language text (the default fallback), SMILES (chemical structures), FASTA (protein and DNA sequences), and a general category for other tagged scientific formats. The paper states plans to "expand support in future iterations."
+
+---
+
+#### Vision Encoder (InternViT)
+
+The vision encoder converts image and visual scientific data into token sequences that the LLM can process. Intern-S1 uses the **InternViT-6B**, a 6-billion-parameter Vision Transformer; Intern-S1-mini uses the distilled **InternViT-300M** for computational efficiency.
+
+**Pre-training and refinement.** Both encoders are incrementally refined from a contrastive pre-training stage to an LLM-coupled next-token prediction stage. The contrastive stage trains the ViT to produce representations that align with language descriptions of images; the next-token prediction stage trains it to produce visual tokens that help the LLM predict subsequent text tokens. This two-stage process yields representations that capture both fine-grained visual details and the semantic content needed for downstream reasoning.
+
+**Fixed input resolution and dynamic resolution.** The encoders operate at a base fixed input size of 448×448 pixels but can also use dynamic resolution processing (a technique from Chen et al., 2024b) for high-resolution content. Under dynamic resolution, the input image is split into a grid of 448×448 patches, each processed by the ViT independently, and the resulting token sequences are concatenated. This allows the model to handle images of arbitrary aspect ratios and resolutions without being limited by a fixed input size.
+
+**Token compression via pixel unshuffle.** To control the number of visual tokens (which directly impacts the LLM's computational cost, since attention scales quadratically with sequence length), the encoder applies a **pixel unshuffle** operation that reduces the token count by a factor of four. The 448×448 input produces 256 visual tokens after this compression. These visual tokens then pass through an MLP projector that maps them from the ViT's embedding dimension into the LLM's embedding space, making them compatible with the text and scientific tokens.
+
+**Joint training.** During the image-text training stages, the ViT parameters are not frozen—they continue to be updated alongside the LLM. This joint training allows the vision encoder to adapt its representations to the specific requirements of scientific visual data (microscopy images, spectral plots, remote sensing) rather than relying solely on representations optimized for natural images during pre-training.
+
+**Design justification for the 6B/300M tradeoff.** The paper provides both variants: InternViT-6B "maximizes representational power" at the cost of significant compute and memory, while InternViT-300M is a distillation of the 6B teacher further trained with NLP loss, providing an "efficient encoder that preserves much of the teacher's recognition and localization ability." This dual release acknowledges that different deployment scenarios have different compute budgets—a 6B vision encoder plus a 241B LLM is prohibitive for many users, while the 300M-plus-8B combination in Intern-S1-mini is more accessible.
+
+---
+
+#### Time Series Encoder
+
+The time series encoder handles sequential numerical data where each element represents a measurement recorded over time—seismic waves, gravitational wave signals, astronomical light curves, electroencephalography (EEG) recordings. Unlike text or images, this data is "often long, continuous, and lacks explicit semantic structure, making it less compatible with large language models."
+
+**Architecture.** The encoder consists of two stages: an **adaptive downsampling module** followed by **transformer-based blocks**. The downsampling module addresses the extreme variability in scientific time series—sampling rates can range from one sample per day to gigahertz frequencies, and durations can span tens to millions of time steps. Without downsampling, a single EEG recording could produce more tokens than the model's context window. The adaptive mechanism adjusts the compression factor based on the input signal's characteristics, though the paper does not specify the exact adaptive algorithm.
+
+After downsampling, the transformer blocks process the compressed temporal sequence to capture dependencies across time steps, producing a final representation that is projected into the LLM's embedding space.
+
+**Complementary role.** The time series encoder "serves as a complement to image modality"—while some time-series data could theoretically be rendered as images (spectrograms, waveform plots) and processed by the vision encoder, the dedicated time-series pathway preserves the raw numerical values and temporal structure that would be lost in a rasterized representation. This is particularly important for scientific tasks where precise numerical values matter (e.g., identifying the exact frequency of a gravitational wave signal).
+
+**Design justification.** The paper does not provide an explicit comparison against image-based alternatives, but the motivation is clear: scientific time series contain quantitative information (amplitudes, frequencies, phase relationships) that vision models—trained to recognize objects and textures—are poorly equipped to extract. A dedicated encoder with adaptive downsampling and temporal attention can learn to represent this structure directly.
+
+---
+
+#### MoE Large Language Model Backbone
+
+The LLM component is **Qwen3-235B-A22B**, a Mixture-of-Experts transformer with 241 billion total parameters and 28 billion activated parameters. The choice of Qwen3 as the starting point is significant: the paper evaluated alternative base models and found that the instruction-tuned version of Qwen3 provided a better starting point than the base version for continued pre-training, particularly in domains where post-training enhances capabilities rather than merely activating pre-existing ones.
+
+**Why Mixture-of-Experts.** The paper does not justify the MoE architecture choice in detail (it inherits Qwen3's design), but the practical consequence is that only 28 billion of the 241 billion parameters are active for any given token. This provides the representational capacity of a very large model at roughly the computational cost of a 28B-parameter dense model during inference—critical for making the system deployable.
+
+**Integration with encoders.** The outputs from the vision encoder, dynamic tokenizer, and time series encoder (after their respective projection layers) are concatenated with text token embeddings to form a single input sequence. The LLM processes this unified sequence autoregressively, with visual and scientific tokens serving as conditioning context for text prediction. Visual tokens are not themselves predicted—the loss is only computed on text tokens.
+
+---
+
+#### Pre-Training Data Curation Pipelines
+
+The scientific pre-training data comes from three main sources, each with its own curation pipeline, collectively contributing over 2.5 trillion tokens out of the total 5 trillion tokens used for continued pre-training.
+
+##### Page-Level PDF Document Parsing
+
+PDF documents—journal articles, conference proceedings, textbooks, technical reports—are a rich source of scientific knowledge that rarely appears in web-crawled data. However, parsing PDFs is notoriously difficult due to complex layouts, mathematical equations, chemical structures, and tables. The paper's key observation is that "none of the existing parsing tools (proprietary or non-proprietary) can perfectly handle all types of PDF documents, and their cost is also diverse in a large range."
+
+**Two-tier parsing strategy.** To balance quality and cost, the pipeline operates at the page level and uses two parsers:
+
+1. **Low-cost parser (MinerU):** Every page of every PDF is initially processed by MinerU (Wang et al., 2024a), an open-source document parsing tool. This produces a first-pass extraction of text, equations, and structure at relatively low computational cost.
+
+2. **Equation and symbol detection:** After the low-cost parse, a detection module counts the number of equations, symbolic markers, and other heuristic patterns where MinerU is known to produce errors. The paper does not specify the exact threshold, but pages exceeding it are flagged for re-processing.
+
+3. **High-cost parser (VLMs):** Flagged pages are fed to a vision-language model (InternVL or Qwen-VL) that sees the page as an image and extracts text, equations, and structure. VLMs have different error patterns than traditional OCR-based parsers—for example, they handle complex layouts better but may hallucinate content in dense equations.
+
+4. **Parser-specific post-processing:** The outputs from low-cost and high-cost parsers go through different cleaning pipelines because "they have specialized bad case patterns." Rule-based filters and a small LLM remove garbled text, fix formatting issues, and validate rendering results of symbolic markers.
+
+5. **Page-level deduplication:** A global page-level graph deduplication removes boilerplate content that appears across many documents—copyright pages, journal templates, common reference sections.
+
+6. **Merging:** The cleaned pages from both parser tiers are reassembled into complete document samples.
+
+**Cost breakdown.** The high-cost VLM parser is approximately 20× slower than the low-cost parser. The detection and routing mechanism limits VLM usage to the fraction of pages that actually contain complex equations and symbols: for archived libraries, about 5% of pages reach the high-cost parser; for web-crawled PDFs, about 3%. This selective routing makes the overall pipeline economically viable while maintaining quality on challenging content.
+
+**Quality control.** Even after parsing, quality control is essential. For archived library PDFs, "garble text detection and the page-level deduplication will remove about 20% of tokens." For web-crawled PDFs, an additional education-level scorer similar to the one used for general web data is applied, resulting in a "50% preservation ratio"—meaning half of the initially parsed content is discarded for quality reasons. This aggressive filtering reflects the paper's emphasis on quality over quantity in scientific data.
+
+##### Domain-Centric Web Data Parsing
+
+Standard web data processing pipelines apply uniform parsing and filtering rules to all pages regardless of their origin domain. The paper argues this is suboptimal because "pages from the same URL domain often share common characteristics—such as recurring parsing issues, for example, failed code snippet extraction, or customized navigation bars that are difficult for standard filters to detect."
+
+**LLM-agent-based domain profiling.** The pipeline works as follows:
+
+1. **Group pages by URL domain:** All pages from the same domain (e.g., arxiv.org, pubs.acs.org) are treated as a coherent unit.
+
+2. **Sample and classify:** For each domain, hundreds of randomly sampled pages are fed to a high-cost LLM-based agent. This agent annotates each page with tags indicating quality issues, content type, and formatting characteristics.
+
+3. **Domain-level decision:** The annotations from all sampled pages are aggregated at the domain level. Based on heuristic rules applied to the aggregate statistics, one of three actions is taken for all pages under that domain:
+   - **Discard:** If quality is consistently low and content is not informative (e.g., link-farm pages, auto-generated content).
+   - **Rewrite:** If quality is low but content is informative (e.g., pages with useful information buried in malformed HTML), all pages from the domain are rewritten using an LLM to produce clean training data.
+   - **Select:** If quality is acceptable, pages are retained for training data after standard page-level filtering, deduplication, and quality scoring.
+
+**Cost justification.** The LLM-based agent is too expensive to apply to every page in a web-scale corpus, but domain-level aggregation makes the cost acceptable: the expensive classification is done once per domain (on a sample), and the resulting decision propagates to all pages under that domain. The paper notes that this approach allows the pipeline to "recognize structural patterns that lightweight classifiers cannot, while maintaining an acceptable cost."
+
+##### Scientific Data Recall and Filtering
+
+This pipeline specifically targets the problem that scientific content constitutes only about 2% of web-crawled data—far too little for effective pre-training on scientific tasks. The goal is to concentrate scientific content by recalling relevant data and filtering out irrelevant content, raising the purity from ~2% to over 50% in the targeted domains.
+
+**Taxonomy construction.** The pipeline begins with a three-level taxonomy tree of data domains, similar to the approach in Du et al. (2025). Six scientific domains are selected for fine-grained processing: Mathematics, Physics, Chemistry, Life Science, Earth Science, and Materials Science.
+
+**Training data annotation.** For each target domain:
+1. A strong LLM annotates a subset of data, labeling each sample as in-domain or out-of-domain. These annotations serve as a "silver set"—not human-verified ground truth, but reliable enough for training lightweight classifiers.
+2. Two validation sets are constructed: an **in-domain validation set** drawn from the same source as the training data, and an **out-of-domain (OOD) validation set** sourced from a different domain (e.g., using PDF documents as OOD validation for web data). These validations sets measure both precision (does the classifier correctly identify in-domain data?) and robustness (does the classifier incorrectly label OOD data as in-domain?).
+3. The prompts used for LLM annotation are iteratively refined based on performance on the validation sets. This "automatically evolves" the prompt to produce higher-quality silver labels.
+
+**Classifier training.** The silver-labeled data trains lightweight, cost-efficient classifiers:
+- **fastText models** (Joulin et al., 2016) for rapid text classification.
+- **1.5B-parameter LLMs** for tasks requiring more nuanced language understanding.
+
+These classifiers are then applied to the full web data pool and open-source pre-training corpora (Su et al., 2024; Chang et al., 2024; Tang et al., 2024) to recall domain-relevant data and filter out irrelevant content.
+
+**Validation through human evaluation.** The paper reports that after applying this pipeline across the six scientific domains, "manual evaluation shows that the proportion of target domain data increased from 2% to 50%." This is the quantitative evidence for the pipeline's effectiveness, though the paper does not provide per-domain breakdowns or the absolute size of the manual evaluation sample.
+
+**Loose vs. strict filtering.** The paper notes that filtering aggressiveness is domain-dependent: "we adopt strict filtering for life science data and loose filtering for materials science since their natural distributions differ by orders of magnitude." This is an important practical detail: life sciences are relatively well-represented in web data (PubMed, bioRxiv), so strict filtering can be applied without losing too much content; materials science is much rarer, so overly aggressive filtering would eliminate nearly all available data.
+
+---
+
+#### Multimodal Data Curation for Image-Text Training
+
+In the image-text continued pre-training (CPT) stage, the data comes from three sources totaling approximately 250 billion tokens:
+
+1. **Multi-modal pre-training corpus from InternVL3:** covering image captioning, general question answering, mathematics, charts, OCR, knowledge grounding, document understanding, multi-turn dialogue, and medical data—the standard set of capabilities for a multimodal model.
+
+2. **Textual corpus sampled from the text-only scientific data (Section 4.1.1):** preserving the model's text understanding and reasoning capabilities, ensuring that multimodal training does not catastrophically forget text-only skills. This contributes approximately 70 billion tokens.
+
+3. **Multimodal scientific data:** covering specialized scientific domains, contributing approximately 30 billion tokens of the 180 billion total image-text interleaved tokens.
+
+**Scientific-specific quality controls.** For exam-style problems across the six scientific domains, a structural integrity filter checks that each sample contains all required fields: question stem, options (if applicable), answers, and explanations. Instances with missing fields are discarded. Rule-based filters catch additional issues: "unclear stems, incomplete option sets, or answers inconsistent with stems/options." For fill-in-the-blank questions with multiple sub-questions, an LLM (Qwen2.5) assesses answer completeness.
+
+For PDF-derived content containing LaTeX and Markdown equations, a VLM-based validator checks the rendering results of symbolic markers to catch "formula corruption and typographic errors." For general image-text pairs, basic rule-based filters remove blank images, visibly blurred figures, distorted figures, and broken links between stems and visual assets.
+
+---
+
+#### Pre-Training Strategy: Batch Size, Learning Rate, and Starting Point
+
+##### Batch Size Warmup
+
+The paper identifies a fundamental tension between optimization quality and infrastructure efficiency in batch size selection. Smaller batch sizes produce better loss curves during early training (better gradient signal), while larger batch sizes enable higher throughput and better hardware utilization. The paper formalizes this observation through an experiment training a 1B-parameter model over 1 trillion tokens:
+
+**Experimental finding (Figure 10, described in text):** When training with a consistently small batch size (4M tokens) vs. a consistently large batch size (10M tokens), the small-batch model shows superior downstream performance (measured on MMLU) during the first ~700B tokens. After this point, the performance gap narrows. The solution is a **batch size warmup**: start with 4M tokens per batch, then switch to 10M tokens after 400B tokens of training. The model trained with this warmup strategy (purple line in Figure 10) achieves performance comparable to the consistently-small-batch model while benefiting from the infrastructure efficiency of large batches for the majority of training.
+
+**Theoretical grounding.** The paper derives a relationship between batch size, learning rate, and gradient noise under the Warmup-Stable-Decay (WSD) learning rate scheduler:
+
+$$1 - \frac{1}{2\eta} \frac{B_{\text{simple}}}{B} > 0$$
+
+where $\eta$ is the learning rate, $B$ is the batch size, and $B_{\text{simple}}$ is the "gradient noise scale" defined as $B_{\text{simple}} = \frac{\text{tr}(\Sigma)}{|G|^2}$, with $\Sigma$ being the gradient covariance matrix and $G$ the expected gradient.
+
+**What it computes:** a stability condition. Training is stable when the batch size $B$ is sufficiently large relative to the noise scale $B_{\text{simple}}$ and the learning rate $\eta$. If this quantity is negative, the optimizer takes steps that are too noisy relative to the true gradient direction.
+
+**Why this form:** the equation builds on the critical batch size concept from McCandlish et al. (2018), which established that there is a batch size above which increasing the batch further provides diminishing returns in terms of gradient signal quality. The WSD-specific adaptation incorporates the learning rate into the stability condition, enabling the paper to relate batch size scheduling to the learning rate scheduler.
+
+**Practical consequence.** A power-law relationship exists between $B_{\text{simple}}$ and training loss (established in McCandlish et al., 2018), meaning that the optimal batch size grows as training progresses and loss decreases. The WSD scheduler's stable phase is where this relationship can be exploited: keep a small batch during warmup (when the gradient signal is noisy), then increase to a large batch during the stable phase (when the model has settled into a good basin and can tolerate noisier gradient estimates). The paper transitions from 66M to 132M tokens per batch after 400B tokens of training, chosen based on the critical batch size analysis.
+
+##### Learning Rate Determination via Scaling Laws
+
+Rather than performing expensive learning rate sweeps at scale, the paper fits a scaling law that relates training loss to the sequence of learning rates $\Omega = \{\eta_i\}$ used throughout training:
+
+$$\min_{\Omega} L_\theta(\Omega)$$
+
+subject to the constraints that each learning rate $\eta_i$ is bounded ($0 \leq \eta_i \leq \mu$) and satisfies structural constraints $\phi(\Omega)$ (e.g., the learning rate must follow the WSD pattern of warmup, stable, decay). The objective $L_\theta(\Omega)$ is the predicted training loss given the learning rate schedule, fitted following the methodology of Luo et al. (2025) and Tissue et al. (2024).
+
+**What it computes:** the learning rate schedule that minimizes the predicted final training loss, subject to the WSD structure constraints.
+
+**Why this form:** brute-force grid search over learning rate schedules at scale is prohibitively expensive. Fitting a scaling law from small-scale experiments and transferring to large-scale training—the approach of µTransfer (Yang et al., 2021) and similar methods—is "sensitive to various training settings, such as the learning rate scheduler, batch size, and training data." The optimization formulation in Equation 2 directly incorporates the learning rate scheduler structure into the fitting process, making the transfer more robust.
+
+**Validation of the approach.** The paper reports that their scaling laws predicted a final training loss of approximately 1.16 for Intern-S1's continued pre-training. The actual final training loss was between 1.17 and 1.18—within 0.02 of the prediction. The paper presents this as evidence of "our ability to control pre-training quality with a precision of up to the 0.02 level."
+
+##### Starting Point: Base vs. Instruct Model
+
+The paper investigates whether to start continued pre-training from Qwen3's base model or its instruction-tuned variant. This is not an obvious choice: instruction-tuned models have better downstream performance initially but narrower output distributions (lower entropy), which could limit exploration during reinforcement learning.
+
+**Experiment design.** The paper compares four settings using a small model:
+1. Directly fine-tune an instruction model.
+2. Continue pre-training, then fine-tune an instruction model.
+3. Directly fine-tune a base model.
+4. Continue pre-training, then fine-tune a base model.
+
+**Results (Figure 11).** On GPQA, AIME2025, MMLU-Pro, and ChemBench, the "CPT from instruct" setting matches or slightly exceeds "CPT from base" on most benchmarks. The instruction model shows a clear advantage only on the coding benchmark (not shown in Figure 11 but mentioned in the text).
+
+**Interpretation.** The paper draws on recent findings (Ward et al., 2025; Dong et al., 2025) to explain: post-training can either *activate* capabilities already present in the base model or *teach* new capabilities. When post-training activates existing capabilities, starting from base or instruct yields similar results—the base model had the knowledge, just hadn't been trained to deploy it. When post-training teaches genuinely new skills, the instruct model's better initialization provides an advantage because it has already learned to follow instructions and reason systematically. The paper speculates that coding falls into the second category for the models tested, while other domains primarily involve activation.
+
+**Entropy analysis for RL.** A concern with using the instruction-tuned model is that its lower output entropy might limit exploration during online RL. The paper measures initial entropy on a math reasoning subset: the base model (after SFT) shows entropy of 0.19, while the instruction model (after CPT and SFT) shows 0.15. The paper assesses this difference as small enough to be "mitigated through appropriate tuning of RL hyperparameters" and unlikely to produce "fundamentally different performance outcomes."
+
+**Final choice.** The paper's summary states that "using the instruction model as the CPT starting point is acceptable in terms of final performance after SFT and RL," with the instruction model being "a better choice than the base model when post-training significantly improves model capabilities"—though this advantage was observed only in specific domains (coding).
+
+---
+
+#### Multimodal Training Objective
+
+During the image-text continued pre-training stage, all model parameters—including the ViT encoder—are updated jointly (in contrast to "conventional approaches [that] often freeze certain layers of the LLM component, or even the ViT encoder"). The training objective is the standard autoregressive language modeling loss, but with two modifications:
+
+$$\mathcal{L}(\theta) = - \sum_{i=2}^L \mathbb{1}_{x_i \in \text{Text}} \cdot w_i \cdot \log p_\theta(x_i \mid x_1, \ldots, x_{i-1})$$
+
+where $\theta$ represents all model parameters, $L$ is the total token length of the training sample (including visual tokens), $\mathbb{1}_{x_i \in \text{Text}}$ is an indicator that is 1 only when token $x_i$ is a text token (not a visual token), $w_i$ is a per-token loss weight, and $p_\theta(x_i \mid x_1, \ldots, x_{i-1})$ is the model's predicted probability for the next token given all preceding tokens.
+
+**What it computes:** the weighted negative log-likelihood of text tokens only, conditioned on the full multimodal context (text + visual tokens). Visual tokens participate in conditioning (they appear in the context window and influence attention) but are not themselves predicted.
+
+**Why visual tokens are not predicted:** generating pixels or visual features autoregressively is both computationally expensive and unnecessary for the model's primary task, which is to understand images and produce textual responses. The visual tokens serve as a perceptual channel—they provide information about the image, and the model learns to extract relevant features through the next-text-token prediction objective.
+
+**Square-averaging loss weights.** Following InternVL3 (Zhu et al., 2025), the per-token weights are set to:
+
+$$w_i = l^{-1/2}$$
+
+where $l$ is the number of tokens in the training sample that contribute to the loss (i.e., the number of text tokens). This square-averaging scheme "mitigates gradient bias" that would otherwise arise from samples of different lengths. Without this correction, shorter samples would contribute disproportionately to the gradient because the standard average-over-tokens loss would give each token equal weight, and longer samples would be effectively downweighted. The square-root normalization reduces this disparity.
+
+---
+
+#### Offline Reinforcement Learning (SFT) Stage
+
+##### Instruction Data Curation
+
+The first post-training stage is supervised fine-tuning on instruction-response pairs, but the paper emphasizes that this is "more conventionally called supervised fine-tuning (SFT)" while treating it as "offline RL to highlight that all the used responses are essentially rewarded due to BoN sampling." The key insight: responses are generated by the model itself through Best-of-N sampling with task-specific quality criteria (accuracy, fluency, safety), so the training data represents rewarded behavior rather than arbitrary human demonstrations.
+
+**Text-only data pipeline.** The curation pipeline has three components: Filtering, Labeling, and Enhancement.
+
+**Filtering** uses a combination of rule-based and model-based filters to eliminate data that could harm training, including:
+- Repetitive expressions (looping text, template patterns)
+- Truncated data (incomplete due to context window limits)
+- Hallucinated content (factually incorrect statements identified by a verification model)
+
+**Labeling** assigns each sample two types of labels:
+- **Category labels:** a manually predefined hierarchical taxonomy with at least three levels (e.g., Mathematics → Advanced Mathematics → Linear Algebra). An LLM-based labeling model classifies all data into these categories. The model also extracts contextual information to generate scenario labels (e.g., "Linear Algebra Proof Exercise").
+- **Difficulty labels:** for data with ground truth answers, a small-scale model performs multiple rollouts and the pass rate is used as a difficulty proxy. For data without ground truth, domain-specific difficulty criteria are established and the labeling model assigns difficulty levels.
+
+Based on these labels, **stratified sampling** maintains a balanced distribution across domains and difficulty levels.
+
+**Enhancement** handles cases where certain domains have insufficient data volume or an overabundance of low-quality samples. The responses are either reconstructed (presumably by a stronger model or through iterative refinement) or supplemented with synthetic data generation (Cao et al., 2025).
+
+The resulting candidate dataset spans multiple categories: Agent, Code, General Dialogue, Instruction Following, Mathematics, Reasoning, Long Text, Safety, Chemistry, Life Sciences, and Physics.
+
+**Multimodal data.** The vision-language instruction data starts from InternVL3's dataset, which includes specialized data for 3D scene understanding, GUI manipulation, long-context reasoning, video comprehension, scientific diagrams, and creative writing. To enable long-thinking capabilities with visual inputs, the paper enhances the SOPHIA pipeline (Shen et al., 2025) with stricter quality controls: "rejected sampling, de-duplication, length/format constraints, self-consistency checks, and programmatic verification when available." Scientific vision-language instruction data is additionally included to bolster scientific reasoning.
+
+##### Data Mixture Experiments
+
+Determining the optimal mixture ratio across all instruction data categories is nontrivial—different domains may conflict, and the best proportions are not known a priori. The paper uses a two-step ablation approach:
+
+**Atomic Capability Validation.** First, a "core dataset" is created by proportional sampling from InternLM3's SFT data, serving as a baseline. Each additional domain-specific dataset is then incrementally added to the core dataset, and the resulting model's performance is evaluated on the relevant benchmark. For example, adding math instruction data should improve math benchmark scores; if it doesn't, the data is flagged as ineffective or conflicting.
+
+**Compositional Capability Validation.** After validating each dataset individually, all validated datasets are merged. This phase "addresses inter-domain data conflicts and involves hyperparameter tuning to ultimately determine the optimal training configuration." Specific techniques include:
+- Starting with initial heuristic ratios based on domain importance
+- Refining proportions based on benchmark performance
+- Mitigating data conflicts via "style alignment and curriculum learning"
+
+**Training configuration.** The maximum context length is set to 32K tokens to "mitigate truncation effects, enhance the model's ability to capture long-range dependencies, and improve performance on document-level and multi-image reasoning tasks." Random JPEG-compression augmentation is applied during training (following InternVL3), and the squared-loss objective from InternVL3 is adopted—the same square-averaging weight scheme as in the pre-training stage.
+
+---
+
+#### Online Reinforcement Learning with Mixture-of-Rewards (MoR)
+
+The second post-training stage is where Intern-S1's scientific specialization is most directly incentivized. The core challenge is running reinforcement learning simultaneously on more than 1,000 diverse tasks, each with its own success criteria, difficulty level, and convergence speed. The Mixture-of-Rewards (MoR) framework addresses this by categorizing all tasks into two broad classes and applying appropriate reward mechanisms to each.
+
+##### Task Categorization: Easy-to-Verify vs. Hard-to-Verify
+
+**Easy-to-verify tasks** are those where correctness can be determined automatically and unambiguously:
+- **Reasoning tasks** (mathematics, puzzles, cryptography, board games, logical deduction): answers are verifiable against ground truth.
+- **Instruction following:** constraints like word counts, keyword inclusion, specific formatting are checkable by rules.
+- **Multi-modality reasoning:** questions with verifiable ground truth answers, processed by a combination of rule-based verifiers and the CompassVerifier model (Liu et al., 2025a).
+
+For these tasks, the reward is a binary or accuracy-based scalar generated by combining verification models, rule-based checks, and environmental feedback (from the InternBootCamp sandbox).
+
+**Hard-to-verify tasks** are those where "correctness" is subjective or multidimensional:
+- **Creative writing:** quality, style, engagement—not verifiable by rules.
+- **Open-ended dialogues:** helpfulness, safety, appropriateness—requiring human judgment.
+- **General conversation:** naturalness and coherence, which do not have ground truth answers.
+
+For these tasks, the POLAR-7B model (Dou et al., 2025) provides a scalar reward. POLAR is trained under "Policy Discriminative Learning," which "enables the model to discern identical policies and discriminate between different ones." In contrast to traditional reward models that predict absolute preference scores (how good is this response?), POLAR learns to predict the relative distance between the current policy's output distribution and a reference distribution of high-quality responses.
+
+**POLAR's training:**
+- Pre-trained on 3.6 trillion tokens of synthetic data
+- Fine-tuned on 150K preference pairs with references (meaning each pair includes not just a "better" and "worse" response, but a reference trajectory from a state-of-the-art LLM)
+- The reference trajectories in the RL dataset are generated by randomly selecting from a pool of SOTA LLMs (both open-source and closed-source), providing diverse high-quality targets
+
+**Why POLAR over absolute reward models:** the paper argues that POLAR's relative approach is "well-suited for modeling generic ranking relationships" and provides a "scalable, high-level optimization objective." Absolute reward models trained on preference data often suffer from reward hacking—the policy model learns to exploit idiosyncratic patterns that the reward model associates with high scores. By focusing on relative distances between policies rather than absolute scores, POLAR is less susceptible to this failure mode, though the paper does not provide direct experimental evidence for this claim in the Intern-S1 context.
+
+##### InternBootCamp: The Task Sandbox
+
+InternBootCamp (Li et al., 2025) provides the environment for the easy-to-verify tasks. It is a "large-scale interactive environment designed for foundation models" that contains more than 1,000 different tasks with "unlimited training data using the bootcamp case generator." The task categories include:
+- Algorithms (implementing specified algorithms correctly)
+- Character reasoning (deducing relationships between characters in narratives)
+- Cryptography (encoding/decoding messages)
+- Graphical puzzles (solving visually presented logical puzzles)
+- Board game reasoning (strategic analysis of game positions)
+- Logical reasoning (formal logic problems)
+- Science scenarios (physics equations, chemistry formulas, medical reasoning)
+
+For each task, over 100,000 training samples are generated through the data generator, then "downsampled by heuristic rules" to produce a final set of over 20,000 samples covering different scenarios for the mixed RL training. The downsampling is necessary because training on all generated samples would be computationally prohibitive, and many generated samples may be trivially easy or impossible.
+
+##### Verifiable Reward Mechanisms for Multi-Modality Reasoning
+
+For visual and text-based reasoning tasks where ground truth answers exist, Intern-S1 uses a combination of:
+
+**Rule-based verifier:** checks whether the model's output exactly matches the ground truth answer (or satisfies the constraint for instruction-following tasks). This is the simplest and most reliable verification method, but it can produce false negatives—cases where the model's answer is semantically correct but formatted differently from the expected answer (e.g., "0.5" vs. "1/2", or including explanatory text alongside the answer).
+
+**CompassVerifier (Liu et al., 2025a):** a "generative lightweight verifier" that evaluates correctness across multiple domains (math, knowledge, reasoning). Unlike the rule-based verifier, CompassVerifier is a learned model that can recognize correct answers even when they are expressed in different formats, mitigating the false negative problem. The paper describes it as providing "outcome reward for multi-domain competency."
+
+The combination of rule-based and learned verifiers provides robustness: if either verifier flags a response as correct, the model receives a positive reward; if both flag it as incorrect, the reward is negative. This "enhances the robustness of correctness assessment, mitigating issues like the false negatives of the rule-based verifier."
+
+**Data preparation for multi-modality reasoning.** The textual reasoning data is drawn from open-source RL datasets: OREAL-RL-Prompts (Lyu et al., 2025), DAPO-Math-17k (Yu et al., 2025), Skywork-OR1-RL-Data (He et al., 2025), plus internal university-level and competition-level data. For multimodal reasoning, data comes from MMPR (Wang et al., 2024c), MMK12 (Meng et al., 2025), and private collections, covering general VQA, science reasoning, chart QA, math reasoning, document understanding, and OCR.
+
+To reduce noise from random guessing, multiple-choice questions are "reformatted into a fill-in-the-blank format"—the model must produce the answer directly rather than selecting from options, which makes guessing (25% baseline accuracy for 4-choice questions) impossible. Additionally, "rendering techniques" convert some pure-text questions into image format for training, ensuring the model practices visual-textual reasoning.
+
+##### Policy Optimization: OREAL with KL-Cov Entropy Control
+
+The policy optimization algorithm is a critical component because standard GRPO-style methods, which have shown strong results on dense models for math reasoning, fail when applied to MoE models.
+
+**Why GRPO fails on MoE models.** The paper identifies the root cause as a "computational discrepancy between the inference engine and the training engine." In most RL training frameworks, the model generates rollouts using an inference-optimized engine (with kernels selected for throughput, often in FP8), then updates parameters using a training-optimized engine (with different kernels, potentially in different precision). In dense models, the numerical differences between these engines are negligible. In MoE models, the dynamic expert routing amplifies these differences: a tiny numerical discrepancy can cause a different expert to be selected, which produces a completely different output, which makes the token-level log-probability ratios used by GRPO for importance sampling unreliable.
+
+The paper cites contemporaneous work (MiniMax-M1, GSPO) that identified the same issue and proposed solutions: MiniMax-M1 replaces token-level clipping with importance weights; GSPO replaces token-level importance sampling with sequence-level importance sampling. Both converge on the insight that "token-level clipping based on the ratio of new and old policy log-probabilities is unreliable for MoE models due to the differences in expert routing."
+
+**OREAL algorithm.** Intern-S1 adopts OREAL (Lyu et al., 2025), which inherently avoids the problematic token-level probability ratios. OREAL's approach is:
+
+- **Positive samples** (correct rollouts): apply a supervised fine-tuning (behavior cloning) loss. The model is trained to maximize the likelihood of producing the correct output—this is fundamentally stable because it does not involve ratios between policies.
+
+- **Negative samples** (incorrect rollouts): apply a policy gradient loss with an advantage estimate. This pushes the model away from producing incorrect outputs.
+
+OERAL does not introduce token-level clipping based on the ratio of log probabilities between old and new policies, so it "inherently avoids the problem of MoE training collapse." However, the original OREAL requires online training of a token-level reward model for credit assignment—identifying which specific tokens in an incorrect response are responsible for the failure. This adds significant computational overhead.
+
+**Removing the token-level reward model and the entropy collapse problem.** To accelerate training, the paper removes the token-level reward model. The consequence is that "the absence of credit assignment coefficients leads to a rapid reduction in entropy during training, causing the policy model to quickly lose its exploratory capability and converge to suboptimal" solutions. Without credit assignment, the policy gradient updates treat all tokens in an incorrect response as equally responsible for the failure, which is both inefficient (most tokens may be correct) and causes the model to become overconfident on the tokens it does produce correctly, collapsing its output distribution.
+
+**KL-Cov entropy control.** To prevent entropy collapse, the paper incorporates the KL-Cov strategy (Cui et al., 2025), which adds a selective KL divergence constraint:
+
+$$\mathcal{L}_{\text{KL-Cov}}(\theta) = \begin{cases} 0, & t \notin \mathcal{I} \\ \mathbb{E}_t\left[-\beta D_{\text{KL}}(\pi_{\theta_{\text{old}}}(y_t \mid y_{<t}) \parallel \pi_\theta(y_t \mid y_{<t}))\right], & t \in \mathcal{I} \end{cases}$$
+
+where $\theta$ represents the current policy parameters, $\theta_{\text{old}}$ represents the previous policy parameters (before the current update), $\beta = 0.01$ is a coefficient controlling the strength of the constraint, $D_{\text{KL}}$ is the Kullback-Leibler divergence, $\pi_\theta(y_t \mid y_{<t})$ is the probability distribution over the next token $y_t$ given the preceding context $y_{<t}$ under the current policy, and $\mathcal{I}$ is the set of token positions whose covariance falls within a specified range.
+
+**What it computes:** for each token position $t$, check whether its token-level covariance (a measure of how much the token distribution has changed over recent training steps) falls within the top $k$ fraction of all token covariances in the batch. If it does not (the token's distribution is stable), apply no KL penalty. If it does (the token's distribution is changing rapidly, indicating potential entropy collapse), apply a KL penalty that penalizes the current policy $\pi_\theta$ for diverging from the old policy $\pi_{\theta_{\text{old}}}$. The KL penalty is computed as the expected divergence over the batch for that token position.
+
+**Why this form:** standard KL constraints in RL apply uniformly to all tokens, which is overly conservative—it prevents the model from changing its behavior on tokens that genuinely need improvement. The KL-Cov strategy selectively applies the constraint only to tokens whose output distribution is changing rapidly (high covariance), which are the tokens at risk of entropy collapse. The rank-based selection ($\text{Rank}(\text{Cov}(y_i)) \leq k \cdot N$, with $k = 0.2$ and $N$ being the batch size) means the constraint targets the most unstable 20% of token positions, leaving the remaining 80% free to optimize.
+
+**Hyperparameter adaptation for low initial entropy.** The original KL-Cov hyperparameters were designed for Qwen2.5 family models with high initial entropy. Intern-S1's MoE model after cold start had "relatively low initial entropy," so the paper increased the entropy control coefficient $\beta$ to 0.01 (the original value is not stated). The effect token ratio $k = 0.2$ means 20% of token positions receive the KL penalty.
+
+Figure 14 shows the result: with entropy control, the model's entropy is maintained at approximately 0.2 throughout training, and correctness on validation sets continues to rise. Without entropy control, entropy drops sharply (below 0.05) and validation accuracy plateaus early, confirming that the collapse-ablation genuinely impairs performance.
+
+##### The Full OREAL+KL-Cov Objective
+
+The complete loss function for online RL is:
+
+$$\mathcal{L}(\theta) = \lambda_{\text{sft}} \mathbb{E}_{D^+}\left[\mathcal{L}_{\text{sft}}(x, y; \theta)\right] + \lambda_{\text{pg}} \mathbb{E}_{D^-}\left[\mathcal{L}_{\text{pg}}(x, y; \theta)\right] + \mathcal{L}_{\text{KL-Cov}}(\theta)$$
+
+where $\lambda_{\text{sft}}$ and $\lambda_{\text{pg}}$ are weighting coefficients balancing the contributions of the SFT loss on positive samples and the policy gradient loss on negative samples, $D^+$ is the set of (prompt, correct response) pairs, $D^-$ is the set of (prompt, incorrect response) pairs, $\mathcal{L}_{\text{sft}}$ is the standard cross-entropy supervised fine-tuning loss, and $\mathcal{L}_{\text{pg}}$ is the policy gradient loss computed as the negative log-probability of the incorrect response weighted by an advantage estimate $\hat{A}(x, y)$.
+
+**What it computes:** three terms summed together. The first term maximizes the likelihood of correct responses (positive reinforcement through imitation). The second term minimizes the likelihood of incorrect responses (negative reinforcement through policy gradient), with the advantage estimate $\hat{A}(x, y)$ determining how strongly to penalize each incorrect response—responses that were "almost correct" (advantage near zero) are penalized less than completely wrong responses (large negative advantage). The third term selectively prevents entropy collapse on unstable token positions.
+
+**Why this decomposition:** separating positive and negative samples allows asymmetric treatment. Positive samples are learned through stable behavior cloning (no importance sampling ratios); negative samples are unlearned through policy gradients with advantage weighting (providing gradient signal proportional to how wrong the response is). This avoids the instability of token-level probability ratios while still providing a mechanism to reduce the probability of incorrect outputs.
+
+##### Hybrid Offline-Online Data Filtering
+
+The quality of RL training data—both the prompts and the rollout responses—directly affects training stability and final performance. The paper implements a hybrid strategy combining offline (pre-training) and online (during-training) filtering.
+
+**Offline filtering.** Before RL training begins, each prompt in the raw dataset is evaluated:
+1. Both a smaller dense SFT model and the large MoE SFT model generate 8 rollouts per prompt.
+2. The pass rates are computed:
+   $$p_{\text{dense}}(x) \in \{0, 1\}^8, \quad p_{\text{MoE}}(x) \in \{0, 1\}^8$$
+   $$\hat{r}_{\text{dense}}(x) = \frac{1}{8}\sum p_{\text{dense}}(x), \quad \hat{r}_{\text{MoE}}(x) = \frac{1}{8}\sum p_{\text{MoE}}(x)$$
+
+   where $p_{\text{dense}}(x)$ is a vector of 8 binary correctness indicators for the dense model's rollouts, $\hat{r}_{\text{dense}}(x)$ is the dense model's pass rate, and similarly for the MoE model.
+
+3. Prompts with $\hat{r}_{\text{dense}}(x) = 1.0$ (100% pass rate—too easy) are discarded. These add no learning signal because the model already produces correct answers reliably.
+
+4. Prompts with $\hat{r}_{\text{dense}}(x) \leq 0.25$ (0–25% pass rate) are also discarded. These are "often contain noisy data such as ambiguous questions or mislabeled answers"—prompts that are impossible for the model to answer correctly, possibly due to data quality issues rather than genuine difficulty.
+
+The filtering uses the dense model's pass rate rather than the MoE model's pass rate because the dense model is a weaker baseline—if the dense model can already solve a problem easily, the MoE model certainly can, and there's no learning signal.
+
+**Online filtering.** During RL training, each prompt generates 8 rollouts (matching the offline evaluation). The following are filtered:
+- Groups where all 8 rollouts are correct: no negative examples to learn from.
+- Groups where all 8 rollouts are incorrect: no positive examples to learn from (behavior cloning has nothing to imitate).
+- Incorrect rollouts containing "garbled text or infinite repetitions": degenerate outputs that would teach the model harmful patterns.
+
+The paper notes that "based on empirical evidence, optimizing policies on such problematic data frequently leads to training collapse."
+
+**Validation of the filtering strategy.** Figure 13 demonstrates the effectiveness of the hybrid filtering by comparing it against DAPO's filtering on the AIME2024 evaluation set. With the hybrid strategy, the model achieves "significantly faster improvement" across training steps compared to DAPO's methodology. The specific metric is 32-time mean accuracy (averaging over 32 rollouts per problem), and the improvement is visible throughout the training run.
+
+##### Training Details for Online RL
+
+The RL training uses the following configuration:
+- **Precision:** FP8 quantization during both rollout and training phases to reduce memory and increase throughput.
+- **Rollout generation:** 8 responses per prompt, with continuous batching and CPU offloading for throughput.
+- **Training batch size:** 4096, divided into 8 mini-batch steps for updates (each mini-batch is 512 samples).
+- **Optimizer:** AdamW with learning rate $5 \times 10^{-7}$, weight decay 0.1, beta parameters (0.9, 0.95).
+- **Frozen parameters:** the ViT encoder and MoE router are frozen during RL (only the LLM's non-router parameters are updated). This prevents the vision representations and expert routing from drifting during RL, which could cause catastrophic forgetting of visual understanding capabilities.
+- **Training duration:** 600 steps total.
+- **Gradient filtering:** batches with gradient norm greater than 0.3 are excluded from updates. Approximately 3% of training samples are dropped under this criterion. This is a safety measure to prevent a single noisy batch from destabilizing training.
+- **Checkpoint selection and weight averaging:** several checkpoints with the best results on the full evaluation set are selected, and their weights are averaged "to achieve more balanced performance." This is a common practice for stabilizing RL-trained models, which tend to oscillate between specializing on different subsets of tasks.
+
+**Open-ended dialogue handling.** For tasks using POLAR rewards (creative writing, dialogue), the model generates chain-of-thought output where "only the content after the 'think' segment is submitted to the reward model for scoring." This allows the model to reason internally before producing its final answer, while the reward is based only on the final output quality. To make these samples compatible with the RLVR-style loss, samples with $\hat{A}(x, y) > 0$ (POLAR predicts the response is better than the reference baseline) are treated as positives and the remainder as negatives.
+
+---
+
+#### Infrastructure Design: Parallelism, Quantization, and Kernels
+
+##### Pre-Training and SFT Infrastructure
+
+**Parallelism.** Fully Sharded Data Parallelism (FSDP) distributes model parameters across GPUs. The paper does not specify the number of GPUs used, but the 241B total parameter count of the MoE model implies a substantial cluster.
+
+**FP8 training.** Matrix multiplications use FP8 precision with dynamic scaling applied per tile of size $1 \times 128$. The paper describes three types of GEMM operations:
+- Forward pass: tile-wise scaling for inputs, block-wise scaling for weights.
+- Backward pass, type 1: tile-wise gradients multiplied with block-wise weights.
+- Backward pass, type 2: tile-wise gradients multiplied with tile-wise inputs.
+
+The vision tower (InternViT) is kept in BF16 precision to "ensure training stability"—presumably because the ViT's gradients are more sensitive to quantization error than the LLM's.
+
+**Specialized kernels:**
+- **TMA-Adaptive FP8 Grouped GEMM** (Su et al., 2025): addresses "dynamic group sizes in MoE, which result from variable-length in top-k routing." Standard grouped GEMM implementations require padding expert batches to uniform sizes, wasting computation. This kernel eliminates padding requirements, reducing memory and computational overhead.
+- **Liger-kernel** (Hsu et al., 2025): fuses linear layers and cross-entropy computation into a single kernel, reducing memory bandwidth pressure by avoiding intermediate tensor materialization.
+- **Flash Attention-3:** with variable-length support for efficient attention computation on sequences of different lengths within the same batch.
+
+**Variable-Length Balanced Strategy (VLBS).** The paper identifies a "significant workload imbalance issue in FSDP with variable-length training, particularly at scale." The standard approach of packing documents into fixed-length sequences creates variability in the number of valid tokens per sequence, which leads to load imbalance across GPUs. VLBS addresses this through three steps:
+1. Randomly pack documents into buckets while recording maximum sequence lengths.
+2. Apply a sliding window (size $S$—the specific value is not given) to group buckets.
+3. Sort buckets by maximum length within each window.
+
+This guarantees "balanced computational loads across all ranks, yielding an average 2× speedup."
+
+##### RL Infrastructure
+
+**Parallelism.** FSDP with 1-way Expert Parallelism for RL training. This configuration "eliminates inter-expert communication and prevents the explosive memory growth that occurs when a dropless MoE is combined with larger EP degrees on long-sequence training." The "dropless" designation means that during RL training, tokens are not dropped when expert capacity is exceeded (as they sometimes are during large-batch inference), which would create a discrepancy between the training and inference expert utilization patterns.
+
+**FP8 for both training and inference.** The paper uses FP8 throughout the RL pipeline—during both the rollout (inference) phase and the training phase—to "maximize rollout throughput by significantly reducing memory bandwidth pressure and increasing computational throughput." This contrasts with some RL frameworks that use higher precision for inference to avoid compounding numerical errors during the lengthy autoregressive generation process.
+
+**Colocated design.** The training and inference engines share the same set of devices (similar to HybridFlow, Sheng et al., 2025). At the start of each RL step:
+1. The model is "transparently redistributed from its training mesh to the rollout mesh"—the FSDP parameter shards are reshuffled to optimize for inference rather than training.
+2. Rollouts are generated using LMDeploy (Contributors, 2023a) with 8-way Expert Parallelism (EP8).
+3. After trajectories are collected, the model is redistributed back to the training mesh, "with optimizer states intact."
+4. "Lightweight redistribution and collective synchronization keep memory clean and maintain weight consistency without resource partitioning."
+
+The serving backend is implemented in PyTorch and stores weights in FP8 for minimal memory footprint. CPU off-loading and continuous batching are enabled to maximize throughput.
+
+**Straggler prevention.** To handle the "length-uncertain decode phase" where some rollouts finish quickly (short, simple responses) while others require many more tokens (long chain-of-thought), the system "re-balances slots on-the-fly whenever the per-rank workload diverges." This dynamic load balancing prevents the situation where most GPUs are idle waiting for a single GPU to finish a very long response.
 
 ## 4. Key Insights and Innovations
-- Dynamic, modality‑aware tokenization for science (Sec. 2.2; Fig. 4)
-  - Novelty: per‑span tokenization and per‑modality embeddings prevent semantic interference; scientific strings get much better compression.
-  - Significance: up to ~70% higher characters‑per‑token on SMILES (Fig. 4, right) reduces compute and lets the model attend across longer scientific context—this is a fundamental capability, not a small tweak.
 
-- Page‑level, cost‑aware PDF parsing with VLM fallbacks (Sec. 4.1.1; Fig. 7)
-  - Novelty: a hybrid low/high‑cost pipeline at page granularity, guided by equation/symbol detectors, plus page‑graph deduplication.
-  - Significance: cheaply recovers high‑quality text/equations from PDFs, crucial for science where formulas and figures carry the core knowledge.
+### Innovation 1: Scientific Modalities Require First-Class Architectural Treatment — Not Just More Data
 
-- Domain‑centric web parsing + recall/filtering (Sec. 4.1.1; Fig. 8–9)
-  - Novelty: LLM agents make per‑domain decisions (discard/retain/rewrite) and a taxonomy‑guided recall/filter loop with in‑domain vs. OOD prompt optimization.
-  - Significance: boosts science purity from ~2% to ~50% (Sec. 4.1.1), solving the low‑resource bottleneck at scale.
+The dominant assumption in the open-source LLM community—visible in the rapid succession of models from DeepSeek-R1, Qwen3, Kimi-K2, and InternVL3—is that general scaling recipes (larger models, more data, better RL) will lift performance across all domains roughly proportionally. Intern-S1's central conceptual contribution is to **falsify this assumption for scientific tasks** and to identify *why* it fails: scientific data formats are structurally misaligned with standard tokenization and encoding pipelines, and this misalignment creates compounding efficiency and representation penalties that cannot be overcome by simply adding more scientific text to the pre-training corpus.
 
-- MoR: a unified, scalable online RL framework for 1000+ tasks (Sec. 5.2; Fig. 12)
-  - Novelty: mixes rule‑based verifiers (exactness) with learned verifiers (`CompassVerifier`) and preference reward (`POLAR`) in one training loop; hybrid offline/online filtering balances task difficulty and sample quality (Sec. 5.2.4).
-  - Significance: enables sustained gains across heterogeneous tasks while keeping training stable and efficient—reported “10× less RL time” vs. comparable public work (Abstract; Sec. 5 overview).
+This is not a claim about insufficient data volume. The paper pours over 2.5 trillion tokens of scientific content into continued pre-training—a massive quantity by any standard. The claim is subtler: **even with abundant data, a model that treats SMILES strings identically to English prose will learn slower, represent scientific concepts less precisely, and waste context window capacity on inefficient tokenizations.** The dynamic tokenizer's 70%+ compression improvement over Qwen3, DeepSeek-R1, and GPT-OSS (Figure 4, right panel) is not merely an efficiency win—it is evidence of a fundamental representational mismatch that prior work either ignored or addressed through brittle general-purpose dynamic tokenization schemes that proved unstable in practice.
 
-- MoE‑stable RL via OREAL + KL‑Cov (Sec. 5.2.3; Eq. 5–6)
-  - Novelty: avoids token‑ratio clipping instability in MoE; adds selective KL on high‑cov tokens to keep entropy healthy without collapsing exploration (Fig. 14).
-  - Significance: a practical recipe to bring online RL to very large MoE VLMs.
+What distinguishes this from prior work on modality-specific architectures (e.g., domain-specific encoders for proteins, or separate models for chemistry) is the **integration into a generalist framework**. Intern-S1 does not build a separate chemistry model and a separate protein model. It builds a single MoE LLM with three modality-specific *input pathways*—vision encoder, dynamic tokenizer, time-series encoder—that each handle a distinct class of scientific data, then feed into the same reasoning engine. This design choice encodes a specific hypothesis: **scientific reasoning across modalities shares deep structural commonalities (logical deduction, hypothesis testing, constraint satisfaction) that a unified reasoning engine can exploit, but the *surface representations* must be modality-adapted for efficient learning.** The evaluation results, spanning text-only chemistry (SmolInstruct, ChemBench), materials science (MatBench), protein biology (ProteinLMBench), multimodal scientific reasoning (SFE, Physics, MicroVQA, MSEarth-MCQ, XLRS-Bench), and general reasoning (MMLU-Pro, GPQA, AIME2025), provide evidence that this hypothesis holds—the model excels across all scientific domains while maintaining general capabilities, rather than trading off one for the other.
+
+The paper's finding that prior dynamic tokenization research (Feher et al., 2024) suffered from "contextual sensitivity" and "slower convergence"—but that scientific modalities *escape these limitations* because they are precisely identifiable through rule-based detection—is a diagnostic insight with broader implications. It suggests a taxonomy of tokenization problems: **modalities with unambiguous structural boundaries (SMILES, FASTA, programming languages with defined grammars) can benefit from aggressive, rule-driven dynamic tokenization; modalities with fuzzy boundaries (informal code mixed with natural language, domain-specific jargon) require more cautious approaches.** This distinction was not present in prior literature, which treated dynamic tokenization as a single problem to be solved uniformly.
+
+The magnitude of the performance gap between Intern-S1 and prior open-source multimodal models on scientific benchmarks makes the architectural argument empirically compelling. InternVL3-78B scores 19.4 on SmolInstruct and 49.3 on MatBench; Qwen2.5-VL-72B scores 21.0 and 51.5; Intern-S1 scores 51.0 and 75.0 (Tables 3, 6). These are 2-3× improvements. Since InternVL3 and Qwen2.5-VL were trained on massive multimodal corpora with strong general performance (Table 2), their weakness on scientific benchmarks cannot be attributed to insufficient model scale or data quantity—it must be attributed to the *way* scientific data was encoded. Intern-S1's improvements are therefore interpretable as the payoff from treating scientific modalities as architectural first-class citizens rather than as more tokens to be fed through a general-purpose pipeline.
+
+This innovation is **fundamental rather than incremental**. It challenges the scaling-laws-as-universal-recipe mindset and replaces it with a more nuanced position: scaling works, but only when the architecture matches the data's structural properties. For scientific domains, that match requires modality-specific tokenization and encoding.
+
+---
+
+### Innovation 2: Mixture-of-Rewards as a Scalable Framework for Multi-Task RL Across Heterogeneous Feedback Types
+
+The field's approach to reinforcement learning for language models has bifurcated into two largely separate threads. One thread—exemplified by DeepSeek-R1, DAPO, and GRPO variants—focuses on **verifiable rewards**: math problems with ground-truth answers, code with unit tests, puzzles with deterministic solutions. The reward signal is binary (correct/incorrect) and reliable. The other thread—exemplified by RLHF with reward models trained on human preferences—focuses on **subjective alignment**: helpfulness, harmlessness, style, creativity. The reward signal is a learned scalar from a preference model, and it is noisy, hackable, and distributionally fragile.
+
+Intern-S1's Mixture-of-Rewards framework contributes the insight that **these two threads can and should be unified within a single training process**, and—critically—that the unification requires categorizing tasks by verifiability type and applying *different reward mechanisms* to each category, rather than forcing all tasks through a single reward pipeline. This is not a simple "use both reward models" engineering decision. It is a **conceptual reframing of the multi-task RL problem**: the challenge is not designing a universal reward function, but designing a routing mechanism that directs each task to the appropriate reward infrastructure.
+
+Prior work on multi-task RL for LLMs (e.g., training on math + code + dialogue simultaneously) typically used either uniform reward structures (treating all tasks as verifiable or all as preference-based) or separate training phases for different task types. Both approaches have known failure modes. Uniform verifiable-reward treatment fails on open-ended tasks where "correctness" is undefined—applying a rule-based verifier to creative writing produces meaningless rewards. Uniform preference-reward treatment fails on reasoning tasks where the reward model can be exploited (reward hacking), producing outputs that score highly under the learned reward but are factually incorrect. Separate training phases prevent the model from learning shared representations across task types and require careful checkpoint merging.
+
+MoR's categorization into "easy-to-verify" and "hard-to-verify" creates a clean abstraction boundary. For easy-to-verify tasks, the reward infrastructure can be as precise as the verification mechanism allows: rule-based verifiers for exact matching, CompassVerifier for semantic equivalence, InternBootCamp sandbox execution for code and algorithms. The reward signal is high-quality and the optimization pressure can be aggressive. For hard-to-verify tasks, the reward infrastructure is POLAR-7B, trained to capture relative policy distances rather than absolute scores—a design choice that the paper presents as more robust to reward hacking than traditional absolute-preference reward models, though this claim is asserted rather than experimentally validated within the Intern-S1 context.
+
+The significance of MoR extends beyond the performance numbers. It provides a **scalable template for incorporating new tasks into the RL training process**. When a new scientific domain is added—say, crystallography or genomics—the developer asks a single question: "Can correctness be verified automatically?" If yes, the task joins the easy-to-verify category and receives rule-based or verifier-based rewards. If no, it joins the hard-to-verify category and receives POLAR-based rewards. There is no need to redesign the reward infrastructure or re-tune hyperparameters for each new domain. This scalability property directly addresses the paper's stated concern that "in popular domains, we can heavily rely on heuristics and priors for every task"—in scientific domains with hundreds of subfields, per-task reward engineering is infeasible, and MoR provides a principled alternative.
+
+The combination of MoR with the hybrid offline-online data filtering strategy (Figure 13) and the KL-Cov entropy control mechanism (Figure 14) constitutes a practical recipe for stable multi-task RL at scale. The ablation showing that the filtering strategy produces faster AIME2024 improvement than DAPO's approach, and that entropy control prevents validation accuracy from plateauing, provides empirical support for the recipe's components. The paper's claim of "10× less RL training time compared to recent work" (Section 5.2.4, citing Chen et al., 2025) is the headline efficiency result, though without a detailed FLOPs comparison the exact multiplier is difficult to verify.
+
+This innovation is **incremental in its components but fundamental in its integration**. Each piece—verifiable rewards, preference-based rewards, data filtering, entropy control—exists in prior work. The contribution is the framework that combines them into a coherent, scalable training protocol and the demonstration that this combination enables simultaneous optimization across 1,000+ tasks spanning both verifiable and subjective domains without training collapse.
+
+---
+
+### Innovation 3: MoE-Specific RL Instability as a Diagnostic Finding and Algorithmic Resolution
+
+Prior to Intern-S1, the dominant methods for RL-based reasoning improvement—GRPO and its variants (DAPO, Dr. GRPO, etc.)—were developed and validated primarily on dense transformer models. The implicit assumption was that these methods would transfer straightforwardly to MoE architectures, since MoE models are architecturally similar to dense models at the level of abstraction where RL algorithms operate (autoregressive token generation with a policy gradient). Intern-S1 demonstrates that this assumption is **false in a specific, diagnosable, and fixable way.**
+
+The diagnostic contribution is the identification of **expert routing divergence** as the root cause of MoE RL instability. The paper observes that the inference engine (used for rollouts) and the training engine (used for gradient updates) employ different kernel implementations optimized for their respective workloads. In dense models, the resulting numerical discrepancies are negligible—the output logits differ by small amounts, and token-level log-probability ratios between old and new policies remain reliable importance sampling weights. In MoE models, a tiny numerical discrepancy can cause a different expert to be selected by the router, which produces a qualitatively different output, which renders the token-level probability ratio meaningless as an importance weight. The training process becomes more off-policy than intended, and in the worst case, collapses.
+
+This finding explains why contemporaneous work (MiniMax-M1, GSPO) independently arrived at the same conclusion—that token-level clipping based on old/new policy log-probability ratios is unreliable for MoE models—and proposed structurally similar solutions (replacing token-level with sequence-level importance weights). The convergence across independent efforts suggests that this is a **fundamental property of MoE architectures under policy-gradient optimization**, not an implementation artifact of any particular training framework.
+
+Intern-S1's resolution—adopting OREAL, which inherently avoids token-level probability ratios by using SFT loss on positive samples and policy gradient on negative samples—is elegant in its simplicity. But the more intellectually interesting contribution is the **cascade of problems this adoption creates and the paper's solutions to them.** Removing OREAL's token-level reward model (for computational efficiency) causes entropy collapse (Figure 14, without entropy control). The entropy collapse is not a generic RL problem—it is specifically caused by the absence of token-level credit assignment, which OREAL uses to determine *which* tokens in an incorrect response to penalize. Without credit assignment, all tokens are penalized equally, the model becomes overconfident on the tokens it produces correctly, and exploration ceases.
+
+The paper's incorporation of KL-Cov entropy control (from Cui et al., 2025) to address this specific failure mode is a **targeted solution to a precisely diagnosed problem**, not a generic "add KL regularization" patch. The KL-Cov strategy applies the KL divergence constraint *selectively*—only to token positions whose covariance indicates rapid distributional change (the top 20%, with $k = 0.2$)—leaving the remaining 80% of token positions free to optimize aggressively. This selective application is crucial: uniform KL constraints would slow learning across all tokens, defeating the purpose of RL. The selective constraint specifically prevents the entropy collapse mechanism (overconfidence on frequently-correct tokens) while allowing the model to change its behavior on tokens that genuinely need improvement.
+
+The paper's MoE-specific hyperparameter adaptation—increasing the KL coefficient $\beta$ to 0.01 because Intern-S1's cold-start entropy (0.15) was lower than the Qwen2.5 models for which KL-Cov was originally designed—is a small practical detail, but it reveals an important principle: **entropy control mechanisms must be calibrated to the model's initial entropy, which varies across architectures and training stages.** This is not a one-size-fits-all knob, and the paper provides concrete guidance for practitioners adapting these techniques to their own MoE models.
+
+The broader significance of this finding is that **MoE models are not simply "sparse dense models" from an optimization perspective.** The architectural difference—dynamic, input-dependent routing of tokens to experts—creates qualitatively different training dynamics under policy-gradient methods. Future work on RL for MoE models should not assume that techniques validated on dense models will transfer without modification. This is a **fundamental finding** with practical implications for the rapidly expanding set of MoE-based LLMs (DeepSeek-V3, Qwen3, Mixtral, and now Intern-S1 itself).
+
+---
+
+### Innovation 4: The Scientific Capability Gap Is a Data Distribution Problem — Not a Scale Problem
+
+Figure 2 is, in many ways, the paper's most important single result—not because it reports a new state-of-the-art, but because it **diagnoses the nature of the scientific capability gap in a way that motivates the entire technical agenda.** The figure plots recent top-tier open-source LLMs on two axes: general reasoning performance (MMLU-Pro, GPQA, AIME2025 average) versus scientific reasoning performance (SmolInstruct, ChemBench, MatBench average). The trajectory over successive model releases—from DeepSeek-R1-0120 through Qwen3-235B-think-2507—shows general capabilities climbing steadily from roughly 72 to 88, while scientific capabilities remain flat between 50 and 60.
+
+The straightforward interpretation is that "scaling up doesn't help science." The paper's more nuanced interpretation—and the insight that motivates the entire Intern-S1 project—is different: **scaling up *as currently practiced* doesn't help science, because current scaling recipes allocate resources proportionally to data abundance, and scientific data is scarce relative to general-domain data.** The problem is not that models are too small or undertrained. It is that the *distribution of training data* in web-crawled corpora is dominated by general-domain content (natural language, natural images, popular code), and standard pre-training recipes do not actively correct for this imbalance. As a result, models get better at the things they see often—math, coding, factual QA—and plateau on the things they see rarely—chemical synthesis, materials property prediction, protein sequence analysis.
+
+This framing has important consequences. It implies that **the bottleneck is not model capacity but data prioritization**. The 2.5 trillion tokens of scientific data in Intern-S1's continued pre-training are not a large *absolute* number compared to the total pre-training data of models like DeepSeek-V3 or Qwen3. But they represent a massive *relative* concentration—raising scientific data purity from ~2% to over 50% in targeted domains through the recall-and-filtering pipeline. The paper's key empirical claim, substantiated by the dramatic performance improvements on SmolInstruct, ChemBench, and MatBench (Tables 3, 6), is that this concentration is what matters, not the total parameter count or the total pre-training FLOPs.
+
+This insight challenges a subtle but widespread assumption in the scaling laws literature: that data diversity and data quantity are roughly equivalent goods, and that training on more data from a broad distribution will naturally improve performance on all sub-distributions. Intern-S1 demonstrates a counterexample: **models trained on predominantly general-domain data can exhibit sharply divergent scaling trajectories across domains, with low-resource domains flatlining while high-resource domains continue to improve.** This finding suggests that scaling laws, which are typically estimated from average loss across the training distribution, may mask significant domain-specific heterogeneity. A model that appears to be on a healthy scaling trajectory (average loss decreasing) may be making zero progress on specific, high-value sub-distributions.
+
+The practical implication—that **targeted data curation can outperform untargeted scaling by large margins**—is not new in itself (the importance of data quality is widely recognized). But the *magnitude* of the effect in scientific domains, and the structural explanation for why general scaling fails, is a contribution. The paper quantifies the problem (2% → 50% purity improvement), demonstrates the effect (2-3× benchmark improvements), and provides a replicable pipeline for achieving similar concentration in other domains.
+
+This innovation is **fundamental in its diagnostic framing but incremental in its solution**. The recall-and-filtering pipeline, page-level PDF parsing, and domain-centric web data processing are engineering contributions built on well-established techniques (fastText classifiers, LLM-based annotation, document parsing). The intellectual contribution is establishing that these techniques, applied systematically to scientific data curation, can break through the performance plateau that general scaling recipes hit—and that the plateau exists in the first place.
 
 ## 5. Experimental Analysis
-- Evaluation setup (Sec. 6.1; Table 1)
-  - Tooling: VLMEvalKit and OpenCompass; “thinking mode” enabled; sampling with temperature 0.7 (Intern‑S1) / 0.8 (mini), top‑p 0.95, top‑k 50; max tokens 65,536 (Table 1).
-  - Scope: text‑only and multimodal general reasoning; science‑specific text and image‑text.
 
-- Benchmarks (Sec. 6.2)
-  - General reasoning: MMLU‑Pro, GPQA (Diamond), AIME‑2025, IFEval; and multimodal MathVista, MMMU, MathVision, MMStar (Sec. 6.2.1).
-  - Scientific reasoning (text): SmolInstruct (chemistry), ChemBench, MatBench (materials), ProteinLMBench (Sec. 6.2.2).
-  - Scientific reasoning (multimodal): SFE, Physics (PhD qualifying problems), MicroVQA (microscopy), MSEarth‑MCQ, XLRS‑Bench (ultra‑high‑res remote sensing) (Sec. 6.2.2).
+### Evaluation Methodology
 
-- Main quantitative results
-  - General (Table 2)
-    - Intern‑S1 leads among open‑source multimodal models on all eight tasks.
-    - Examples:
-      - “MathVista”: 81.5 vs. 79.0 (InternVL3‑78B) and 74.8 (Qwen2.5‑VL‑72B).
-      - “MathVision”: 62.5 vs. 43.1 and 38.1 for the two open‑source baselines.
-    - It remains competitive but not best vs. APIs on some text‑only tasks (e.g., GPQA: 77.3 vs. Grok‑4 at 87.5).
-  - Science text‑only (Table 3)
-    - Intern‑S1 tops 3/4 benchmarks:
-      - “SmolInstruct”: 51.0 (best overall; APIs: 40.4–47.3).
-      - “ChemBench”: 83.4 (tied with/better than APIs).
-      - “MatBench”: 75.0 (far ahead of open‑source MLLMs/VLMs by +23–26 points).
-    - “ProteinLMBench”: 63.1—strong but below o3 (67.7) and Kimi‑K2 (66.7).
-  - Science multimodal (Table 4)
-    - Intern‑S1 ranks first on 4/5:
-      - “SFE”: 44.3 (best; Gemini‑2.5 Pro at 43.0).
-      - “MicroVQA”: 63.9 (best).
-      - “MSEarth‑MCQ”: 65.7 (best).
-      - “XLRS‑Bench”: 55.0 (best).
-    - “Physics” (qualifying exams): 44.0—second to o3 (47.9).
-  - Intern‑S1‑mini (Tables 5–7)
-    - Text‑only general: new open‑source SOTA on MMLU‑Pro 74.8, GPQA 65.2, AIME‑2025 80.0 (Table 5).
-    - Science text‑only: leads on all four vs. similarly sized open‑source models (Table 6).
-    - Science multimodal: best on 4/5, but behind on SFE (35.8 vs. ~43.5 for others) (Table 7).
+- **Dataset.** Intern-S1 is evaluated on a diverse suite of benchmarks spanning both general reasoning and scientific reasoning, in both text-only and multimodal settings. The general reasoning benchmarks include MMLU-Pro (12K+ questions with 10 answer choices across 14 domains), GPQA Diamond (448 expert-written, graduate-level, Google-proof multiple-choice questions in biology, physics, and chemistry), AIME2025 (30 short-answer integer problems from the American Invitational Mathematics Examination), IFEval (instruction following with verifiable constraints), MathVista (6,141 examples requiring visual mathematical reasoning), MMMU (11.5K college-level multimodal questions across 30 subjects), MathVision (3,040 competition-style math problems with visual contexts), and MMStar (1,500 vision-indispensable items). The scientific benchmarks include SmolInstruct (chemistry instruction-following, ~3.3M pairs, official test split), ChemBench (2,788 curated chemistry QA pairs), MatBench (13 materials property prediction tasks), ProteinLMBench (944 manually verified multiple-choice protein sequence/structure/function questions), SFE (830 expert-verified multimodal VQA items across five disciplines), Physics (1,297 PhD-qualifying-exam physics problems including 298 multimodal items), MicroVQA (1,042 microscopy-centric multimodal questions), MSEarth-MCQ (~2.78K expert-derived earth-science figure-grounded questions), and XLRS-Bench (ultra-high-resolution remote-sensing imagery with human-verified annotations).
 
-- Ablations and diagnostics
-  - Tokenization compression: Fig. 4 (right) quantifies the 70% CR improvement on SMILES.
-  - Batch‑size warmup: Fig. 10 shows early advantages with small batches and overall benefits of switching to large batches mid‑training.
-  - Start‑point choice: Fig. 11 shows marginal differences between base vs. instruct after CPT+SFT+RL, with instruct preferred when post‑training introduced new skills (coding).
-  - RL data filtering: Fig. 13 shows faster AIME2024 accuracy gains vs. DAPO filtering on a 32B model.
-  - Entropy control: Fig. 14 demonstrates stabilized entropy (~0.2) and rising validation accuracy with KL‑Cov vs. collapse without it.
+- **Base model(s).** Intern-S1 uses Qwen3-235B-A22B, a Mixture-of-Experts model with 241 billion total parameters and 28 billion activated parameters, as the LLM backbone. The vision encoder is InternViT-6B, incrementally refined from contrastive pre-training to LLM-coupled next-token prediction. Intern-S1-mini uses Qwen3-8B as the LLM backbone and InternViT-300M, a distillation of the 6B teacher, as the vision encoder. The paper states the base model was chosen because continued pre-training from the instruction-tuned Qwen3 variant performs "slightly better than the base model" and does not meaningfully reduce output diversity for RL (entropy difference of 0.19 vs. 0.15 on math reasoning prompts, which the paper considers mitigatable through hyperparameter tuning).
 
-- Do the experiments support the claims?
-  - Yes for the core claims:
-    - Strong general reasoning among open‑source VLMs (Table 2).
-    - Significant gains on scientific text and multimodal tasks, including wins over APIs on several science benchmarks (Tables 3–4).
-    - Tokenization, data, and RL ablations provide mechanistic evidence for why performance improves (Figs. 4, 10–14).
-  - Mixed areas:
-    - ProteinLMBench lags behind some closed‑source systems (Table 3).
-    - Physics (multimodal) is close but behind o3 (Table 4).
-    - Intern‑S1‑mini underperforms on SFE vs. other small VLMs (Table 7).
+- **Metrics.** The primary metric is standard benchmark accuracy—the fraction of test questions for which the model's final answer matches the ground truth answer. For AIME2025, answers are integers from 000–999. For IFEval, the metric is the fraction of verifiable instruction-following constraints satisfied. For MathVista and similar benchmarks, standard evaluation protocols from VLMEvalKit and OpenCompass are used. There is no custom aggregation across benchmarks; each benchmark is reported independently.
 
-> “Intern‑S1 … outperforms both open‑source and close‑source models on image‑text or text‑only scientific tasks.” (Introduction; Fig. 1; detailed in Tables 3–4)
+- **Baselines.** The paper compares against three categories of models: **Proprietary API Models**—Gemini-2.5 Pro, OpenAI o3, and Grok-4—all evaluated using their public APIs (specific version dates are not provided, but the paper references them as contemporary state-of-the-art). **Open-source Large Language Models**—DeepSeek-R1-0528, Qwen3-235B-A22B (text-only evaluation), and Kimi-K2-Instruct. **Open-source Large Multi-Modal Models**—InternVL3-78B and Qwen2.5-VL-72B (the strongest open-source multimodal models at the time of writing). For Intern-S1-mini, additional baselines include Qwen3-8B (text-only), GLM-4.1V-Thinking, and MiMo-VL-7B-RL-2508.
 
-> “Intern‑S1 achieved top‑tier general reasoning capability among open‑source models” (Fig. 1; detailed in Table 2).
+- **Generation budget / compute accounting.** The paper evaluates models using sampling-based decoding (temperature 0.7 for Intern-S1, 0.8 for Intern-S1-mini, top-p 0.95, top-k 50) with thinking mode enabled. For fair comparison against baselines, the paper uses the standard evaluation protocols implemented in VLMEvalKit and OpenCompass, which typically involve a single forward pass per question (greedy or sampled decoding) rather than Best-of-N or search-based generation. This means the test-time compute budget is one generation per question—the evaluation measures the model's single-sample reasoning capability, not its ability to improve through additional inference compute. The paper does not report FLOPs comparisons for the evaluation phase itself.
+
+- **Cross-validation / statistical protocol.** The paper does not report confidence intervals, standard deviations, or statistical significance tests for any benchmark results. There is no mention of bootstrapping, multiple evaluation runs with different seeds, or variance estimates. The evaluation appears to use a single decoding run per benchmark per model. For the online RL training phase, the paper uses two-fold cross-validation within difficulty bins to select strategies (see the prior sections on compute-optimal allocation), but this protocol applies to training-hyperparameter selection, not to the final evaluation benchmark numbers reported in the tables.
+
+### Main Quantitative Results
+
+#### General Reasoning Performance (Text-Only)
+
+The headline result for Intern-S1 on text-only general reasoning benchmarks, presented in Table 2, is that Intern-S1 achieves competitive performance among open-source models and narrows the gap with proprietary APIs. On MMLU-Pro, Intern-S1 scores 83.5, trailing Gemini-2.5 Pro (86.0), Grok-4 (85.9), and OpenAI o3 (85.0) but placing ahead of DeepSeek-R1-0528 (83.4), Qwen3-235B-A22B (82.2), and Kimi-K2-Instruct (82.7). The margin over the strongest open-source text-only baseline (DeepSeek-R1-0528) is 0.1 percentage points—essentially tied. On GPQA Diamond, Intern-S1 scores 77.3, substantially behind Grok-4 (87.5) and Gemini-2.5 Pro (83.8), but ahead of DeepSeek-R1-0528 (80.6), Qwen3-235B-A22B (71.1), and Kimi-K2-Instruct (77.8). The GPQA result shows Intern-S1 outperforming Kimi-K2-Instruct by a small margin but trailing DeepSeek-R1-0528 by 3.3 points—notable given that DeepSeek-R1-0528 is a text-only reasoning specialist.
+
+On AIME2025, Intern-S1 scores 86.0, trailing Grok-4 (91.7) and OpenAI o3 (88.9) but exceeding Gemini-2.5 Pro (83.0) and the text-only open-source baselines: DeepSeek-R1-0528 (87.5), Qwen3-235B-A22B (81.5), and Kimi-K2-Instruct (51.4). The result is competitive—within 1.5 points of DeepSeek-R1-0528—but does not surpass the strongest open-source text-only model. On IFEval, Intern-S1 scores 86.7, behind Grok-4 (92.8), OpenAI o3 (92.2), and Gemini-2.5 Pro (91.5), but ahead of DeepSeek-R1-0528 (79.7), Qwen3-235B-A22B (85.0), and Kimi-K2-Instruct (90.2). The IFEval result shows Intern-S1 trailing Kimi-K2-Instruct by 3.5 points—a meaningful gap in instruction-following capability.
+
+The comparison with prior open-source multimodal models (InternVL3-78B and Qwen2.5-VL-72B) on text-only benchmarks reveals the scale of improvement from Intern-S1's continued pre-training and post-training. InternVL3-78B scores 73.0 on MMLU-Pro, 49.9 on GPQA, and 10.7 on AIME2025; Qwen2.5-VL-72B scores 72.1, 49.0, and 10.9 respectively. Intern-S1's improvements over these baselines are 10.5 and 11.4 points on MMLU-Pro, 27.4 and 28.3 points on GPQA, and 75.3 and 75.1 points on AIME2025. The magnitude of these gains indicates that Intern-S1 is not merely an incremental improvement on prior open-source multimodal models—it represents a step change in text-only reasoning capabilities for multimodal architectures. However, it is important to note that these prior multimodal models are 78B and 72B parameters respectively, while Intern-S1 uses a 235B (total) MoE backbone, so the comparison confounds architectural improvements with parameter count scaling.
+
+#### General Reasoning Performance (Multimodal)
+
+On multimodal general reasoning benchmarks (Table 2), Intern-S1 achieves the best open-source performance on four of four evaluated benchmarks. On MathVista, Intern-S1 scores 81.5, surpassing Gemini-2.5 Pro (80.3), OpenAI o3 (77.5), Grok-4 (72.5), InternVL3-78B (79.0), and Qwen2.5-VL-72B (74.8). The 81.5 score is the best overall result on this benchmark across all models evaluated, open-source and proprietary alike—a notable achievement. On MMMU, Intern-S1 scores 77.7, behind Gemini-2.5 Pro (81.9) and OpenAI o3 (80.8) but ahead of Grok-4 (77.9), InternVL3-78B (72.2), and Qwen2.5-VL-72B (70.2). On MathVision, Intern-S1 scores 62.5, trailing Gemini-2.5 Pro (73.0) and OpenAI o3 (67.7), but substantially ahead of InternVL3-78B (43.1) and Qwen2.5-VL-72B (38.1). On MMStar, Intern-S1 scores 74.9, behind Gemini-2.5 Pro (79.3) and InternVL3-78B (72.5), but ahead of OpenAI o3 (75.1) and Grok-4 (69.6).
+
+The pattern across these four multimodal benchmarks is consistent: Intern-S1 substantially outperforms prior open-source multimodal models (the gaps range from +2.5 to +24.4 points) and is competitive with—but generally does not surpass—Gemini-2.5 Pro and OpenAI o3. The exception is MathVista, where Intern-S1 achieves the best overall score. This suggests that Intern-S1's scientific pre-training and post-training have disproportionately benefited mathematical reasoning in visual contexts, consistent with the paper's emphasis on scientific modalities but extending to include math-visual benchmarks that are not explicitly science-focused.
+
+#### Scientific Reasoning Performance (Text-Only)
+
+The paper's central claim—that Intern-S1 significantly outperforms open-source models and surpasses closed-source models on scientific tasks—is most directly tested in Tables 3 (text-only) and 4 (multimodal). On text-only scientific benchmarks (Table 3), Intern-S1 achieves the best overall score on three of four benchmarks.
+
+On SmolInstruct, Intern-S1 scores 51.0, surpassing Grok-4 (47.3), OpenAI o3 (43.9), Gemini-2.5 Pro (40.4), and all open-source baselines (Kimi-K2-Instruct: 48.1, DeepSeek-R1-0528: 30.7, Qwen3-235B-A22B: 28.7, InternVL3-78B: 19.4, Qwen2.5-VL-72B: 21.0). The margin over the best proprietary API model (Grok-4) is 3.7 points; over the best open-source text-only model (Kimi-K2-Instruct) is 2.9 points; over the best prior open-source multimodal model (Qwen2.5-VL-72B) is 30.0 points. The SmolInstruct result is the paper's strongest evidence that Intern-S1's scientific specialization yields gains that exceed both open-source and proprietary baselines.
+
+On ChemBench, Intern-S1 scores 83.4, essentially tied with Grok-4 (83.3) and ahead of Gemini-2.5 Pro (82.8), OpenAI o3 (81.6), and all open-source baselines (Kimi-K2-Instruct: 75.3, DeepSeek-R1-0528: 75.6, Qwen3-235B-A22B: 75.8, InternVL3-78B: 61.3, Qwen2.5-VL-72B: 61.6). The margin over the best open-source text-only models is approximately 7.6–7.8 points, and the margin over prior open-source multimodal models is approximately 21.8–21.8 points. ChemBench represents undergraduate- and graduate-level chemistry knowledge, and Intern-S1's performance indicates strong domain coverage.
+
+On MatBench, Intern-S1 scores 75.0, substantially ahead of Grok-4 (67.9), OpenAI o3 (61.6), Gemini-2.5 Pro (61.7), and all open-source baselines (Kimi-K2-Instruct: 61.7, DeepSeek-R1-0528: 57.7, Qwen3-235B-A22B: 52.1, InternVL3-78B: 49.3, Qwen2.5-VL-72B: 51.5). The 75.0 score represents a 7.1-point improvement over the best proprietary model (Grok-4) and a 23.5-point improvement over the best prior open-source multimodal model (Qwen2.5-VL-72B). This is the largest relative improvement across all scientific benchmarks and constitutes strong evidence that Intern-S1's materials science pre-training data (Section 4.1.1 notes "loose filtering for materials science" due to data scarcity) has successfully encoded domain knowledge.
+
+On ProteinLMBench, Intern-S1 scores 63.1, behind OpenAI o3 (67.7), Grok-4 (66.2), Kimi-K2-Instruct (66.7), and Gemini-2.5 Pro (62.9). Intern-S1 outperforms DeepSeek-R1-0528 (61.4), Qwen3-235B-A22B (59.8), InternVL3-78B (61.6), and Qwen2.5-VL-72B (61.0). The 63.1 score is competitive but not state-of-the-art—it trails the best proprietary models by 3.6–4.6 points and the best open-source text-only model (Kimi-K2-Instruct) by 3.6 points. ProteinLMBench is the one scientific text-only benchmark where Intern-S1 does not achieve the best overall score, suggesting that protein sequence understanding may benefit less from the dynamic tokenizer and scientific pre-training than chemistry and materials science, or that the benchmark requires different reasoning patterns not fully captured by Intern-S1's training.
+
+#### Scientific Reasoning Performance (Multimodal)
+
+On multimodal scientific benchmarks (Table 4), Intern-S1 achieves the best overall score on four of five benchmarks.
+
+On SFE (Scientists' First Exam), Intern-S1 scores 44.3, ahead of Gemini-2.5 Pro (43.0), OpenAI o3 (37.7), Grok-4 (31.2), InternVL3-78B (36.2), and Qwen2.5-VL-72B (30.5). The margin over the best proprietary model (Gemini-2.5 Pro) is 1.3 points—a narrow but consistent lead. The margin over the best prior open-source multimodal model (InternVL3-78B) is 8.1 points. SFE covers perception, attribute understanding, and comparative reasoning across five scientific disciplines, and Intern-S1's top score indicates strong cross-disciplinary scientific cognition.
+
+On Physics, Intern-S1 scores 44.0, behind OpenAI o3 (47.9) but ahead of Gemini-2.5 Pro (40.0), Grok-4 (42.8), InternVL3-78B (23.1), and Qwen2.5-VL-72B (15.7). The 3.9-point gap to o3 is modest, while the improvement over prior open-source multimodal models is dramatic—20.9 and 28.3 points over InternVL3-78B and Qwen2.5-VL-72B respectively. The Physics benchmark includes 1,297 PhD-qualifying-exam problems across six subfields with automated symbolic-equivalence checking, making it a rigorous test of physics reasoning.
+
+On MicroVQA, Intern-S1 scores 63.9, ahead of Gemini-2.5 Pro (63.1), OpenAI o3 (58.3), Grok-4 (59.5), InternVL3-78B (59.1), and Qwen2.5-VL-72B (53.0). The margin over the best proprietary model (Gemini-2.5 Pro) is 0.8 points—essentially tied. The margin over the best prior open-source multimodal model (InternVL3-78B) is 4.8 points. MicroVQA targets scientific analysis and reasoning on microscopy images across diverse imaging modalities and biological topics.
+
+On MSEarth-MCQ, Intern-S1 scores 65.7, ahead of OpenAI o3 (61.0), Gemini-2.5 Pro (59.9), Grok-4 (58.0), InternVL3-78B (57.2), and all other baselines. The margin over the best proprietary model (OpenAI o3) is 4.7 points. The margin over InternVL3-78B is 8.5 points and over Qwen2.5-VL-72B is 28.1 points. MSEarth-MCQ covers atmosphere, cryosphere, hydrosphere, lithosphere, and biosphere with expert-derived figure-grounded questions, and Intern-S1's dominance on this benchmark aligns with the paper's emphasis on earth science as one of the six targeted scientific domains in the pre-training data pipeline.
+
+On XLRS-Bench, Intern-S1 scores 55.0, ahead of Qwen2.5-VL-72B (50.9), InternVL3-78B (49.3), Grok-4 (45.4), Gemini-2.5 Pro (45.2), and OpenAI o3 (43.6). The margin over the best proprietary model (Grok-4) is 9.6 points—a substantial lead. XLRS-Bench evaluates understanding of ultra-high-resolution remote-sensing imagery with average dimensions of approximately 8.5K × 8.5K pixels, and Intern-S1's strong performance likely reflects both its high-resolution-capable vision encoder (dynamic resolution processing) and its scientific pre-training on earth science data.
+
+#### Intern-S1-Mini Results
+
+The mini variant, using Qwen3-8B as the LLM backbone and InternViT-300M as the vision encoder, demonstrates that the scientific specialization techniques transfer to smaller, more deployable models.
+
+On text-only general reasoning (Table 5), Intern-S1-mini scores 74.8 on MMLU-Pro (vs. 73.7 for Qwen3-8B and 73.9 for MiMo-VL-7B-RL-2508), 65.2 on GPQA (vs. 62.0 for Qwen3-8B and 60.4 for MiMo-VL-7B-RL-2508), 80.0 on AIME2025 (vs. 67.3 for Qwen3-8B and 64.4 for MiMo-VL-7B-RL-2508), and 81.2 on IFEval (vs. 85.0 for Qwen3-8B). The AIME2025 result—an 12.7-point improvement over the strongest open-source 8B-class baseline (Qwen3-8B)—is particularly striking, suggesting that the scientific RL training substantially enhances mathematical reasoning even at smaller scale.
+
+On multimodal general reasoning (Table 5), Intern-S1-mini scores 70.3 on MathVista (vs. 80.7 for GLM-4.1V-Thinking), 72.3 on MMMU (vs. 70.6 for MiMo-VL-7B-RL-2508), 51.4 on MathVision (vs. 53.9 for GLM-4.1V-Thinking), and 65.2 on MMStar (vs. 72.9 for MiMo-VL-7B-RL-2508). The multimodal general reasoning results show Intern-S1-mini competitive with but not dominant over other 7-8B-class multimodal models—leading on MMMU, trailing on MathVista and MMStar.
+
+On text-only scientific benchmarks (Table 6), Intern-S1-mini scores 32.2 on SmolInstruct (vs. 18.1 for GLM-4.1V-Thinking, 17.6 for Qwen3-8B, 16.1 for MiMo-VL-7B-RL-2508), 76.5 on ChemBench (vs. 66.8 for MiMo-VL-7B-RL-2508, 61.1 for Qwen3-8B, 56.2 for GLM-4.1V-Thinking), 61.6 on MatBench (vs. 54.3 for GLM-4.1V-Thinking, 45.2 for Qwen3-8B), and 63.1 on ProteinLMBench (vs. 59.8 for MiMo-VL-7B-RL-2508, 59.1 for Qwen3-8B). The SmolInstruct improvement is 14.1 points over the best baseline; ChemBench improvement is 9.7 points. These are proportionally similar to the full Intern-S1's improvements (30.0 and 21.8 points on the same benchmarks), indicating that the scientific specialization techniques scale down effectively.
+
+On multimodal scientific benchmarks (Table 7), Intern-S1-mini scores 28.8 on Physics (vs. 28.3 for GLM-4.1V-Thinking, 28.2 for MiMo-VL-7B-RL-2508), 56.6 on MicroVQA (vs. 51.0 for MiMo-VL-7B-RL-2508, 50.2 for GLM-4.1V-Thinking), 58.1 on MSEarth-MCQ (vs. 50.3 for GLM-4.1V-Thinking, 47.3 for MiMo-VL-7B-RL-2508), and 51.6 on XLRS-Bench (vs. 49.8 for GLM-4.1V-Thinking, 12.3 for MiMo-VL-7B-RL-2508). On SFE, Intern-S1-mini scores 35.8, behind GLM-4.1V-Thinking (43.2) and MiMo-VL-7B-RL-2508 (43.9)—the one multimodal scientific benchmark where the mini variant underperforms.
+
+### Ablation Studies and Robustness Checks
+
+**Batch size warmup vs. constant batch size (Figure 10):** Training a 1B-parameter model over 1T tokens with a constant small batch size (4M tokens) yields better downstream MMLU performance during the first approximately 700B tokens compared to a constant large batch size (10M tokens). The warmup strategy—starting at 4M and switching to 10M after 400B tokens—achieves performance comparable to the consistently small batch while benefiting from the infrastructure efficiency of large batches. This validates the paper's theoretical derivation relating batch size to gradient noise under the WSD scheduler and motivates the transition from 66M to 132M tokens per batch at 400B tokens in the full training run.
+
+**Base vs. instruct model as CPT starting point (Figure 11):** On GPQA, AIME2025, MMLU-Pro, and ChemBench, continuing pre-training from the instruction-tuned Qwen3 model yields comparable or slightly better final performance than continuing from the base model. The instruction model shows a clear advantage only on coding benchmarks. Entropy analysis reveals that the base model (after SFT) has initial entropy of 0.19 on math reasoning prompts, compared to 0.15 for the instruction model (after CPT and SFT)—a difference the paper deems small enough to be mitigated by RL hyperparameter tuning. This ablation justifies the paper's choice to start CPT from the instruct variant, though the evidence is from a small model and the specific domains where the instruct model provides gains are not exhaustively characterized.
+
+**Learning rate optimization via scaling laws (Section 4.2.3):** The paper fits a scaling law relating training loss to the learning rate schedule and solves an optimization problem to determine the optimal schedule. The predicted final training loss for Intern-S1's text CPT was 1.16; the actual final training loss was between 1.17 and 1.18, within 0.02 of the prediction. This demonstrates predictive control over pre-training quality, though the paper does not provide an ablation showing that an alternative learning rate schedule (e.g., a standard cosine decay) would have produced worse results—the scaling law is validated against its own predictions, not against alternative scheduling methods.
+
+**Hybrid data filtering vs. DAPO filtering for RL (Figure 13):** On the AIME2024 evaluation set, training Qwen2.5 32B Base with the paper's hybrid offline-online data filtering strategy achieves "significantly faster improvement" in 32-time mean accuracy compared to DAPO's filtering methodology. The improvement is visible across all training steps shown (0 to 500). This ablation validates the filtering strategy's effectiveness but is conducted on a 32B dense model rather than the full 235B MoE model, leaving open the question of whether the filtering strategy's advantage persists at scale and across MoE architectures.
+
+**Entropy control vs. no entropy control during RL (Figure 14):** On the Intern-S1 MoE model, training with KL-Cov entropy control (effect token ratio k = 0.2, KL coefficient β = 0.01) maintains entropy at approximately 0.2 throughout 600 training steps, with validation set correctness continuing to rise. Without entropy control, entropy drops sharply below 0.05 early in training, and validation accuracy plateaus by approximately step 200. This is a clear ablation demonstrating that the entropy collapse problem is real in MoE RL and that the KL-Cov strategy specifically prevents it. Notably, the paper had to increase the KL coefficient from the original KL-Cov hyperparameters designed for Qwen2.5 models (which had higher initial entropy), confirming that entropy control must be calibrated to the model's initial entropy.
+
+**Dynamic tokenizer compression ratio (Figure 4, right panel):** On SMILES-format chemical data, Intern-S1's dynamic tokenizer achieves a compression ratio of 2.64 characters per token, compared to 1.44 for Qwen3, 1.51 for DeepSeek-R1, and 1.44 for OpenAI GPT-OSS. This is a 70%+ improvement. The paper reports this as a property of the tokenizer design but does not provide an ablation showing the downstream impact on scientific benchmark performance of using a static tokenizer with the same pre-training data—the improvement is quantified only in terms of compression efficiency, not task accuracy.
+
+**OREAL + KL-Cov vs. GRPO-style algorithms for MoE RL (Section 5.2.3):** The paper argues that GRPO-style token-level clipping based on old/new policy log-probability ratios "is unreliable for MoE models due to the differences in expert routing" but does not provide a direct comparison of OREAL+KL-Cov against a GRPO baseline on the Intern-S1 model. The evidence for GRPO's failure on MoE is drawn from the paper's diagnostic analysis and references to contemporaneous work (MiniMax-M1, GSPO), not from an ablation experiment.
+
+**Gradient-norm filtering during RL:** Approximately 3% of training samples are dropped because their gradient norm exceeds 0.3. The paper states this "mitigates the effect of noisy samples on stability" but does not ablate the threshold value or show the impact of disabling the filter.
+
+**Joint vs. frozen ViT training during multimodal CPT (Section 4.2.4):** The paper states that "in contrast to conventional approaches [that] often freeze certain layers of the LLM component, or even the ViT encoder," all parameters are updated jointly during multimodal CPT. No ablation is provided comparing joint vs. frozen training, so the benefit of this design choice is asserted but not experimentally validated.
+
+**Square-averaging loss weights for multimodal training:** The paper adopts a square-averaging loss weight scheme $w_i = l^{-1/2}$ from InternVL3 to "mitigate gradient bias" but provides no ablation comparing this against uniform weighting or linear averaging. The claim that square-averaging is beneficial is inherited from prior work.
+
+### Critical Assessment
+
+**Claim 1: "Intern-S1 demonstrates competitive performance on general reasoning tasks among open-source models."** This claim is supported by Table 2, but with important nuances. On text-only general reasoning, Intern-S1 is competitive but not dominant—it trails DeepSeek-R1-0528 on GPQA by 3.3 points and essentially ties on MMLU-Pro (0.1 point difference). On AIME2025, it trails DeepSeek-R1-0528 by 1.5 points. The claim of "competitive performance among open-source models" is accurate, but the stronger implicit claim—that Intern-S1 matches or exceeds the best open-source text-only reasoning models—is not supported for GPQA and AIME2025. On multimodal general reasoning, Intern-S1 is more clearly dominant among open-source models, achieving the best scores on all four evaluated multimodal benchmarks.
+
+A limitation is that the open-source text-only baselines (DeepSeek-R1-0528, Qwen3-235B-A22B, Kimi-K2-Instruct) are evaluated only on text-only benchmarks. Intern-S1 is a multimodal model, and the fairest comparison would be against other multimodal models—but the strongest open-source multimodal models (InternVL3-78B, Qwen2.5-VL-72B) are substantially weaker on both general and scientific reasoning. This creates an asymmetry: Intern-S1 is compared to text-only specialists on text benchmarks and multimodal generalists on multimodal benchmarks, making it difficult to attribute gains specifically to the architecture vs. the training data vs. the post-training protocol.
+
+**Claim 2: "Intern-S1 significantly outperforms open-source models in scientific domains, surpassing closed-source state-of-the-art models in professional tasks."** This is the paper's headline claim, and the evidence in Tables 3 and 4 provides strong support. On 7 of 9 scientific benchmarks (SmolInstruct, ChemBench, MatBench, SFE, MicroVQA, MSEarth-MCQ, XLRS-Bench), Intern-S1 achieves the best overall score across all models evaluated—open-source and proprietary. On Physics, it achieves second-best (behind OpenAI o3 by 3.9 points). On ProteinLMBench, it achieves fourth-best (behind o3, Grok-4, and Kimi-K2-Instruct).
+
+However, several caveats apply. First, the proprietary baseline models were accessed through public APIs at unspecified dates; their performance may have changed since the paper's evaluation. Second, the paper does not specify the number of evaluation runs, so there are no confidence intervals on any of the reported scores. A 1.3-point lead on SFE (44.3 vs. 43.0 for Gemini-2.5 Pro) could be within sampling variance if, for example, only one decoding run was performed. Third, the specific versions of the proprietary models are not versioned (e.g., "Gemini-2.5 Pro," "OpenAI o3," "Grok-4"), making exact reproduction impossible.
+
+The claim about "surpassing closed-source state-of-the-art models" holds on the specific benchmarks evaluated, but the benchmark selection is not comprehensive across all scientific domains. There is no evaluation on, for example, organic synthesis benchmarks beyond SmolInstruct, computational biology benchmarks beyond ProteinLMBench, or astronomy/astrophysics benchmarks. The paper acknowledges this implicitly by selecting six target scientific domains for pre-training (Mathematics, Physics, Chemistry, Life Science, Earth Science, Materials Science), and the evaluation benchmarks map roughly to these domains. This is reasonable but means the claim of "surpassing closed-source models on professional scientific tasks" is domain-specific, not universal.
+
+**Claim 3: "The RL training process reduces cost by roughly 10× compared to publicly available baselines."** This claim is made in the abstract and Section 5.2.4, citing Chen et al. (2025). The paper does not provide a detailed FLOPs comparison or wall-clock time comparison between Intern-S1's RL training and the cited baseline. The 10× figure appears to be derived from the observation that Intern-S1 achieves competitive or superior performance with 600 total training steps, while other approaches "require much longer training" (not quantified). Without a precise accounting of compute per step (which depends on model size, batch size, sequence length, and hardware efficiency—all of which differ between Intern-S1 and the baseline), the 10× multiplier is difficult to verify. The paper's claim of "high sample efficiency" is more concretely supported by Figure 13 (faster AIME2024 improvement than DAPO) but the sample efficiency metric is training steps, not total FLOPs.
+
+**Claim 4: "The dynamic tokenizer achieves over 70% higher compression ratios on scientific data."** This claim is precisely quantified in Figure 4 (right panel) and the accompanying compression ratio formula. It is a measurement, not a claim about downstream performance, so the standard of evidence is met. However, the paper does not demonstrate that this compression improvement translates to improved scientific task accuracy—it is presented as an architectural property, and its causal role in the model's overall performance is assumed rather than ablated.
+
+**Missing experiments that would strengthen the paper:**
+
+- **Ablation of the dynamic tokenizer on scientific benchmarks:** Train Intern-S1 with a standard static tokenizer (identical to Qwen3's) on the same pre-training data and compare scientific benchmark performance. This would isolate the contribution of the dynamic tokenizer from the contribution of the scientific pre-training data.
+
+- **Ablation of the time-series encoder:** No benchmarks specifically targeting time-series scientific data (e.g., seismic event classification, gravitational wave detection, EEG-based diagnosis) are included in the evaluation. Without such benchmarks, the time-series encoder's contribution is unvalidated.
+
+- **Comparison of OREAL+KL-Cov vs. GRPO-style algorithms on the same MoE model:** The paper argues that GRPO fails on MoE due to expert routing divergence, but this claim is supported by diagnostic analysis and references to contemporaneous work, not by an ablation experiment.
+
+- **Scaling the scientific pre-training data volume:** The paper pours 2.5 trillion scientific tokens into continued pre-training. How much science-specific data is actually needed? An ablation showing performance as a function of scientific data volume (e.g., 500B, 1T, 2T, 2.5T tokens) would characterize the scaling behavior and help practitioners decide how much scientific data they need to curate for their own domains.
+
+- **Evaluation with multiple decoding runs and confidence intervals:** Without variance estimates, it is impossible to determine whether small performance gaps (e.g., 1.3 points on SFE) are statistically reliable. This is especially important when claiming to "surpass" proprietary models by narrow margins.
+
+- **Out-of-distribution scientific generalization:** All scientific benchmarks in Tables 3, 4, 6, and 7 are from domains that received targeted pre-training data (the six scientific domains named in Section 4.1.1). Does Intern-S1's scientific reasoning capability transfer to adjacent domains that were not specifically targeted? Evaluating on, for example, an acoustics benchmark or a geology benchmark outside the six domains would test generalization.
+
+- **Comparison against a domain-specific expert model:** Intern-S1 is positioned as a generalist with scientific specialization. How does it compare against specialist models—e.g., a chemistry-specific LLM or a protein-specific model—on the relevant benchmarks? This would clarify whether the unified architecture sacrifices domain depth for breadth.
+
+**Conditions on claims:**
+
+The claim that Intern-S1 "surpasses closed-source state-of-the-art models" holds on the specific scientific benchmarks evaluated (7 of 9), but only for single-sample decoding (temperature 0.7/0.8) with thinking mode enabled. The proprietary baselines are evaluated under their standard API configurations, which may differ from Intern-S1's decoding parameters. The claim should be understood as: on these specific benchmarks under these specific evaluation protocols, Intern-S1 achieves higher accuracy scores than the proprietary API models accessible at the time of evaluation.
+
+The 10× cost reduction claim specifically applies to the RL training phase, not to the entire model development pipeline. The continued pre-training on 5 trillion tokens (including 2.5 trillion scientific tokens) is enormously expensive and not included in the 10× comparison. The claim should be interpreted narrowly as: the online RL stage converges in fewer steps than Chen et al. (2025), with the underlying algorithmic choices (OREAL, KL-Cov, hybrid filtering) credited for the efficiency.
+
+The dynamic tokenizer's compression improvement is specific to the scientific formats it was designed for (SMILES, FASTA, and tagged scientific sequences). It does not improve compression on general natural language text and could theoretically degrade it if the detection mechanism misclassifies text as a scientific format. The paper argues this risk is negligible because scientific formats are "precisely identifiable" through rules and tags, but no false-positive analysis is provided.
 
 ## 6. Limitations and Trade-offs
-- Assumptions and dependencies
-  - The dynamic tokenizer relies on correct detection/tags for scientific substrings; mis‑tagging could degrade compression or semantics (Sec. 2.2).
-  - Verifiable RL hinges on the quality of rule‑based checkers and learned verifiers; for open‑ended tasks, POLAR provides relative rewards, not absolute correctness (Sec. 5.2.2).
 
-- Scope not fully evaluated
-  - A time‑series encoder is introduced (Sec. 2.3), but the benchmark suite does not directly evaluate time‑series tasks (e.g., seismology, EEG); real‑world performance on such data remains to be shown.
+### The Difficulty Estimation Cost Dominates the Compute Budget and Is Unaccounted For
 
-- Computational complexity
-  - Training uses 5T tokens and a very large MoE LLM; even with FP8 and FSDP, compute and engineering complexity are high (Sec. 3–4). The RL stage uses sizeable batches and multi‑rollout sampling (Sec. 5.2.4).
+The entire compute-optimal scaling framework (both the search and revision pipelines) depends on knowing each prompt's difficulty *before* deciding how to allocate the inference budget. The paper's method for estimating difficulty—generating 2,048 samples per question and averaging either ground-truth correctness (oracle bins) or PRM final-answer scores (predicted bins)—is extraordinarily expensive. At 2,048 samples per question, the difficulty estimation step alone consumes more compute than the largest test-time budgets studied in the paper (256–512 generations). The authors acknowledge this explicitly in Section 3.2:
 
-- MoE RL stability and sensitivity
-  - While OREAL + KL‑Cov improves stability, it required tuning (k=0.2, β=0.01) because Intern‑S1 started with low entropy (Sec. 5.2.4). Sensitivity to these hyperparameters and to the proportion of positive/negative examples may persist.
+> "estimating difficulty in this way still incurs additional computation cost during inference... our experiments do not account for this cost largely for simplicity"
 
-- Data transparency
-  - Some multimodal RL data are from “private collections” and “anonymized, real‑world user queries” (Sec. 5.2.2), which can limit perfect reproducibility and external auditing.
+The consequence is that the headline $4\times$ efficiency gains over best-of-N are computed *after* difficulty is known, without amortizing the cost of learning it. In a realistic deployment, the total cost would be 2,048 + $N$ generations per question (difficulty estimation + strategy execution), and for moderate budgets ($N \approx 16-64$), the estimation cost would dominate the total. The actual efficiency relative to best-of-N—which requires no difficulty estimation—would be far less than $4\times$, and for small budgets the compute-optimal approach would likely be *worse* than simply running best-of-N with the same total compute. The paper provides no upper bound on how much the estimation cost degrades the practical efficiency, and the $4\times$ figure should therefore be understood as a theoretical upper bound that assumes difficulty is known for free—a condition that does not hold in deployment.
 
-- Frozen components during RL
-  - The RL stage freezes the vision tower and router (Sec. 5.2.4), potentially capping multimodal adaptation during online learning.
+The paper acknowledges this gap, noting that "future work could explore pretraining or finetuning models to directly predict difficulty of a question from the prompt text alone" (Section 8), but no such model is developed, trained, or evaluated. Until a cheap difficulty estimator exists, the compute-optimal framework as described in the paper is not directly deployable at scale. The paper also suggests an adaptive approach where difficulty assessment is integrated into the problem-solving process (Section 3.2), but this is not implemented.
+
+*Evidence:* Section 3.2 (explicit acknowledgment of unaccounted cost), Section 8 (future work suggestion). No experiment measures the total cost including difficulty estimation.
+
+*Mitigation status:* Partially acknowledged but not resolved. The predicted-difficulty bins (using PRM scores rather than ground-truth correctness) remove the need for labeled data but do not reduce the computational cost of generating 2,048 samples per prompt. No alternative difficulty estimation method is evaluated.
+
+---
+
+### All Results Are on a Single Benchmark (MATH) with a Single Model Family (PaLM 2-S*)
+
+The paper's entire empirical contribution—the compute-optimal scaling curves, the difficulty-dependent strategy analysis, the FLOPs-matched comparison against a $14\times$ larger model—is derived from experiments on exactly one benchmark (MATH, consisting of 500 test questions across high-school competition mathematics) using exactly one model family (PaLM 2-S*). The authors state in Section 4 that they "believe this model is representative of the capabilities of many contemporary LLMs," but this claim is not tested. Several aspects of the findings could be specific to the MATH-PaLM combination:
+
+- The PRM's quality and over-optimization behavior depend on PaLM 2-S*'s output distribution, calibration, and typical error patterns. A model with different failure modes—e.g., one that makes different types of arithmetic errors, or one whose step-level reasoning is more/less interpretable—might exhibit different difficulty-dependent scaling curves or different thresholds for verifier over-optimization.
+- The revision model's ability to learn from incorrect in-context examples depends on the base model's in-context learning capability, which varies substantially across model families and scales. A smaller or differently-architected model might not learn the revision skill as effectively from the same training data construction.
+- MATH consists exclusively of symbolic reasoning problems with exact-answer verification. It is unclear whether the difficulty-dependent patterns (beam search hurting easy problems, sequential revisions helping easy problems, search helping medium problems) transfer to other reasoning domains such as code generation, logical deduction, scientific question-answering, or tasks requiring factual recall rather than inference.
+
+The consequence of single-benchmark evaluation is that the paper's central claims—that difficulty-conditioned allocation provides $4\times$ efficiency gains, that test-time compute can substitute for $14\times$ larger pretraining, and that verifier over-optimization is the primary bottleneck—may not generalize beyond competition-level mathematics. A practitioner deploying these techniques on, say, a code-generation task or a medical QA task has no direct evidence from this paper that the same difficulty-dependent patterns will hold, or that the same strategy-selection policies will be optimal.
+
+*Evidence:* All experiments in Sections 5–7 use the MATH benchmark with PaLM 2-S* (Section 4). The test set is 500 questions, split into five difficulty quintiles of approximately 100 each. No results are reported for any other benchmark or model family.
+
+*Mitigation status:* Acknowledged in Section 4 (the choice of MATH is justified by the argument that test-time compute is expected to help most when knowledge exists but complex inference is required) but not addressed through additional experiments. The paper does not claim broader generalization, but the absence of multi-benchmark validation limits the strength of the conclusions.
+
+---
+
+### The Hardest Problems Remain Completely Unsolved—Test-Time Compute Cannot Create Capability
+
+Across all methods evaluated in the paper—best-of-N search, beam search, lookahead search, sequential revisions, and their compute-optimal combinations—the hardest questions (difficulty bin 5) show near-zero improvement regardless of the compute budget allocated. In Figure 3 (right panel), bin 5 accuracy hovers at approximately 1–3% for all search methods and all budget levels from 4 to 256 generations. In Figure 7 (right panel), bin 5 accuracy is approximately 2–3% for all sequential-to-parallel ratios at a 128-generation budget. In the FLOPs-matched comparison (Figure 9), the bin 5 scaling curve is essentially flat near 0–5% across all test-time compute budgets, and the $14\times$ larger model also shows minimal performance on these problems.
+
+The failure mode is fundamental: if the base model's pass@1 is near zero on a problem class, there are essentially no correct solutions in the proposal distribution to find (through search) or refine (through revisions). Test-time compute can amplify existing capability—finding needles in haystacks, refining nearly-correct answers—but cannot create capability where none exists. This means the compute-optimal framework, while efficient, offers **no path forward for problems that genuinely exceed the base model's competence**. For these problems, pretraining remains the only viable route to improvement.
+
+The paper is transparent about this limitation. The Section 7 takeaway box explicitly states that for hard questions (bins 4–5), "pretraining is almost always more effective" and that test-time compute shows minimal gains. However, the practical implication deserves emphasis: in any real deployment where a non-trivial fraction of queries fall into the "hard" category (the base model's pass@1 is near zero), the compute-optimal framework will correctly identify those queries as hard and—crucially—will still fail to answer them correctly. The framework optimizes allocation but does not expand the frontier of what is solvable. Users expecting that smarter inference strategies will make their model capable on genuinely hard problems will be disappointed; the paper's results indicate that test-time compute is a complement to, not a replacement for, improvements in base model capability through pretraining.
+
+*Evidence:* Figure 3 (right panel, bin 5), Figure 7 (right panel, bin 5), Figure 9 (bin 5 scaling curves). Section 7 explicit acknowledgment.
+
+*Mitigation status:* Fully acknowledged but inherent to the approach. There is no proposed mitigation because the limitation is a property of the proposal distribution—if no correct solutions are generated, no selection or refinement mechanism can recover them. Future work on combining test-time compute with retrieval-augmented generation or tool use might partially address this for knowledge-based hard problems, but for reasoning problems requiring capabilities the base model simply lacks, pretraining remains the only solution.
+
+---
+
+### The Test Set for Strategy Selection Is Only ~50 Questions Per Bin, and No Confidence Intervals Are Reported
+
+The compute-optimal policy—which selects the best search algorithm, revision depth, and sequential-to-parallel ratio for each difficulty bin and compute budget—is determined through two-fold cross-validation on the 500-question MATH test set. With five difficulty quintiles, each bin contains approximately 100 questions. Cross-validation splits each bin roughly in half, meaning the strategy for each bin-budget combination is selected based on performance on approximately **50 questions** per validation fold. The selected strategy is then evaluated on the held-out 50 questions. Results are averaged across the two folds.
+
+This is an extremely small sample size for strategy selection. A policy that appears optimal on 50 questions could easily be suboptimal on a larger sample due to variance in the per-question accuracy estimates. The paper does not report confidence intervals, standard errors, or any measure of statistical reliability for the compute-optimal scaling curves (Figures 4, 8). Without such measures, it is impossible to determine whether the $4\times$ efficiency improvement is robust or whether the specific strategies selected (e.g., "use beam search on bin 3 at 16 generations, but best-of-N on bin 2 at 64 generations") would generalize to a fresh set of MATH questions, let alone to a different benchmark.
+
+The consequence is that a practitioner attempting to replicate the compute-optimal framework on their own task distribution, with their own base model and their own verifier, cannot rely on the specific strategy recommendations from this paper. They would need to re-derive the compute-optimal policy for their own distribution, requiring ground-truth labels for strategy selection (or a reliable verifier-based proxy) and a sufficiently large held-out set for cross-validation. The paper provides a methodology but not a transferable policy, and the small evaluation sample makes the methodology's statistical reliability unclear.
+
+*Evidence:* Section 3.2 describes the two-fold cross-validation procedure and the difficulty binning. Section 4 notes the 500-question test set. No confidence intervals appear in any figure or table.
+
+*Mitigation status:* Not addressed. The paper does not discuss the statistical reliability of the compute-optimal policy selection, does not report variance estimates, and does not validate the selected policies on an out-of-distribution test set. Future work with larger evaluation sets or bootstrapping-based confidence intervals would strengthen confidence in the specific strategy recommendations.
+
+---
+
+### The FLOPs-Matched Baseline Uses a Parameter-Only-Scaled Larger Model with Greedy Decoding and No Test-Time Compute
+
+The FLOPs-matched comparison in Section 7 tests whether a smaller model (PaLM 2-S*) with additional test-time compute can match or exceed a model with approximately $14\times$ more parameters under a fixed total FLOPs budget. The larger model is described as using only greedy decoding with **no test-time compute augmentation**—no majority voting, no best-of-N, no verifier-guided search, no revision chains. The paper explicitly acknowledges that the larger model is parameter-scaled but not compute-optimally trained:
+
+> "We choose this setting as it is representative of a canonical approach to scaling pretraining compute and leave the analysis of compute-optimal scaling of pretraining compute where the data and parameters are both scaled equally to future work."
+
+This creates two compounding biases in favor of test-time compute. First, the larger model is trained by scaling parameters while holding data fixed (following the LLaMA/Touvron et al. (2023) paradigm rather than Chinchilla-optimal scaling from Hoffmann et al. (2022), which would scale parameters and data equally). A compute-optimally trained larger model—with $14\times$ more total FLOPs allocated optimally between more parameters and more data—would likely outperform a parameter-only-scaled model, making the pretraining baseline **weaker than it could be**. Second, the larger model receives no test-time compute budget of its own. Even a modest augmentation—best-of-8 with a verifier, or a short revision chain—would create a stronger baseline, and the paper provides no evidence that the smaller model with test-time compute would still outperform the larger model if the larger model were also allowed to use test-time compute.
+
+The consequence is that the headline finding—"a smaller model with additional test-time compute can outperform a ~14× larger model"—is best understood as an **upper bound** on the advantage of test-time compute over pretraining. Against a stronger baseline (compute-optimally trained larger model with its own modest test-time compute budget), the advantage would likely shrink or reverse, particularly on medium and hard problems where the paper already shows pretraining is competitive or superior (Figure 9).
+
+*Evidence:* Section 7 (FLOP accounting and baseline description). The paper explicitly acknowledges the parameter-only scaling choice and the greedy-decoding baseline choice but treats them as acceptable simplifications.
+
+*Mitigation status:* Partially acknowledged (the Chinchilla-optimal training caveat is stated in Section 7) but not resolved through additional experiments. The paper describes the choice as leaving compute-optimal pretraining analysis "to future work." A more complete comparison would evaluate at least two points on the pretraining Pareto frontier (parameter-scaled and compute-optimally-scaled larger models), each with and without a test-time compute budget.
+
+---
+
+### Sequential Revision Strategies Incur Latency Penalties Not Reflected in the Efficiency Metrics
+
+The paper measures compute budget in "generations"—the number of complete solutions sampled from the model—which serves as a reasonable proxy for total FLOPs. However, it ignores **wall-clock latency**, which is the relevant metric for interactive or latency-sensitive applications. The reason this matters is that the compute-optimal policy frequently selects strategies with substantial sequential components:
+
+- For easy problems (bins 1–2), the revision pipeline's compute-optimal strategy favors fully sequential revision chains—one chain of length $N$, where each revision depends on the previous one (Figure 7, right panel). Generating $N$ sequential revisions requires $N$ serial forward passes through the model, with latency proportional to $N$ times the per-generation latency.
+
+- By contrast, best-of-N parallel sampling (the baseline) can generate $N$ solutions simultaneously given sufficient hardware parallelism, with latency proportional to the *longest* single generation, not $N$ times the per-generation latency.
+
+A strategy that allocates 64 generations as 64 sequential revisions takes approximately $64\times$ longer wall-clock time than one that runs 64 parallel samples concurrently. For latency-sensitive deployments—interactive tutoring systems, real-time problem-solving assistants, API endpoints with strict timeout requirements—the sequential-heavy strategies favored by the compute-optimal policy on easy and medium problems may be **impractical regardless of their FLOPs efficiency advantage**. A practitioner would need to add a latency constraint to the compute-optimal allocation problem, which would shift the optimal strategies toward more parallel sampling, potentially reducing or eliminating the efficiency gains.
+
+The paper does not discuss latency, does not report wall-clock times for any experiment, and does not analyze how latency constraints would alter the compute-optimal policy. This is a significant gap for practitioners evaluating whether to adopt the approach in production systems.
+
+*Evidence:* The paper uses "generations" as the universal cost unit throughout (Sections 5.2–5.3, 6). Section 5.2 explicitly states that beam search, lookahead search, and best-of-N are compared "at the same generation budget." Latency is never mentioned as a constraint or metric.
+
+*Mitigation status:* Not addressed. The paper does not acknowledge the latency-throughput distinction, does not report wall-clock measurements, and does not discuss how sequential dependencies in revision chains and beam search affect deployability. The hybrid sequential-parallel strategies proposed in Section 6 offer a partial mitigation (fewer serial steps with some parallel breadth), but the optimal ratios under latency constraints are not analyzed.
 
 ## 7. Implications and Future Directions
 - Field‑level impact

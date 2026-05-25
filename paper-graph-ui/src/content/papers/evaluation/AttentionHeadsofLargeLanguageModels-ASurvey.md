@@ -9,172 +9,737 @@ This paper delivers the first comprehensive, up-to-date survey focused specifica
 ---
 
 ## 1. Executive Summary
-This survey systematizes what is known about “special” attention heads inside modern decoder‑only large language models (LLMs) and proposes a four‑stage, cognitively inspired framework—Knowledge Recalling (KR), In‑Context Identification (ICI), Latent Reasoning (LR), and Expression Preparation (EP)—to explain how such heads cooperate to produce answers (Section 4; Figures 6–8). It also unifies discovery methods (activation patching, ablations, probing, scoring, simplified models) and compiles evaluation datasets and metrics so researchers can identify, test, and compare functional attention heads (Section 5; Tables 4–5; Section 6; Tables 6–7).
+
+This survey systematizes how attention heads in decoder-only LLMs implement the internal reasoning processes that underpin model behavior, introducing a novel **four-stage framework** inspired by human cognition — Knowledge Recalling (e.g., Memory Head retrieving parametric knowledge), In-Context Identification (e.g., Syntactic Head labeling grammatical structure), Latent Reasoning (e.g., Induction Head capturing pattern-completion for in-context learning), and Expression Preparation (e.g., Amplification Head boosting correct answer logits). Drawing on studies across LLaMA, GPT, and other model families, the paper catalogs over 30 functionally specialized attention heads, maps their layer-wise distribution, and classifies the experimental methods used to discover them into Modeling-Free (activation patching, ablation) and Modeling-Required (probing classifiers, simplified model training) approaches. The review establishes that attention heads exhibit stage-specific, collaborative behavior — with shallow layers favoring Knowledge Recalling, middle layers dominated by In-Context Identification and Latent Reasoning, and deep layers handling Expression Preparation — but only for the narrow task distributions and model-specific circuits studied to date, as findings lack cross-task and cross-architecture validation.
 
 ## 2. Context and Motivation
-- Problem addressed
-  - Modern LLMs are high‑performing but remain “black boxes.” The paper targets the specific internal components—attention heads—that appear to implement distinct sub‑skills such as copying names, doing pattern induction, or amplifying correct choices (Section 4; Figure 7).
-  - There is no up‑to‑date, LLM‑focused survey of attention head mechanisms; prior surveys either emphasized non‑Transformer architectures, early attention variants, or broad interpretability methods without consolidating what each head type actually does in today’s LLMs (Section 3.3).
 
-- Why it matters
-  - Understanding head functions enables principled interventions to reduce errors (e.g., hallucinations), improve truthfulness and consistency, and steer models at inference time (Sections 1, 4.4.2, 5.1; also see heads like Truthfulness/Accuracy/Consistency in Figure 7).
-  - Insights support theory building (e.g., circuits, residual streams) and practical tooling (e.g., KV‑cache compression via retrieval heads; Figure 7 and citations 69–70).
+### The Core Problem: LLMs Are Black Boxes That We Rely On Despite Not Understanding
 
-- Prior approaches and gaps
-  - Early interpretability focused on BERT‑style encoders or on many attention variants that are no longer central to mainstream LLMs (Section 3.3).
-  - Mechanistic studies identified individual circuits (e.g., IOI—Indirect Object Identification) mostly in small models like GPT‑2 Small, but lacked a unifying cognitive framework and did not synthesize discovery methods and benchmarks in one place (Section 4.6; Figure 9).
+The fundamental problem this survey addresses is deceptively simple: **Large Language Models work, but we don't know *how* they work internally.** Since the Transformer architecture's introduction in 2017, models built on it — particularly decoder-only LLMs like GPT-4, LLaMA, and their variants — have achieved remarkable performance across tasks ranging from mathematical reasoning to code generation to medical diagnosis. These models are deployed in high-stakes applications where reliability matters. Yet they remain, in the authors' words, "black-box systems" (Section 1).
 
-- Positioning
-  - Provides a mathematical “wiring diagram” for decoder‑only Transformers (Section 3.1; Equations 1–4; Figure 3) and key conceptual tools—`residual streams`, `QK` and `OV` matrices, and `circuits` (Section 3.2; Figure 4).
-  - Organizes known head types by stage of reasoning (Figure 7), maps stages to layer depth (Figure 8), and shows collaborative patterns across heads with worked examples (Section 4.6; Figure 9).
+This opacity creates a practical tension. When an LLM produces a correct answer, can we trust that it arrived at that answer through sound reasoning rather than statistical pattern matching? When it fails — as it does on certain reasoning problems, or when it hallucinates facts, or when it exhibits contradictory behavior under slightly different prompts — we lack the diagnostic tools to understand *why*. The inability to inspect and verify the reasoning process is not merely an academic inconvenience; it is a barrier to reliable deployment, systematic improvement, and safety assurance.
+
+### Why Understanding Attention Heads Specifically Matters
+
+The survey focuses on attention heads for a specific architectural reason. In the Transformer's design (Section 3.1), each layer contains multiple attention heads operating in parallel, each computing:
+
+$$\text{Attn}^h_\ell(X_{\ell,0}) = \text{softmax}\left(X_{\ell,0} \cdot WQ^h_\ell WK^{h\top}_\ell \cdot X_{\ell,0}^\top\right) \cdot X_{\ell,0} \cdot WV^h_\ell O^h_\ell$$
+
+This formulation reveals that each attention head performs two distinct operations: **reading** from the residual stream (via the QK matrix, which determines which tokens attend to which other tokens) and **writing** back into it (via the OV matrix, which transforms and outputs information). The residual stream itself functions as a shared bandwidth — a communication channel through which different heads at different layers deposit and retrieve information (Section 3.2.1, citing Elhage et al., 2021).
+
+This architecture makes attention heads the natural unit of analysis for mechanistic interpretability. Unlike FFN neurons, which the paper briefly discusses in Section 7.1 as storing factual knowledge in a key-value-like manner, attention heads are the components that **move and transform information across token positions and layers**. They implement the computation graph that turns input tokens into output predictions. Understanding what each head does — what information it reads, what computation it performs, and what it writes — is therefore equivalent to understanding the model's reasoning program.
+
+The authors argue this focus is timely because, as shown in their Figure 1 (Google Trends data), both "Attention Head" and "Model Interpretability" as search terms have surged in popularity since the release of ChatGPT, indicating growing research and practitioner interest in peering inside these models.
+
+### The Fragmented State of Prior Research
+
+Prior to this survey, research on attention head function suffered from several structural problems that prevented the field from coalescing into a coherent understanding:
+
+#### Problem 1: Scattered, Task-Specific Findings Without Unifying Framework
+
+The most significant gap the survey identifies is the absence of any organizing taxonomy for what attention heads actually do. As Section 4 reveals, the literature had identified dozens of functionally specialized heads — Induction Heads for pattern completion, Name Mover Heads for copying entity information to the [END] position, Sentiment Summarizers for aggregating emotional valence, Truthfulness Heads correlated with answer correctness — but these discoveries were made in isolation, using different models, different tasks, and different experimental protocols. There was no framework for answering questions like:
+
+- Are Induction Heads and Successor Heads fundamentally the same type of mechanism applied to different domains, or are they genuinely distinct?
+- Do the same attention heads that perform syntactic identification in one task also handle it in another, or do functions redistribute across heads depending on context?
+- Is there a principled mapping between a head's layer depth and its functional role, or is the observed localization (shallow → shallow functions, deep → deep functions) an artifact of the specific circuits studied?
+
+The field had accumulated a catalog of specialized heads but lacked a taxonomy to organize them. The authors' four-stage framework — Knowledge Recalling, In-Context Identification, Latent Reasoning, Expression Preparation — is their proposed solution, drawing an explicit analogy to cognitive neuroscience models of human problem-solving (the OAR model of Wang, 2007; the ACT-R architecture of Anderson, 2014). This is not merely labeling convenience; the analogy provides testable predictions. If LLM attention heads map cleanly onto these human cognitive stages, then interventions that disrupt a particular stage in humans (e.g., impairing working memory) should have analogs that disrupt the corresponding heads in LLMs.
+
+#### Problem 2: Focus on Toy Tasks and Small Models With Unknown Scalability
+
+The paper explicitly distinguishes itself from earlier interpretability work on encoder-only models like BERT (Section 2, "Out-of-scope topics"). Studies of BERT attention heads — such as Kovaleva et al. (2019) on syntactic specialization, or Pande et al. (2021) on the statistical properties of multi-head attention — provided early insights but are "now outdated" for understanding modern LLMs. Decoder-only architectures differ fundamentally from BERT's bidirectional design: they process tokens autoregressively, use causal masking, and operate at scales where emergent behaviors appear that are absent in smaller models.
+
+More critically, even recent work on decoder-only models often relies on what the authors call "toy models" — for example, two-layer decoder-only Transformers trained on synthetic tasks. The paper's Figure 7 marks which heads were discovered in toy models versus production-scale LLMs using icons for different model families. This is important because findings from simplified architectures may not transfer to full-scale models where interactions between dozens of layers and hundreds of heads create emergent computational patterns not present in the toy setting. The survey aggregates findings specifically from "highly popular LLMs, such as LLaMA and GPT" (Section 1), providing a snapshot of what has been validated at scale.
+
+#### Problem 3: Experimental Methodology Fragmented Across Approaches
+
+Section 5 categorizes discovery methods into Modeling-Free (which modify or replace activations without training new models) and Modeling-Required (which train auxiliary models or compute diagnostic scores). Within Modeling-Free methods alone, the authors distinguish between Modification-Based approaches (directional addition or subtraction of vectors in activation space) and Replacement-Based approaches (zero ablation, mean ablation, naïve activation patching). These method families answer different questions — ablation asks "is this head necessary?", while patching asks "what information does this head transmit?" — and a finding established via one method may not replicate under another. The survey's systematic categorization of experimental methods is itself a contribution, providing researchers with a menu of approaches and their applicability conditions.
+
+#### Problem 4: Lack of Cross-Task and Cross-Architecture Validation
+
+Section 8.1 is explicit about the most significant limitation in existing work: "These circuits have not been validated across other tasks, making it challenging to determine whether these mechanisms are universally applicable." The IOI (Indirect Object Identification) circuit discovered by Wang et al. (2023) in GPT-2 Small — involving Duplicate Heads, Name Mover Heads, Inhibition Heads, and Amplification Heads working in concert — is one of the best-understood circuits in any language model. But we don't know whether GPT-4, LLaMA-3, or Qwen implements IOI using the same head types and the same communication patterns, or whether the mechanism changes with scale.
+
+The authors further note that "current research lacks investigations into the transferability of such mechanisms across different model series." A Retrieval Head identified in LLaMA may not exist in the same form in Mistral or Gemma, or may be distributed across multiple heads instead of localized to one. Without cross-architecture validation, the field risks accumulating model-specific findings that fail to generalize.
+
+### Conflicting Evidence and Unreconciled Observations
+
+The paper implicitly identifies tensions in the literature that a unified framework should resolve. For instance:
+
+- Some studies find that attention heads exhibit clean, localized functions — a single head handles a specific syntactic operation (Syntactic Head), or moves a specific type of information to the [END] position (Name Mover Head). Other work finds that functions are distributed across many heads in superposition, making isolation difficult.
+- The relationship between attention heads and model performance is not monotonic. Some heads (Truthfulness Head, Accuracy Head) positively correlate with correct outputs, and amplifying their activations improves model performance. Others (Vulnerable Head, Negative Head) introduce biases or sensitivity to irrelevant features, and suppressing them helps. This suggests that not all attention heads are beneficial, complicating any simple interpretation of "more attention = better."
+- The collaboration between heads (Section 4.6) follows patterns — like the IOI circuit in Figure 9 — that suggest structured computation, but whether these patterns emerge consistently across task types or are one-off discoveries is unknown.
+
+### How This Survey Positions Itself
+
+The survey explicitly positions itself as filling a gap not addressed by existing reviews:
+
+- **Räuker et al. (2023)** discussed interpretability broadly but focused on non-Transformer architectures, with "little focus on attention heads" (Section 3.3).
+- **Gonçalves et al. (2022), Santana and Colombini (2021), Chaudhari et al. (2021), and Brauwers and Frasincar (2021)** covered attention mechanism variants developed during the Transformer's early evolution, but "current LLMs still use the original scaled-dot product attention, indicating that many of the derived attention forms have become outdated."
+- **Luo and Specia (2024)** surveyed explainability methods for LLMs but "only summarized experimental methodologies and overlooked research findings related to operational mechanisms" — that is, they covered *how* to study models but not *what* has been learned about attention head function.
+
+The survey's distinctive contribution is therefore threefold:
+
+1. **A functional taxonomy** that organizes over 30 identified attention heads into four cognitive stages, grounded in the neuroscience of human reasoning. This is not merely categorization for its own sake; it reveals patterns — such as the concentration of KR heads in shallow layers and EP heads in deep layers (Figure 8) — that would be invisible without the framework.
+
+2. **A methodological taxonomy** (Modeling-Free vs. Modeling-Required, with subcategories) that makes the experimental toolkit explicit and comparable across studies.
+
+3. **An explicit limitations analysis** (Section 8.1) that identifies what the field has *not* established — including the lack of cross-task generalizability, cross-architecture transferability, multi-head collaboration frameworks, and theoretical grounding — providing a structured research agenda rather than merely a summary.
+
+The paper thus positions itself not as introducing new experimental findings, but as providing the conceptual infrastructure — the taxonomy, terminology, and identified gaps — needed to convert scattered observations into a systematic science of attention head interpretability. The four-stage framework's explicit grounding in cognitive neuroscience (the ACT-R model's Perception → Working Memory → Procedural/Declarative Memory → Motor pathway) is intended to provide testable hypotheses: if LLM reasoning is analogous to human cognition at the architectural level, then disrupting heads at one stage should produce predictable deficits, and the collaboration patterns between stages should mirror the information flow patterns documented in human problem-solving studies.
 
 ## 3. Technical Approach
-This is a survey, but it offers a precise technical scaffolding for understanding how attention heads work and how to study them.
 
-A. Model anatomy and notation (Section 3.1; Equations 1–4; Figure 3)
-- A decoder‑only LLM consists of an embedding layer, L Transformer blocks, and an unembedding layer. Each block has:
-  - Multi‑head attention: outputs from H heads are summed and residual‑added to the input (Equation 1).
-  - Feed‑Forward Network (FFN/MLP): its output is residual‑added to produce the next block’s input (Equation 2).
-- For head `h` in layer `ℓ`, queries/keys/values are `Q^h_ℓ = X W^Q`, `K^h_ℓ = X W^K`, `V^h_ℓ = X W^V`; attention computes `softmax(Q K^T) V O` (Equation 3).
-- Expanding this shows two compound matrices (Equation 4):
-  - `QK matrix = W^Q W^{K⊤}` determines where a head looks (which tokens/timesteps).
-  - `OV matrix = W^V O` determines what a head writes back to the residual stream.
+### 3.1 Reader orientation (approachable technical breakdown)
 
-B. Conceptual tools for mechanism tracing (Section 3.2; Figure 4)
-- Residual streams: every token position carries a running sum of prior computations; heads read from and write to this shared highway, enabling cross‑layer and cross‑token information flow.
-- Circuits: subgraphs of interacting components (heads, FFNs) that implement tasks (e.g., bias circuits, knowledge circuits).
-- Logit lens: project intermediate vectors through the unembedding to approximate token‑level preferences; useful to quantify effects of interventions.
+This is a **survey paper** that constructs a conceptual framework — the four-stage reasoning pipeline — and uses it to **classify and organize** existing research findings about attention head function, rather than proposing a new experimental method or model architecture. The "system" being built is not a computational artifact but an **intellectual infrastructure**: a taxonomy of attention head types, a mapping of their layer-wise distribution, a catalog of experimental discovery methods, and a vocabulary for describing multi-head collaboration. The core idea is that by analogizing LLM reasoning to the four cognitive stages humans use when solving problems (Knowledge Recalling → In-Context Identification → Latent Reasoning → Expression Preparation), scattered findings about individual attention heads snap into a coherent picture where each head's function, layer position, and interaction patterns become predictable rather than arbitrary.
 
-C. Four‑stage cognitive framework (Section 4; Figures 6–8)
-- Stages are not strictly linear; reasoning can loop between stages (Figure 6).
-  1) Knowledge Recalling (KR): retrieve relevant stored knowledge or biases from parameters.
-  2) In‑Context Identification (ICI): locate and transform structural, syntactic, and semantic cues in the prompt/history.
-  3) Latent Reasoning (LR): integrate evidence and perform implicit computation (pattern induction, comparison, arithmetic/logical steps).
-  4) Expression Preparation (EP): aggregate and amplify the result into tokens that the unembedding/softmax will emit.
-- Typical layer mapping (not absolute): KR in shallow/middle layers; ICI spans shallow→deep; LR in middle→deep; EP deeper layers (Figure 8).
+### 3.2 Big-picture architecture (diagram in words)
 
-D. Taxonomy of head functions by stage (Figure 7; Sections 4.2–4.5)
-Below are representative head types, how they work, and where they fit.
+The survey's organizing architecture has five components:
 
-1) KR: heads that initialize or bias the reasoning
-- Associative/Memory Heads (Section 4.2): treat weights like associative memories that denoise superposed activations; they recall attributes about entities surfaced by FFNs and write this back to the stream (citations 59–61).
-- Task‑bias heads in special settings:
-  - Constant/Single‑Letter Heads for multiple‑choice QA (MCQA): spread or focus attention over option letters to “collect” candidate answers before reasoning (Section 4.2; Table 2).
-  - Negative Head for binary decision tasks: shows a pre‑learned bias toward negative answers by allocating more attention to “No”‑like tokens (Section 4.2; Figure 7; Table 2).
+1. **A mathematical grounding of the Transformer** (Section 3.1) — defining the residual stream, the QK matrix (reads information from specific token positions), the OV matrix (writes transformed information back), and the additive residual connections that link layers. This formalism is the *language* in which all subsequent head descriptions are expressed.
 
-2) ICI: heads that parse structure and meaning from the context
-- Structural heads (Section 4.3.1):
-  - Previous/Positional Heads: encode previous‑token relations and positional patterns.
-  - Rare Words / Duplicate Heads: attend to low‑frequency or repeated tokens to highlight salience.
-  - (Global) Retrieval Heads: track specific mentions deep in long contexts—crucial for “needle‑in‑a‑haystack” retrieval (Figure 7; citations 69–70).
-- Syntactic heads (Section 4.3.2):
-  - Subword Merge: unify split word pieces into coherent units.
-  - Mover/Name‑Mover/Backup/Negative‑Name‑Mover: copy important arguments (e.g., names) to the current decoding position ([END]) or suppress a copy when inappropriate (Figure 7).
-- Semantic heads (Section 4.3.3):
-  - Context and Content‑Gatherer Heads: move answer‑relevant tokens to [END]/[SUM] to stage evidence (Figure 7).
-  - Sentiment Summarizer: aggregates sentiment‑bearing adjectives/verbs around [SUM] (Section 4.3.3).
-  - Subject/Relation Heads; Semantic Induction Heads: extract entities and relations (Figure 7).
+2. **A four-stage cognitive framework** (Section 4.1) — derived from human problem-solving models (OAR, ACT-R) and applied analogically to LLMs. The four stages — Knowledge Recalling, In-Context Identification, Latent Reasoning, Expression Preparation — serve as the primary classification axis for attention heads.
 
-3) LR: heads that compute or decide
-- In‑Context Learning (Section 4.4.1):
-  - Task Recognition: a Summary Reader head reads [SUM] to map a described task to known labels (e.g., positive/negative).
-  - Task Learning: Induction Heads detect patterns like “… A B … A → predict B” by matching “previous token” features from a Previous Head with current tokens (Section 4.4.1).
-  - In‑Context Heads with metric‑learning flavor compute similarity between [END] representation and label prototypes to choose a label among several (Section 4.4.1).
-- Effective reasoning property heads (Section 4.4.2):
-  - Truthfulness/Accuracy/Consistency Heads correlate with truthful, correct, and self‑consistent outputs; steering along their directions can improve behavior.
-  - Vulnerable Heads overreact to distractors; reducing their influence can improve robustness.
-- Task‑specific LR (Section 4.4.3):
-  - Correct‑Letter Head bridges textual answers to option letters in MCQA.
-  - Iteration Head performs step‑by‑step state updates (e.g., parity or sequence iteration; Section 4.6).
-  - Successor Head implements “+1” on ordinal numbers.
-  - Inhibition/Suppression Head reduces the logits of disallowed candidates (e.g., suppress “John” in IOI; Section 4.4.3).
+3. **A taxonomy of special attention heads** (Sections 4.2–4.5) — over 30 functionally characterized heads, each mapped to one of the four stages, with their input features, output features, and typical layer distribution documented in summary tables.
 
-4) EP: heads that “package” the result for emission (Section 4.5; Table 3)
-- Mixed Head aggregates outputs of Subject/Relation/Induction heads into a concise final vector.
-- Amplification/Correct Heads boost the correct token(s) near [END] so the unembedding/softmax selects them.
-- Coherence Head aligns generated language with the desired output language; Faithfulness Head improves consistency between internal reasoning and chain‑of‑thought text.
+4. **An experimental methods catalog** (Section 5) — divided into Modeling-Free (activation patching, ablation, directional addition/subtraction) and Modeling-Required (probing classifiers, simplified model training, scoring functions), with subcategories based on whether they modify or replace activations, and whether they require training.
 
-E. Collaboration patterns and circuits (Section 4.6; Figure 9)
-- MCQA example: Content‑Gatherer at ICI moves answer text to [END]; Correct‑Letter at LR matches a “query” that asks “are you the correct label?” against keys that encode option letters plus their textual descriptions.
-- Parity example: a Mover Head sends [EOI] to [END]; an Iteration Head finds the last digit and combines with the previous parity state to compute the final parity (Equation 5).
-- IOI circuit (Figure 9): Subject/Relation Heads cue “answer should be a human name” (KR), Duplicate and Name‑Mover Heads collect candidate names (ICI), Induction plus Previous Heads propagate “John” salience while an Inhibition Head suppresses “John” (LR), and an Amplification Head boosts “Mary” at EP.
+5. **A collaborative mechanism narrative** (Section 4.6) — how heads across stages exchange information through the residual stream to implement complete reasoning circuits, illustrated with the IOI (Indirect Object Identification) task example in Figure 9.
 
-F. Methods to discover and validate head functions (Section 5; Tables 4–5; Figure 10)
-- Modeling‑Free
-  - Modification‑based: directional addition/subtraction assumes some concept direction in representation space; e.g., add a “positive‑minus‑negative” sentiment vector at a head to test if it summarizes sentiment (Section 5.1).
-  - Replacement‑based: zero/mean ablation or naïve activation patching (replace an activation from the clean prompt with one from a corrupted prompt, or vice versa) to see which heads matter (Section 5.1).
-- Modeling‑Required
-  - Training‑Required: probing (train classifiers on head activations to identify functions); simplified model training (train tiny Transformers on clean tasks to reveal mechanisms more clearly) (Section 5.2).
-  - Training‑Free: scoring metrics such as Retrieval Score (Equation 6) for retrieval heads and Negative Attention Score (NAS; Equation 7) for negative‑bias heads; Information Flow Graphs to extract high‑impact edges across tokens and components (Section 5.2).
+Information flows conceptually: human cognitive models motivate the four-stage framework → the framework provides bins for sorting discovered attention heads → each head's function is characterized by the QK/OV operations it performs on the residual stream → experimental methods provide the evidence linking specific heads to specific functions → the collaboration narrative stitches isolated heads into end-to-end reasoning circuits.
 
-G. Evaluation resources (Section 6; Tables 6–7; Figure 11)
-- Mechanism exploration datasets distill tasks into token‑level probes (e.g., IOI, ToyMovieReview/MoodStory with templates in Figure 11, Induction/Iteration/Succession tasks).
-- Common evaluations test whether steering heads improves real‑world capability (MMLU, TruthfulQA, LogiQA, SST/SST‑2, long‑context retrieval, etc.).
+### 3.3 Roadmap for the deep dive
+
+- **First**, the mathematical formalism of the Transformer (Section 3.1 of the paper). This defines the residual stream, the QK/OV matrix decomposition, and the additive computation structure — the substrate on which all head functions are implemented. Without this, the subsequent talk of heads "reading from" and "writing to" the residual stream has no operational meaning.
+
+- **Second**, the four-stage framework derivation (Section 4.1). I will trace how the authors extract KR, ICI, LR, and EP from cognitive neuroscience models (OAR, ACT-R), then map each stage to what attention heads can observably do in the Transformer architecture. This explains *why* these four stages and not others.
+
+- **Third**, the head taxonomy itself (Sections 4.2–4.5). For each stage, I will explain what types of heads belong there, using representative examples with their QK/OV behavior, input/output features, and typical layer positions. The goal is to show how the abstract stages are grounded in concrete architectural operations.
+
+- **Fourth**, the collaborative mechanism (Section 4.6). I will walk through the IOI circuit (Figure 9) as a worked example of heads from different stages communicating through the residual stream, showing how the four-stage framework explains *why* certain heads appear at certain layers and interact in certain orders.
+
+- **Fifth**, the experimental discovery methods (Section 5). This is the evidentiary backbone: I will explain how researchers infer head function from behavior, covering the logic of activation patching, ablation, probing, and scoring-based approaches. Understanding these methods is essential for evaluating the strength of the claims in the taxonomy.
+
+### 3.4 Detailed, sentence-based technical breakdown
+
+This section explains the conceptual machinery the survey builds — first the architectural substrate (the Transformer's mathematical structure), then the cognitive framework, then the head classification within that framework, then the collaboration patterns, and finally the experimental methods that provide evidence for it all.
+
+---
+
+#### The Mathematical Substrate: Residual Streams, QK Matrices, and OV Matrices
+
+The survey's entire classification of attention heads depends on a specific decomposition of the attention computation, formalized in Sections 3.1 and 3.2.1. The key insight is that an attention head's operation can be separated into **reading** (determining which token positions to attend to) and **writing** (determining what information to deposit at those positions). This decomposition is what makes it possible to ask questions like "does this head move entity information to the [END] position?" — because the reading pattern (QK matrix) tells you which positions the head looks at, and the writing pattern (OV matrix) tells you what it puts where.
+
+**The residual stream as shared bandwidth.** The authors adopt the framework from Elhage et al. (2021) (cited as reference 25) that conceptualizes the Transformer's hidden states not as isolated layer outputs but as a continuous "residual stream" — a shared communication channel that runs through the entire model. At layer $\ell$, the residual stream $X_{\ell,0} \in \mathbb{R}^{N \times d}$ contains the sum of the original token embeddings plus the outputs of every previous layer's attention and FFN blocks. Each attention head *reads* from this stream (via its QK matrix, which computes attention weights over the $N$ token positions) and *writes* back into it (via its OV matrix, which produces an additive update that is summed into the stream). Because the writing is additive (residual connections), information accumulates — heads in deeper layers see not just the output of the immediately preceding layer, but a superposition of information deposited by all previous heads across all previous layers.
+
+**The QK/OV decomposition.** The standard attention computation for head $h$ in layer $\ell$ is defined in Equation 3:
+
+$$\text{Attn}^h_\ell(X_{\ell,0}) = \text{softmax}\left(Q^h_\ell \cdot K^{h\top}_\ell\right) \cdot V^h_\ell \cdot O^h_\ell$$
+
+where $Q^h_\ell = X_{\ell,0} \cdot WQ^h_\ell$ is the query matrix (shape $N \times d_H$, where $d_H = d/H$ is the per-head dimension and $H$ is the total number of heads), $K^h_\ell = X_{\ell,0} \cdot WK^h_\ell$ is the key matrix, $V^h_\ell = X_{\ell,0} \cdot WV^h_\ell$ is the value matrix, and $O^h_\ell \in \mathbb{R}^{d_H \times d}$ is the output projection matrix. The matrices $WQ^h_\ell, WK^h_\ell, WV^h_\ell \in \mathbb{R}^{d \times d_H}$ are low-rank projections that map the $d$-dimensional residual stream into a smaller $d_H$-dimensional space per head.
+
+Equation 4 rewrites this to expose the QK and OV matrices:
+
+$$\text{Attn}^h_\ell(X_{\ell,0}) = \text{softmax}\left(X_{\ell,0} \cdot WQ^h_\ell WK^{h\top}_\ell \cdot X_{\ell,0}^\top\right) \cdot X_{\ell,0} \cdot WV^h_\ell O^h_\ell$$
+
+where $WQ^h_\ell WK^{h\top}_\ell \in \mathbb{R}^{d \times d}$ is the **QK matrix** (also called the QK circuit) and $WV^h_\ell O^h_\ell \in \mathbb{R}^{d \times d_H \times d}$ is the **OV matrix** (also called the OV circuit).
+
+**What the QK matrix does operationally:** For each of the $N$ token positions $i$ in the input, the QK matrix computes a bilinear score between the query vector at position $i$ (a $d$-dimensional row of $X_{\ell,0} \cdot WQ^h_\ell$) and the key vector at position $j$ (a $d$-dimensional row of $X_{\ell,0} \cdot WK^h_\ell$). The softmax normalizes these scores into a probability distribution over the $N$ source positions for each target position $i$. This is the *reading* operation: it determines which tokens the head "looks at" and with what relative weight. Investigating what a head attends to — which tokens receive high softmax weight — is the primary method for inferring what information it reads.
+
+**What the OV matrix does operationally:** Once attention weights are computed, the OV matrix takes the value vectors from the attended-to positions and transforms each into an output vector of dimension $d$ that is written back into the residual stream at the attending position. This is the *writing* operation: it determines what information the head deposits. Crucially, two heads with identical QK matrices (reading the same token positions) but different OV matrices would deposit completely different information — one might copy entity names, another might compute sentiment features. This is why many of the heads in the taxonomy are characterized by *both* their attention pattern (QK behavior — what they look at) and their output function (OV behavior — what they write).
+
+**Why this decomposition matters for the survey:** The QK/OV separation is the operational language in which every special head is described. A "Mover Head" (Section 4.3.2) is defined by its QK matrix attending to entity-name token positions and its OV matrix copying that name information to the [END] token position. An "Induction Head" (Section 4.4.1) is defined by its QK matrix matching the current token against previous occurrences of the same token, and its OV matrix outputting the token that followed the matched occurrence. Without the QK/OV decomposition, these functional descriptions have no architectural grounding — they become vague metaphors rather than falsifiable claims about matrix operations.
+
+**The multi-head summation and residual connection.** Equation 1 shows that the outputs of all $H$ attention heads in layer $\ell$ are summed:
+
+$$X^\text{attn}_\ell = \sum_{h=1}^H \text{Attn}^h_\ell(X_{\ell,0})$$
+
+$$X_{\ell,1} = X_{\ell,0} + X^\text{attn}_\ell$$
+
+This additive structure means that heads operate independently (no cross-head interaction within a layer) and their contributions accumulate in the residual stream. A head in layer $\ell+1$ can therefore read information written by any head in layer $\ell$ or earlier, but cannot read information written by heads in the same layer. This sequential independence-within-layers, dependence-across-layers is the architectural constraint that shapes the collaborative circuits described in Section 4.6.
+
+**The FFN block.** Equation 2 defines the second residual addition in each layer:
+
+$$X^\text{ffn}_\ell = \text{FFN}_\ell(X_{\ell,1})$$
+
+$$X_{\ell+1,0} = X_{\ell,1} + X^\text{ffn}_\ell$$
+
+The FFN's role is discussed separately in Section 7.1. For the purposes of the attention head taxonomy, the FFN is treated as a complement to attention — it processes each token position independently (no cross-position mixing) and stores factual knowledge in a key-value-like manner (Geva et al., 2021, cited as reference 123). The survey notes that FFNs enrich entity semantics in shallow layers (feeding into the KR stage's Memory Head) and that attention heads and FFNs work in complementary fashion: "attention heads, which focus on global information and perform aggregation," while "FFNs focus only on a single representation and perform local updates" (Section 7.1).
+
+**Layer normalization omission.** The authors explicitly note that they "will omit Layer Normalization in this section" because the two variants (Pre-Norm and Post-Norm) are "not the focus of this paper." This is a reasonable simplification for a conceptual survey, though practitioners should be aware that LayerNorm affects the effective rank and scaling of the residual stream states.
+
+**Glossary of key terms (Section 3.2).** Before proceeding to the taxonomy, the survey defines four terms that serve as the analytical vocabulary:
+
+- **Circuits:** A subgraph of the model's computational graph, where nodes are either features in the latent space (one approach) or model components like attention heads and neurons (another approach — the one predominantly used in the surveyed papers). The IOI circuit (Figure 9) is the canonical example.
+
+- **Residual Stream:** The running sum of embeddings and all previous layer outputs. This is the shared bandwidth through which heads communicate.
+
+- **QK Matrix and OV Matrix:** As defined above.
+
+- **Activation Patching:** Replacing activation values at specific locations with alternatives (from corrupted prompts, baseline values, etc.) to isolate the causal effect of a component. The total effect decomposes into direct effect (the component's own output) and indirect effect (downstream impacts through other components).
+
+- **Ablation Study:** Physically removing a component (zeroing its output) rather than replacing its activation. The key methodological distinction from activation patching is that ablation eliminates the component entirely while patching substitutes alternative values.
+
+- **Logit Lens:** Using the unembedding layer to map any intermediate representation vector (not just the final layer output) to vocabulary logits, allowing researchers to observe what the model "would predict" at intermediate stages of computation.
+
+---
+
+#### The Four-Stage Framework: Derivation from Cognitive Neuroscience
+
+The four-stage framework is not an arbitrary categorization. Section 4.1 builds it by extracting common elements from two established models of human cognition — the OAR model (Wang, 2007) and the ACT-R architecture (Anderson, 2014) — and then mapping those elements onto observable attention head behaviors.
+
+**OAR model extraction.** Wang's OAR model (Object-Attribute-Relation) represents human knowledge as a graph where nodes are objects with attributes, and edges are relations between objects. Wang and Chiew (2010) extended this to problem-solving: the solver first identifies objects and attributes in the problem statement (constructing a sub-graph), then searches memory for potential solution paths, evaluates candidates, and iteratively refines. The key stages extracted are: (1) activating relevant knowledge structures, (2) parsing the problem into its constituent entities and relations, (3) searching and evaluating solution paths, and (4) outputting the solution as a relation in the sub-graph.
+
+**ACT-R extraction.** The ACT-R model (Anderson, 2014) has five modules: Perception (P) receives environmental input; Working Memory (WM) holds current context; Procedural Memory (PM) stores condition-action rules in if-then format; Declarative Memory (DM) stores factual knowledge; and Motor (M) executes actions. The processing flow is: P → WM → (PM consult or DM retrieval) → M. The extracted stages are: (1) retrieving declarative knowledge from long-term memory, (2) holding and parsing current perceptual input in working memory, (3) matching conditions and executing procedural rules, and (4) preparing motor output.
+
+**Synthesis into four stages.** The authors synthesize these into a more universal framework by observing that both models — despite different formalisms — share an underlying pipeline:
+
+1. **Knowledge Recalling (KR):** Activate relevant stored information (declarative memory in ACT-R, the OAR knowledge graph in Wang's model). For humans, this is mediated by the hippocampus integrating memories and dynamic associations activating different memory types as needed.
+
+2. **In-Context Identification (ICI):** Parse the specific problem text into its structural, syntactic, and semantic components (the P module feeding WM in ACT-R, the sub-OAR construction in Wang's model). This involves both overall structure (what entities exist, what are their relationships) and detailed feature extraction (syntax, semantics, special tokens).
+
+3. **Latent Reasoning (LR):** Combine the recalled knowledge and parsed context to derive conclusions (PM condition-action rules firing in ACT-R, search through the OAR solution space in Wang's model). This includes arithmetic computation, logical inference, pattern matching, and in-context learning.
+
+4. **Expression Preparation (EP):** Translate reasoning results into communicable output (the M module in ACT-R, representing the solution as a relation in Wang's model). This bridges the gap between "knowing" and "saying" — a distinction the authors explicitly attribute to Levelt's (1999) model of word production.
+
+**The crucial non-linearity claim.** The authors emphasize — with arrows in Figure 6 — that "these four stages are not executed in a strictly one-direction fashion." The brain can cycle: identifying something in context (ICI) might trigger a new knowledge retrieval (KR); reasoning that stalls (LR) might prompt re-examination of the context (ICI). This is mapped onto LLM behavior by noting that while shallow layers *predominantly* handle KR and ICI, and deep layers *predominantly* handle LR and EP, there are "instances where LLMs return to the KR or ICI stage at deeper layers" (Section 4.6). This non-linearity is important because it means the layer-depth-to-stage mapping is statistical rather than absolute — a finding that is testable via the experimental methods in Section 5.
+
+**The evidence for the analogy (Table 1).** The survey does not assume the analogy is valid a priori. Table 1 summarizes eight prior studies that independently found parallels between LLM behavior and human cognition:
+
+- Liang et al. (2024) found that LLM "Self-Feedback" mechanisms mirror human metacognition — the ability to evaluate and refine one's own reasoning — which the authors map to the iterative cycling between LR and EP stages.
+
+- Dasgupta et al. (2022) demonstrated that LLMs exhibit "many of the varied, context-sensitive patterns of human reasoning behavior," providing behavioral evidence for stage-like processing.
+
+- Li et al. (2024) found that "different attention heads in LLMs exhibit specialized roles, analogous to the modular organization of human brain regions" — direct evidence for the head-as-functional-module mapping that the four-stage framework relies on.
+
+- Janik (2023) identified human-like memory characteristics (primacy and recency effects) in LLMs, which maps to the KR stage's retrieval dynamics.
+
+- Schrimpf et al. (2021) showed that "representations in Transformers show significant similarity to human brain neural activities during language tasks, particularly in terms of predictive processing" — evidence that the neural-level implementation of language processing is conserved between biological and artificial systems.
+
+- Marjieh et al. (2024) found that "the attention distributions of LLMs for implicit semantic relations in language closely align with human response patterns in perceptual tasks" — evidence that the ICI stage's attention patterns mirror human perceptual focusing.
+
+- Mischler et al. (2024) suggested that "the attention mechanism may partially reflect the brain's predictive coding theory" — a mechanistic-level parallel.
+
+The survey thus builds the four-stage framework not as speculation but as a distillation of converging evidence from cognitive neuroscience, behavioral comparisons, and neural-level similarity analyses.
+
+**How the framework is used operationally.** Given a paper that identifies a novel attention head, the survey's classification procedure asks:
+
+1. What does the head's QK matrix attend to? (reading pattern)
+2. What does the head's OV matrix write into the residual stream? (writing pattern)
+3. At what stage in the problem-solving pipeline does this reading/writing serve? (functional role)
+4. Assign to KR, ICI, LR, or EP based on functional role, not based on layer position (though layer position provides corroborating evidence).
+
+For example, the Memory Head (Section 4.2) is classified as KR because its function is retrieving parametric knowledge — it reads entity information enriched by shallow FFNs and writes associated attributes into the residual stream. The classification is based on *what it does*, not *where it is*, though the authors note that KR heads tend to concentrate in shallow/middle layers (Table 2), which is consistent with the human analogy (memory retrieval is an early-stage process).
+
+**The distribution of discovered heads across stages.** The authors acknowledge an important asymmetry: "the functions of currently known special attention heads are primarily concentrated in the ICI and LR stages, while fewer attention heads operate in the KR and EP stages" (Section 4.1). This is not necessarily because KR and EP heads are rare in LLMs — it may reflect research bias, as most interpretability work has focused on how models process and reason about contextual information (ICI and LR) rather than how they retrieve parametric knowledge or prepare output expressions. The survey therefore serves partly as a gap analysis: the EP stage has only a handful of heads (Mixed Head, Amplification Head, Correct Head, Coherence Head, Faithfulness Head), suggesting this is an under-explored area.
+
+---
+
+#### Knowledge Recalling (KR): Heads That Retrieve Stored Information
+
+The KR stage (Section 4.2) encompasses attention heads that "recall internally stored knowledge — such as common sense or domain-specific expertise — to be used in subsequent reasoning." The key operational signature is that these heads make initial guesses or associations based on specific context content, injecting memory information into the residual stream as "initial data or supplementary information." The survey identifies two categories: general-purpose KR heads that operate across tasks, and task-specific KR heads that activate only in particular problem types.
+
+**Memory Head (general task).** Cited to Jin et al. (2024, reference 61), the Memory Head is described as operating in shallow-to-middle layers. Its input feature is "User context & Intermediate results" — specifically, entity information that has been semantically enriched by shallow FFNs. The FFN enriches the representation of entities mentioned in the problem (e.g., adding attribute information about a country or person), and the Memory Head reads this enriched representation and "recalls attributes associated with these entities and writes them back into the residual stream." The operational mechanism is: QK matrix attends to entity token positions whose semantics have been enriched by FFN processing; OV matrix outputs a vector containing associated parametric knowledge (facts, properties, common associations) that was stored in the head's weights during pre-training.
+
+**Associative Memories heads (general task).** Bietti et al. (2024, reference 59) identified that certain attention heads "can give rise to associative memories, progressively storing and retrieving knowledge during the model's training phase." The mathematical model is that these heads' weight matrices can be viewed as "a weighted sum of the outer products of various vectors (e.g., input-output vectors or key-value vectors)." Operationally, these heads "filter out noise from a superposed activation state while preserving essential features." As the embedding dimension $d$ increases, they become "more adept at refining relevant information and linking it to useful memories" (Dana et al., 2024, reference 60). This is a theoretical claim about how KR emerges from the linear-algebraic properties of attention: the outer-product structure allows a head to store multiple key-value associations in superposition, and the attention mechanism's softmax selection retrieves the relevant association when the query matches a stored key.
+
+**Constant Head (MCQA-specific).** In Multiple Choice Question Answering tasks, the Constant Head (Lieberum et al., 2023, reference 62) operates in middle layers and "evenly distributes attention scores across all options." Its function is to initially treat all answer choices as equally plausible — a kind of neutrality prior before evidence is gathered. The QK matrix attends uniformly to all option-letter token positions (A, B, C, D) in the context.
+
+**Single Letter Head (MCQA-specific).** Also from Lieberum et al. (2023), this middle-layer head "assigns a higher attention score to one option while giving lower scores to others, thereby capturing all potential answers." Unlike the Constant Head's uniform attention, the Single Letter Head makes an initial preferential guess — perhaps based on superficial features or priors from pre-training — that will later be confirmed or overturned by downstream reasoning.
+
+**Negative Head (Binary Decision Task-specific).** Yu et al. (2024, reference 63) found that in Binary Decision Tasks (yes/no questions, answer verification), LLMs often exhibit a negative bias — a tendency to answer "no" more readily than "yes." The Negative Head, operating in middle layers, is the mechanism behind this bias. Its input is the binary decision task context, and its output is "bias attention scores toward negative expressions." The proposed explanation is that "the model has learned a significant amount of negative expressions related to similar tasks from prior knowledge during training" — that is, the pre-training data contained more negative examples (refutations, corrections, negations) than positive ones, and the Negative Head has internalized this asymmetry as a retrieval prior. When the model identifies a text as a binary task, the Negative Head "preemptively" favors the negative answer.
+
+**Summary of KR head patterns (Table 2).** All four KR head types operate in the shallow-to-middle layer range, consistent with the human analogy that knowledge retrieval is an early-stage process. Their input features are always context-derived (user input, option texts, task type indicators), and their output is always information injected into the residual stream for downstream heads to use. None of them perform reasoning themselves — they provide the raw material that reasoning heads (LR stage) will later process.
+
+**Why KR heads are not simply "the embedding layer":** The distinction is that KR heads perform *conditional* retrieval — what they output depends on both the stored knowledge (in weights) and the current context (via attention). The embedding layer provides a fixed, context-independent representation for each token. KR heads integrate context with stored knowledge to produce a context-conditioned knowledge representation.
+
+---
+
+#### In-Context Identification (ICI): Heads That Parse the Problem
+
+The ICI stage (Section 4.3) is the most densely populated category. These heads "use their QK matrices to focus on and identify overall structural, syntactic, and semantic information within the in-context. This information is then written into the residual stream via OV matrices." The survey subdivides ICI heads into three categories based on what type of information they extract: overall structural, syntactic, and semantic.
+
+##### Overall Structural Information Identification (Section 4.3.1)
+
+These heads attend to positional relationships, token frequency patterns, and special positions in the input sequence — the kind of parsing that identifies *what is where* in the text before any analysis of *what it means*.
+
+**Previous Head and Positional Head.** The Previous Head (Olsson et al., 2022, reference 64; Nanda et al., 2023, reference 65) and Positional Head (Ferrando and Voita, 2024, reference 66; Voita et al., 2019, reference 67; Raganato and Tiedemann, 2018, reference 68) attend to "the positional relationships within the token sequence. They capture the embedding information of the current token and the previous token." Operationally, the QK matrix of a Previous Head computes high attention weight from each token to its immediate predecessor, effectively making the information "what token came before me" available at the current position. This is critical infrastructure for downstream heads — the Induction Head (LR stage) uses this "previous token" information to perform pattern matching.
+
+**Rare Words Head.** Identified by Voita et al. (2019, reference 67), this head "focuses on tokens that appear with the lowest frequency, emphasizing rare or unique tokens." The QK matrix assigns high attention to infrequent tokens in the vocabulary. The functional role is to flag unusual content that might be task-relevant — in a question like "What is the capital of Kyrgyzstan?", the rare word "Kyrgyzstan" would receive high attention, helping downstream heads identify it as the key entity to reason about.
+
+**Duplicate Head.** From Wang et al. (2023, reference 22), this head "excels at capturing repeated content within the context, giving more attention to tokens that appear multiple times." In the IOI circuit, the Duplicate Head identifies that certain names appear multiple times in the sentence, which signals their structural importance (as subjects, objects, or repeated references) independent of their semantic content.
+
+**(Global) Retrieval Head.** Wu et al. (2024, reference 69) and Tang et al. (2024, reference 70) identified these heads as enabling the "Needle-in-a-Haystack" capability — "accurately locating specific tokens in long texts." This is the mechanism behind LLMs' ability to answer questions about specific facts buried in long documents. The Retrieval Head's QK matrix can attend to a token from a distant position, ignoring thousands of intervening tokens. The "Global" variant (Tang et al., 2024) can retrieve from even longer ranges, forming the basis for KV-cache compression techniques that prune less-relevant tokens while preserving those the Retrieval Head might need.
+
+##### Syntactic Information Identification (Section 4.3.2)
+
+These heads parse the grammatical structure of the input — identifying subjects, objects, modifiers, and the relationships between sentence constituents.
+
+**Syntactic Head.** Chen et al. (2024, reference 72) and Voita et al. (2019, reference 67) found that certain heads can "distinctly identify and label nominal subjects, direct objects, adjectival modifiers, and adverbial modifiers." The QK matrix attends to words based on their syntactic roles, and the OV matrix writes a representation that encodes this grammatical function. This is the LLM analog of a syntactic parser, operating on the residual stream representations rather than on explicit parse trees.
+
+**Subword Merge Head.** Ferrando and Voita (2024, reference 66) and Correia et al. (2019, reference 71) identified heads that handle tokenization artifacts. When the tokenizer splits a word into multiple subwords (e.g., "happiness" → "happi" + "ness"), the Subword Merge Head "focuses on these subwords and merges them into one complete word." Operationally, its QK matrix attends across the subword tokens of a single word, and its OV matrix outputs a representation that combines them into a unified word-level embedding. This is necessary because downstream semantic heads should reason about whole words, not tokenizer fragments.
+
+**Mover Head cluster.** The Mover Head family — including Name Mover Head, Backup Name Mover Head, Letter Mover Head, and the inhibitory Negative Name Mover Head — constitutes what the survey calls "argument parsers." These heads "copy or transfer a sentence's important information (such as the subject's position) to the [END] position." The [END] position is defined as "the last token's position in the sentence being decoded by the LLM." Many studies indicate that summarizing contextual information at the [END] position "facilitates subsequent reasoning and next-token prediction" — it creates a bottleneck where all relevant information about the sentence is concentrated in a single representation, making it easy for downstream heads to access.
+
+- **Name Mover Head** (Yao et al., 2024, reference 24; McDougall et al., 2023, reference 73): Moves entity names to the [END] position. QK attends to name tokens; OV copies their information to [END].
+
+- **Backup Name Mover Head** (McDougall et al., 2023, reference 73): A redundant copy of the Name Mover function — if the primary Name Mover is ablated, the Backup takes over, demonstrating functional redundancy.
+
+- **Letter Mover Head** (García-Carrasco et al., 2024, reference 74): Extracts the first letters of certain words and aggregates them at [END]. This is used in acronym resolution tasks.
+
+- **Negative Name Mover Head** (Wang et al., 2023, reference 22; McDougall et al., 2023, reference 73): "Prevents name information from being transferred to the [END] position." Its function is inhibitory — it actively suppresses certain names from being moved, which is critical for tasks like IOI where the model must distinguish between the direct object (which should be moved) and the indirect object (which should be suppressed).
+
+##### Semantic Information Identification (Section 4.3.3)
+
+These heads extract meaning-level features — sentiment, entity attributes, relationships between concepts — from the context.
+
+**Context Head.** Jin et al. (2024, reference 61) found that the Context Head "extracts information from the context that is related to the current task." Unlike the structural heads that identify *what is where*, the Context Head identifies *what is relevant* — a form of task-conditioned attention filtering.
+
+**Content Gatherer Head.** Lieberum et al. (2023, reference 62) and Merullo et al. (2024, reference 75) identified that these heads "move tokens related to the correct answer to the [END] position, preparing to convert them into the corresponding option letter for output." In MCQA tasks, after LR-stage heads have inferred the correct answer in text form, the Content Gatherer Head copies the answer text tokens to [END], where downstream EP heads can map them to option letters (A/B/C/D).
+
+**Sentiment Summarizer.** Tigges et al. (2023, reference 76) found that this head "can summarize adjectives and verbs that express sentiment in the context near the [SUM] position." The [SUM] position is a special token position "located directly before the [END] position" that "enables subsequent heads to effectively read and reason." The Sentiment Summarizer's QK matrix attends to sentiment-bearing words; its OV matrix aggregates their emotional valence into a single representation at [SUM].
+
+**Semantic Induction Head.** Ren et al. (2024, reference 77) identified this head as capturing "semantic relationships within sentences, such as part-whole, usage, and category-instance relationships." This goes beyond simple co-occurrence to extract structured relationship types, which feeds into the LR stage's reasoning about how concepts relate.
+
+**Subject Head and Relation Head.** Chughtai et al. (2024, reference 78) and Yao et al. (2024, reference 24) identified these paired heads. The Subject Head "focuses on subject attributes" — what properties does the subject entity have? The Relation Head "focuses on relation attributes" — what type of relationship connects the subject to other entities? Together they "inject these attributes into the residual stream," providing the structured entity-relationship information that downstream reasoning heads (LR stage) need.
+
+---
+
+#### Latent Reasoning (LR): Heads That Perform Computation
+
+The LR stage (Section 4.4) is where "all the collected information is synthesized and logical reasoning occurs." The survey calls this "the core of problem-solving" for both humans and LLMs. LR heads are defined by their computational function: "QK matrices of a head perform implicit reasoning based on information read from the residual stream, and then the reasoning results or signals are written back into the residual stream through OV matrices." The survey subdivides LR heads into three categories: in-context learning, effective reasoning, and task-specific reasoning.
+
+##### In-Context Learning (Section 4.4.1)
+
+This is "one of the most widely discussed areas" in attention head research. The survey adopts Pan's (2023, reference 98) distinction between Task Recognition (TR) and Task Learning (TL):
+
+- **Task Recognition (TR):** The LLM leverages its pre-trained knowledge to interpret demonstrations. For example, sentiment classification with labels like "positive" and "negative" — the model already knows what these words mean from pre-training, so in-context demonstrations serve to *identify* the task rather than to *teach* a novel mapping.
+
+- **Task Learning (TL):** The model must learn a *new* mapping function between inputs and outputs, where "the examples and labels lack an inherent semantic connection." The model must induce the pattern from the demonstrations alone, without relying on pre-existing knowledge of what the labels mean.
+
+**Summary Reader (TR).** Tigges et al. (2023, reference 76) identified this head in sentiment classification tasks. It "can read the information summarized at the [SUM] position during the ICI stage and use this information to infer the corresponding sentiment label." This is a clean example of stage-to-stage information flow: the ICI stage's Sentiment Summarizer deposits aggregated emotional valence at [SUM]; the LR stage's Summary Reader reads that [SUM] representation and produces the output label. The QK matrix of the Summary Reader attends specifically to the [SUM] position; its OV matrix outputs a representation that pushes the correct sentiment label to high probability.
+
+**Function Vector (TR).** Todd et al. (2024, reference 79) proposed that "the output of certain mid-layer attention heads can combine into a Function Vector." These heads "abstract the core features and logical relationships of a task, based on the semantic information identified during ICI, and thereby trigger task execution." The Function Vector is not a single head but an emergent property: when the outputs of multiple mid-layer heads are summed (via the residual connection), the resulting vector in the residual stream encodes *what task to perform*. This vector can be extracted, added to the residual stream in unrelated contexts, and cause the model to perform the task even without explicit instructions — demonstrating that it causally encodes task identity.
+
+**Induction Head (TL).** This is the most extensively studied attention head in the literature (Olsson et al., 2022, reference 64; Edelman et al., 2024, reference 80; Singh et al., 2024, reference 81; Ji-An et al., 2024, reference 82; Crosbie, 2024, reference 83; Reddy, 2024, reference 84; Akyürek et al., 2024, reference 85). The Induction Head captures patterns of the form "[A][B]... [A]" and predicts [B] as the continuation. The operational mechanism involves two pieces of information in the residual stream:
+
+1. The Previous Head (ICI stage) has deposited information at each token position indicating "what the previous token was." At the position of token [B], the Previous Head has written information encoding that [A] was the previous token. At the position of the second [A], the Previous Head has written information encoding whatever token preceded it.
+
+2. The Induction Head's QK matrix at the second [A] position matches against all previous positions. It finds the first [B] position because the Previous Head's information at that position says "my previous token was [A]," which matches the current token [A]. The attention weight concentrates on the first [B] position.
+
+3. The Induction Head's OV matrix then copies information from the attended-to position (the first [B]) to the current position (the second [A]), effectively predicting that [B] should follow.
+
+**Why this matters:** The Induction Head is the mechanistic basis of in-context learning for pattern completion. It does not understand *why* [B] follows [A] — it merely learns the statistical regularity that "[A] is followed by [B]" and applies it when [A] appears again. This is a fundamental building block that can be composed to implement more complex reasoning.
+
+**Limitation of Induction Heads:** The authors note that Induction Heads "tend to strictly follow a pattern once identified and complete fill-in-the-blank reasoning." However, real problems are not identical to examples — the mapping may be analogical rather than literal. To address this, Yu and Ananiadou (2024, reference 99) identified the **In-Context Head**, whose "QK matrix calculates the similarity between information at the [END] position and each label," and whose "OV matrix then extracts label features and weights them according to the similarity scores to determine the final answer (take all labels into consideration rather than only one label)." This is a softer, more generalizable form of induction that doesn't require exact token matching.
+
+##### Effective Reasoning (Section 4.4.2)
+
+These heads are identified not by *what type* of reasoning they perform, but by their *correlation with reasoning quality* — they are heads whose activation strength predicts whether the model's output will be truthful, accurate, or consistent.
+
+**Truthfulness Head.** Li et al. (2024, reference 86) and Hoscilowicz et al. (2024, reference 87) identified heads "highly correlated with the truthfulness and accuracy of answers" in QA tasks. "Modifying the model along their activation directions can enhance LLMs' reasoning abilities." This suggests that truthfulness has a directional representation in the residual stream — adding a "truthfulness vector" (derived from the difference between truthful and untruthful activation patterns) shifts the model toward more truthful outputs, a finding that underpins inference-time intervention methods.
+
+**Accuracy Head.** Guo et al. (2024, reference 88) and Yin et al. (reference 89) identified heads correlated with answer correctness. These heads "help the model infer truthful and correct results in QA tasks." The difference from Truthfulness Head is subtle: Accuracy Head is about factual correctness on a specific question, while Truthfulness Head is about a general disposition toward honest vs. deceptive responding. In practice, the distinction may be blurred.
+
+**Consistency Head.** Yang et al. (2024, reference 90) found heads that "ensure the internal consistency of LLMs when asked the same question in different ways." This addresses a known fragility: LLMs often give contradictory answers to semantically equivalent questions with different surface forms. The Consistency Head suppresses this variability, suggesting that inconsistency arises from certain heads introducing noise that other heads must compensate for.
+
+**Vulnerable Head.** García-Carrasco et al. (2024, reference 91) identified heads that are "overly sensitive to certain specific input forms, making it susceptible to irrelevant information and leading to incorrect results." These are heads whose ablation or suppression improves model robustness — they represent a kind of "reasoning vulnerability" where the model can be derailed by superficial input features. "During reasoning, it is advisable to minimize the influence of such heads" is the practical recommendation.
+
+##### Task-Specific Reasoning (Section 4.4.3)
+
+Some LR heads are specialized for particular task structures — MCQA answer selection, sequence iteration, ordinal arithmetic, or information suppression.
+
+**Correct Letter Head (MCQA).** Lieberum et al. (2023, reference 62) identified that this head "can complete the matching between the answer text and option letters in order to determine the final answer choice." After the Content Gatherer Head (ICI) has moved the inferred answer text to [END], the Correct Letter Head reads that text, compares it to the option texts associated with each letter (A, B, C, D), and outputs the matching letter. Its QK matrix asks (via query-key matching) "which option has the text that matches the inferred answer?" and its OV matrix outputs the corresponding letter token.
+
+**Iteration Head (Sequence tasks).** Cabannes et al. (2024, reference 92) identified this head in tasks requiring iterative state updates — for example, computing the parity (odd/even) of a binary sequence by repeatedly applying the update rule. The Iteration Head "can iteratively infer the next intermediate state based on the current state and input." Operationally, its QK matrix attends to the current state token and the next input token; its OV matrix outputs the new state representation. When composed with itself across multiple steps (via the residual stream's information persistence), this implements sequential computation.
+
+**Successor Head (Ordinal tasks).** Gould et al. (2024, reference 93) found heads that "can perform increment operations on ordinal numbers." For example, given "Monday," the Successor Head outputs a representation favoring "Tuesday." This is a specialized form of the Iteration Head applied to ordinal sequences with a fixed increment rule.
+
+**Inhibition Head (also called Suppression Head).** Wang et al. (2023, reference 22) and Kim et al. (2024, reference 94) identified this head in syllogistic reasoning and information extraction tasks. It "can aggregate outputs from other heads and suppress certain information" — for example, suppressing a subject or middle term "in order to reduce their associated logit values after unembedding." The mechanism: the Inhibition Head reads from the residual stream information about which entity should be suppressed (deposited by previous reasoning heads), and its OV matrix writes a representation that, when passed through the unembedding layer, *decreases* the logit value for that entity's tokens. In the IOI circuit, the Inhibition Head suppresses the logits for "John" (the direct object), ensuring that "Mary" (the indirect object) is the highest-probability output.
+
+---
+
+#### Expression Preparation (EP): Heads That Prepare Output
+
+The EP stage (Section 4.5) handles "aligning reasoning results with the content that needs to be expressed verbally." This is the least populated category, which the authors partly attribute to research bias and partly to the fact that "for some simple tasks, LLMs might not require special EP heads to refine language expression" — the ICI and LR outputs may already be in a directly usable form.
+
+**Mixed Head (Information Aggregation).** Chughtai et al. (2024, reference 78) identified heads that "can linearly combine and aggregate information passed along by heads from the ICI and LR stages (such as Subject Heads, Relation Heads, Induction Heads, etc.)." The aggregated result "is then written back into the residual stream and ultimately mapped onto the vocabulary logits via the unembedding layer." The Mixed Head acts as a final integration step, combining diverse information sources (entity attributes, relational information, induced patterns) into a unified representation suitable for token prediction.
+
+**Amplification Head and Correct Head (Signal Amplification).** Lieberum et al. (2023, reference 62) and Wiegreffe et al. (2024, reference 95) identified heads that "amplify the signal of the correct choice letter in MCQA problems near the [END] position." These heads "read information about the context or reasoning results from the residual stream, then enhance the information that needs to be expressed as output, and write it back into the stream." The mechanism is directional: they add a vector to the [END] position representation that, after unembedding and softmax, increases the probability mass on the correct option letter. "This amplification ensures that after passing through the Unembedding layer and softmax calculation, the correct choice letter has the highest probability."
+
+**Coherence Head (Instruction Alignment).** Guo et al. (2024, reference 88) identified heads that "ensure linguistic consistency in the generated content" in multilingual tasks. When a user queries in a target language, the Coherence Head "helps LLMs maintain consistency between the output language and the language of user's query when dealing with multilingual inputs." This addresses the problem where a model might answer in English when queried in Chinese, or vice versa. The Coherence Head reads language-identity information from the query and biases the output toward tokens in the matching language.
+
+**Faithfulness Head (Instruction Alignment).** Tanneru et al. (2024, reference 96) found heads "strongly associated with the faithfulness of Chain-of-Thought (CoT) reasoning." Faithfulness here means "whether the model's generated response accurately reflects its internal reasoning process and behavior." In other words, does the CoT explanation actually describe what the model did, or is it a post-hoc rationalization? "Enhancing the activation of these heads allows LLMs to better align their internal reasoning with the output, making the CoT results more robust and consistent."
+
+**The skip-EP shortcut.** The authors note that not all tasks require EP processing. "In this situation, the information written back into the residual stream during the ICI and LR stages may be directly suitable for output" — the model can directly select the highest-probability token without additional expression preparation. This is consistent with the non-linear stage transitions in Figure 6: the pipeline can jump from LR directly to output, bypassing EP, when the task is simple enough that output formatting is trivial.
+
+---
+
+#### How Attention Heads Work Together: The IOI Circuit as a Worked Example
+
+Section 4.6 shifts from individual head functions to collaborative mechanisms. The central example is the **IOI (Indirect Object Identification) task** in GPT-2 Small, as documented by Wang et al. (2023, reference 22), with corroboration from Merullo et al. (2024, reference 75) and Kim et al. (2024, reference 94). The task: given a sentence like "When Mary and John went to the store, John gave a drink to" — the model must predict "Mary" (the indirect object).
+
+**The circuit in Figure 9, traced through the four stages:**
+
+1. **KR Stage (shallow):** The Subject Head and Relation Head focus on "Mary" and "bought flowers for" (or analogous relation phrases), respectively, "triggering the model to recall that the answer should be a human name." These heads retrieve the *type* constraint on the answer from parametric knowledge — the indirect object of a giving event is typically a person.
+
+2. **ICI Stage (early-middle):** The Duplicate Head identifies that "John" appears multiple times in the context, flagging it as structurally significant. The Name Mover Head focuses on both "John" and "Mary" and moves them to the [END] position — making both names available at the final token for decision-making.
+
+3. **Iterative ICI-LR Stages (middle):** The Previous Head and Induction Head work together to attend to "John." The Induction Head recognizes the pattern [John]... [John] and predicts the token that followed the first occurrence. This information — that "John" is the repeated entity, the direct object — is passed to the Inhibition Head.
+
+4. **Inhibition (middle-deep):** The Inhibition Head receives the information about "John" and suppresses its logit values — actively reducing the probability that "John" will be predicted at the output. This is the crucial operation that differentiates the direct object (to be suppressed) from the indirect object (to be output).
+
+5. **EP Stage (deep):** The Amplification Head boosts the logit values for "Mary" — the remaining candidate after "John" has been suppressed — ensuring it is the highest-probability token.
+
+**Layer-stage mapping (Figure 8).** If GPT-2 Small's 12 layers are divided into shallow (1-4), middle (5-8), and deep (9-12), the IOI circuit shows KR in shallow layers, ICI and early LR in early-middle layers, inhibition (late LR) in middle-deep layers, and EP in deep layers. This matches the general pattern in Figure 8: KR → shallow, ICI and LR → middle, EP → deep.
+
+**The Parity Problem example (Section 4.6).** The survey provides a second worked example — computing parity (odd/even) of a binary sequence. Here, a Mover Head (ICI) transmits information from the [EOI] (End of Input) position to the [END] position. An Iteration Head (LR) then reads the [EOI] position index from [END] and uses its query vector to ask "Are you position t?" while key vectors respond "I'm position t′." This querying identifies the last digit in the input sequence, which, combined with the previous parity state $s_{t-1}$, allows computation of $s_t$. This demonstrates the same pattern: ICI heads prepare information at bottleneck positions ([END]), and LR heads read from those positions to perform computation.
+
+**The query-key semantic interpretation.** The survey highlights an important methodological insight from Lieberum et al. (2023, reference 62) and Merullo et al. (2024, reference 75): query and key vectors have interpretable semantic content. In the MCQA case, the query vector of the Correct Letter Head effectively asks "Are you the correct label?" while recalling the gathered correct answer text. The key vector responds "I'm choice [A/B/C/D], with the corresponding text [...]." This semantic interpretation of QK matching is what allows researchers to move beyond "this head attends to position X" to "this head is asking question Y and receiving answer Z."
+
+---
+
+#### Experimental Discovery Methods (Section 5): The Evidentiary Foundation
+
+The entire taxonomy rests on experimental evidence that specific heads perform specific functions. Section 5 catalogs the methods researchers use to establish these function-to-head mappings. The survey divides methods along two axes: whether they require constructing new models (Modeling-Free vs. Modeling-Required), and within each, the specific operation performed.
+
+##### Modeling-Free Methods (Section 5.1)
+
+These methods "do not require setting up new models, making them widely applicable in interpretability research." They operate by "altering a latent state computed during the LLMs' reasoning process and then using Logit Lens to map the intermediate results to token logits or probabilities."
+
+**Modification-Based methods** retain some original information while adding or subtracting specific directional components:
+
+- **Directional Addition (Tigges et al., 2023, reference 76; Yu et al., 2024, reference 63; Turner et al., 2023, reference 101):** Under the hypothesis that "concepts are encoded as linear directions in the representation space" (Park et al., 2024, reference 105), this method adds a direction vector to a head's activation. For example, Tigges et al. (2023) computed the difference between positive-sentiment and negative-sentiment representations at a head's output, creating a "sentiment direction vector." Adding this vector to the head's activation and observing the effect on output reveals whether the head causally encodes sentiment. Ortu et al. (2024, reference 100) used directional amplification of attention scores — increasing one token's attention toward another — to study competitive relationships between mechanisms.
+
+- **Directional Subtraction (Tigges et al., 2023, reference 76; Geiger et al., 2024, reference 102):** Subtracting a directional component removes specific information while preserving the rest. This probes whether a head is "backing up" information — if removing sentiment direction from head A causes no output change (because head B still encodes it), the information is redundantly represented.
+
+**Replacement-Based methods** discard the original latent state entirely and substitute alternatives:
+
+- **Zero Ablation (Wang et al., 2023, reference 22; Yu and Ananiadou, 2024, reference 99; Jin et al., 2024, reference 61; Yao et al., 2024, reference 24; Mohebbi et al., 2023, reference 103):** Replace the head's output with a zero vector. This "logically 'eliminates' the head" and measures the impact on output — if performance degrades, the head is necessary for the task.
+
+- **Mean Ablation (McDougall et al., 2023, reference 73; Wang et al., 2023, reference 22; Kim et al., 2024, reference 94; Hanna et al., 2024, reference 104):** Replace the head's output with the mean activation across a dataset. This preserves the head's statistical baseline while removing instance-specific information. If performance degrades to chance, the head encoded task-relevant information beyond baseline statistics.
+
+- **Naïve Activation Patching (Merullo et al., 2024, reference 75; Todd et al., 2024, reference 79; Wang et al., 2023, reference 22; Lieberum et al., 2023, reference 62; Wiegreffe et al., 2024, reference 95):** Replace the head's activation from a "clean" run (original prompt) with the activation from a "corrupted" run (modified prompt — e.g., changing "Mary" to "Alice"). If the output shifts toward the corrupted-prompt behavior, the head was causally transmitting information about the modified element. The reverse direction (replacing corrupted-run activation with clean-run activation) can "restore" correct behavior, providing converging evidence.
+
+**The three effect types (Figure 5).** Activation patching decomposes a component's effect into:
+- **Direct effect:** How much the component's own output directly changes the final logits, independent of downstream components.
+- **Indirect effect:** How much the component influences the final logits *through* its impact on downstream components' activations.
+- **Total effect = direct + indirect:** The overall causal contribution.
+
+This decomposition matters because two heads could have the same total effect but different mechanisms — one might directly influence the output, while another might do so by modulating intermediate representations that other heads then process.
+
+##### Modeling-Required Methods (Section 5.2)
+
+These methods construct auxiliary models or compute diagnostic scores from head attributes. They are divided into Training-Required and Training-Free.
+
+**Training-Required methods:**
+
+- **Probing (Li et al., 2024, reference 86; Hoscilowicz et al., 2024, reference 87; Gould et al., 2024, reference 93; Guo et al., 2024, reference 88; Yang et al., 2024, reference 90; Jin et al., 2024, reference 108):** "Extract activation values from different heads as features and categorize heads into different classes as labels. A classifier is then trained on this data to learn the relationship between the activation patterns and the head's function." A trained probe can then be applied to any head in any model to predict its function from activation patterns — a form of function detection. For example, Li et al. (2024) trained probes to identify Truthfulness Heads by classifying whether a head's activation pattern predicts truthful vs. untruthful model outputs.
+
+- **Simplified Model Training (Edelman et al., 2024, reference 80; Cabannes et al., 2024, reference 92; Reddy, 2024, reference 84; Elhage et al., 2021, reference 25):** "Train a simplified transformer model on a clean dataset for a specific task" and "investigate whether the heads in this simplified model exhibit certain functionalities, which can then be extrapolated whether similar heads in the original model possess the same capabilities." This method "reduces computational costs during training and analysis, while the constructed model remains simple and highly controllable." The risk — which the survey acknowledges implicitly by noting that many heads were discovered in toy models — is that simplified models may exhibit mechanisms that do not scale to full-size architectures.
+
+**Training-Free methods:**
+
+- **Scoring functions (Jin et al., 2024, reference 61; Wu et al., 2024, reference 69; Crosbie, 2024, reference 83; Yu et al., 2024, reference 63; Ji-An et al., 2024, reference 82):** These "can be viewed as mathematical models that construct an intrinsic relationship between the attributes of components and certain model characteristics or behaviors." Two example scores from the paper:
+
+  **Retrieval Score** (Wu et al., 2024, reference 69, Equation 6):
+
+  $$\text{RetrievalScore}^h_\ell = \frac{|\mathcal{D}_{\text{right}} \cap \mathcal{D}_{\text{all}}|}{|\mathcal{D}_{\text{all}}|}$$
+
+  where $\mathcal{D}_{\text{all}}$ is the set of all samples in the evaluation set, and $\mathcal{D}_{\text{right}}$ is the subset of samples for which the head assigns its highest attention score to the token it aims to retrieve.
+
+  **What it computes:** The fraction of test cases where the head's maximum-attention token is the correct retrieval target. A score near 1.0 means the head reliably attends to the right token across diverse long-context scenarios.
+
+  **Why this form:** It operationalizes "retrieval ability" as a simple hit rate — the head either attends maximally to the correct token or it doesn't. This is interpretable and doesn't require a trained classifier, but it is coarse: a head that gives 30% attention to the correct token and 31% to the wrong token gets the same score (0 on that sample) as a head that gives 0% to the correct token, even though the former is closer to being useful. A continuous alternative (e.g., average attention weight on the correct token) might provide finer discrimination but would require thresholding to map to yes/no decisions.
+
+  **Negative Attention Score (NAS)** (Yu et al., 2024, reference 63, Equation 7):
+
+  $$\text{NAS}^h_\ell = \sum_i \left( \text{Attn}^h_\ell[i, t_{\text{Yes}}] + \text{Attn}^h_\ell[i, t_{\text{No}}] \right) \cdot \log \left( \frac{\text{Attn}^h_\ell[i, t_{\text{No}}]}{\text{Attn}^h_\ell[i, t_{\text{Yes}}]} \right)$$
+
+  where $i$ indexes the $i$-th token in the input prompt, $t_{\text{Yes}}$ is the position of the "Yes" token in the prompt, $t_{\text{No}}$ is the position of the "No" token, and $\text{Attn}^h_\ell[i, t]$ is the attention weight from token $i$ to token $t$ in head $h$ of layer $\ell$.
+
+  **What it computes:** For each source token $i$, it sums the attention to both "Yes" and "No" tokens (the parenthesized sum), then multiplies by the log-ratio of attention to "No" versus "Yes." The sum $\text{Attn}^h_\ell[i, t_{\text{Yes}}] + \text{Attn}^h_\ell[i, t_{\text{No}}]$ measures how much token $i$ attends to the binary decision tokens at all — tokens that don't attend to either "Yes" or "No" contribute near zero regardless of ratio. The log-ratio $\log(\text{Attn}^h_\ell[i, t_{\text{No}}] / \text{Attn}^h_\ell[i, t_{\text{Yes}}])$ is positive when "No" gets more attention, zero when they're equal, and negative when "Yes" gets more attention. Summing over all $i$ gives a head-level score: high positive values indicate the head preferentially attends to negative tokens.
+
+  **Why this form:** It combines two diagnostic signals into one scalar. The attention-sum term ensures that only heads that actually attend to the decision tokens (rather than attending elsewhere) contribute to the score. The log-ratio term provides symmetry: equal attention to "Yes" and "No" gives zero contribution; a head that gives twice as much attention to "No" as "Yes" contributes positively; a head that gives twice as much attention to "Yes" contributes negatively with the same magnitude. This symmetry is important because it means NAS discriminates the *direction* of bias, not just the *presence* of attention to decision tokens. A simple difference $\text{Attn}[i, t_{\text{No}}] - \text{Attn}[i, t_{\text{Yes}}]$ would also capture direction but wouldn't normalize for the total attention to decision tokens — a head with attention weights (0.001, 0.0005) would get the same score as one with (0.5, 0.25), even though the latter represents much stronger engagement with the decision.
+
+- **Information Flow Graph (Ferrando and Voita, 2024, reference 66):** A graph-theoretic approach where "nodes represent tokens and edges represent information transfer between tokens via attention heads or FFNs. By calculating and filtering the importance of each edge to the node it points to, key edges can be selected to form a subgraph. This subgraph can then be viewed as the primary internal mechanism through which LLMs perform reasoning." This is distinct from scoring individual heads — it recovers the *circuit* (multi-head, multi-layer information flow) as a graph structure.
+
+- **Automated Circuit Discovery (Conmy et al., 2023, reference 109):** An emerging approach that aims to automate the identification of circuits rather than relying on manual hypothesis-driven exploration. The survey flags this as a "new method that has not yet been widely adopted" but that represents the direction the field is moving.
+
+**Why the method taxonomy matters.** Each method has different strengths and limitations. Ablation can establish necessity (removing the head breaks the behavior) but not sufficiency (another head might be able to perform the function if this one were present). Patching can establish information content (the head transmits specific information) but cannot distinguish between direct and indirect effects without additional causal mediation analysis. Probing classifiers can detect whether information is *present* in a head's activations, but presence does not imply causal use — a head might encode information that the model never actually uses. The survey's methodological categorization makes these distinctions explicit, enabling researchers to select the right method for the question they want to answer.
+
+---
+
+#### Summary of Design Choices and Their Justifications
+
+- **Four cognitive stages over alternatives:** The ACT-R and OAR models were chosen as the cognitive grounding because they are well-established in neuroscience and provide a clear information-processing pipeline (perceive → recall → reason → act) that maps naturally onto residual stream information flow in Transformers. Alternative frameworks (e.g., purely behavioral taxonomies like "factual recall heads" vs. "reasoning heads") would not capture the sequential, stage-like collaboration patterns documented in circuits like IOI.
+
+- **QK/OV decomposition over raw attention weights:** The paper consistently describes heads by their reading (QK) and writing (OV) behavior rather than by raw attention patterns alone. This is justified because two heads with identical attention patterns (reading) can write completely different information, and the functional role is determined by the combination.
+
+- **Functional classification over layer-position classification:** Heads are assigned to KR, ICI, LR, or EP based on *what they do*, not where they are. The layer-stage mapping in Figure 8 is presented as an empirical generalization, not a definitional constraint. This allows the framework to accommodate exceptions (deeper-layer KR, shallow-layer EP) without breaking.
+
+- **Modeling-Free vs. Modeling-Required split:** This classification axis captures a fundamental tension in interpretability research — methods that minimally perturb the model (Modeling-Free) are easier to implement and interpret but may miss information that is only detectable through learned probes (Modeling-Required). The survey makes both available with their respective tradeoffs.
+
+- **[END] and [SUM] position emphasis:** Many head descriptions center on these special token positions as information bottlenecks. This is not an arbitrary choice — it emerges from the reviewed literature, where multiple independent studies found that information routing through the last token position is a recurring architectural motif. The survey elevates this from an interesting observation to a structural principle.
 
 ## 4. Key Insights and Innovations
-1) A cognitively grounded four‑stage framework for LLM reasoning (Section 4; Figures 6–8)
-   - Innovation: frames head activity as cycles across KR→ICI→LR→EP, mirroring human problem solving modules (knowledge retrieval, perception/parse, reasoning, articulation).
-   - Significance: clarifies how different heads cooperate and why some heads recur across tasks (e.g., Induction with Previous, Inhibition with Mover) rather than treating heads as isolated curiosities.
-   - Difference from prior work: earlier studies documented specific circuits (e.g., IOI) but lacked a unifying, stage‑wise map that spans most observed head types.
 
-2) A comprehensive taxonomy of special heads with concrete mechanisms (Figure 7; Sections 4.2–4.5)
-   - Innovation: places dozens of reported heads into functional families with brief operational descriptions and links to where they were found (e.g., LLaMA, GPT, Pythia, Mistral).
-   - Significance: provides a lookup for practitioners to hypothesize which heads to inspect or steer for a given failure mode (e.g., long‑context errors → Retrieval Heads).
+### Innovation 1: A Four-Stage Cognitive Framework That Organizes Scattered Findings Into a Coherent Functional Hierarchy
 
-3) Unification of discovery methodologies by dependency on modeling and manipulation type (Section 5; Tables 4–5; Figure 10)
-   - Innovation: splits methods into modeling‑free vs modeling‑required and further into modification‑ vs replacement‑based (for the former) and training‑required vs training‑free (for the latter).
-   - Significance: helps choose the right tool for a hypothesis—for example, when labels are unavailable, use training‑free scores like Retrieval Score/NAS; when controllability matters, train simplified models.
+Before this survey, the literature on attention head functions was a collection of individually named heads — Induction Head, Name Mover Head, Sentiment Summarizer, Successor Head — each discovered in isolation on a specific task with a specific model, cataloged but not connected. The dominant implicit assumption was that these heads were essentially a grab-bag: different tasks recruited different heads, and there was no higher-order structure relating them. A researcher encountering a new head would have no principled basis for predicting its layer location, its relationship to other heads, or its role in the broader reasoning pipeline.
 
-4) Concrete collaboration narratives and layer‑stage mapping (Sections 4.6; Figures 8–9)
-   - Innovation: shows how sequences of heads produce end‑to‑end behavior in worked examples (parity, IOI, MCQA), and provides a typical mapping of stages to layer depth.
-   - Significance: encourages multi‑head, circuit‑level analysis instead of single‑head anecdotes; aids debugging by predicting where in the stack to intervene.
+This survey's central intellectual move is to argue that this apparent chaos resolves into a coherent functional hierarchy when viewed through the lens of human cognitive stages. By extracting a four-stage pipeline — Knowledge Recalling → In-Context Identification → Latent Reasoning → Expression Preparation — from the convergent evidence of cognitive neuroscience (the ACT-R and OAR models, Section 4.1) and mapping each discovered head onto one of these stages based on its operational function (QK reading + OV writing behavior), the survey transforms a flat catalog into a layered architecture. The KR stage comprises heads that retrieve stored knowledge and inject it into the residual stream as raw material for downstream processing (Memory Head, Associative Memories heads). The ICI stage is the most densely populated, containing heads that parse the input text at multiple levels — structural (Positional Head, Duplicate Head), syntactic (Syntactic Head, Mover Head cluster), and semantic (Sentiment Summarizer, Subject/Relation Head). The LR stage contains the computational core: heads that perform pattern induction (Induction Head), task recognition (Function Vector, Summary Reader), or specialized inference (Iteration Head, Successor Head, Inhibition Head). The EP stage, sparsely populated, handles output formatting and alignment (Amplification Head, Coherence Head, Faithfulness Head).
 
-5) Curated evaluation suites with prompt templates and equations (Section 6; Tables 6–7; Figure 11; Equations 6–7)
-   - Innovation: compiles mechanism‑targeted datasets and introduces head‑specific scores.
-   - Significance: supports reproducible comparison of head hypotheses and their downstream impact (e.g., sentiment templates in Figure 11 to find Sentiment Summarizers).
+What makes this a fundamental contribution rather than a convenient labeling scheme is that it generates testable structural predictions that are confirmed by independent evidence. The framework predicts that KR heads should concentrate in shallow layers (early retrieval of knowledge), ICI heads in early-to-middle layers (parsing before reasoning), LR heads in middle layers (computation on parsed input), and EP heads in deep layers (output preparation after reasoning). Figure 8, which maps the relationship between functional stages and layer depth across the surveyed literature, confirms exactly this distribution: shallow layers are dominated by KR, middle layers by ICI and LR, deep layers by EP. This is not a definitional truth — the authors classify heads by *what they do*, not *where they are* — so the fact that the functional classification independently reproduces the expected layer ordering is strong evidence that the framework captures something real about how Transformers organize computation.
+
+The framework further predicts that heads from different stages should interoperate in specific patterns — KR heads feed ICI heads, which feed LR heads, which feed EP heads — and that disrupting one stage should produce predictable deficits downstream. The IOI circuit analysis (Figure 9, Section 4.6) bears this out: the four-stage sequence appears in the observed information flow from Subject Head/Relation Head (KR) → Duplicate Head/Name Mover Head (ICI) → Induction Head/Inhibition Head (LR) → Amplification Head (EP), with each stage's output creating the preconditions for the next.
+
+This is a fundamental reframing of the field. It is not an incremental improvement in head classification — it is the difference between having a parts list for an engine and having an engineering diagram that shows how the parts connect and in what order they operate. The four-stage framework provides the first systematic answer to the question "what do attention heads *as a population* do?" rather than "what does this individual head do?".
+
+The comparison to prior work is stark. Earlier surveys (e.g., Luo and Specia, 2024) organized findings by experimental methodology — how heads were discovered — without connecting them functionally. The cognitive-neuroscience-grounded surveys of mechanistic interpretability (Räuker et al., 2023) discussed Transformer components broadly but did not provide a stage-based functional taxonomy for attention heads specifically. The survey's innovation is to introduce a *functional* organizing principle — cognitive stages — that is simultaneously descriptive (it accurately sorts existing heads), predictive (it tells you where to look for heads of a given type), and explanatory (it tells you *why* certain heads appear at certain layers and interact in certain orders, rather than just noting that they do).
+
+The limitation — which the authors acknowledge in Section 9 — is that the stage boundaries are not perfectly orthogonal. Some heads could arguably belong to multiple stages (does the Content Gatherer Head, which moves answer text to [END] in preparation for letter mapping, belong to ICI or early EP?). The framework treats the stages as overlapping categories in a graph (Figure 6), not as rigid sequential bins. This is both a strength (it matches the empirical messiness) and a weakness (it reduces the framework's falsifiability — a head that doesn't fit neatly can be placed in a "boundary" role). But as a first organizing principle for a previously unstructured literature, the orthogonal-stages concern is secondary to the framework's demonstrated ability to reveal the layer-stage correlation and the multi-stage circuit structure.
+
+---
+
+### Innovation 2: The [END] Position as a Computational Bottleneck — Elevating an Empirical Observation to an Architectural Principle
+
+Prior to this survey, the observation that many attention heads route information through the final token position of a sequence was scattered across individual papers as a curious empirical finding. Wang et al. (2023) noted that Name Mover Heads copied entity names to the last token position in the IOI circuit. Tigges et al. (2023) found that the Sentiment Summarizer aggregated emotional valence at the [SUM] position — a special token placed immediately before the [END] token. Lieberum et al. (2023) and Merullo et al. (2024) observed that the Content Gatherer Head moved answer text tokens to [END] in MCQA tasks. Each paper treated this as a task-specific mechanism: "in *this* circuit, information routes through the last token."
+
+The survey's innovation is to recognize that these are not independent discoveries of task-specific mechanisms but **manifestations of a single, cross-cutting architectural principle**: the [END] position serves as a computational bottleneck — a shared readout location where diverse information streams are concentrated so that downstream heads can access them without needing to know where the information originated. By cross-referencing across the ICI, LR, and EP head catalogs, the survey shows that the [END]-routing pattern appears in Mover Heads (syntactic identification), Content Gatherer Heads (semantic identification), Sentiment Summarizers (semantic identification), Summary Readers (latent reasoning — they *read* from [SUM]), Correct Letter Heads (latent reasoning), and Amplification Heads (expression preparation — they amplify signals *at* [END]). At least six functionally distinct head types, spanning three of the four cognitive stages, either write to or read from the [END]/[SUM] bottleneck positions.
+
+This transforms the [END] position from an interesting quirk of individual circuits into a design pattern of the Transformer architecture itself. The insight is architectural, not merely taxonomic: the residual stream's additive structure means that heads in deeper layers see a superposition of all previous heads' outputs. Information written directly to a task-relevant token position (e.g., the subject name token) is mixed with that token's evolving representation across layers, making it harder for downstream heads to cleanly extract. Writing to a dedicated, semantically neutral [END] position — which starts as a simple end-of-sequence marker and accumulates task-relevant information through additive contributions — creates a clean readout channel. The [END] position becomes a summary register that downstream heads can attend to without interference from the semantic evolution of the source tokens.
+
+The significance of this insight extends beyond description to prediction and design. If the [END]-as-bottleneck principle is general, then newly discovered circuits in previously unstudied tasks should exhibit the same pattern: information should be routed through the final token position whenever multiple information sources must be combined for a decision. This is a falsifiable prediction that can guide future circuit discovery. It also has practical implications: if [END]-routing is how LLMs implement multi-source information integration, then interventions at the [END] position (e.g., activation steering, patching) should be particularly powerful for modifying model behavior — a hypothesis that is testable and potentially useful for model control.
+
+This is a fundamental conceptual contribution, not an incremental one. It takes a pattern that was implicit in the literature — noticed by multiple groups but never explicitly connected — and articulates it as a general principle with explanatory and predictive power. It is the interpretability analog of discovering that a particular register in a CPU serves as an accumulator: once you see it, the design of many otherwise-mysterious circuits becomes transparent.
+
+---
+
+### Innovation 3: A Methodological Taxonomy That Distinguishes *What Question* an Experiment Answers, Not Just *What Operation* It Performs
+
+The experimental methods section (Section 5) could have been a simple catalog: ablation works like this, patching works like that, probing works like this. Prior surveys in interpretability (e.g., Luo and Specia, 2024) largely took this approach — listing methods by their operational mechanics. The innovation in this survey's treatment of methodology is more subtle but more consequential: it organizes methods by the **epistemological question they answer**, not merely by their implementation.
+
+The Modeling-Free vs. Modeling-Required distinction (Section 5) is the primary axis, but the subcategorization reveals the deeper structure. Within Modeling-Free, Modification-Based methods (directional addition/subtraction) answer the question "is concept X encoded as a direction in this head's representation space, and is that direction causally used?" Replacement-Based methods (zero ablation, mean ablation, naïve patching) answer a different question: "is this head necessary for the behavior, and what specific information does it transmit?" Within Modeling-Required, Probing answers "is information about Y linearly decodable from this head's activations?" — a correlation question — while scoring functions (Retrieval Score, NAS) answer "does this head exhibit behavior pattern Z across a distribution of inputs?" — a behavior-characterization question.
+
+This epistemological organization matters because a finding established by one method does not automatically imply the conclusions that would follow from another method. A probe that achieves high classification accuracy for "truthfulness" from a head's activations (e.g., Li et al., 2024) tells you that the information is *present*. It does not tell you that the model *uses* that information, or that intervening on the head will change behavior — those are causal questions requiring patching or ablation. Conversely, an ablation study showing that removing a head degrades performance tells you the head is *necessary* but not *sufficient* — another head might perform the same function if this one were present, or the head might be a redundant backup. The survey's methodological taxonomy makes these distinctions visible, preventing the common interpretability error of conflating correlation with causation, or presence with use.
+
+The inclusion of the direct/indirect/total effect decomposition (Figure 5, Section 3.2.2) within the Modeling-Free framework further sharpens this. A head can have a large total effect because it directly influences the output, or because it modulates a downstream component that has a large effect. These are mechanistically different but observationally similar if only total effect is measured. The survey's methodological vocabulary — adopted from the causal mediation analysis literature (Heimersheim and Nanda, 2024, reference 26) — equips researchers to distinguish these cases.
+
+This is a foundational contribution to research methodology rather than to model understanding per se. It does not reveal anything new about attention heads directly; it reveals something about *how to study them properly*. In a field where replication and cross-validation are already challenging (due to model access limitations and computational costs), having a clear vocabulary for what each method establishes — and what it does not — reduces the risk of overclaiming and supports more precise hypothesis formulation. It also provides a natural framework for evaluating new methods: does a proposed approach answer a question that existing methods cannot, or does it answer an existing question more efficiently? The survey's taxonomy provides the structure for answering that meta-question.
+
+---
+
+### Innovation 4: Explicitly Documenting What Is *Not* Known — The Limitations Section as a Research Agenda
+
+Survey papers typically end with a brief "future work" section that gestures at open problems. Section 8.1 of this survey does something different: it systematically catalogs four specific, named limitations of the existing literature — lack of task generalizability, lack of mechanism transferability, limited focus on multi-head collaboration, and absence of theoretical supports — and ties each to the evidence presented earlier in the survey. This transforms the limitations from a perfunctory acknowledgment into a structured research agenda.
+
+**Lack of task generalizability** is documented by the fact that circuits like the IOI circuit (Wang et al., 2023) and the Color Object circuit (Merullo et al., 2024) have only been validated on the specific synthetic tasks for which they were discovered. The survey makes explicit what is implicit in the literature: we do not know whether the same heads, in the same layers, with the same communication patterns, implement the same functions when the model is performing a different task — or even a slightly varied version of the same task. This is a concrete, actionable gap: replicate circuit discoveries across task variants and report which components generalize and which are task-specific.
+
+**Lack of mechanism transferability** is documented by Figure 7: the icons next to each head name indicate which model family the head was discovered in, and the pattern is that most heads have been found in only one or two model families. An Induction Head found in GPT-2 Small may or may not exist in LLaMA-3-70B with the same functional properties. A Retrieval Head identified in LLaMA may have no analog in Mistral, or may be implemented by a distributed set of heads rather than a single specialized one. The survey makes this gap explicit and urgent: without cross-architecture validation, the field cannot distinguish *general principles of Transformer computation* from *idiosyncratic properties of specific trained models*.
+
+**Limited focus on multi-head collaboration** is the gap that Sections 4.6 and 8.1 jointly identify: most studies investigate individual heads in isolation, but the IOI circuit and the parity example show that real computation involves temporally coordinated sequences of heads across layers and stages. The survey notes that "existing work lacks a comprehensive framework for understanding the coordinated functioning of all attention heads in LLMs and analogizing the human brains." This is a call for circuit-level rather than head-level analysis — moving from "what does this head do?" to "how do groups of heads implement algorithms?"
+
+**Absence of theoretical supports** is the deepest gap identified. The survey acknowledges that current research is largely empirical: "Many studies propose hypotheses about circuits based on observed phenomena and validate these hypotheses through experiments. However, this approach cannot establish the theoretical soundness of the mechanisms, nor can it determine whether the observed mechanisms are merely coincidental." This is not a criticism of existing work — it is a characterization of the field's current maturity level. The survey is arguing that mechanistic interpretability needs to move beyond "we found this circuit in this model" to "we can prove that this type of circuit is the unique (or optimal) solution to this computational problem under these architectural constraints." This is an ambitious call that goes well beyond the scope of any individual paper reviewed, but it provides direction for theoretically-inclined researchers.
+
+What makes this a genuine innovation rather than a standard limitations section is its structure and specificity. Each limitation is (1) clearly named as a category of gap, (2) grounded in specific evidence from the surveyed literature, and (3) linked to the survey's own contributions — the four-stage framework provides scaffolding for studying multi-head collaboration, the methodological taxonomy provides tools for testing generalizability and transferability, and the cognitive-neuroscience grounding points toward the kind of theoretical frameworks that might explain *why* certain head organizations emerge. Section 8.2 then enumerates five concrete future directions that follow directly from these limitations, creating a clear path from "here's what we don't know" to "here's what to do next." This is more valuable to the field than a generic call for "more research" — it tells researchers exactly which experiments would most advance understanding and why.
 
 ## 5. Experimental Analysis
-Note: This is a survey; it does not run new experiments. Instead, it collates how the community evaluates head mechanisms and provides formulas and templates.
 
-- Evaluation methodology (Section 6)
-  - Mechanism‑focused datasets (Table 6) reduce tasks to token‑level probes so head effects can be cleanly measured:
-    - IOI (indirect object identification), ICL‑MC for induction, Succession for ordinal “+1,” Iteration‑Synthetic for iterative state updates, ToyMovieReview/MoodStory for sentiment (Figure 11 templates), World‑Capital and LRE‑1 for knowledge recall.
-  - Common capability benchmarks (Table 7) check whether steering heads improves global performance: MMLU (knowledge reasoning), TruthfulQA (truthfulness), SST/SST‑2 and ETHOS (sentiment/abuse), Needle‑in‑a‑Haystack (long‑context retrieval), AG News/TriviaQA/AGENDA (comprehension/generation).
+### Evaluation Methodology
 
-- Metrics and instruments
-  - Logit lens to quantify the effect of a head intervention at intermediate layers (Section 3.2.2).
-  - Retrieval Score (Equation 6) to measure how reliably a head points to the intended token across examples.
-  - Negative Attention Score (NAS; Equation 7) to quantify negative bias across “Yes/No” positions.
+- **Dataset.** The survey does not introduce a new dataset or run original experiments. Instead, it **aggregates and categorizes** the evaluation benchmarks used in the 100+ papers it surveys. Section 6 organizes these into two categories: **Mechanism Exploration Evaluation** (synthetic or simplified datasets designed to isolate specific head functions) and **Common Evaluation** (standard benchmarks used to assess whether head interventions improve overall model performance). Mechanism exploration datasets — such as IOI (Wang et al., 2023), Colored Object (Merullo et al., 2024), ToyMovieReview / ToyMoodStory (Tigges et al., 2023), and Iteration-Synthetic (Cabannes et al., 2024) — are typically task-specific, token-level, and designed to strip away confounding factors (problem length, query format variation) so that head function can be studied in isolation. Common evaluation benchmarks include MMLU (Hendrycks et al., 2021), TruthfulQA (Lin et al., 2022), LogiQA (Liu et al., 2020), SST/SST2 (Socher et al., 2013), and Needle-in-a-Haystack (GitHub, 2023), spanning knowledge reasoning, logic reasoning, sentiment analysis, long-context retrieval, and text comprehension. No single dataset is used across all surveyed papers; the survey's contribution is documenting which datasets have been used to study which head types (Table 6 and Table 7).
 
-- Interventional methods and ablations (Section 5; Table 4)
-  - Directional addition/subtraction to test linear concept directions (e.g., positive–negative sentiment direction added to a head’s activation).
-  - Zero/mean ablation or naïve activation patching to identify necessity/sufficiency of a head’s activation for an observed behavior.
+- **Base model(s).** The surveyed papers span a range of decoder-only LLM families, which the survey explicitly catalogs via icons in Figure 7:
+  - **LLaMA series** (most common), **GPT series** (including GPT-2 Small, the most heavily studied model for circuit-level analysis), **Pythia series**, **Qwen series**, **Gemma series**, **Mistral series**, **Yi series**, **InternLM series**, and **toy models** (two-layer decoder-only Transformers trained on synthetic data). The authors note in Section 2 that they deliberately exclude encoder-only models like BERT, as "conclusions [from BERT-era studies] are now outdated" for understanding modern autoregressive LLMs. Model scales range from GPT-2 Small (~85M parameters) to Chinchilla-scale models (~70B, for the MCQA head analysis in Lieberum et al., 2023). The choice of model in each surveyed paper is task- and resource-dependent: toy models are used when researchers want full control over training data and architecture to establish causal mechanisms (e.g., Edelman et al., 2024; Cabannes et al., 2024); production-scale models are used when assessing whether mechanisms discovered in small models scale to practically deployed systems. The survey does not itself pick a canonical model but instead treats the diversity of studied architectures as an asset for assessing cross-model generalizability — a point it returns to critically in Section 8.1.
 
-- Representative collaboration evidence
-  - IOI circuit diagram (Figure 9) integrates Subject/Relation (KR), Duplicate/Name‑Mover (ICI), Induction/Previous and Inhibition (LR), and Amplification (EP). The diagram encodes paths of information flow rather than numeric effect sizes, but it summarizes replicated findings across studies on GPT‑2 (Section 4.6).
-  - Parity and MCQA mini‑case studies describe the step‑by‑step information routing and matching queries vs keys (Section 4.6).
+- **Metrics.** The survey does not standardize metrics across papers. Instead, it documents the heterogeneous metrics used in the underlying studies:
+  - **Logit differences / probability differences** (via Logit Lens): the primary metric for Mechanism Exploration — comparing the logit value or softmax probability of the correct answer token vs. incorrect alternatives after intervening on a specific head. Larger differences indicate stronger causal contribution.
+  - **Attention pattern analysis**: for structural and syntactic heads (Previous Head, Positional Head, Duplicate Head, Retrieval Head), the metric is whether the head's attention weights concentrate on the theoretically predicted token positions (e.g., the previous token, repeated tokens, the retrieval target).
+  - **Ablation impact on task accuracy**: removing a head (zero/mean ablation) and measuring the degradation in end-task accuracy (e.g., IOI accuracy, MCQA accuracy). This is the primary metric for necessity claims.
+  - **Probing classifier accuracy**: for Training-Required methods, the metric is how accurately a trained classifier can predict a property (truthfulness, syntactic role, sentiment) from a head's activations. Higher accuracy = stronger encoding of that property in that head.
+  - **Head-specific scores**: the survey highlights two formalized scoring metrics: Retrieval Score (Equation 6 — fraction of test cases where the head's maximum-attention token is the correct retrieval target) and Negative Attention Score (NAS, Equation 7 — a bias metric combining attention to "Yes"/"No" tokens with a log-ratio favoring negative attention). These are the only metrics in the survey that are given analytically precise definitions; most other findings are reported in terms of qualitative attention pattern inspection or ablation effect sizes without a standardized numerical scale.
+  Table 6 and Table 7 compile which benchmarks are used but do not report numerical results, consistent with the survey's organizational rather than experimental contribution.
 
-- Quantitative results
-  - This survey aggregates methods and phenomena but does not tabulate numeric scores or effect sizes across models or tasks. Where numbers matter (e.g., “how much does steering a Truthfulness Head improve TruthfulQA?”), readers must consult the cited studies (Figure 7 citations 86–89). Within this paper, the quantitative pieces are definitions of scores (Equations 6–7) and setup specifics (layer ranges in Figure 8), plus a trend illustration (Figure 1) showing rising Google search interest in “attention head” and “model interpretability”.
+- **Baselines.** The survey does not run experiments and therefore does not establish baselines in the traditional sense. However, the underlying papers it surveys use several varieties of control conditions:
+  - **Clean-run vs. corrupted-run activation patching**: the standard baseline is the model's behavior on the original (clean) prompt. The experimental condition replaces a head's activation with that from a corrupted prompt (e.g., changing "Mary" to "Alice") and measures deviation from the clean-run output. The "corrupted-run" serves as the baseline for what behavior looks like when the targeted information is absent.
+  - **Mean ablation**: replaces head output with the mean activation across a dataset, preserving baseline statistics while removing instance-specific information. This serves as a stronger baseline than zero ablation because it controls for the possibility that any non-zero output is sufficient.
+  - **Majority voting / random guessing**: for Common Evaluation benchmarks, the implicit baseline is the model's unmodified performance. When interventions are applied (enhancing or suppressing specific heads), the comparison is against the model's original accuracy.
+  - In the scoring-based methods (Retrieval Score, NAS), the baseline is implicitly zero: a head with no retrieval ability would have a Retrieval Score at chance level (~1/N for N tokens); a head with no negative bias would have NAS ≈ 0. The survey does not explicitly report these baseline values, as the focus is on head identification rather than head evaluation.
 
-- Do the summarized experiments support the claims?
-  - Yes with caveats: the paper grounds mechanisms in multiple, often replicated case studies (e.g., Induction Heads64,80–85; Name‑Mover/Copy‑Suppression22,73; Retrieval Heads69–70) and shows converging evidence from activation patching, ablation, and simplified models. However, many demonstrations are in smaller models (e.g., GPT‑2 Small) and toy settings; transfer to frontier LLMs and open‑ended tasks is less documented (Section 8.1).
+- **Generation budget / compute accounting.** Not applicable. The survey does not compare methods along a compute-efficiency axis. The experimental methods discussed (activation patching, ablation, probing) vary in computational cost, but the survey does not provide FLOP counts, GPU-hour estimates, or sample-efficiency comparisons. This is a notable gap: a practitioner choosing between Modeling-Free (activation patching) and Modeling-Required (probing classifier training) methods for their own investigation would not find cost guidance in this survey. The survey emphasizes *what can be discovered* with each method but not *at what computational cost*.
+
+- **Cross-validation / statistical protocol.** The survey does not describe a statistical protocol for its own analysis, as it is a literature survey rather than an experimental paper. The underlying papers vary widely in their statistical rigor:
+  - **Circuit-level studies** (Wang et al., 2023; Merullo et al., 2024) typically use small, hand-crafted test sets (hundreds of examples for the IOI task, for instance) and report ablation or patching results without formal confidence intervals. The survey does not critique this; it notes in Section 8.1 that the lack of cross-task validation is a fundamental limitation.
+  - **Probing-based studies** (Li et al., 2024; Yang et al., 2024) typically employ train/test splits for the probe classifier and report classification accuracy, which provides a statistical reliability measure for the *probe* but not necessarily for the *causal role* of the probed head.
+  - **Scoring-based studies** (Wu et al., 2024; Yu et al., 2024) compute their scores over evaluation sets (sizes not systematically reported in the survey) and rely on thresholding or ranking to identify special heads. The survey does not report effect sizes, p-values, or confidence bounds for these scores — this is a limitation of the surveyed literature, not just the survey itself.
+
+### Main Quantitative Results
+
+The survey is a taxonomic and organizational contribution, not an experimental paper. It does not report new quantitative results. However, it *aggregates and organizes* the quantitative patterns that emerge across the literature. This section describes those patterns as the survey presents them, citing the specific figures and tables where these aggregations appear.
+
+#### Functional Distribution of Attention Heads Across the Four Stages
+
+The survey identifies **over 30 functionally characterized attention heads** in the literature, organized into the four cognitive stages. The distribution is highly asymmetric (summarized in Figure 7 and the head-name lists in Sections 4.2–4.5):
+
+- **Knowledge Recalling (KR):** 4 head types identified (Memory Head, Associative Memories heads, Constant Head, Single Letter Head, Negative Head). This is the sparsest category after EP.
+- **In-Context Identification (ICI):** The most densely populated category, with at least 14 identified head types spanning structural (5 heads: Previous, Positional, Rare Words, Duplicate, Retrieval), syntactic (6+ heads: Subword Merge, Syntactic, Name Mover, Backup Name Mover, Letter Mover, Negative Name Mover), and semantic (5+ heads: Context, Content Gatherer, Sentiment Summarizer, Semantic Induction, Subject/Relation) subcategories.
+- **Latent Reasoning (LR):** Approximately 10+ head types, spanning in-context learning (Summary Reader, Function Vector, Induction Head, In-Context Head), effective reasoning (Truthfulness, Accuracy, Consistency, Vulnerable), and task-specific reasoning (Correct Letter, Iteration, Successor, Inhibition).
+- **Expression Preparation (EP):** 5 head types identified (Mixed Head, Amplification Head, Correct Head, Coherence Head, Faithfulness Head). The authors explicitly note (Section 4.1) that the concentration in ICI and LR likely reflects research bias — "fewer attention heads operate in the KR and EP stages" may indicate underexploration rather than genuine scarcity.
+
+The survey does not provide the exact count of studies supporting each head type (e.g., "Induction Head is attested in X papers"), which would have strengthened the evidentiary weight. The icons in Figure 7 indicate *which model families* each head was found in but not *how many independent studies* confirm it.
+
+#### Layer-Depth Distribution of Head Functions (Figure 8)
+
+The survey's key quantitative generalization is the **mapping between functional stage and layer depth**, visualized in Figure 8. Dividing a representative LLM (GPT-2 Small, 12 layers) into shallow (layers 1-4), middle (layers 5-8), and deep (layers 9-12):
+
+- **KR heads** concentrate in shallow and middle layers. Table 2 reports "Shallow / Middle" for Memory Head and "Middle" for Constant Head, Single Letter Head, and Negative Head.
+- **ICI heads** span shallow-to-middle layers predominantly. Structural identification heads (Previous, Positional) tend toward earlier layers; semantic identification heads (Sentiment Summarizer, Semantic Induction) tend toward middle layers. The Mover Head cluster is predominantly middle-layer.
+- **LR heads** concentrate in middle layers. Induction Heads appear in early-to-mid layers; Inhibition Heads and task-specific reasoning heads (Correct Letter, Iteration) appear in middle-to-deep layers.
+- **EP heads** concentrate in deep layers. Table 3 reports "Deep" for Mixed Head, Amplification Head, Correct Head, Faithfulness Head, and "Middle / deep" for Coherence Head.
+
+The survey cautions (Section 4.6) that this mapping is statistical rather than absolute: "there are instances where LLMs return to the KR or ICI stage at deeper layers — for example, in the MCQA and IOI cases." The layer-stage relationship is presented as an empirical tendency, not a deterministic law. No numerical statistics (e.g., "78% of ICI heads in the surveyed literature appear in layers 3-7") are provided — the aggregation is qualitative.
+
+#### Collaborative Circuit Architecture: The IOI Circuit (Figure 9)
+
+The IOI circuit in GPT-2 Small, documented by Wang et al. (2023) and corroborated by Merullo et al. (2024) and Kim et al. (2024), serves as the survey's central case study for multi-head collaboration. The circuit involves at least 7 functionally distinct head types across all four stages and approximately 6-8 layers (exact layer indices not specified in the survey). The information flow documented in Figure 9 maps cleanly onto the four-stage framework:
+
+1. **KR (shallow):** Subject Head and Relation Head activate stored knowledge that the answer should be a human name.
+2. **ICI (early-middle):** Duplicate Head detects repeated token occurrences; Name Mover Head copies entity names to [END]; Backup Name Mover provides redundancy.
+3. **Iterative ICI-LR (middle):** Previous Head and Induction Head work together to attend to the repeated entity (the direct object, "John"). The Induction Head captures the [A][B]...[A] pattern.
+4. **LR (middle-deep):** Inhibition Head suppresses logits for "John" (the entity not to be output).
+5. **EP (deep):** Amplification Head boosts logits for "Mary" (the remaining candidate).
+
+The survey does not report ablation effect sizes (e.g., "ablating the Inhibition Head reduces IOI accuracy from X% to Y%") — these are available in the original Wang et al. (2023) paper but not reproduced here. The contribution is the *organizational mapping* of an existing circuit onto the four-stage framework, demonstrating that the framework captures the empirical circuit structure.
+
+#### Discovery Method Distribution (Figure 10)
+
+Figure 10 provides a pie chart showing the relative prevalence of Modeling-Free vs. Modeling-Required methods in the surveyed literature. The survey reports (Section 5) that Modeling-Free methods are "widely applicable" and likely more common, but no exact percentages are provided for the pie chart segments. The subcategories — Modification-Based (Directional Addition, Directional Subtraction) and Replacement-Based (Zero Ablation, Mean Ablation, Naïve Activation Patching) within Modeling-Free; Training-Required (Probing, Simplified Model Training) and Training-Free (Scoring, Information Flow Graph) within Modeling-Required — are described with representative works for each (Tables 4 and 5) but without frequency counts.
+
+#### Mechanism Exploration vs. Common Evaluation Benchmarks (Tables 6 and 7)
+
+Table 6 lists 13 Mechanism Exploration benchmarks (from LRE to World-Capital), each categorized by the reasoning type it probes (knowledge recalling, sentiment analysis, token-level reasoning, arithmetic reasoning, word-level reasoning). These are predominantly synthetic or simplified datasets with token-level answers, designed to isolate specific head functions. Table 7 lists 10 Common Evaluation benchmarks (from MMLU to AGENDA), categorized by evaluation focus (knowledge reasoning, logic reasoning, sentiment analysis, long context retrieval, text comprehension). These are standard benchmarks used to assess whether head interventions (enhancement or suppression) improve general model performance.
+
+The survey does not report performance numbers on any of these benchmarks — it catalogs *which* benchmarks are used for *which* purpose, not *how well* any method performs on them.
+
+### Ablation Studies and Robustness Checks
+
+The survey does not contain original ablation studies. However, it **documents the ablation and robustness patterns** from the underlying literature. This section catalogs these as the survey presents them, organized by methodological insight rather than by original experimental section.
+
+**Ablation vs. patching for establishing necessity vs. sufficiency:** The survey notes (Section 5.1) that Zero Ablation and Mean Ablation establish **necessity** — if removing a head degrades performance, the head is necessary for the behavior. Activation Patching (replacing with corrupted-run activations) establishes **information content** — if the output changes, the head was transmitting specific information. However, the survey implicitly highlights a robustness concern: the IOI circuit's Backup Name Mover Head provides an example of **functional redundancy**, where ablating the primary Name Mover does not degrade performance because the Backup compensates. This means that ablation studies can *underestimate* a head's functional role if redundant mechanisms exist. The survey does not report how common functional redundancy is across the cataloged heads — this is flagged as an open question (Section 8.1, "Limited focus on multi-head collaboration").
+
+**Oracle vs. predicted difficulty bins in the reviewed literature:** The survey does not apply this distinction itself, but the discovery methods it catalogs have varying reliance on ground-truth labels. Probing classifiers require labeled training data (e.g., "truthful" vs. "untruthful" responses for Truthfulness Head identification; Li et al., 2024). Scoring methods like Retrieval Score and NAS require knowing which token is the correct retrieval target or having access to "Yes"/"No" token positions. The survey does not assess whether head functions discovered via supervised methods (probing) generalize to settings without labeled data — this is a robustness gap in the underlying literature that the survey identifies only implicitly.
+
+**Toy model vs. production model validation:** The survey's Figure 7 explicitly marks which heads were discovered in toy models (two-layer Transformers) vs. production-scale LLMs. Several key heads — including early Induction Head analyses (Edelman et al., 2024; Reddy, 2024) and the Iteration Head (Cabannes et al., 2024) — were initially discovered in toy or simplified models. The survey notes that "findings from simplified architectures may not transfer to full-scale models" (Section 8.1, "Lack of Mechanism Transferability"), but does not systematically report which toy-model findings have been replicated at scale and which remain unvalidated. This is a significant robustness gap: the Induction Head has been replicated across scales (GPT-2 Small through larger models, per Olsson et al., 2022), but for many other head types, the survey cannot confirm cross-scale robustness from the available literature.
+
+**Cross-task validation:** The survey explicitly identifies (Section 8.1) that "circuits [like IOI] have not been validated across other tasks, making it challenging to determine whether these mechanisms are universally applicable." The IOI circuit has been studied only on the IOI task; the Color Object circuit only on the Color Object task. The survey does not report any study that tests whether the same heads, in the same layers, with the same collaborative patterns, implement the same functions when the model performs a different task. This is the single largest robustness gap documented in the survey.
+
+**Model family diversity:** Figure 7's icons serve as a qualitative robustness check — a head type attested in multiple model families (e.g., Induction Head found in LLaMA, GPT, and Pythia) has stronger evidence of generality than a head type found only in one family (e.g., many of the MCQA-specific heads from Lieberum et al., 2023, studied primarily in Chinchilla). The survey does not compute any formal cross-family replication rate.
+
+**Negative results documented in the survey:** The survey catalogues several heads whose function is **detrimental** to model performance, and for which the recommended intervention is **suppression** rather than amplification:
+- **Vulnerable Head** (García-Carrasco et al., 2024, reference 91): overly sensitive to specific input forms, susceptible to irrelevant information, and associated with incorrect results. Ablating or suppressing this head improves model robustness.
+- **Negative Head** (Yu et al., 2024, reference 63): introduces a negative bias in binary decision tasks via pre-training-induced priors. The Negative Attention Score (NAS) is specifically designed to identify and quantify this bias so it can be mitigated.
+The existence of such heads is a conceptually important negative result: it demonstrates that not all attention heads contribute positively to reasoning, and that "more activation" is not uniformly beneficial. This complicates any simple narrative of "attention heads implement interpretable reasoning steps" — some heads implement biases or vulnerabilities that the model would perform better without.
+
+### Critical Assessment
+
+The survey's central claims, as established in the Executive Summary, are organizational and taxonomical rather than empirical: (1) attention heads can be categorized into four functional stages inspired by human cognition; (2) these stages exhibit a layer-wise distribution pattern; (3) the surveyed experimental methods fall into two categories (Modeling-Free and Modeling-Required) with distinct epistemological implications; and (4) attention heads collaborate across stages in structured circuits, as exemplified by the IOI task.
+
+**On the claim that attention heads can be categorized into four functional stages:** This claim is **supported at the level of taxonomic plausibility** but **not empirically validated** by the survey itself. The survey demonstrates that over 30 independently discovered attention heads *can be sorted* into the four bins without obvious forcing — the Memory Head naturally maps to KR, the Induction Head to LR, the Amplification Head to EP. The fact that the resulting bins independently reproduce a shallow-to-deep layer ordering (Figure 8) provides circumstantial evidence that the taxonomy captures something real rather than arbitrary. However, the survey does not provide an inter-rater reliability analysis: would independent annotators, given the same head descriptions, assign them to the same four stages at above-chance rates? The boundary cases the authors acknowledge (Section 9 — "the categorization of attention head functions from the perspective of human cognitive behavior in this paper may not be perfectly orthogonal, potentially leading to some overlap between different stages") suggests that some assignments are ambiguous. The Content Gatherer Head moves answer text to [END] in preparation for letter mapping — is this late ICI or early EP? The taxonomy's value is heuristic (organizing the literature) rather than definitive (establishing strict functional boundaries). Readers should treat the four stages as a productive working hypothesis, not a verified model of Transformer computation.
+
+**On the claim that the four stages exhibit a layer-wise distribution pattern (Figure 8):** This claim is **anecdotally supported by the surveyed examples** but **not quantitatively established**. The survey reports that KR heads "concentrate in shallow/middle layers" (Table 2), that ICI and LR heads dominate middle layers, and that EP heads appear in deep layers (Table 3). The IOI circuit and parity example (Section 4.6) provide case studies consistent with this pattern. However, the survey does not report any systematic layer-distribution analysis — e.g., "across all 30+ heads, the mean layer index for KR heads is 2.3, for ICI is 5.1, for LR is 7.8, and for EP is 10.2." This may be because the underlying studies use different model architectures with different layer counts, making layer-index averaging non-trivial (layer 5 in a 12-layer model is not equivalent to layer 5 in a 70-layer model). The survey would have been strengthened by a normalized layer-depth analysis (percentile of total depth) across all cataloged heads, or at minimum a table reporting the layer indices reported in each underlying study. Without this, the Figure 8 generalization is a plausible hypothesis drawn from illustrative examples, not a empirically robust finding.
+
+**On the claim that experimental methods fall into two categories with distinct epistemological implications:** This claim is **well-supported by the survey's explicit methodological analysis** and is the strongest contribution in the Experimental Analysis space. Section 5's distinction between Modification-Based and Replacement-Based methods, and between Training-Required and Training-Free approaches, is analytically crisp and well-motivated. The survey correctly identifies that ablation establishes *necessity* but not *sufficiency*, that patching establishes *information content* but not *causal role* (without further mediation analysis), and that probing establishes *encodability* but not *use*. This analysis does not depend on any quantitative aggregation — it is a conceptual framework for evaluating evidence, and it succeeds on those terms. The one gap is the absence of any discussion of statistical power or sample sizes for these methods: how many corrupted prompts are needed for reliable activation patching? How many training examples for a probe to achieve above-chance classification? A practitioner reading this survey would learn *which* method to use for *which* question, but would not learn *how much data or compute* is needed to apply it reliably.
+
+**On the claim that attention heads collaborate across stages in structured circuits:** This claim is **supported for the specific tasks studied** (IOI, parity, MCQA) but **its generality is unknown** and the survey is candid about this (Section 8.1, "Lack of task generalizability" and "Limited focus on multi-head collaboration"). The IOI circuit analysis in Figure 9 is the strongest evidence — it shows a clean mapping from the four-stage framework onto an empirically validated circuit. However, the survey documents only a handful of such circuits. The majority of cataloged heads (over 20 of the 30+) are studied in isolation, with no evidence about how they interact with other heads during end-to-end task execution. The survey's methodological contribution — providing the four-stage framework — offers a hypothesis for *how* these isolated heads might collaborate (e.g., a newly discovered head in the ICI stage should feed into LR heads, which should feed into EP heads), but these hypotheses are untested for most of the catalog.
+
+**Genuine weaknesses in the experimental underpinning:**
+
+1. **No systematic cross-task replication for any head type.** The survey identifies this as a limitation (Section 8.1) but the depth of the problem is worth emphasizing: even the most well-studied head, the Induction Head, has been studied primarily on synthetic pattern-completion tasks. We do not know whether the same Induction Heads (same layer indices, same QK/OV behavior) participate in natural language reasoning tasks like reading comprehension or mathematical problem-solving, or whether the mechanism is task-specific. The survey cannot answer this because the underlying literature has not addressed it.
+
+2. **No cross-architecture replication except for anecdotal cases.** Figure 7's icons show that most head types have been found in only 1-2 model families. The Induction Head is the notable exception (found in LLaMA, GPT, Pythia). For the majority of head types, we do not know whether the function is an architectural invariant of Transformers or a contingent property of a specific trained model.
+
+3. **Heavy reliance on small models for circuit-level analysis.** The IOI circuit, the most detailed multi-head collaboration case study, was discovered in GPT-2 Small (85M parameters). The survey acknowledges the "toy model" concern but does not report which IOI findings have been replicated in larger models. Given that emergent abilities appear at scale, it is plausible that the computational strategies implemented by attention heads reorganize as model capacity increases — a model with hundreds of heads across dozens of layers may distribute functions differently than a model with 12 layers and 144 total heads.
+
+4. **Absence of formal metrics for head function.** The survey catalogues heads by descriptive function ("moves names to [END]"), but for most head types, there is no standardized quantitative metric for assessing how strongly a given head exhibits the function. Without such metrics, researchers cannot compare "how Mover-like" head A is vs. head B, or set thresholds for head classification. The Retrieval Score (Equation 6) and NAS (Equation 7) are exceptions — they provide analytically precise definitions — but they apply only to their specific head types. Expanding this scoring approach to other head functions (a "Mover Score," a "Sentiment Summarization Score") would transform the taxonomy from qualitative to quantitative.
+
+5. **The four-stage framework itself has not been experimentally tested.** The survey proposes the framework as an organizing principle, but does not report any experiment that tests its predictions. For example: if the framework is correct, disrupting a KR head should primarily affect downstream ICI and LR processing, not directly affect output logits (since KR is upstream). If the framework is wrong and the stages are epiphenomenal, disrupting a KR head might have unpredictable effects because heads don't actually operate in a stage-like pipeline. The survey does not report any study that performs this type of cross-stage causal mediation analysis. The framework thus remains a hypothesis, not a validated theory.
+
+**Experiments that would have strengthened the survey but were not run:** The survey's contribution is organizational, so it is not expected to contain original experiments. However, the survey would have been strengthened by:
+- A systematic meta-analysis of reported layer indices across all cataloged heads, with normalized depth percentiles and variance estimates.
+- An inter-annotator agreement study for the four-stage classification.
+- A systematic cross-referencing of which head-type discoveries have been independently replicated by different research groups (beyond the anecdotal mentions of "Wang et al. 2023, Merullo et al. 2024, and Kim et al. 2024 independently identified similar collaborative mechanisms").
+- A table reporting effect sizes for head ablations across tasks, where available in the original papers, to give readers a sense of how *much* each head contributes to end-task performance.
+
+**Conditions under which claims hold:** The survey's claims are primarily descriptive ("the literature has found these head types, with these functions, in these model families") and methodological ("these experimental approaches answer these questions"). These claims are not conditional on hyperparameter settings or compute budgets in the way an experimental paper's claims would be. However, the *generalizability* claims implicit in the four-stage framework are conditional on the framework surviving cross-task and cross-architecture validation that has not yet been performed. The survey is explicit about this conditionality (Section 8.1), so readers are not misled — but they should understand that the framework's value is currently heuristic and organizational, not predictive. A researcher who assumes that Induction Heads will always appear at layers 5-8 in any Transformer model, or that the IOI circuit structure will replicate in GPT-4, would be over-interpreting the evidence the survey provides.
 
 ## 6. Limitations and Trade-offs
-- Generalizability across tasks (Section 8.1)
-  - Circuits validated on IOI, Color‑Object, or toy arithmetic may not directly map to open‑ended QA, math proofs, or tool‑use workflows.
-- Transferability across model families (Section 8.1; Figure 7)
-  - Many head types are reported in limited model series (e.g., GPT‑2, Pythia, LLaMA); whether the same head indices or even the same functions exist in other architectures is underexplored.
-- Multi‑head collaboration under‑specified (Section 8.1)
-  - Most studies isolate single heads; few provide complete, quantitative circuit decompositions across layers and tokens for complex tasks.
-- Theoretical foundations (Section 8.1)
-  - Evidence is largely empirical and interventional. There is no formal proof that the proposed circuits are necessary/unique; alternate mechanisms may implement the same behavior.
-- Stage mapping is heuristic (Figures 6–8)
-  - The KR→ICI→LR→EP sequence is helpful but not strict; models can revisit KR/ICI late in the stack, and simple tasks may skip EP entirely (Section 4.5). This blurs boundaries when classifying heads that appear at multiple depths.
-- Computational constraints
-  - Fine‑grained patching/ablation over all heads and positions in modern LLMs is expensive; some methods (probing, simplified model training) require additional data or training (Section 5.2).
-- Measurement bias
-  - Scores like NAS (Equation 7) depend on prompt formatting and choice of positions for “Yes/No”; conclusions about bias or vulnerability can be prompt‑sensitive (Sections 4.4.2, 5.2).
+
+### 6.1 Lack of Cross-Task Generalizability: Circuits Validated Only on the Specific Tasks for Which They Were Discovered
+
+**The assumption or constraint.** The survey categorizes over 30 attention heads by their function within specific reasoning tasks — the IOI circuit for indirect object identification, the Color Object circuit for attribute binding, MCQA heads for multiple-choice answer selection, Sentiment Summarizers for binary sentiment classification. Section 8.1 explicitly acknowledges that "these circuits have not been validated across other tasks, making it challenging to determine whether these mechanisms are universally applicable." Every head type in the taxonomy is documented in the context of one or a small number of tightly scoped synthetic or simplified tasks.
+
+**The consequence.** Without cross-task validation, we cannot distinguish between three fundamentally different interpretations of the cataloged heads: (1) **General-purpose computational primitives** — e.g., the Induction Head implements pattern completion as a universal operation, recruited by many tasks; (2) **Task-specific specializations** — e.g., the Name Mover Head copies entity names to [END] only in tasks involving entity disambiguation, and is quiescent or repurposed in other tasks; (3) **Statistical artifacts of specific weight configurations** — e.g., the Sentiment Summarizer's attention pattern emerges from the interaction of pre-training data biases and the specific prompt format, not from a functional role the architecture is designed to implement. A practitioner who discovers an interesting head in one task cannot use this survey to predict whether that head will appear in a different task, with a different prompt format, or in a different model. This limits the survey's utility for guiding intervention design: enhancing Amplification Heads improves MCQA accuracy in Chinchilla (Lieberum et al., 2023), but we do not know whether the same intervention improves — or harms — performance on open-ended generation tasks.
+
+**What evidence exists in the paper.** The evidence for this limitation is the **absence** of cross-task validation studies in the surveyed literature. Section 8.1 states it as a finding about the field's current state: "Current research primarily explores simple application scenarios that are limited to specific types of tasks." Tables 6 and 7 in Section 6 show that Mechanism Exploration Evaluation and Common Evaluation are conducted on separate, non-overlapping benchmarks — heads are identified on synthetic, simplified datasets (IOI, ToyMovieReview, Iteration-Synthetic) and tested only for within-task function, while general capabilities are assessed on standard benchmarks (MMLU, TruthfulQA, LogiQA) without head-level circuit analysis. The survey does not report a single study that validates an IOI-discovered circuit on a semantically unrelated task. The methodological taxonomy in Section 5 reinforces this: activation patching and ablation require a well-defined task with measurable output, making it difficult to apply to open-ended generation where "correctness" is ambiguous.
+
+**Mitigation status.** The paper does not attempt to resolve this limitation — it documents it as a gap in the field and calls for "exploring mechanisms in more complex tasks, such as open-ended question answering, math problems, and tool-using tasks" (Section 8.2). This is a call to action, not a solution. The four-stage framework provides a hypothesis about cross-task generality (heads in the ICI stage should perform contextual parsing regardless of downstream task), but this hypothesis is untested.
+
+---
+
+### 6.2 Absence of Cross-Architecture Transferability: Most Heads Attested in Only One or Two Model Families
+
+**The assumption or constraint.** The survey's taxonomy aggregates findings across the literature, but Figure 7 reveals a stark pattern: the icons next to each head name indicate which model families the head was discovered in, and the majority of heads have been found in only one family — typically either GPT-2 Small (the most heavily studied model for circuit analysis) or a specific LLaMA variant. Section 8.1 states: "many discovered special heads have only been explored within a few specific LLMs, or even on custom-built toy models. This raises a critical question: does a specialized head identified in one LLM exhibit the same functionality in another LLM? However, current research lacks investigations into the transferability of such mechanisms across different model series."
+
+**The consequence.** Without cross-architecture validation, we cannot distinguish between: (1) **Architectural universals** — computational primitives that emerge in any sufficiently large autoregressive Transformer trained on natural language, regardless of specific hyperparameters, training data, or initialization; and (2) **Contingent outcomes of specific training runs** — heads whose functions are a product of that model's particular weight configuration, tokenizer, training data distribution, or optimization trajectory. For a practitioner working with a model family not covered in the literature (e.g., a newly released architecture or a domain-specific fine-tuned model), this survey provides **no guarantee** that the cataloged heads exist in their model, let alone at the same layer depths or with the same collaborative patterns. An engineer wanting to suppress Negative Heads to reduce binary-decision bias in their Qwen-based system would find that Negative Heads were discovered in a completely different model family (the survey does not specify which, per Figure 7's icon system), and would have no protocol for locating the analog in their model beyond re-running the full discovery pipeline from scratch.
+
+**What evidence exists in the paper.** Figure 7 is the primary evidence. The Induction Head stands out as the exception with multi-family attestation (LLaMA, GPT, Pythia icons), while most other heads show single-family icons. The IOI circuit was discovered in GPT-2 Small; it is unknown whether LLaMA-3-70B or Mistral-Large implements IOI using the same head types, the same layer distribution, or a different circuit entirely. The survey does not report any systematic cross-family replication study. Section 8.1 explicitly frames this as a "lack of mechanism transferability" — the limitation is self-acknowledged.
+
+**Mitigation status.** Not addressed. The survey calls for cross-architecture validation in Section 8.2 but provides no methodological guidance for how to conduct it efficiently (e.g., transfer learning of probe classifiers across model families, or layer-normalized depth analysis to account for different model sizes). The four-stage framework implies that the *stages* should be architecture-invariant (any LLM should have something like a KR → ICI → LR → EP pipeline), but the specific head implementations of each stage may vary — a hypothesis that remains entirely untested.
+
+---
+
+### 6.3 The Four-Stage Framework Is an Organizing Hypothesis, Not a Validated Theory
+
+**The assumption or constraint.** The survey's central contribution is the four-stage framework (Knowledge Recalling → In-Context Identification → Latent Reasoning → Expression Preparation), derived from human cognitive neuroscience models (OAR, ACT-R) and applied analogically to LLMs. Section 9 acknowledges a fundamental limitation: "the categorization of attention head functions from the perspective of human cognitive behavior in this paper may not be perfectly orthogonal, potentially leading to some overlap between different stages." The framework is presented as a taxonomy for organizing the literature, not as a set of falsifiable claims about Transformer computation that have been experimentally tested.
+
+**The consequence.** The framework's value is currently **heuristic and organizational** — it helps researchers think about attention heads and locate prior work — but it does not provide **mechanistic predictions** with the precision needed for engineering interventions. Consider a researcher who wants to improve an LLM's reasoning about counterfactuals. The framework tells them to look at LR-stage heads (since reasoning is LR), but doesn't tell them which specific heads, in which layers, with which QK/OV behavior, or how to intervene. More seriously, if the framework is *wrong* — if attention heads do not actually operate in a stage-like pipeline but instead implement distributed, overlapping functions without clean stage boundaries — then organizing the literature around these four stages may **actively mislead** by imposing a structure that doesn't exist in the models. A researcher who designs an experiment assuming that KR heads provide input to ICI heads, which feed LR heads, may misinterpret evidence or miss alternative information-flow patterns.
+
+The non-orthogonality concern is not minor. The Content Gatherer Head (which moves answer text to [END] for option-letter mapping in MCQA) is classified as ICI (Section 4.3.3), but its function — preparing information for output — could equally be classified as early EP. The Summary Reader (which reads [SUM]-position sentiment summaries and produces sentiment labels) is classified as LR (Section 4.4.1), but could be seen as a direct readout of ICI-processed information. These boundary cases suggest that the stage boundaries are blurrier than the framework's clean four-box diagram (Figure 6) suggests, and that some heads perform functions that span multiple stages.
+
+**What evidence exists in the paper.** The evidence *for* the framework is circumstantial: (1) heads can be sorted into the four bins without obvious forcing (Sections 4.2–4.5), (2) the resulting bins independently reproduce a shallow-to-deep layer ordering consistent with the cognitive analogy (Figure 8), and (3) the IOI circuit (Figure 9) exhibits a stage-like information flow matching the framework's predicted progression. The evidence *against* the framework is that no experiment in the surveyed literature tests its predictions. No study reports: "We ablated all KR heads and measured the impact specifically on ICI-stage head activations, confirming that KR → ICI information flow is causal and stage-specific." No study tests whether the framework's non-linearity claim — that stages can cycle and jump (Figure 6 arrows) — is actually observed in attention-head dynamics or is merely a concession to the messiness of real data. The framework is consistent with the literature but not empirically validated by it.
+
+**Mitigation status.** The paper is transparent about this limitation ("the categorization ... may not be perfectly orthogonal") but does not propose a validation methodology. Section 8.2 calls for "building a comprehensive interpretability framework" that encompasses "both the independent and collaborative functioning mechanisms of most attention heads," which implicitly acknowledges that the current framework is incomplete. The lack of a concrete validation protocol — e.g., inter-annotator agreement studies for head classification, or causal mediation analyses testing stage-to-stage information flow — means the framework remains in the "productive hypothesis" phase rather than the "validated theory" phase.
+
+---
+
+### 6.4 No Systematic Accounting of Effect Sizes: The Survey Catalogs Head Types Without Quantifying Their Importance
+
+**The assumption or constraint.** The survey is a taxonomic and organizational contribution — it classifies heads by *function* (what they do) and documents their *existence* (where they were found), but does not systematically report *how much* each head contributes to end-task performance. For most head types in the catalog, the survey does not provide: the degradation in task accuracy when the head is ablated, the magnitude of logit change when the head is patched, the probe classification accuracy for the head's encoded property, or the variance in these measures across model families and task instances.
+
+**The consequence.** A practitioner reading this survey cannot prioritize which heads to focus on. If an engineer building a more robust QA system has limited resources to run ablation studies or implement interventions, should they spend effort on Truthfulness Heads, Accuracy Heads, Consistency Heads, or Vulnerable Heads? The survey tells them that all four types exist and are correlated with reasoning quality, but provides no quantitative guidance on their relative importance. A Truthfulness Head whose ablation reduces truthful-response probability by 2% is treated identically (in the survey's textual descriptions) to one whose ablation reduces it by 20%. This matters because mechanistic interpretability research is expensive — running comprehensive activation patching across all heads in a 70B-parameter model is computationally prohibitive. Without effect-size information, the survey cannot guide resource allocation for downstream applications.
+
+More subtly, cataloging heads without effect sizes creates a **publication bias** dynamic that the survey inherits from the underlying literature: papers report discovering a "special attention head" when they find a statistically significant effect, but the practical significance of that effect may vary enormously. Heads with small but statistically detectable effects enter the same catalog as heads with large, unambiguous effects, and the survey does not distinguish them.
+
+**What evidence exists in the paper.** The survey does not report effect sizes. For the Induction Head — the most extensively studied head in the literature — the survey describes its mechanism in detail (Section 4.4.1) but does not report "ablating the Induction Head reduces in-context learning accuracy from X% to Y%" despite this information being available in the original papers (e.g., Olsson et al., 2022). For the IOI circuit (Section 4.6), the survey describes the collaborative mechanism but does not report the circuit's contribution to IOI accuracy relative to a baseline model, even though Wang et al. (2023) provides these numbers. The Retrieval Score (Equation 6) and Negative Attention Score (Equation 7) are the only quantitative metrics reproduced in the survey, and even for these, the survey does not report the score distributions across heads or the threshold values used to classify a head as a Retrieval Head or Negative Head.
+
+**Mitigation status.** Not addressed. The survey does not acknowledge this as a limitation — it frames itself as a qualitative taxonomy, and quantitative aggregation is outside its scope. However, the absence of effect sizes significantly limits the practical utility of the taxonomy. A future version "v2" of this survey, as the field matures, could systematically extract ablation effect sizes and probe accuracies from the original papers and present them in a unified table, enabling comparative assessment.
+
+---
+
+### 6.5 Heavy Reliance on Small Models and Toy Architectures With Unknown Scalability to Production-Scale LLMs
+
+**The assumption or constraint.** Figure 7 explicitly marks which head types were discovered in "toy models, such as two-layer decoder-only Transformers" (distinguished by a separate icon). Several conceptually important heads — including early Induction Head analyses (Edelman et al., 2024; Reddy, 2024), the Iteration Head (Cabannes et al., 2024), and some Associative Memory analyses (Bietti et al., 2024) — were discovered in simplified architectures trained on synthetic data, not in production-scale LLMs. The IOI circuit, the survey's central case study for multi-head collaboration, was comprehensively mapped in GPT-2 Small (~85M parameters, 12 layers) but has not been replicated in models with >1B parameters. Section 8.1 acknowledges the problem indirectly ("many discovered special heads have only been explored within a few specific LLMs, or even on custom-built toy models"), but Section 4.6 and Figure 9 present the IOI circuit as evidence for general collaboration principles without caveats about model scale.
+
+**The consequence.** The mechanisms discovered in small models may not scale. Transformer computation exhibits **emergent behaviors** at scale (Section 4 mentions emergent abilities as a property of decoder-only LLMs) — capabilities that are absent in small models and appear discontinuously with parameter count. It is plausible that the computational strategies implemented by attention heads reorganize as model capacity increases. A 12-layer model with 12 heads per layer has 144 attention heads total; a 70-layer model with 64 heads per layer has 4,480 heads. The latter has vastly more representational capacity and may distribute functions across many heads (superposition) rather than localizing them to individual specialized heads, or may implement entirely different algorithms for the same task that do not decompose into the same head types.
+
+For a practitioner working with a production-scale LLM (e.g., LLaMA-3-70B, GPT-4), the survey provides **no guarantee that the cataloged head types exist as identifiable, localizable units** in their model. The Induction Head is the strongest case for cross-scale replication (Olsson et al., 2022 studied models at multiple scales), but for the majority of head types — especially the task-specific ones like Correct Letter Head, Content Gatherer Head, Negative Head — the evidence comes from one or two models at specific scales, often small. An engineer who builds an intervention pipeline based on the GPT-2 Small IOI circuit and deploys it on LLaMA-3-70B is making an untested extrapolation.
+
+**What evidence exists in the paper.** Figure 7's toy-model icons provide direct evidence of the scale gap. The survey text acknowledges (Section 8.1) that mechanism transferability across models is lacking, but does not separately analyze scale as a dimension of transferability distinct from architecture family. The IOI circuit discussion (Section 4.6) does not mention model scale or note that the circuit was mapped in GPT-2 Small. The survey does not report any study that tests whether a circuit mapped in a small model (80M-1B parameters) is preserved in a large model (10B-100B+ parameters).
+
+**Mitigation status.** Partially addressed by transparency (the toy-model icons in Figure 7 are an honest labeling) but not resolved. Section 8.2 calls for mechanism robustness analysis and exploration in more complex architectures, but does not specifically call for systematic small-to-large model circuit replication studies, which would directly address this limitation.
 
 ## 7. Implications and Future Directions
 - How this changes the field

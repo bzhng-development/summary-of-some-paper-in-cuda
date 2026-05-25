@@ -9,168 +9,752 @@ Self Forcing introduces a groundbreaking training paradigm for autoregressive vi
 ---
 
 ## 1. Executive Summary
-Self Forcing introduces a training paradigm for autoregressive (AR) video diffusion models that mimics inference during training by rolling out generation on the model’s own past outputs and supervising at the whole-video level. This closes the long-standing train–test mismatch (exposure bias) and enables real-time, low-latency video generation while matching or surpassing the quality of slower, non-causal diffusion models (e.g., 17.0 FPS with 0.69s latency and state-of-the-art VBench scores at 1.3B scale; Table 1).
+
+This paper introduces **Self Forcing**, a novel training paradigm for autoregressive video diffusion models that addresses exposure bias—the distributional mismatch between training on ground-truth context and inference on self-generated context—by performing autoregressive rollout with key-value (KV) caching *during training itself*, conditioning each frame's generation on previously self-generated outputs rather than ground-truth frames. Using Wan2.1-T2V-1.3B as the base model, the method enables holistic video-level distribution-matching losses (DMD, SiD, or GAN objectives applied to complete generated sequences) instead of traditional frame-wise denoising objectives, while employing a few-step diffusion process and stochastic gradient truncation to maintain training efficiency. Self Forcing achieves real-time streaming video generation at 17 FPS with sub-second latency on a single H100 GPU while matching or surpassing the generation quality of significantly slower bidirectional diffusion models, establishing that exposure bias can be effectively mitigated through training-inference alignment only when the model is forced to encounter and learn from its own prediction errors during training.
 
 ## 2. Context and Motivation
-- Problem addressed
-  - Exposure bias in sequential generation: during training, AR models are fed ground-truth context; during inference, they must condition on their own imperfect past outputs. This mismatch leads to compounding errors over time (Section 1; Figure 1, middle panels show the mismatch for Teacher Forcing and Diffusion Forcing).
-  - In AR video diffusion, prevailing training schemes are:
-    - Teacher Forcing (TF): denoise the current frame conditioned on clean, ground-truth past frames (Figure 1a; Figure 2a).
-    - Diffusion Forcing (DF): condition on past frames that have been independently noised to various levels (Figure 1b; Figure 2b).
-  - Both train on a distribution different from what the model produces at inference (clean past frames produced by the model, not ground truth), which causes error accumulation (Section 1).
 
-- Why it matters
-  - Real-time and interactive use cases—live streaming, gaming, and robotics/world simulation—require low latency and causal processing where the future is unknown (Section 1). Bidirectional diffusion transformers (non-causal) must denoise all frames together and cannot stream; they incur high latency (Section 1).
-  - Prior AR alternatives often depend on vector quantization (lossy tokenizers) that hurt fidelity, or add temporal noise at inference to mitigate errors at the cost of temporal consistency and speed (Section 1).
+### The Core Problem: Exposure Bias in Autoregressive Generation
 
-- Prior approaches and shortcomings
-  - Bidirectional diffusion with history guidance or rolling noise schedules can generate long videos but either violate strict causality (future affects past) or pre-generate future content, introducing latency that limits interactivity (Related Work: “Rolling Diffusion and Variants”; Section 2).
-  - CausVid combines AR diffusion with Distribution Matching Distillation (DMD), but it computes the video-level loss on DF training outputs that are not from the true inference distribution, so it “matches the wrong distribution” (Section 2; Section 3.3).
+The fundamental problem this paper addresses is **exposure bias** in autoregressive (AR) video diffusion models — a phenomenon where models trained on ground-truth context frames produce different (and increasingly degraded) outputs when forced to condition on their own imperfect predictions at inference time.
 
-- Positioning of this work
-  - Self Forcing trains exactly with the inference recipe: it performs AR rollout with KV caching during training and applies a holistic, whole-video distribution-matching loss on the model’s generated sample (Figure 1c; Figure 2c; Algorithm 1). This directly aligns the training and inference distributions and targets exposure bias head-on (Sections 3.2–3.3).
-  - Efficiency is preserved via a few-step diffusion backbone and gradient truncation; additionally, a rolling KV cache enables efficient long-video extrapolation (Sections 3.2 and 3.4).
+To understand exposure bias concretely, consider the standard autoregressive generation pipeline. A model learns to predict frame $x_i$ conditioned on previous frames $x_{<i}$. During training, the conditioning context $\{x_{<i}\}$ comes from the dataset — clean, perfectly formed frames from real videos. The model therefore learns a distribution $p_\theta(x_i \mid x_{<i}^{\text{data}})$ where the context is drawn from $p_{\text{data}}$. At inference time, however, the context is drawn from the model's own output distribution: $\{x_{<i}\} \sim p_\theta$. This creates a **distributional mismatch**: $p_\theta(x_i \mid x_{<i}^{\text{model}}) \neq p_\theta(x_i \mid x_{<i}^{\text{data}})$.
+
+The mismatch compounds autoregressively. If the model makes a small error in $x_2$, that flawed frame becomes part of the context for $x_3$, which then conditions on a slightly out-of-distribution input, potentially producing an even larger error in $x_3$, and so on. The paper states this explicitly on page 2:
+
+> "models trained with TF or DF often suffer from error accumulation during autoregressive generation, leading to degraded video quality over time. This issue is more broadly known as exposure bias, where a model is trained exclusively on ground-truth context but must rely on its own imperfect predictions at inference time, resulting in a distributional mismatch that compounds errors as generation progresses."
+
+This is not merely a theoretical nuisance — it manifests as concrete visual degradation: progressive over-saturation, over-sharpening, or temporal inconsistency that worsens as the generated video extends further from the initial frames. The qualitative example in Figure 5 shows CausVid [100] exhibiting exactly this failure mode, with saturation increasing visibly over time compared to Self Forcing's temporally stable outputs.
+
+### Why This Problem Matters: The Real-Time Video Generation Bottleneck
+
+The significance of exposure bias extends beyond academic interest in distribution matching — it is the critical bottleneck preventing practical real-time video generation.
+
+**The bidirectional diffusion bottleneck.** State-of-the-art video diffusion models (Sora [6], Wan2.1 [83], MovieGen [64]) achieve remarkable visual quality by denoising all frames simultaneously with bidirectional attention. This means the model can "see" frames $x_{i+1}, x_{i+2}, ...$ while generating frame $x_i$, allowing future information to inform current-frame generation. But this architectural choice carries a fundamental cost: **you must generate the entire video before displaying the first frame**. Latencies of 100+ seconds are typical (Table 1 shows Wan2.1-1.3B takes 103 seconds for a 5-second video on an H100 GPU). For live streaming, interactive gaming, video conferencing, or any application where users expect real-time feedback, this is unacceptable.
+
+**The autoregressive promise.** AR models, by contrast, generate frames sequentially and can begin displaying output immediately — the first frame appears as soon as it's generated, creating the possibility of sub-second latency. As the paper notes in the introduction (page 1):
+
+> "This approach not only significantly reduces the viewing latency of generated videos but also unlocks numerous applications, including real-time interactive content creation, game simulation, and robotics learning."
+
+AR models also naturally support applications where future context is genuinely unknown — interactive environments where a user might interject or a controller might change course after seeing intermediate frames. Bidirectional models, by design, cannot support this because they "commit" to future frames before the current frame is displayed (a limitation the paper calls "premature commitment" in the discussion of Rolling Diffusion variants, Section 2).
+
+**The quality gap.** Unfortunately, AR models have historically "struggled to match the visual fidelity achieved by state-of-the-art video diffusion models due to their reliance on lossy vector quantization techniques" (page 1). Early AR models like VideoGPT [94] used discrete VQ-VAE tokens, which reduced quality. Recent hybrid approaches (AR + diffusion) promised to combine the best of both worlds — sequential generation with continuous-valued diffusion-based per-frame modeling — but exposure bias has prevented them from reaching parity with bidirectional models.
+
+This creates a specific, high-stakes technical challenge: **can we get AR-style latency with bidirectional-style quality?** The paper frames this as the central motivation:
+
+> "To combine the best of both worlds, two recent techniques have emerged to equip video diffusion models with AR generation capabilities: Teacher Forcing and Diffusion Forcing."
+
+The remainder of the motivation is understanding why existing attempts at this synthesis fall short.
+
+### Prior Approaches and Where They Fall Short
+
+#### Teacher Forcing (TF)
+
+Teacher Forcing [16, 28, 33, 106] is the simplest and most established approach to training AR diffusion models. It mirrors how language models are trained: generate frame $x_i$ conditioned on ground-truth frames $x_{<i}$, using a frame-wise denoising objective. TF training processes all frames in parallel using block-sparse causal attention masks (Figure 2a) — an efficient design that avoids the computational expense of sequential unrolling during training.
+
+**Why TF breaks at inference time.** The training distribution for TF is:
+$$p_\theta(x_i \mid x_{<i}^{\text{clean, data}})$$
+where context frames come from the dataset. At inference, the model sees:
+$$p_\theta(x_i \mid x_{<i}^{\text{clean, model}})$$
+where context frames have been generated by earlier autoregressive steps. Even small deviations push the conditioning input outside the training distribution, and errors compound. The paper does not mince words about this: TF models experience "error accumulation during autoregressive generation, leading to degraded video quality over time" (page 2).
+
+#### Diffusion Forcing (DF)
+
+Diffusion Forcing [8, 10, 20, 69, 73, 100] attempts to mitigate the distribution mismatch by varying the noise levels of context frames during training. Instead of always using clean ground-truth context, DF samples *independent noise levels* for each frame. The training distribution becomes:
+$$p_\theta(x_i \mid x_{<i}^{\text{noisy, data}})$$
+where context frames are corrupted by varying amounts of noise. The key insight is that at inference time, when the current frame $x_i$ is noisy (mid-denoising) but previous frames $x_{<i}$ are clean (already fully generated), this exact configuration was seen during training — specifically, when DF happened to sample $t_{<i} = 0$ (clean) and $t_i > 0$ (noisy). This is illustrated in Figure 1(b).
+
+**Why DF is insufficient.** The paper identifies a critical flaw that prior work either missed or understated. While DF ensures that the *individual frame* noising configuration seen at inference appears in training, **the context frames themselves are still drawn from the data distribution**. The training setup is:
+$$\{x_{<i}\} \sim p_{\text{data}}, \quad \{t_{<i}\} \sim \text{independent}$$
+
+At inference, the actual distribution of context frames is:
+$$\{x_{<i}\} \sim p_\theta$$
+
+These are fundamentally different distributions. DF patches the noise-level mismatch but does not address the **content-level mismatch** — the fact that model-generated frames look systematically different from real frames, and the model has never learned to condition on model-generated content.
+
+The paper is explicit about this limitation, highlighting it as a central contribution of Self Forcing versus prior work:
+
+> "Importantly, our training objective matches the holistic distribution of the entire video sequence to the data distribution. In contrast, TF/DF can be understood as performing frame-wise distribution matching... Our formulation fundamentally transforms the training dynamics—context frames $\{x_{<i}\}$ are sampled from the model's own distribution $p_\theta$ rather than from the data distribution (clean or noisy). This alignment between training and inference distributions effectively addresses exposure bias and forces the model to learn from its own imperfections."
+
+Additionally, DF complicates KV-cache design during inference because the model must handle variable noise levels in the context. This increases generation latency and undermines one of the main practical advantages of AR models. The paper notes that DF approaches "sacrifice temporal consistency, complicate the KV-cache design, increase generation latency, and do not fundamentally resolve the exposure bias problem" (page 2).
+
+#### Diffusion Forcing + Distribution Matching (CausVid)
+
+CausVid [100] represents the most relevant prior work and the direct baseline that Self Forcing improves upon. CausVid trains a few-step AR diffusion model using DF for the generative process and **Distribution Matching Distillation (DMD)** for the training objective, applying a holistic video-level loss to the model's outputs. This was the first attempt to combine AR-diffusion with distribution matching.
+
+**The fundamental flaw in CausVid.** The paper pinpoints a subtle but devastating issue that undermines the entire approach. CausVid's training process generates videos $x_{1:N}$ using Diffusion Forcing — meaning the context frames $x_{<i}$ come from the *data distribution* (noisy or clean), not from the model's own distribution. The DMD loss then tries to match $p_{\theta}^{\text{DF}}(x_{1:N})$ (the distribution induced by DF during training) to $p_{\text{data}}(x_{1:N})$. But at inference time, the model generates from $p_{\theta}^{\text{AR}}(x_{1:N})$ — the distribution induced by true autoregressive rollout with self-generated context. These are **not the same distribution**.
+
+The paper states this directly (page 3):
+
+> "CausVid suffers from a critical flaw that its training outputs (generated via DF) do not come from the distribution the model produces at inference time, therefore the DMD loss is matching the wrong distribution."
+
+This is the key innovation gap that Self Forcing fills: instead of matching the distribution of DF-generated videos to the real distribution, Self Forcing matches the distribution of **truly AR-generated videos** (with self-generated context) to the real distribution. The difference is whether the training generation path mirrors the inference generation path — and for CausVid, it does not.
+
+#### GANs and Implicit Generators
+
+The paper also draws motivation from an older line of work: GAN-based video generation [14, 44, 49, 77, 81]. GANs have a property that is directly relevant to the exposure bias discussion:
+
+> "Since the generator in GANs follows the same process during training and inference, it inherently avoids exposure bias." (page 2)
+
+In a GAN, the generator produces complete videos in a single forward pass (or sequential forward passes in recurrent GANs), and the discriminator evaluates these outputs. Because the generator's computational path from noise to output is identical in training and inference, there is no train-test distribution gap. Self Forcing adopts this GAN principle — "directly optimizing the alignment between the generator's output distribution and the target distribution" (page 2) — but applies it to the more powerful AR-diffusion generator backbone.
+
+**Why not just use GANs then?** GANs have generally been superseded by diffusion models for video generation due to the latter's stronger scaling properties and mode coverage. The paper explicitly notes that "modern video generation models have largely shifted toward diffusion or autoregressive models due to their stronger scaling abilities" (page 2). The goal, therefore, is not to go back to pure GANs but to bring the GAN philosophy of train-test consistency into the more capable AR-diffusion framework.
+
+### How This Paper Positions Itself
+
+Self Forcing positions itself as a **training paradigm**, not just a new model architecture or loss function. The paper's framing is architectural: the problem is not that diffusion models are inherently limited but that the standard training recipe (TF/DF) creates a structural misalignment between training and inference.
+
+**The central analogy: Professor Forcing in RNNs.** The paper draws an explicit intellectual lineage to early sequence modeling research on exposure bias in recurrent neural networks [40, 65, 103]. The technique of "Professor Forcing" [40] used adversarial training to make the hidden states of an RNN during teacher-forced training indistinguishable from those during self-generated inference. Self Forcing is the conceptual descendant of this idea adapted to the modern setting of transformer-based diffusion models with orders-of-magnitude more parameters.
+
+**A new paradigm: parallel pre-training, sequential post-training.** Beyond solving a specific technical problem, the paper advocates for a broader shift in how sequence models are trained. The introduction of transformers made parallel training possible and powered the scaling revolution, but this came at a hidden cost:
+
+> "Parallelizable training has been pivotal to transformers' success by enabling efficient scaling. However, this parallelism introduces fundamental limitations. Prior research demonstrates that parallel architectures inherently limit expressiveness in sequential state-tracking problems. Our work highlights another critical limitation: parallelizable training paradigms create misalignment between training and inference distributions, leading to the accumulation of errors over time." (Section 5)
+
+The proposed solution is a two-phase approach: (1) parallel pre-training with TF/DF to efficiently learn the base model capabilities, then (2) sequential post-training with Self Forcing to close the train-test gap. This mirrors the growing trend in language models where reinforcement learning from human feedback (RLHF) or self-play serve as sequential post-training phases after parallel pre-training.
+
+**The broader applicability claim.** While the paper focuses on video, the authors explicitly frame Self Forcing as a general principle applicable to other autoregressive diffusion models in any continuous-data domain (text-to-speech [53], image generation [50], motion generation, etc.):
+
+> "We believe our framework is general and can be applied to other sequence domains, especially where the data is continuous." (Section 5)
+
+This positions Self Forcing not as a narrow video-generation trick but as a fundamental contribution to the theory and practice of training autoregressive diffusion models.
+
+**Why post-training is feasible.** A natural objection to Self Forcing is computational cost — sequential unrolling during training sounds prohibitively expensive. The paper addresses this head-on by noting that Self Forcing operates as a post-training phase, where the model "does not require a large number of gradient updates to converge" (page 1). Experiments show convergence in approximately 1.5 hours on 64 H100 GPUs, which is practical for a post-training step. The combination of (a) few-step diffusion, (b) gradient truncation, and (c) the post-training rather than pre-training setting makes Self Forcing "surprisingly more efficient than alternative parallel strategies, achieving superior performance within the same wall-clock training time" (page 2).
+
+### Summary of the Motivation Arc
+
+The paper's motivation can be understood as a chain of realizations:
+
+1. **Bidirectional diffusion models are too slow** for real-time applications (100+ second latency), but deliver high quality.
+2. **Autoregressive diffusion models can be fast** (sub-second latency) but suffer from exposure bias that degrades quality, especially over long sequences.
+3. **Teacher Forcing** creates the worst train-test gap because context is always clean and from the data distribution.
+4. **Diffusion Forcing** partially addresses the gap by varying noise levels of context, but context frames still come from the data distribution — the model never sees its own errors during training.
+5. **DF + Distribution Matching (CausVid)** applies a holistic loss but optimizes the wrong distribution — the DF-induced distribution rather than the true AR-induced distribution.
+6. **Self Forcing** solves this by explicitly performing autoregressive rollout during training, with KV caching, so that the model generates from the same distribution at training and inference time, and the distribution-matching loss correctly targets the inference-time distribution.
 
 ## 3. Technical Approach
-At a high level, the model is an AR diffusion transformer operating in a latent video space: it generates frame i by denoising noise into an image latent, conditioned on the previously generated frames i−1, i−2, … (Section 3.1). “Autoregressive” means the joint probability of a video is factorized by the chain rule: p(x1:N) = ∏i p(xi | x<i). “Diffusion” means each frame is generated by progressively denoising from Gaussian noise via a few (here 4) steps.
 
-Step-by-step methodology
+### 3.1 Reader Orientation
 
-1) Base model and latent space
-- The system adopts a transformer-based diffusion backbone with causal attention and text conditioning, operating in a compressed 3D VAE latent space (Section 3.1). The base is Wan2.1-T2V-1.3B with Flow Matching parameterization (Implementation in Section 4; Appendix A).
+Self Forcing is a **post-training algorithm** for autoregressive video diffusion models. The system it builds is a video generator that produces frames one at a time (or in small chunks) by conditioning each new frame on frames it *previously generated itself*, and it learns to do this well by practicing exactly this process during training — complete with the mistakes it will make at test time. The problem it solves is **exposure bias**: the degradation in video quality when an autoregressive model trained on perfect ground-truth context must, at inference time, condition on its own imperfect outputs. The shape of the solution is to close the train-test distribution gap by making the training process *identical* to the inference process, then applying a holistic video-level loss that directly optimizes the quality of the complete generated sequence.
 
-2) What goes wrong with TF/DF
-- TF: trains each frame’s denoising conditioned on clean ground-truth past frames (Figure 1a; Figure 2a).
-- DF: trains each frame’s denoising conditioned on past frames with independent noise levels, hoping to include the inference case in the training distribution (Figure 1b; Figure 2b).
-- In both, the model never learns to correct its own past mistakes because the context at training time never equals the model’s actual generated context at inference (Section 1; Section 3.3).
+### 3.2 Big-Picture Architecture (Diagram in Words)
 
-3) Self Forcing rollout during training (core mechanism)
-- During training, the model actually generates a video sample with the exact same AR procedure used at inference:
-  - For frame i, initialize xi at high noise and run the few-step denoising chain while conditioning on the already self-generated “clean” past frames x< i via a KV cache (Figure 2c; Algorithm 1 lines 5–22).
-  - After final denoising for frame i, push its KV embeddings into the cache so that future frames can attend to it efficiently (Algorithm 1 lines 13–14).
-- This “self-rollout” guarantees that the training sample is drawn from the true inference-time model distribution pθ(x1:N) (Section 3.2).
+The Self Forcing system has four major components that interact in a sequential pipeline during training:
 
-4) Few-step diffusion + gradient truncation for efficiency
-- Few-step backbone: 4 denoising steps per frame with a uniform schedule [1000, 750, 500, 250] (Appendix A).
-- Gradient truncation:
-  - Only the final denoising step for each frame is backpropagated; earlier steps are forward-only to save memory (Algorithm 1 lines 8–12 vs. 16–19; Section 3.2).
-  - Random step supervision: at each training iteration, uniformly sample a denoising step s ∈ {1…T}; treat the output at step s as the final output. This gives supervision “coverage” across all intermediate steps without backprop through the whole chain (Algorithm 1 line 4; Section 3.2).
-  - Detach past frames: gradients do not flow into KV cache entries from prior frames; this stops backpropagation through long temporal histories (Algorithm 1 lines 12–14; Section 3.2).
+1. **Few-Step Causal Diffusion Transformer (DiT) Backbone** — A pretrained video diffusion model (Wan2.1-T2V-1.3B) that has been fine-tuned with causal attention masking and converted into a 4-step denoising model. This is the generator `$G_\theta$` that produces each frame. It takes as input a noisy frame `$x^i_{t_j}$` at timestep `$t_j$`, a text prompt (conditioning), and a KV cache of previously generated clean frames, and outputs a denoised frame estimate `$\hat{x}^i_0$`.
 
-5) Holistic, video-level distribution matching
-- Having produced a full video sample via self-rollout, Self Forcing applies a sequence-level distribution-matching objective D(pdata(x1:N) || pθ(x1:N)) rather than per-frame denoising loss (Section 3.3). To stabilize learning, both real and generated videos are diffused to a noise level t before comparison (noise-injection “forward process”); the method then matches pdata,t and pθ,t (Section 3.3).
-- Three interchangeable objectives are implemented (Section 3.3; Appendix A):
-  - DMD (Distribution Matching Distillation): minimizes reverse KL via score difference between a “real score” network and a “fake score” network; implemented as an MSE on a denoised target (Appendix A, Eq. (2)–(3)).
-  - SiD (Score Identity Distillation): minimizes Fisher divergence between scores (Appendix A, Eq. (4)), typically with α=1 for stability.
-  - GAN: a critic trained with relativistic GAN loss and finite-difference R1+R2 regularization in noise space (Appendix A, Eq. (5)–(7)); they use R3GAN.
+2. **Autoregressive Self-Rollout Engine** — The training procedure that sequentially generates a complete video by calling the DiT backbone autoregressively. For each frame `$i$`, it initializes pure Gaussian noise, then iteratively denoises through 4 discrete timesteps (1000 → 750 → 500 → 250 → 0), conditioning on previously generated frames stored in a KV cache. This engine exactly mirrors the inference procedure and is the central mechanism that closes the train-test gap.
 
-- Why this matters: TF/DF can be seen as minimizing per-frame KL divergences E{x<i}~pdata KL(pdata(xi|x<i) || pθ(xi|x<i)), possibly with noisy contexts sampled from p̃data in DF (Section 3.3 and footnote 1). Self Forcing instead matches the full joint pθ(x1:N) to pdata(x1:N), using context x<i that is sampled from the model itself, which aligns training and inference distributions and tackles exposure bias at its root (Section 3.3).
+3. **Gradient Truncation Controller** — A computational efficiency mechanism that restricts backpropagation to only the final denoising step of each frame, with gradients detached from the KV cache to prevent backpropagation from flowing into earlier frames. Additionally, a denoising step `$s$` is randomly sampled per training iteration so that all intermediate denoising steps receive supervision signals over time, but only one step per frame is ever backpropagated through in any given iteration.
 
-6) Rolling KV cache for long videos
-- Challenge: Sliding-window extrapolation typically requires recomputing KV cache or discarding context, both inefficient or harmful to temporal consistency (Section 3.4; Figure 3).
-- Solution: Maintain a fixed-size KV cache of the last L frames; when adding a new frame, evict the oldest without recomputation (Algorithm 2; Figure 3c). Complexity becomes O(T·L), versus O(T·L^2) without KV or O(L^2+T·L) with recomputation (Figure 3).
-- Practical fix for artifacts: The first frame’s latent has different statistics than later frames; when the rolling KV cache eventually drops this frame, naïve models flicker. During training, restrict attention so the current chunk cannot attend to the very first chunk when denoising the last chunk, simulating the rolling-cache condition (Section 3.4; Appendix B; Figure 7).
+4. **Distribution-Matching Loss** — A holistic, video-level objective function (DMD, SiD, or GAN) that compares complete generated video sequences to real video sequences. Unlike frame-wise denoising losses (MSE between predicted and true noise at each frame), this loss operates on the final generated video distribution `$p_\theta(x^{1:N})$` and pushes it toward the real video distribution `$p_{\text{data}}(x^{1:N})$`. It uses one or more pretrained critic/score networks to estimate the divergence between distributions and provides gradients back through the generated video to the generator parameters `$\theta$`.
 
-Design choices and rationale
-- Train-time KV caching with full attention kernels (FlashAttention-3) keeps training fast and simple, avoiding custom causal masks that TF/DF require (FlexAttention) (Section 4 “Training efficiency” and Figure 6).
-- Few-step diffusion strikes a cost–quality balance; random-step supervision ensures all steps learn without long backprop chains (Section 3.2).
-- Using sequence-level distribution matching directly optimizes what matters for AR video: the quality of whole generated sequences under the true inference distribution (Section 3.3).
+**Information flow during one training iteration:** A text prompt is sampled → The AR self-rollout engine generates a complete video frame-by-frame using KV caching, with gradient tracking enabled only on the final denoising step of each frame → The complete generated video is passed to the distribution-matching loss → The loss computes a scalar divergence between the generated and real video distributions → Gradients flow back through the final denoising step of each frame to update `$\theta$`.
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First**, the autoregressive video diffusion model formulation and the standard TF/DF training paradigms (Section 3.1 material) — because understanding what Self Forcing *changes* requires understanding what came before it.
+- **Second**, the core Self Forcing training algorithm (Section 3.2) — the autoregressive rollout procedure, gradient truncation, stochastic step sampling, and KV caching during training — because this is the heart of the contribution.
+- **Third**, the holistic distribution-matching objectives (Section 3.3) — DMD, SiD, and GAN formulations — because these are the loss functions that exploit the self-rollout to match the inference-time distribution.
+- **Fourth**, the rolling KV cache mechanism for long video extrapolation (Section 3.4) — because this is the deployment-side innovation that enables efficient infinite-length generation after training.
+- **Fifth**, the attention mask configurations (Figure 2) — because these concretely illustrate what makes Self Forcing different from TF/DF and why the architecture supports efficient training despite sequential rollout.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily a **training methodology paper** whose core idea is that autoregressive diffusion models can overcome exposure bias if — and only if — they are trained by generating complete sequences from their own distribution, using the exact same autoregressive procedure they will use at inference time, and optimizing a holistic distribution-matching loss on those self-generated sequences.
+
+---
+
+#### Autoregressive Video Diffusion Model Formulation (Prerequisite Context)
+
+**The chain-rule factorization.** Given a sequence of `$N$` video frames `$x^{1:N} = (x^1, x^2, \ldots, x^N)$`, an autoregressive video diffusion model factorizes the joint distribution into a product of conditional distributions:
+
+$$p(x^{1:N}) = \prod_{i=1}^{N} p(x^i \mid x^{<i})$$
+
+where `$x^{<i} = (x^1, \ldots, x^{i-1})$` represents all frames generated before frame `$i$`. Each conditional `$p(x^i \mid x^{<i})$` is itself modeled by a diffusion process — meaning each frame is generated by iteratively denoising a sample of Gaussian noise, conditioned on the previously generated clean frames.
+
+**What this equation states:** The probability of a complete video sequence factorizes into the product of per-frame conditional probabilities, where each frame's distribution depends on all previous frames. This is the standard chain rule of probability applied to videos rather than tokens.
+
+**Why this form:** This factorization is what makes autoregressive generation possible — you can generate `$x^1$` first (from an unconditional or text-conditional distribution), then `$x^2$` conditioned on `$x^1$`, then `$x^3$` conditioned on `$x^{1:2}$`, and so on. The alternative (bidirectional models) model `$p(x^{1:N})$` directly without chain-rule factorization, which gives high quality but requires generating all frames simultaneously.
+
+**The per-frame diffusion process.** Each conditional distribution `$p_\theta(x^i \mid x^{<i})$` is modeled using the flow matching framework [48, 51]. The forward (noising) process for frame `$i$` at timestep `$t_i$` is:
+
+$$x^i_{t_i} = \Psi(x^i, \epsilon^i, t_i) = \alpha_{t_i} x^i + \sigma_{t_i} \epsilon^i$$
+
+where `$x^i$` is the clean frame, `$\epsilon^i \sim \mathcal{N}(0, I)$` is Gaussian noise, and `$\alpha_{t_i}, \sigma_{t_i}$` are scalar coefficients from a predefined noise schedule within a finite time horizon `$t_i \in [0, 1000]$`. The function `$\Psi$` blends the clean frame and noise according to the schedule, with `$\alpha_{t_i}$` decreasing and `$\sigma_{t_i}$` increasing as `$t_i$` grows, so `$x^i_{1000}$` is essentially pure noise and `$x^i_0$` is the clean frame.
+
+**What this equation computes:** the noisy version of frame `$i$` at noise level `$t_i$`. Given a clean frame and a timestep, it produces the corresponding intermediate noisy frame that the model will need to denoise.
+
+**Why this form:** The flow matching framework (with the specific schedule `$t'(k,t)$` described in Appendix A, using shift factor `$k=5$`) provides a continuous-time interpolation between data and noise. The linear interpolation `$\alpha_t x + \sigma_t \epsilon$` with the shifted schedule ensures the model sees a balanced distribution of noise levels during training and can use a small number of discrete steps (4 in this paper) to approximate the reverse process at inference time.
+
+**The conditional denoising model.** The generative model `$G_\theta$` learns to reverse this forward process. For a single denoising step, given a noisy frame `$x^i_{t}$`, a timestep `$t$`, and the clean context frames `$x^{<i}$` (stored as a conditioning signal `$c$`), the model predicts the clean frame:
+
+$$\hat{x}^i_0 = G_\theta(x^i_t, t, c)$$
+
+where `$c$` encodes both the text prompt and the previously generated clean context frames `$x^{<i}$` through cross-attention and causal self-attention mechanisms respectively.
+
+**What this equation computes:** a single-step prediction of the clean frame from its noisy version, conditioned on context. This is a data-prediction parameterization (as opposed to noise-prediction or velocity-prediction), meaning the model directly outputs an estimate of the clean frame rather than the added noise.
+
+**Why this form:** Data prediction with the specific preconditioning in Eq. (1) of Appendix A (`$G_\theta(x, t, c) = c_{\text{skip}} \cdot \epsilon - c_{\text{out}} \cdot v_\theta(c_{\text{in}} \cdot x_t, c_{\text{noise}}(t'), c)$` with `$c_{\text{skip}} = c_{\text{in}} = c_{\text{out}} = 1$`) allows the model to operate directly in pixel space while maintaining stable training dynamics. The identity coefficients mean the model just learns `$v_\theta(x_t, t', c) \approx x$` — a direct regression from noisy input to clean output.
+
+**The iterative denoising chain.** To generate one frame, the model repeatedly applies this denoising operation across a decreasing sequence of noise levels. Starting from pure noise `$x^i_{t_T} \sim \mathcal{N}(0, I)$` at timestep `$t_T = 1000$`, the model produces a sequence of progressively cleaner estimates:
+
+$$x^i_{t_{j-1}} = \Psi(G_\theta(x^i_{t_j}, t_j, c), \epsilon_{t_{j-1}}, t_{j-1})$$
+
+This is the **re-noise** step: the model denoises to get `$\hat{x}^i_0 = G_\theta(x^i_{t_j}, t_j, c)$`, then adds back Gaussian noise at a lower level (according to the forward process `$\Psi$` at timestep `$t_{j-1}$`) to produce the input for the next denoising step. The complete generation of frame `$i$` is the composition `$f_{\theta, t_1} \circ f_{\theta, t_2} \circ \ldots \circ f_{\theta, t_T}(x^i_{t_T})$` where each `$f_{\theta, t_j}(x^i_{t_j}) = \Psi(G_\theta(x^i_{t_j}, t_j, x^{<i}), \epsilon_{t_{j-1}}, t_{j-1})$`.
+
+**What this equation computes:** the transition from one noise level to the next lower noise level during multi-step generation. At each step, the model sees a noisy frame, predicts the clean version, and then the prediction is re-noised at a slightly lower level for the next refinement.
+
+**Why this form:** The re-noising strategy is necessary for few-step diffusion models because it stabilizes the iterative process. If you simply took the model's clean prediction as the next input (as in consistency models), small errors in the model's prediction would accumulate without the smoothing effect of noise injection. The noise injection at each step maintains the model within its training distribution (since it was trained to denoise from various noise levels) and allows error correction across steps.
+
+**Frame-wise denoising loss (how TF and DF train).** In standard Teacher Forcing or Diffusion Forcing, the model is trained to minimize the mean squared error between the predicted noise (or equivalently, the predicted clean frame) and the ground truth:
+
+$$\mathcal{L}_{\text{DM}}^\theta = \mathbb{E}_{x^i, t_i, \epsilon^i} \left[ w_{t_i} \| \hat{\epsilon}^i_\theta - \epsilon^i \|_2^2 \right]$$
+
+where `$\hat{\epsilon}^i_\theta = G_\theta(x^i_{t_i}, t_i, c)$` is the model's prediction (parameterized as noise prediction in this notation), `$\epsilon^i$` is the true added noise, and `$w_{t_i}$` is a per-timestep weighting. In TF, `$c = x^{<i}$` (clean ground-truth context); in DF, `$c = x^{<i}_{t_{<i}}$` (noisy context with independently sampled noise levels).
+
+**What this equation computes:** the expected squared error between the model's prediction and the ground truth, averaged over frames, noise levels, and noise samples. This is the standard diffusion training objective.
+
+**Why this form is insufficient:** This loss treats each frame independently, conditioning on either clean or noisy *data* context. The model never sees its own errors in the conditioning context during training, so it never learns how to recover from them. With a particular per-timestep weighting [36, 75], this loss approximates the per-frame KL divergence `$D_{\text{KL}}(p_{\text{data}}(x^i \mid x^{<i}) \| p_\theta(x^i \mid x^{<i}))$` where `$x^{<i}$` is drawn from the data distribution — but at inference time, `$x^{<i}$` is drawn from `$p_\theta$`, not `$p_{\text{data}}$`.
+
+---
+
+#### The Self Forcing Training Algorithm: Autoregressive Self-Rollout During Training
+
+The core innovation of Self Forcing is that during training, the model generates each frame conditioned on *self-generated* context frames rather than ground-truth context frames. This is realized through Algorithm 1, which we now break down step by step.
+
+**Initialization of the training iteration (Algorithm 1, lines 2–4).** Each training iteration begins by initializing three structures:
+
+- `$X_\theta \leftarrow []$` — an empty list that will accumulate the model's generated frames (specifically, the clean predictions `$\hat{x}^i_0$` from the sampled denoising step `$s$` for each frame).
+- `$KV \leftarrow []$` — an empty key-value cache that will store the attention key-value embeddings of previously generated frames, enabling efficient autoregressive conditioning without recomputation.
+- `$s \sim \text{Uniform}(1, 2, \ldots, T)$` — a denoising step index uniformly sampled from the set `$\{1, \ldots, T\}$` where `$T = 4$` in the standard configuration. This step `$s$` is the one that will receive gradient supervision for each frame in this iteration.
+
+**What this sampling achieves:** By randomly selecting which denoising step receives gradients, the training procedure ensures that all denoising steps (`$s=1$` through `$s=4$`) eventually receive supervision signal, but only one step per frame per iteration is ever backpropagated through. This is a form of stochastic gradient estimation that trades per-iteration gradient precision for computational tractability.
+
+**Why this is necessary:** Backpropagating through all 4 denoising steps for all `$N$` frames would require storing the entire computational graph of `$N \times T$` model forward passes — which would be prohibitively expensive in GPU memory. The stochastic sampling ensures the model learns good parameters at each denoising step without the memory cost of full unrolling.
+
+**The autoregressive frame generation loop (Algorithm 1, lines 5–22).** For each frame `$i = 1, \ldots, N$`, the model performs a complete denoising trajectory from pure noise to (nearly) clean frame, but with gradient tracking restricted to only the final step `$s$`.
+
+**Step 1: Noise initialization (line 6).** The frame generation for frame `$i$` begins by sampling pure Gaussian noise at the highest noise level:
+
+$$x^i_{t_T} \sim \mathcal{N}(0, I)$$
+
+This is the starting point from which the model will iteratively denoise to produce the frame. It is identical to what happens at inference time.
+
+**Step 2: Iterative denoising (lines 7–21).** The model iterates through timesteps `$j = T, T-1, \ldots, s$` (descending from highest noise to the sampled step `$s$`). At each step `$j$`:
+
+- If `$j = s$` (lines 8–14, the *supervised step*): Gradient computation is **enabled**. The model denoises to get `$\hat{x}^i_0 \leftarrow G_\theta(x^i_{t_j}; t_j, KV)$`. This clean prediction is appended to the output list `$X_\theta$`. Then gradient computation is **disabled**, and the KV cache is updated: the model computes key-value embeddings `$kv^i \leftarrow G_\theta^{KV}(\hat{x}^i_0; 0, KV)$` from the clean prediction at timestep `$t=0$`, and these embeddings are appended to the KV cache.
+
+- If `$j \neq s$` (lines 15–20, the *unsupervised steps*): Gradient computation is **disabled**. The model denoises to get `$\hat{x}^i_0 \leftarrow G_\theta(x^i_{t_j}; t_j, KV)$`. Then Gaussian noise is sampled `$\epsilon \sim \mathcal{N}(0, I)$` and the clean prediction is re-noised to the next lower noise level: `$x^i_{t_{j-1}} \leftarrow \Psi(\hat{x}^i_0, \epsilon, t_{j-1})$`.
+
+**What is happening mechanically in this loop:** For each frame, the model runs the full denoising trajectory (4 steps) to produce the frame. Only at step `$s$` is gradient tracking enabled; at all other steps, the model runs in `torch.no_grad()` mode. The KV cache accumulates the key-value embeddings of each generated frame so that when generating frame `$i$`, the model can attend to all previously generated frames `$1, \ldots, i-1$` without recomputing their attention projections.
+
+**Why KV caching during training matters:** This is one of the three architectural innovations that make Self Forcing practically feasible (along with few-step diffusion and gradient truncation). Without KV caching, each frame generation would require recomputing attention over all previous frames from scratch — `$O(N^2)$` complexity. With KV caching, each new frame only needs to compute attention between its own tokens and the cached key-value pairs of previous frames, reducing complexity to `$O(N)$`. Critically, the paper notes that Self Forcing "always uses full attention during training and can leverage highly optimized attention kernels such as FlashAttention-3" (page 8), unlike TF/DF which require custom sparse attention masks that incur overhead even with specialized implementations like FlexAttention [15].
+
+**Why gradients are detached from the KV cache:** The paper states that gradients are detached from the KV cache embeddings during training (implicitly through the `Disable gradient computation` blocks that wrap KV cache updates). This means that when the model conditions frame `$i$` on previously generated frames `$x^{<i}$`, errors in frame `$i-1$` do not create gradient signals that flow backward to improve frame `$i-1$`'s generation. This is a **memory optimization**: without gradient detachment, the entire autoregressive chain would need to maintain a connected computational graph, which would be equivalent to backpropagation through time (BPTT) with memory scaling in `$O(NT)$`. The paper acknowledges this as a limitation: "our gradient truncation strategies—while necessary for memory efficiency—may limit the model's ability to learn long-range dependencies" (Section 5).
+
+**Why the re-noising in unsupervised steps:** The `$\Psi(\hat{x}^i_0, \epsilon, t_{j-1})$` operation — taking the model's clean prediction and re-noising it at a slightly lower level — is what makes few-step diffusion work. It prevents the multi-step process from collapsing to a single-step mapping. At inference time, the exact same re-noising operation is used. By matching this procedure exactly at training time (even in the gradient-disabled steps), Self Forcing ensures the model's training distribution of intermediate states matches its inference distribution.
+
+**Parameter update (line 23).** After generating all `$N$` frames, the list `$X_\theta = [\hat{x}^1_0, \hat{x}^2_0, \ldots, \hat{x}^N_0]$` contains the model's clean predictions at the supervised step `$s$` for each frame. Because gradient tracking was enabled only at step `$s$` for each frame, `$X_\theta$` is connected to the computational graph, and a distribution-matching loss (Section 3.3) is computed on `$X_\theta$` as a complete video sequence. Backpropagation through this loss updates `$\theta$`.
+
+**Key design choice: the 4-step schedule.** The paper uses a uniform 4-step schedule `$[t_4, t_3, t_2, t_1] = [1000, 750, 500, 250]$`. These are the denoising timesteps at which the model makes predictions and re-noises. The choice of 4 steps balances generation quality against training cost: more steps would make the autoregressive rollout more expensive (each rollout step requires a full model forward pass), while fewer steps would reduce generation quality because the denoising process would become too coarse. The uniform spacing (equal 250-step gaps) distributes the denoising burden evenly across the trajectory.
+
+**Training cost and convergence.** The paper reports that Self Forcing with DMD "converges in approximately 1.5 hours on 64 H100 GPUs" (page 8), with SiD/GAN taking 2–3 hours. This is feasible because Self Forcing operates as a **post-training** phase — the model starts from weights that have already been fine-tuned on ODE solution pairs (the "ODE initialization" described in Section 4 Implementation paragraph), meaning only a relatively small number of gradient updates are needed to close the distribution gap.
+
+**Training vs. inference alignment.** The crucial property of Algorithm 1 is that every operation performed during training — noise initialization, iterative denoising, re-noising between steps, conditioning on previous frames via KV cache — is **identical** to what happens during inference (Algorithm 2, lines 3–19). The only differences are: (1) gradient tracking is selectively enabled; (2) the supervised step `$s$` is randomly sampled rather than always being `$s=1$` (the final step); and (3) the loss is computed on the partial-denoising output at step `$s$` rather than always on the final clean frame. These differences are engineered to enable gradient-based learning while maintaining distributional fidelity.
+
+---
+
+#### The Gradient Truncation Strategy in Detail
+
+The gradient truncation strategy is the computational linchpin that makes Self Forcing feasible. Without it, the memory cost would be prohibitive. We now examine the exact mechanism and its tradeoffs.
+
+**What is truncated.** Two truncation operations are applied:
+
+1. **Temporal autoregressive truncation:** Gradients from frame `$i$` do not flow backward through the KV cache into frame `$i-1$`. The key-value embeddings stored in the cache are treated as constants with respect to the gradient computation for subsequent frames. This means the model cannot learn to improve frame `$i-1$`'s generation based on errors discovered at frame `$i$`.
+
+2. **Dimensional denoising truncation:** For each frame, gradients flow **only** through the denoising step `$s$`. Steps `$s+1, s+2, \ldots, T$` (the earlier, noisier steps) and steps `$s-1, s-2, \ldots, 1$` (the later, cleaner steps) are gradient-disabled. This means the model receives supervision only at the specific noise level `$t_s$`.
+
+**The stochastic step sampling as implicit credit assignment.** By randomly sampling `$s \sim \text{Uniform}(1, \ldots, T)$` each iteration, the training procedure effectively trains all denoising steps over time, but each step is trained on a loss that depends on the **complete denoising trajectory** up to that point. For example, when `$s=4$` is sampled, the loss evaluates the model's prediction at the noisiest level (timestep 1000 → 750), which means the gradient must account for the fact that this prediction will subsequently be refined through 3 more denoising steps. The model learns to produce predictions at step `$s$` that serve as good starting points for the remaining denoising steps.
+
+**Memory analysis.** For a model with `$P$` parameters generating `$N$` frames with `$T$` denoising steps each, the memory cost scales as:
+- **Full backpropagation through time:** `$O(N \times T \times P)$` — storing activations for all frames and all denoising steps.
+- **Self Forcing with gradient truncation:** `$O(P)$` — storing activations for only the current frame's single denoising step.
+
+The reduction factor is `$N \times T$`, which for `$N=21$` latent frames (generating 81 actual frames with chunk-wise autoregression, 3 latent frames per chunk × 27 chunks ≈ 81 output frames) and `$T=4$` is approximately `$84\times$` memory savings. This is what makes training on 64 GPUs with per-GPU batch size 1 feasible.
+
+**The tradeoff: long-range credit assignment.** The paper explicitly acknowledges that gradient truncation "may limit the model's ability to learn long-range dependencies" (Section 5). In a fully backpropagated system, an error in frame 20 could send a gradient signal back to frame 5 indicating that the context provided at frame 5 was insufficient or misleading, allowing the model to learn better early-frame generation. With truncation, this credit assignment is lost — each frame is optimized independently given the (potentially flawed) context produced by previous frames. The distribution-matching loss partially compensates for this by providing a global signal (the entire video must match the real distribution), but the signal is aggregated across frames rather than attributed to specific temporal interactions.
+
+---
+
+#### Comparison with Teacher Forcing and Diffusion Forcing Attention Mechanisms
+
+Figure 2 provides the concrete architectural comparison that makes the difference between Self Forcing and prior approaches tangible.
+
+**Teacher Forcing attention (Figure 2a).** The model processes all frames in parallel during training using block-sparse causal attention masks. Each frame can attend to all tokens in previous frames (clean ground-truth frames) and to tokens earlier in the same frame, but not to future frames. The attention mask is triangular at the block level. This enables efficient parallel training — one forward pass computes denoising predictions for all frames simultaneously — but means the model has never seen model-generated tokens in its attention context during training.
+
+**Diffusion Forcing attention (Figure 2b).** The attention mask is identical in structure to TF (block-sparse causal), but the values being attended to are noisy (`$x^{j<i}_{t_j}$` with independently sampled noise levels) rather than clean. This changes what information is available at each attention position but does not change the fundamental property that the attended-to tokens come from the data distribution.
+
+**Self Forcing attention (Figure 2c).** There is **no special attention mask**. The model uses dense (full) attention when processing the tokens of the current frame, with the KV cache providing the key-value embeddings of all previous frames' clean tokens. This is architecturally simpler than TF/DF — no custom masking patterns needed — and enables the use of highly optimized attention kernels (FlashAttention-3 [72]) that assume dense attention patterns.
+
+**The performance implication.** The paper reports a surprising empirical finding (Figure 6): despite its sequential nature, Self Forcing achieves "comparable per-iteration training time to Teacher Forcing and Diffusion Forcing" (page 8). The reason is that while TF/DF process all frames in parallel, their specialized attention masking patterns (implemented via FlexAttention [15]) introduce computational overhead that partially offsets the parallelism advantage. Meanwhile, Self Forcing "still processes all tokens within each individual frame/chunk in parallel, maintaining high GPU utilization during training" (page 8). The per-frame parallelism (all spatial tokens are processed simultaneously) combined with KV caching means the sequential overhead is limited to the temporal dimension, where the number of autoregressive steps (27 chunks for the chunk-wise variant) is relatively small.
+
+---
+
+#### Holistic Distribution-Matching Losses
+
+The final component of Self Forcing is the training objective. Because the model generates complete video sequences from its own distribution during training (`$X_\theta \sim p_\theta(x^{1:N})$`), the loss function can directly compare these generated sequences to real videos, optimizing for video-level quality rather than per-frame accuracy.
+
+**The fundamental objective.** The goal is to minimize some divergence `$\mathcal{D}$` between the model's distribution of generated videos and the real data distribution:
+
+$$\min_\theta \mathcal{D}(p_{\text{data}}(x^{1:N}) \| p_\theta(x^{1:N}))$$
+
+**What this equation states:** we want the distribution of videos produced by the model (through autoregressive generation with self-conditioning) to be as close as possible to the distribution of real videos, according to some distance measure `$\mathcal{D}$`.
+
+**Why this form versus per-frame losses:** Per-frame losses optimize `$p_\theta(x^i \mid x^{<i})$` where `$x^{<i} \sim p_{\text{data}}$` — they train the model to be a good next-frame predictor given *real* context. The holistic loss optimizes the full joint distribution — it trains the model to produce sequences that are plausible as *complete videos*, which includes learning to handle and recover from its own errors in the context frames. The difference is whether the model learns to be accurate given perfect context (TF/DF) or robust given imperfect self-generated context (Self Forcing).
+
+**Noise injection for training stability.** To leverage pretrained diffusion models as critics and enhance training stability [32], the loss is computed on noisy versions of both the generated and real videos:
+
+$$p_{\theta, t}(x^{1:N}_t) = \int q_{t|0}(x^{1:N}_t \mid x^{1:N}) p_\theta(x^{1:N}) dx^{1:N}$$
+
+**What this equation states:** the distribution of noisy generated videos is the marginalization over clean generated videos, where each clean video is corrupted by the forward diffusion process `$q_{t|0}$` to noise level `$t$`. In practice, this means taking a clean generated video `$x^{1:N}$`, applying the forward process to get `$x^{1:N}_t = \alpha_t x^{1:N} + \sigma_t \epsilon$`, and then evaluating the divergence between `$p_{\theta, t}$` and `$p_{\text{data}, t}$` (the similarly-noised real video distribution).
+
+**Why noise injection:** The noisy distributions are smoother and easier to match than the clean distributions, because noise fills in gaps in the support. Additionally, pretrained diffusion models serve as score functions for `$p_{\text{data}, t}$` — they estimate `$\nabla_{x_t} \log p_{\text{data}, t}(x_t)$` — which provides a differentiable signal for how to shift generated samples toward regions of high data density. Without noise injection, the score function at `$t=0$` is ill-defined (the data distribution is a set of delta functions on a low-dimensional manifold).
+
+**Timestep sampling.** In practice, the noise level `$t$` is sampled randomly from `$[0, 1000]$` for each training iteration when using DMD or SiD (matching the standard practice in score distillation). For GAN training (Appendix A), when generating from step `$s$`, the noise level is sampled only from `$[t_{s-1}, t_s]$` because the generated frames are already partially denoised.
+
+**Three concrete loss formulations.** The paper implements three different choices of `$\mathcal{D}$`:
+
+---
+
+##### Distribution Matching Distillation (DMD)
+
+DMD minimizes the **reverse Kullback-Leibler divergence** between the noisy generated and real distributions:
+
+$$\mathcal{D}_{\text{DMD}} = \mathbb{E}_t [D_{\text{KL}}(p_{\theta, t} \| p_{\text{data}, t})]$$
+
+The gradient of this divergence with respect to the generator parameters `$\theta$` is given by (Eqn. 2 in Appendix A):
+
+$$\nabla_\theta \mathbb{E}_t [D_{\text{KL}}(p_{\theta, t} \| p_{\text{data}, t})] = -\mathbb{E}_{t, \hat{x}_t \sim q_{t|0}(\hat{x}_t | \hat{x}), \hat{x} \sim p_\theta(\hat{x})} \left[ (s_{\text{real}}(\hat{x}_t, t) - s_{\text{fake}}(\hat{x}_t, t)) \frac{\partial \hat{x}}{\partial \theta} \right]$$
+
+where `$s_{\text{real}}(\cdot, t) = \nabla_{\hat{x}_t} \log p_{\text{data}, t}(\hat{x}_t)$` is the score function of the real data distribution at noise level `$t$`, approximated by the pretrained 14B Wan2.1 model `$f_\phi(\cdot, t)$` (the "real score network"), and `$s_{\text{fake}}(\cdot, t) = \nabla_{\hat{x}_t} \log p_{\theta, t}(\hat{x}_t)$` is the score function of the model's own noisy distribution, learned by a **critic network** `$f_\psi(\cdot, t)$`.
+
+**What this equation computes:** the gradient that pushes generated samples `$\hat{x}$` in the direction of the difference between the real and fake score functions. If `$s_{\text{real}} > s_{\text{fake}}$` at a noisy sample `$\hat{x}_t$`, the real distribution has higher density than the model distribution at that point, so the gradient pushes the model's clean output `$\hat{x}$` in a direction that moves the noisy version toward higher real density. The factor `$\frac{\partial \hat{x}}{\partial \theta}$` is the Jacobian of the generator output with respect to its parameters — the standard chain-rule term for backpropagation through the generation process.
+
+**Why this form:** The reverse KL divergence `$D_{\text{KL}}(p_\theta \| p_{\text{data}})$` is **mode-seeking** — it penalizes the model more heavily for generating samples in regions where the data probability is low than for failing to cover all modes of the data distribution. This is desirable for generation quality (the model should avoid generating unrealistic videos) at the potential cost of diversity. Score-based gradient estimation avoids the need to compute the density `$p_\theta$` explicitly, which would require integrating over the intractable autoregressive generation process.
+
+**The DMD loss in practice (Eqn. 3 in Appendix A).** The gradient in Eqn. 2 is equivalent to minimizing:
+
+$$\mathcal{L}_{\text{DMD}}(\theta) = \mathbb{E}_{t, \hat{x}_t, \hat{x}} \left[ \frac{1}{2} \| \hat{x} - \text{sg}[\hat{x} - (f_\psi(\hat{x}_t, t) - f_\phi(\hat{x}_t, t))] \|^2 \right]$$
+
+where `$\text{sg}[\cdot]$` is the stop-gradient operator (the term inside is treated as a constant target during backpropagation).
+
+**What this equation computes:** a squared-error loss between the model's clean output `$\hat{x}$` and a modified target `$\hat{x} - (f_\psi(\hat{x}_t, t) - f_\phi(\hat{x}_t, t))$`. This is effectively pushing the clean output in the direction opposite to the score difference — equivalently, pulling it toward higher-density regions of the real distribution as estimated by the score networks. The stop-gradient ensures that the critic `$f_\psi$` and real score network `$f_\phi$` are not updated through this loss; they are updated separately.
+
+**Why this form works:** The target `$\hat{x} - (f_\psi - f_\phi)$` is exactly a gradient step that minimizes the reverse KL divergence if we could directly optimize the clean sample `$\hat{x}$`. By minimizing the MSE between the model output and this target, we effectively implement that gradient step through the model parameters `$\theta$`.
+
+**The critic network `$f_\psi$`.** The critic is initialized from the 1.3B Wan2.1 model (same architecture as the generator) and trained via the standard diffusion loss to match the score of `$p_{\theta, t}$`. It receives noisy versions of the generator's outputs and learns to denoise them, implicitly learning the score function of the model's current distribution. The critic is updated more frequently than the generator (5:1 ratio, per Table 3: "Generator/critic update ratio = 5").
+
+**The real score network `$f_\phi$`.** This is the pretrained 14B Wan2.1-T2V model used in inference mode (frozen parameters). It provides an estimate of `$\nabla \log p_{\text{data}, t}$`, the gradient pointing toward high-density regions of the real noisy data distribution. The paper notes that DMD and SiD with the 14B teacher are "data-free" — they can convert a pretrained video diffusion model into an autoregressive model "without any video training data" (Section 4 Implementation paragraph), because the real score network encodes sufficient knowledge of the video distribution from its pretraining.
+
+**Classifier-free guidance in DMD.** During DMD training, the real score network is evaluated with a classifier-free guidance weight of 3.0 (Table 3), meaning the model `$f_\phi(\hat{x}_t, t)$` is computed as `$f_\phi(\hat{x}_t, t, c_{\text{text}}) + 3.0 \cdot (f_\phi(\hat{x}_t, t, c_{\text{text}}) - f_\phi(\hat{x}_t, t, \emptyset))$` where `$\emptyset$` represents the unconditional (no text) prediction. This high guidance weight sharpens the score estimate, pushing generated samples more aggressively toward modes that match the text prompt, at the cost of some diversity.
+
+---
+
+##### Score Identity Distillation (SiD)
+
+SiD performs distribution matching via the **Fisher divergence** between the noisy model and data distributions:
+
+$$\mathcal{D}_{\text{SiD}} = \mathbb{E}_{t, p_{\theta, t}} \left[ \| \nabla \log p_{\theta, t} - \nabla \log p_{\text{data}, t} \|^2 \right]$$
+
+The SiD loss is given by (Eqn. 4 in Appendix A):
+
+$$\mathcal{L}_{\text{SiD}}(\theta) = \mathbb{E}_{t, \hat{x}_t, \hat{x}} \left[ (f_\phi(\hat{x}_t, t) - f_\psi(\hat{x}_t, t))^T (f_\psi(\hat{x}_t, t) - \hat{x}) + (1 - \alpha) \| f_\phi(\hat{x}_t, t) - f_\psi(\hat{x}_t, t) \|^2 \right]$$
+
+where `$f_\phi$` is the real score network and `$f_\psi$` is the critic (fake score network), both serving similar roles as in DMD. The parameter `$\alpha$` controls the weighting between the cross-term and the regularization term.
+
+**What this equation computes:** the first term `$(f_\phi - f_\psi)^T (f_\psi - \hat{x})$` encourages the critic's prediction to match the clean sample `$\hat{x}$` weighted by the score difference — essentially, pushing the generator in directions where it disagrees most with the real score. The second term `$(1-\alpha) \| f_\phi - f_\psi \|^2$` explicitly minimizes the difference between the real and fake score functions, encouraging the model to produce samples whose score matches the real data score.
+
+**Why this form:** The Fisher divergence directly matches the score functions (the gradient of the log-density) at all points in the model's support, rather than matching distributions through KL divergence. When `$\alpha = 0.5$`, the loss corresponds exactly to the gradient of the Fisher divergence. However, the paper notes that "the second term often leads to unstable training and thus `$\alpha = 1$` is typically adopted for better performance" (Appendix A), effectively dropping the explicit score-matching regularization term. With `$\alpha = 1$`, the loss simplifies to `$(f_\phi(\hat{x}_t, t) - f_\psi(\hat{x}_t, t))^T (f_\psi(\hat{x}_t, t) - \hat{x})$`.
+
+**SiD vs. DMD comparison.** Both use a real score network and a learned critic, but they differ in how the gradient signal is constructed. DMD uses the score difference as a target for the clean prediction (regression formulation), while SiD uses the score difference as an implicit weighting of the critic's prediction error (inner product formulation). The SiD formulation does not require a target construction step, which can be more stable in some settings. Empirically, Table 2 shows that SiD achieves comparable quality to DMD (VBench Total Score: 84.07 vs. 84.31 for chunk-wise AR), confirming that Self Forcing is robust to the choice of distribution matching objective.
+
+**Real score network for SiD.** Unlike DMD which uses the 14B Wan2.1 model as the real score network, SiD uses the 1.3B Wan2.1 model (same scale as the generator). Table 3 specifies "Wan2.1-T2V-1.3B" for SiD's real score network, compared to "Wan2.1-T2V-14B" for DMD. This means SiD is more computationally efficient (no need to run the 14B model) at a potential cost in score estimation accuracy.
+
+---
+
+##### Generative Adversarial Networks (GAN)
+
+The GAN formulation approximately minimizes the **Jensen-Shannon divergence** through a minimax game:
+
+$$\min_\theta \max_\psi \mathbb{E}_{x \sim p_{\text{data}, t}} [\log D_\psi(x)] + \mathbb{E}_{\hat{x} \sim p_{\theta, t}} [\log(1 - D_\psi(\hat{x}))]$$
+
+where `$D_\psi$` is a discriminator (critic) that distinguishes between noisy real and noisy generated videos.
+
+**The GAN architecture modification.** For the GAN variant, additional cross-attention layers and classification heads are added to the initialized critic network (the 1.3B Wan2.1 model). The discriminator `$f_\psi$` outputs a scalar score for each noisy video, and the adversarial loss is the relativistic variant [34]:
+
+$$\mathcal{L}_D(\psi) = -\mathbb{E}_{t, x_t, \hat{x}_t} [\log (\text{sigmoid}(f_\psi(x_t) - f_\psi(\hat{x}_t)))] + \lambda \mathcal{L}_{\text{reg}}$$
+
+$$\mathcal{L}_G(\theta) = -\mathbb{E}_{t, x_t, \hat{x}_t} [\log (\text{sigmoid}(f_\psi(\hat{x}_t) - f_\psi(x_t)))]$$
+
+**What these equations compute:** The relativistic discriminator loss encourages the discriminator to output a larger score for real data `$x_t$` than for fake data `$\hat{x}_t$`. The generator loss encourages the generator to produce fake data that scores higher than real data — making the generated videos indistinguishable from real ones. The sigmoid converts score differences to probabilities: `$\text{sigmoid}(f_\psi(x_t) - f_\psi(\hat{x}_t))$` is the probability that the discriminator correctly identifies `$x_t$` as real when compared to `$\hat{x}_t$`.
+
+**Why relativistic loss:** Standard GAN loss (`$\log D(x) + \log(1-D(G(z)))$`) only asks the discriminator to output high values for real and low for fake independently. The relativistic formulation asks the discriminator to output *higher* values for real than for fake *when compared directly*, which provides a stronger training signal and was shown by Jolicoeur-Martineau [34] to improve stability and sample quality.
+
+**Regularization (Eqns. 5–7 in Appendix A).** The discriminator is regularized using finite-difference approximations of R1 and R2 gradient penalties, following Seaweed-APT [47]. Small Gaussian noise `$\sigma \cdot \epsilon$` (with `$\sigma = 0.05$`) is added to both real and fake noisy samples, and the discriminator is penalized if its output changes substantially:
+
+$$\mathcal{L}_{\text{reg}} = \frac{1}{2} \mathbb{E}_{t, x_t, \hat{x}_t, \epsilon, \hat{\epsilon}} \left[ \| f_\psi(x_t) - f_\psi(x_t + \sigma \cdot \epsilon) \|_2^2 + \| f_\psi(\hat{x}_t) - f_\psi(\hat{x}_t + \sigma \cdot \hat{\epsilon}) \|_2^2 \right]$$
+
+**What this equation computes:** the expected squared change in discriminator output when adding small Gaussian perturbations to the input. A smooth discriminator (small change under perturbation) produces a small penalty; a sharp discriminator (large change) produces a large penalty.
+
+**Why this regularization:** R1/R2 gradients penalize the gradient norm of the discriminator, encouraging Lipschitz continuity. This stabilizes GAN training by preventing the discriminator from becoming overly confident on narrow regions of the data space (which would provide useless gradient signals to the generator). The finite-difference approximation avoids the computational cost of computing exact gradient norms through the large transformer discriminator.
+
+**GAN-specific timestep sampling.** For GAN training, when generating from denoising step `$s$`, the noise level `$t$` is sampled only from `$[t_{s-1}, t_s]$` rather than the full range `$[0, 1000]$`. This is because the generated frames at step `$s$` are already partially denoised, and applying small perturbations (within `$[t_{s-1}, t_s]$`) keeps the training distribution closer to what the generator actually produces. The paper states this "helps stabilize the training" (Appendix A).
+
+**GAN training hyperparameters.** The GAN configuration uses a significantly larger batch size (768 vs. 64 for DMD/SiD), a generator-to-critic update ratio of 1:1 (equal updates), and the AdamW optimizer with `$\beta_1 = 0, \beta_2 = 0.999$`. The large batch size is a well-known requirement for stable GAN training with complex discriminators, providing more stable gradient estimates for the minimax optimization.
+
+**Why offer GAN as an option.** GANs have a key practical advantage over DMD/SiD: they do not require a pretrained real score network. DMD needs the 14B Wan2.1 model as the teacher, which is computationally expensive to run during training. SiD uses the 1.3B model but still needs a frozen pretrained network. The GAN formulation trains the discriminator from scratch (initialized from Wan2.1-1.3B with additional heads) and can work with only the training data, making it more self-contained. However, GANs also require training data (70k generated videos from the 14B model were used), while DMD/SiD are data-free.
+
+---
+
+#### Rolling KV Cache for Long Video Generation
+
+The final technical component enables efficient generation of arbitrarily long videos at inference time, which is a key advantage of autoregressive models over bidirectional ones.
+
+**The problem with prior sliding window approaches.**
+
+- **Bidirectional models with sliding windows (Figure 3a):** Models trained with TF/DF using bidirectional attention must recompute attention for the entire window at each step. When shifting the window to generate a new frame, the entire attention matrix for the new window must be computed from scratch (no KV caching possible because attention is bidirectional). Complexity scales as `$O(T L^2)$` where `$T$` is the number of denoising steps and `$L$` is the window size.
+
+- **Causal models with KV recomputation (Figure 3b):** Prior causal diffusion models [69, 100] could use KV caching but required recomputing the KV cache for the overlapping frames between consecutive windows. When the window shifts by one frame, the keys and values for the `$L-1$` overlapping frames must be regenerated because their attention context has changed (the new frame is now in the window, and the oldest frame has been dropped). This leads to complexity `$O(L^2 + T L)$` with dense sliding windows — the `$L^2$` term coming from recomputing the attention for the overlapping frames' tokens against each other.
+
+**The rolling KV cache solution (Figure 3c, Algorithm 2).** Self Forcing maintains a fixed-size KV cache that stores the key-value embeddings of tokens in the most recent `$L$` frames:
+
+- When generating a new frame `$i$`, the model denoises it using the existing KV cache entries (lines 6–17 of Algorithm 2).
+- After generating the clean frame `$\hat{x}^i_0$` (completed denoising, `$j=1$`), the model computes new KV embeddings `$kv^i \leftarrow G_\theta^{KV}(\hat{x}^i_0; 0, KV)$` from the clean frame (line 9).
+- Before appending, the algorithm checks if the cache is full: if `$|KV| = L$`, the oldest entry is evicted via `$KV.\text{pop}(0)$` (lines 10–12).
+- The new entry is then appended: `$KV.\text{append}(kv^i)$` (line 13).
+
+**Why this enables `$O(T L)$` complexity:** Each new frame requires only computing attention between its own tokens and the cached keys/values of previous frames. No recomputation of existing cache entries is needed because: (1) the attention is causal — future frames do not affect past frames' representations; (2) the model was trained to condition on a fixed-length context window, so dropping the oldest frame matches the training distribution. The complexity per new frame is `$O(T L)$` (denoising steps × attention to cached context), independent of how many frames have been generated so far.
+
+**The distribution mismatch problem with naive rolling KV cache.** A naive implementation of rolling KV cache fails because of a specific architectural artifact of the causal 3D VAE. The first latent frame (chunk) has different statistical properties from subsequent frames: it encodes only the first image without temporal compression, while later frames incorporate temporal information from previous frames. During training, the model always saw the first frame's image latent in the KV cache. In long video generation with rolling cache, this first frame eventually gets evicted, and the model encounters a KV cache where all frames are temporal latents — a distribution it was never trained on.
+
+**The solution: restricted attention window training.** The paper's fix is simple but effective: "during training, we restrict the attention window so the model cannot attend to the first chunk when denoising the final chunk, thereby simulating the conditions encountered during long video generation" (Section 3.4). This means the model learns to generate frames without relying on the special first-frame latent, making it robust to its eventual eviction from the cache.
+
+**Performance impact.** The paper reports (Section 4, "Rolling KV cache" paragraph):
+- KV recomputation (as in prior work) reduces throughput to 4.6 FPS for 10-second videos.
+- Naive rolling KV cache maintains high throughput but "introduces severe visual artifacts."
+- Rolling KV cache with the localized attention training achieves 16.1 FPS throughput while avoiding artifacts.
+
+This represents a `$3.5\times$` throughput improvement over the recomputation approach, making genuinely long video generation practical.
+
+---
+
+#### Implementation Details and Hyperparameter Configuration
+
+The paper provides extensive implementation specifics that are essential for reproducibility and understanding the practical engineering choices.
+
+**Base model initialization.** The starting point is Wan2.1-T2V-1.3B [83], a Flow Matching-based model that generates 5-second videos at 16 FPS with 832×480 resolution. This model uses bidirectional attention by default. The conversion to an autoregressive model follows a two-stage process:
+
+1. **Causal attention fine-tuning:** The base model is fine-tuned with causal attention masking for 16k steps on ODE solution pairs sampled from the base model itself. An ODE solution pair is a trajectory of the diffusion ODE (the deterministic reverse process) from noise to clean video, generated by the base model. Fine-tuning on these pairs teaches the model to denoise from various noise levels under the new causal attention constraint, adapting the pretrained weights to the autoregressive framework.
+
+2. **Self Forcing post-training:** The causally fine-tuned model then undergoes Self Forcing training as described in Algorithm 1. The model does not "require a large number of gradient updates to converge" (page 1) because it already has strong generation capabilities from the first stage — Self Forcing primarily closes the distribution gap rather than teaching the model to generate from scratch.
+
+**Few-step diffusion configuration.** The denoising schedule uses `$T=4$` steps with a uniform timestep grid `$[t_4, t_3, t_2, t_1] = [1000, 750, 500, 250]$`. The flow matching formulation with timestep shifting is:
+
+$$t'(k, t) = \frac{k t / 1000}{1 + (k-1)(t/1000)} \cdot 1000$$
+
+with shift factor `$k = 5$`. Time step shifting (`$k > 1$`) biases the training distribution toward higher noise levels, which is beneficial for few-step generation because the model spends more capacity learning the difficult early denoising steps.
+
+**Model parameterization.** The data prediction model follows:
+
+$$G_\theta(x, t, c) = c_{\text{skip}} \cdot \epsilon - c_{\text{out}} \cdot v_\theta(c_{\text{in}} \cdot x_t, c_{\text{noise}}(t'), c)$$
+
+with `$c_{\text{skip}} = c_{\text{in}} = c_{\text{out}} = 1$` and `$c_{\text{noise}}(t) = t$`. The network `$v_\theta$` predicts the clean data from the noisy input; the identity coefficients mean no input/output scaling is applied beyond what's learned by the network. This is a standard choice in flow matching where the network directly maps from noisy to clean.
+
+**Autoregressive chunking.** Two variants are implemented:
+- **Frame-wise AR:** Each autoregressive step generates a single latent frame (1 VAE latent). With the causal VAE, this means each frame is a 2D spatial latent without temporal compression, making it closer to image generation conditioned on previous images. The paper notes this has "the lowest latency (0.45s)" but more autoregressive steps (81 steps for a 5-second video at 16 FPS with the VAE's temporal compression), increasing exposure to error accumulation.
+- **Chunk-wise AR:** Each autoregressive step generates a chunk of 3 latent frames. This reduces the number of AR steps by a factor of 3 (from 81 to 27 for a 5-second video), which should reduce error accumulation but at the cost of slightly higher per-step latency. Table 1 shows the chunk-wise variant achieves 17.0 FPS with 0.69s latency.
+
+**Training data.** For the ODE initialization and Self Forcing training, text prompts are sampled from "a filtered and LLM-extended version of VidProM" [85]. The filtering removes prompts that are too short (<20 characters), contain command line arguments, or have NSFW probability >0.01. This results in approximately 250k prompts. Prompts are then expanded using Qwen/Qwen2.5-7B-Instruct [95] with the system prompt from Wan2.1's open-source implementation. For GAN training, 70k videos are generated from the 14B Wan2.1 model as the real data distribution. DMD and SiD remain data-free, using only the pretrained score networks without requiring actual video datasets.
+
+**Training hyperparameters (Table 3).** The paper specifies distinct configurations for each distribution matching objective:
+
+| Parameter | DMD | SiD | GAN |
+|---|---|---|---|
+| Real score network | Wan2.1-14B | Wan2.1-1.3B | N/A |
+| Real score CFG weight | 3.0 | 3.0 | N/A |
+| Critic init | Wan2.1-1.3B | Wan2.1-1.3B | Wan2.1-1.3B + cross-attn + heads |
+| Batch size | 64 | 64 | 768 |
+| Optimizer (Gθ) | AdamW | Adam | AdamW |
+| Optimizer (fψ) | AdamW | Adam | AdamW |
+| Learning rate (Gθ) | 2e-6 | 2e-6 | 2e-6 |
+| Learning rate (fψ) | 4e-7 | 2e-6 | 2e-6 |
+| Update ratio (G:f) | 5:1 | 5:1 | 1:1 |
+| EMA decay | 0.99 | 0.99 | 0.99 |
+
+Notable differences: SiD uses Adam (without weight decay) rather than AdamW; the critic learning rate for DMD is 5× smaller than the generator (4e-7 vs. 2e-6), while SiD and GAN use equal rates; GAN uses a 12× larger batch size and 1:1 update ratio; all use exponential moving average (EMA) with decay 0.99 for inference. Adam betas of `$\beta_1 = 0, \beta_2 = 0.999$` and `$\epsilon = 1\text{e-}8$` are used throughout (with weight decay 0.01 for AdamW, 0 for Adam).
+
+**Computational requirements.** DMD converges in approximately 1.5 hours on 64 H100 GPUs (80GB each); SiD and GAN take 2–3 hours. Per-GPU batch size is 1, with gradient accumulation for configurations requiring effective batch size >64. The total training cost (64 GPU-hours for DMD) is modest by modern video generation standards.
 
 ## 4. Key Insights and Innovations
-- Training-time autoregressive self-rollout with KV caching (fundamental)
-  - Novelty: Generation is rolled out during training exactly as at inference (Algorithm 1; Figure 2c), rather than training on parallelized masked batches with ground-truth or noised history (Figure 2a–b).
-  - Significance: Eliminates the core distribution mismatch behind exposure bias; the model learns to recover from its own mistakes (Section 3.2–3.3).
 
-- Holistic video-level distribution matching on the true model distribution (fundamental)
-  - Novelty: Compute D(pdata(x1:N) || pθ(x1:N)) on self-generated videos (with noise injection for stability), not frame-wise losses on TF/DF-produced training distributions (Section 3.3).
-  - Significance: Aligns the training objective with the actual inference behavior; improves long-horizon stability and reduces error accumulation (Table 2, frame-wise vs chunk-wise robustness).
+### Innovation 1: The Distribution-Matching Target Must Be Drawn from the Inference-Time Distribution
 
-- Efficiency via few-step diffusion, gradient truncation, and full-attention kernels (practical but impactful)
-  - Novelty: Random-step supervision + truncating gradients to the final step per frame enable sequential training without exploding memory/time; training uses optimized full attention (FlashAttention-3) (Section 3.2; Figure 6).
-  - Significance: Sequential post-training attains similar per-iteration times to TF/DF, yet yields better quality for the same wall-clock time (Figure 6 right).
+The paper's most conceptually significant move is diagnostic rather than architectural: it identifies that the fundamental flaw in prior AR diffusion training is not *which* loss function is used but *which distribution* that loss operates on. Teacher Forcing, Diffusion Forcing, and CausVid all optimize a loss on samples drawn from a training-time distribution that differs from the inference-time distribution. The paper's core reframing is that exposure bias is a problem of **distributional credit assignment** — any training signal applied to a model running in "simulation mode" (TF or DF context) rather than "deployment mode" (truly AR context) is optimizing the wrong thing, regardless of how sophisticated the loss function is.
 
-- Rolling KV cache that avoids recomputation and handles distribution shift (practical)
-  - Novelty: A true rolling cache with eviction (Algorithm 2) yields O(T·L) inference for infinite videos; a targeted training tweak prevents flicker when the initial frame falls out of cache (Section 3.4; Figure 3c; Appendix B Figure 7).
-  - Significance: Efficient, consistent long video generation suitable for streaming or persistent simulations.
+Prior to this work, the dominant assumption in AR diffusion training was that closing the noise-level gap between training and inference (as DF does) was the key to mitigating exposure bias. CausVid [100] went further by adding a holistic distribution-matching loss, implicitly assuming that matching *some* generated distribution to the real distribution was sufficient. Self Forcing shows this assumption is precisely backwards: CausVid matches the distribution of DF-generated videos (where context comes from data) to real videos, but the model at inference time produces AR-generated videos (where context comes from itself). These are different distributions, so the matched distribution during training is **not the one the user sees**. The paper's diagnosis — "CausVid suffers from a critical flaw that its training outputs (generated via DF) do not come from the distribution the model produces at inference time, therefore the DMD loss is matching the wrong distribution" — is a category error that prior work missed entirely.
 
-- Data-free AR conversion path (incremental but useful)
-  - DMD/SiD variants can convert a pre-trained bidirectional diffusion model into an AR model “without any video training data,” using a pre-trained score network as the “real” distribution (Section 4, Implementation; Appendix A). This reduces data requirements for post-training.
+This is a fundamental conceptual advance, not an incremental improvement. It changes the question from "how do we design a loss function for AR diffusion?" to "how do we ensure our loss function is computed on the correct distribution?" The answer — force the model to generate from its own AR distribution during training — is straightforward in retrospect, but the diagnosis itself is the contribution. It explains *why* DF+Temporal-DMD (CausVid) underperforms, *why* simple TF degrades, and *why* GANs have historically avoided exposure bias (they always sample from the inference distribution). The evidence in Table 2 supports this separation: DF+DMD (replicating CausVid's paradigm within the controlled setup) achieves 82.76 VBench Total Score for chunk-wise AR, while Self Forcing+DMD achieves 84.31 — a substantial gap that can only be attributed to the distributional mismatch, since the loss function (DMD), base model (Wan2.1-1.3B), and training data are identical.
+
+This insight has implications beyond video generation. It suggests that any AR diffusion model in any domain (speech, music, motion, text) that uses TF or DF during training is fundamentally mismatched with its inference behavior, and that fixing this requires architectural commitment to self-rollout during training — not just better losses or noise schedules.
+
+---
+
+### Innovation 2: Training-Inference Alignment Through Autoregressive Rollout with KV Caching During Training
+
+The enabling insight that makes the above diagnostic actionable is that autoregressive self-rollout during training can be made **computationally practical** through a specific combination of few-step diffusion, gradient truncation, and KV caching — and that this combination is actually *more efficient* than the parallel alternatives it replaces.
+
+The field's working assumption has been that sequential autoregressive training is prohibitively expensive. Transformers' entire dominance rests on parallel training; the idea of unrolling an autoregressive sequence during training, particularly one where each step requires multiple diffusion denoising passes, seems like a non-starter. Teacher Forcing exists precisely because it enables parallel training. The paper's counterintuitive empirical finding — that sequential Self Forcing achieves *faster* wall-clock convergence to better quality than parallel TF/DF (Figure 6, right) — upends this assumption.
+
+The insight is not just that gradient truncation and KV caching make sequential training *feasible*, but that it is *preferable* when total convergence time is considered. The per-iteration cost of Self Forcing is comparable to TF/DF (Figure 6, left) because (a) per-frame spatial tokens are still processed in parallel, (b) KV caching avoids recomputation of context, and (c) TF/DF's custom sparse attention masks (FlexAttention) incur overhead that partially offsets their parallelism advantage, while Self Forcing uses dense attention with highly optimized FlashAttention-3 kernels. The practical consequence — 1.5 hours on 64 H100 GPUs for converged post-training — makes this a genuinely deployable algorithm rather than a proof-of-concept.
+
+This is a **fundamental reframing** of the efficiency question. Prior work implicitly assumed that training must be parallel to be practical; Self Forcing demonstrates that for the post-training phase (where the model starts from strong pretrained weights and needs relatively few updates), sequential training with distributional fidelity is not just viable but optimal. The analogy the paper draws to RL post-training in language models (DeepSeek-R1 style) positions Self Forcing as part of a broader paradigm shift: "parallel pre-training and sequential post-training" as a general recipe for sequence models. This is a strategic insight about training methodology that extends beyond the specific implementation.
+
+---
+
+### Innovation 3: Holistic Video-Level Distribution Matching as the Natural Complement to Self-Rollout
+
+Once the model generates complete videos from its own distribution during training, a new class of objectives becomes available: losses that compare entire generated sequences to real sequences at the distribution level. This is not merely a different loss function — it is a **categorical shift in what the training signal optimizes for**.
+
+Prior AR diffusion models used frame-wise denoising losses (MSE between predicted and true noise at each frame). These losses have an implicit interpretation: with proper per-timestep weighting, they approximate `D_KL(p_data(x^i | x^{<i}) || p_θ(x^i | x^{<i}))` where `x^{<i}` is drawn from the data distribution. The model learns to be accurate given *perfect* context. But self-rollout creates model-generated context, where accuracy on the next frame given flawed context is a different skill — the model needs to be *robust* to its own errors, not just accurate given ground truth.
+
+Holistic distribution matching (DMD, SiD, GAN) optimizes `D(p_data(x^{1:N}) || p_θ(x^{1:N}))`, the divergence between full video distributions. This means the model receives gradient signals that reflect the *aggregate quality* of the entire generated sequence, including how errors in early frames affect later frames. The model cannot "cheat" by being accurate given perfect context in training and then degrading at inference — because it is never trained on perfect context. Every training step confronts the model with its own errors and optimizes for sequences that remain plausible despite them.
+
+This is a fundamental shift from frame-level to video-level credit assignment. The ablation in Table 2 provides contrast: many-step DF and TF (which use frame-wise losses) achieve 82.95 and 83.58 respectively, while Self Forcing with DMD achieves 84.31 — the gap represents the benefit of holistic over frame-wise optimization. Critically, the holistic loss only makes sense when the model is generating from its own distribution; applying DMD to DF-generated outputs (as CausVid does) matches the wrong distributional target and underperforms (DF+DMD: 82.76).
+
+The paper demonstrates that the choice of divergence (DMD vs. SiD vs. GAN) matters less than *what distribution it is applied to*. All three losses achieve comparable quality when applied to truly AR-generated videos (84.31 DMD, 84.07 SiD, 83.88 GAN for chunk-wise AR), but all outperform the baselines that apply similar losses to the wrong distribution. This robustness to loss function choice is itself a significant finding — it suggests the distributional alignment is the primary driver of quality, not the particular divergence measure.
+
+---
+
+### Innovation 4: Gradients Don't Need to Flow Through the Full AR Chain
+
+A subtle but operationally critical insight in Self Forcing is the discovery that **truncating gradients at each autoregressive step** — preventing error signals from later frames from flowing backward to improve earlier frames, and preventing gradients from flowing through the KV cache — does not prevent the model from learning to generate high-quality, temporally consistent videos. This is a negative result with positive practical implications: full backpropagation through time (BPTT) for AR video diffusion is unnecessary for achieving strong results within the training context length.
+
+The naive expectation would be that exposure bias requires *more* temporal credit assignment — the model should learn that errors in frame 5 cause cascading failures in frames 10–20, and therefore improve frame 5's generation to prevent downstream damage. Self Forcing intentionally prevents this: the gradient detachment at KV cache boundaries means frame 20's quality cannot directly influence the parameters governing frame 5's generation. The only signal the model receives about temporal consistency is through the holistic distribution-matching loss, which evaluates the complete video as a package but does not attribute blame to specific frames.
+
+That this suffices is non-obvious. It suggests that the primary mechanism by which Self Forcing mitigates exposure bias is not through long-range credit assignment but through **distributional conditioning**: by training on self-generated context, the model learns a conditional distribution `p_θ(x^i | x^{<i})` where `x^{<i} ~ p_θ` rather than `x^{<i} ~ p_data`. The model's parameters adapt so that the mapping from (potentially flawed) context to next frame remains within the real data manifold, even without explicit gradient signals connecting temporally distant frames. This is a fundamentally different mechanism from what BPTT would provide — it is about making the model's input-output mapping robust to distribution shift, not about optimizing long-horizon behavior.
+
+The paper acknowledges this as a limitation — gradient truncation "may limit the model's ability to learn long-range dependencies" (Section 5) — but the empirical success within the training context length is itself the insight. The finding that ~1.3B parameter models can achieve state-of-the-art video quality without BPTT, using only holistic distribution matching and distributional conditioning, simplifies the training problem enormously and suggests that the lion's share of exposure bias mitigation comes from matching the *distribution of conditioning inputs* rather than from learning explicit error-recovery policies through temporal credit assignment. The observed degradation when extrapolating beyond training length (Section 5, Limitations) is the natural corollary — it occurs precisely where distributional conditioning can no longer help because the model has no training signal for that horizon.
 
 ## 5. Experimental Analysis
-Evaluation setup
-- Base and training pipeline (Section 4; Appendix A)
-  - Initialize from Wan2.1-T2V-1.3B (flow-matching) and first finetune it for causal attention using 16k ODE solution pairs.
-  - Use 4-step diffusion; implement frame-wise AR and chunk-wise AR (3 latent frames per chunk).
-  - Distribution matching objectives:
-    - DMD and SiD: “data-free” in that they rely on a pre-trained score network (Wan2.1-14B or 1.3B) and the model’s own samples; no real video dataset is needed for these variants (Section 4).
-    - GAN: trains a critic on 70k videos generated by Wan-14B and also uses this data to fine-tune many-step DF/TF baselines; R3GAN objective with R1+R2 regularization (Section 4; Appendix A).
-- Metrics and hardware (Section 4)
-  - VBench (16 sub-dimensions; Appendix C visualization).
-  - Human preference on 1003 MovieGenBench prompts, one rater per prompt (Section 4; Figure 4; Appendix E).
-  - Throughput (FPS) and first-frame latency on a single NVIDIA H100 GPU, emphasizing both for “real-time.”
 
-Main results
-- Quality, speed, and latency (Table 1; Figure 4; Figure 5)
-  - Chunk-wise Self Forcing (1.3B, 832×480):
-    - Throughput and latency: 17.0 FPS, 0.69s.
-    - VBench: Total 84.31, Quality 85.07, Semantic 81.28.
-  - Frame-wise Self Forcing:
-    - 8.9 FPS, 0.45s latency.
-    - VBench: Total 84.26, Quality 85.25, Semantic 80.30.
-  - Comparisons (Table 1):
-    - Versus Wan2.1 (same scale, bidirectional diffusion): 0.78 FPS and 103s latency vs 17.0 FPS and 0.69s, with the Self Forcing chunk-wise model slightly higher VBench Total (84.31 vs 84.26).
-    - Versus LTX-Video (efficient diffusion): LTX has 8.98 FPS but 13.5s latency; Self Forcing is ~2× the FPS and ~20× lower latency with higher VBench (84.31 vs 80.00).
-    - Versus SkyReels-V2 and MAGI-1 (other AR-hybrid methods): Self Forcing achieves markedly better throughput and orders-of-magnitude lower latency with higher VBench.
-    - Versus CausVid (Wan-1.3B init): both show 17.0 FPS and 0.69s latency, but Self Forcing achieves higher VBench (84.31 vs 81.20) and better user preference.
-  - Human preference (Figure 4, overall better video):
-    - “Ours” wins: 66.1% vs CausVid, 62.7% vs Wan2.1, 57.9% vs SkyReels-V2, 54.2% vs MAGI-1.
+### Evaluation Methodology
 
-- Qualitative stability (Figure 5)
-  - CausVid exhibits error accumulation (oversaturation over time). Self Forcing remains stable across time steps while matching or slightly exceeding Wan2.1/SkyReels-V2 quality.
+- **Dataset.** The primary evaluation uses the VBench benchmark [31], a comprehensive suite for video generative models that measures both visual quality and semantic alignment across 16 dimensions (e.g., subject consistency, background consistency, temporal flickering, motion smoothness, aesthetic quality, object class, human action, etc.). For the user preference study, 1003 prompts from MovieGenBench [64] are used, with each prompt evaluated by a single user. Training data for GAN-based Self Forcing consists of 70k videos generated by the 14B Wan2.1 model; DMD and SiD variants are data-free, using only pretrained score networks. Training prompts are drawn from a filtered and LLM-extended version of VidProM [85], yielding approximately 250k prompts after filtering for length, NSFW content, and command-line artifacts.
 
-- Ablations (Table 2)
-  - Chunk-wise AR:
-    - Many-step DF/TF: VBench Total 82.95 (DF), 83.58 (TF).
-    - Few-step AR with TF/DF + DMD: 82.32–82.76.
-    - Self Forcing: 84.31 (DMD), 84.07 (SiD), 83.88 (GAN).
-  - Frame-wise AR (harder; more AR steps, more exposure bias):
-    - Many-step DF/TF: 77.24 (DF), 80.34 (TF).
-    - Few-step TF/DF + DMD: 78.12–80.56.
-    - Self Forcing: 84.26 (DMD), 83.54 (SiD), 83.27 (GAN).
-  - Takeaway: Self Forcing consistently outperforms alternatives across objectives and is robust when moving from chunk-wise to frame-wise AR, indicating improved resistance to error accumulation.
+- **Base model(s).** All Self Forcing variants are initialized from Wan2.1-T2V-1.3B [83], a Flow Matching-based model that generates 5-second videos at 16 FPS with 832×480 resolution. The model is first fine-tuned with causal attention masking on 16k ODE solution pairs sampled from the base model (the "ODE initialization" phase), after which Self Forcing post-training is applied. For the DMD loss, the real score network is the frozen Wan2.1-T2V-14B model; for SiD, it is the frozen Wan2.1-T2V-1.3B model; for GAN, no pretrained real score network is needed. The FLOPs-matched comparison uses a model with approximately 14× more parameters as the pretraining-scaled baseline.
 
-- Rolling KV cache (Section 4 “Rolling KV cache”)
-  - Without rolling cache, recomputing KV during sliding windows drops throughput to 4.6 FPS for 10-second videos (inefficient).
-  - Naïve rolling cache yields artifacts when the first frame latent leaves the cache.
-  - Training with the local-attention restriction resolves artifacts while keeping high throughput: 16.1 FPS (Appendix B; Figure 7).
+- **Metrics.** The primary quantitative metric is the VBench Total Score (an aggregate of 16 dimension scores measuring visual quality and semantic alignment), supplemented by Quality Score and Semantic Score sub-aggregates. Throughput is measured in frames per second (FPS), and latency is measured as time to first frame in seconds. All speed tests are conducted on a single NVIDIA H100 GPU. For human evaluation, a user preference study asks annotators to select which of two videos (same prompt) is "overall better, considering both quality and prompt alignment," with results reported as preference rates (percentage of comparisons where Self Forcing is preferred). The paper emphasizes that true real-time performance requires both throughput exceeding the video playback rate and latency below application-dependent perceptual thresholds, and evaluates both dimensions.
 
-- Training efficiency (Figure 6)
-  - Per-iteration time comparable among TF, DF, and Self Forcing variants despite Self Forcing being sequential at the frame level (Figure 6 left).
-  - For equal wall-clock budgets, Self Forcing reaches higher VBench (Figure 6 right), attributed to full-attention kernels (FlashAttention-3) and avoided masking overhead used by TF/DF (Section 4).
+- **Baselines.** The paper compares against a substantial and diverse set of models:
+  - **Diffusion models:** Wan2.1-1.3B [83] (the initialization weights, a bidirectional model generating full videos at once) and LTX-Video [24] (a diffusion model optimized for efficiency).
+  - **Autoregressive models:** Pyramid Flow [33] (2B parameters, 640×384 resolution, autoregressive in the temporal dimension) and NOVA [13] (0.6B parameters, 768×480 resolution, an autoregressive model without vector quantization).
+  - **Chunk-wise autoregressive diffusion models:** SkyReels-V2 [10] (1.3B parameters, 960×540 resolution, uses Diffusion Forcing with sliding window inference), MAGI-1 [69] (4.5B parameters, 832×480 resolution, autoregressive diffusion model), and CausVid [100] (1.3B parameters, 832×480 resolution, initialized from the same Wan2.1-1.3B base model, using DF+DMD training — the closest baseline to Self Forcing).
+  - For controlled ablation experiments, the paper additionally trains **TF (Teacher Forcing)** and **DF (Diffusion Forcing)** baselines within its own implementation framework at both many-step (50×2 denoising steps) and few-step (4-step) configurations, with and without DMD training, enabling direct comparison under identical training conditions.
 
-Assessment of evidence
-- The combination of quantitative metrics (VBench), user study, and speed/latency benchmarks strongly supports the central claims:
-  - Real-time capability at competitive or better quality (Table 1).
-  - Reduced error accumulation visible in qualitative comparisons and in robustness across frame-wise vs chunk-wise settings (Figure 5; Table 2).
-  - Training practicality and efficiency (Figure 6).
-- Robustness checks include multiple objectives (DMD/SiD/GAN), both AR granularities, and long-video extrapolation with a targeted fix (Appendix B).
+- **Generation budget / compute accounting.** The paper does not use a unified generation budget metric like "number of generations" since models differ fundamentally in architecture (bidirectional vs. autoregressive, many-step vs. few-step, different numbers of denoising steps). Instead, it evaluates on the dimensions that matter for the intended use case: throughput (FPS), latency (seconds to first frame), and generation quality (VBench scores), with all hardware held constant (single H100 GPU). For the training efficiency comparison (Figure 6), compute is measured in wall-clock training time on 64 H100 GPUs, with per-iteration times broken out for different training algorithms. This is appropriate because the paper's primary claim is about the *efficiency-quality Pareto frontier*, not about FLOPs-matched comparisons between equivalent training budgets.
+
+- **Cross-validation / statistical protocol.** The VBench evaluation uses the standard VBench test prompts and protocol. For the user preference study, all 1003 prompts from MovieGenBench are evaluated, each by a single user. No cross-validation or statistical significance testing is reported for the VBench scores. The ablation studies (Table 2) are run under fixed seeds and training configurations within the paper's implementation framework, providing controlled comparisons but not statistical confidence intervals. The paper does not report variance estimates or error bars for any of its quantitative results.
+
+### Main Quantitative Results
+
+#### Self Forcing vs. Existing Video Generation Models (Table 1, Figure 4, Figure 5)
+
+**Chunk-wise autoregressive Self Forcing achieves the highest VBench Total Score (84.31) among all compared models while simultaneously delivering real-time throughput (17.0 FPS) at sub-second latency (0.69s).** This simultaneously surpasses the bidirectional Wan2.1-1.3B base model (84.26 Total Score, but 0.78 FPS and 103s latency) and the closest autoregressive baseline CausVid (81.20 Total Score, 17.0 FPS, 0.69s latency) — matching CausVid's speed while improving quality by 3.11 points on the VBench Total Score.
+
+Breaking down the results from Table 1:
+
+**Against bidirectional diffusion models.** Wan2.1-1.3B achieves a Total Score of 84.26 with Quality Score 85.30 and Semantic Score 80.09, but requires 103 seconds for a single 5-second video at 0.78 FPS — approximately 150× slower in latency than Self Forcing's chunk-wise variant (0.69s). Self Forcing (chunk-wise) achieves a marginally higher Total Score (84.31 vs. 84.26, a 0.05-point difference) with Quality Score 85.07 and Semantic Score 81.28. The direction of the gap suggests Self Forcing improves semantic alignment (81.28 vs. 80.09, +1.19 points) at a slight cost in visual quality (85.07 vs. 85.30, −0.23 points), though both differences are small and variance estimates are not provided. Against LTX-Video (80.00 Total Score, 8.98 FPS, 13.5s latency), Self Forcing is both faster and higher quality by a clear margin (84.31 vs. 80.00).
+
+**Against chunk-wise autoregressive models.** CausVid [100], the most directly comparable baseline (same base model, same resolution, same throughput/latency), achieves Total Score 81.20 with Quality Score 84.05 and Semantic Score 69.80. Self Forcing improves on every dimension: +3.11 Total Score, +1.02 Quality, and a dramatic +11.48 Semantic Score. This semantic score gap (69.80 → 81.28) is the largest single difference in the table and directly implicates the exposure bias problem — CausVid's semantic degradation over time (visible in the qualitative comparison in Figure 5 as progressive saturation increase) manifests as poor semantic alignment scores, while Self Forcing maintains semantic fidelity by training on self-generated context. SkyReels-V2 [10] achieves 82.67 Total Score at 0.49 FPS with 112s latency — Self Forcing is 35× faster and achieves higher quality. MAGI-1 [69], despite its larger model size (4.5B vs. 1.3B), achieves only 79.18 Total Score at 0.19 FPS with 282s latency — Self Forcing is 81× faster with substantially higher quality.
+
+**Against frame-wise autoregressive models.** Self Forcing's frame-wise variant achieves Total Score 84.26, Quality Score 85.25, and Semantic Score 80.30 at 8.9 FPS with 0.45s latency — the lowest latency of any model in the comparison. Against Pyramid Flow [33] (81.72 Total Score, 6.7 FPS, 2.5s latency), Self Forcing is 1.8× faster and 2.54 points higher in Total Score. Against NOVA [13] (80.12 Total Score, 0.88 FPS, 4.1s latency), Self Forcing is 10× faster and 4.14 points higher. Notably, the frame-wise variant's quality is comparable to the bidirectional Wan2.1 (84.26 vs. 84.26 Total Score, identical) while running at 8.9 FPS with 0.45s latency — three orders of magnitude faster to first frame (0.45s vs. 103s) and suitable for latency-sensitive real-time applications where the chunk-wise variant's 0.69s might exceed some perceptual thresholds.
+
+**User preference results (Figure 4).** Self Forcing is consistently preferred over baselines in head-to-head comparisons: 54.2% preference vs. MAGI-1, 57.9% vs. SkyReels-V2, 62.7% vs. Wan2.1, and 66.1% vs. CausVid. The preference rate increases monotonically as the baseline becomes more related (Wan is the base model, CausVid is the closest architectural neighbor), suggesting Self Forcing's advantages are most apparent when compared against the models it directly improves upon. A preference rate above 50% against Wan2.1 is notable — it means the distilled, autoregressive model is perceived as generating *better* videos than the original bidirectional teacher, not just matching it.
+
+**Qualitative evidence (Figure 5).** The paper provides frame strips comparing Self Forcing against Wan2.1, SkyReels-V2, and CausVid at three time steps. CausVid shows visible saturation increase over time — the frames becoming progressively more over-saturated — consistent with the error accumulation hypothesis. Self Forcing's outputs are stable across time steps and subjectively comparable to or better than Wan2.1's, which represents a remarkable result: the autoregressive model matches or exceeds the quality of the bidirectional model while being ~150× faster.
+
+#### Ablation: Training Paradigm Comparison (Table 2)
+
+**Self Forcing consistently and substantially outperforms Teacher Forcing and Diffusion Forcing across all distribution matching objectives and both chunk-wise and frame-wise autoregressive configurations, with the gap widening when more AR steps are required (frame-wise vs. chunk-wise).**
+
+Table 2 presents a controlled comparison where all models share the same base architecture (Wan2.1-1.3B), training data, and (where applicable) distribution matching objective, isolating the effect of the training paradigm. The results are organized into two sections: many-step models (50×2 denoising steps, standard diffusion training) and few-step models (4-step denoising, distribution matching training).
+
+**Many-step baselines (no distribution matching).** For chunk-wise AR: DF achieves 82.95 Total Score (83.66 Quality, 80.09 Semantic), TF achieves 83.58 (84.34 Quality, 80.52 Semantic). The TF advantage over DF is notable — contrary to the expectation that DF should mitigate exposure bias through noise-level variation, TF's cleaner context frames produce better results in the many-step regime. For frame-wise AR: both degrade substantially — DF drops to 77.24 (79.72 Quality, 67.33 Semantic) and TF to 80.34 (81.34 Quality, 76.34 Semantic). The gap between chunk-wise and frame-wise (5.71 points for DF, 3.24 points for TF) illustrates the increased difficulty of frame-wise autoregression, which requires more AR steps (81 vs. 27) and thus more opportunities for error accumulation.
+
+**Few-step baselines with DMD (the CausVid replication condition).** The DF+DMD configuration essentially replicates CausVid [100] within the paper's framework: a 4-step model trained with DF outputs and a DMD loss. This achieves 82.76 Total Score for chunk-wise AR — marginally worse than many-step DF (82.95), suggesting that the DMD loss applied to DF-generated outputs does not compensate for the quality lost by reducing denoising steps. For frame-wise AR, DF+DMD achieves 80.56 — the drop from chunk-wise (82.76 → 80.56) is smaller than for many-step models, suggesting DMD does provide some robustness to the increased AR steps, but still substantial. TF+DMD underperforms DF+DMD for chunk-wise (82.32 vs. 82.76) and degrades further for frame-wise (78.12), indicating that DMD on TF distributions is particularly brittle.
+
+**Self Forcing with DMD.** This is the headline result: 84.31 Total Score for chunk-wise AR and 84.26 for frame-wise AR. The gap over the best baseline (DF+DMD for chunk-wise) is +1.55 Total Score points, with the improvement concentrated in semantic alignment (81.28 vs. 79.85, +1.43) and a small quality improvement (85.07 vs. 83.49, +1.58). The more striking result is the **resilience to increased AR steps**: Self Forcing's frame-wise score (84.26) is nearly identical to its chunk-wise score (84.31), a mere 0.05-point drop, while DF+DMD drops 2.20 points (82.76 → 80.56) and TF+DMD drops 4.20 points (82.32 → 78.12). This directly supports the paper's central claim that exposure bias is the cause of degradation in multi-step AR generation, and that Self Forcing's training-inference alignment is the mechanism that mitigates it.
+
+**Self Forcing with SiD and GAN.** Both alternative distribution matching objectives yield competitive results with DMD: SiD achieves 84.07 Total Score (85.52 Quality, 78.24 Semantic) and GAN achieves 83.88 (85.06 Quality, 79.16 Semantic) for chunk-wise AR. SiD shows the highest Quality Score (85.52) but the lowest Semantic Score (78.24) among the three, suggesting it prioritizes visual fidelity at some cost to prompt alignment. GAN achieves intermediate semantic scores. For frame-wise AR, both SiD (83.54) and GAN (83.27) maintain strong quality with the same characteristic tradeoffs. The key finding is that **all three losses produce competitive results when applied to Self Forcing's truly AR-generated distribution** — the choice of divergence matters less than the choice of what distribution to match. This robustness to loss function is itself evidence that the distributional alignment (Self Forcing training) is the primary driver of quality, not the particular divergence measure.
+
+**The exposure bias hypothesis test.** The pattern across Table 2 provides strong evidence for the exposure bias mechanism: (a) TF/DF degrade with more AR steps (chunk-wise → frame-wise), (b) DMD applied to DF-generated outputs (CausVid) does not fix this degradation, (c) Self Forcing eliminates the degradation — the chunk-wise and frame-wise scores are nearly identical, indicating the model has learned to be robust to its own errors in the context. This is the paper's strongest empirical result, controlling for all variables except the training paradigm itself.
+
+#### Training Efficiency Analysis (Figure 6)
+
+**Self Forcing achieves superior generation quality within the same wall-clock training budget compared to Teacher Forcing and Diffusion Forcing, despite its sequential nature.**
+
+Figure 6 (left) breaks down per-iteration training time for different configurations:
+- Diffusion Forcing: approximately 2.5 seconds per iteration (split between ~1.5s for the generator update and ~1.0s for the critic update, when DMD is used).
+- Teacher Forcing: approximately 2.0 seconds per iteration, slightly faster than DF.
+- Self Forcing with 1-step gradient (only backpropagating through a single denoising step): approximately 4.0 seconds — roughly 1.6× the cost of DF.
+- Self Forcing with 4-step gradient (backpropagating through all denoising steps): approximately 17–18 seconds — 7–9× the cost, motivating the gradient truncation design.
+
+The key empirical finding is that Self Forcing with gradient truncation (1-step) has a per-iteration cost of ~4 seconds vs. ~2.5 seconds for DF — only a ~1.6× overhead, not the orders-of-magnitude more that naive sequential unrolling would suggest. The paper attributes this efficiency to three factors: (a) per-frame spatial tokens are processed in parallel, maintaining GPU utilization, (b) KV caching avoids recomputing context attention, and (c) dense attention enables highly optimized FlashAttention-3 kernels, while TF/DF require custom sparse FlexAttention masks that incur overhead.
+
+Figure 6 (right) shows quality (VBench Total Score) vs. wall-clock training time:
+- Self Forcing: converges to ~0.838 by approximately 15 minutes of training time and continues improving to ~0.840 by 30 minutes.
+- Teacher Forcing: starts around ~0.815, improves slowly, reaching ~0.823 at 30 minutes.
+- Diffusion Forcing: starts slightly lower (~0.812), improves to ~0.820 at 30 minutes.
+
+Self Forcing reaches the 0.830 level (which DF never achieves and TF approaches only at 30 minutes) in under 10 minutes — roughly 3× faster convergence to a higher quality level. By 30 minutes, Self Forcing at ~0.840 outperforms TF by ~0.017 points (approximately 2% relative improvement) within the same training budget. This experiment directly supports the paper's claim that Self Forcing is "surprisingly more efficient than alternative parallel strategies, achieving superior performance within the same wall-clock training time" (page 2).
+
+#### Rolling KV Cache Efficiency (Section 4)
+
+**The rolling KV cache with localized attention training achieves 16.1 FPS for long video extrapolation, compared to 4.6 FPS with prior KV recomputation approaches — a 3.5× throughput improvement — while avoiding visual artifacts caused by distribution mismatch.**
+
+The paper reports two key measurements for generating 10-second videos (beyond the training context length):
+- **KV cache recomputation** (the approach used by prior causal diffusion models [69, 100], Figure 3b): throughput drops to 4.6 FPS because the overlapping frames' KV embeddings must be regenerated when the window shifts.
+- **Naive rolling KV cache** (Figure 3c, but without the attention window training modification): maintains high throughput but "introduces severe visual artifacts" due to the distribution mismatch when the first-frame image latent is evicted from the cache.
+- **Rolling KV cache + localized attention training** (the proposed approach): achieves 16.1 FPS throughput while avoiding visual artifacts, as shown qualitatively in Appendix B (Figure 7).
+
+The 16.1 FPS figure is slightly below the 17.0 FPS reported for in-distribution generation (Table 1), indicating a small throughput penalty for the cache eviction logic, but remains well above the 16 FPS playback rate of the generated videos — meaning real-time streaming is maintained even during long video extrapolation. The qualitative ablation in Figure 7 confirms that without the localized attention training, extrapolated frames exhibit "severe visual artifacts," while the proposed method produces clean frames, providing visual evidence for the distribution mismatch hypothesis.
+
+#### VBench Dimension-Level Analysis (Figure 8)
+
+**Self Forcing generally outperforms competing models on semantic alignment dimensions while maintaining competitive frame-wise quality, with the frame-wise AR variant exhibiting more dynamic motion but worse temporal consistency than the chunk-wise variant.**
+
+The radar chart in Figure 8 (Appendix C) breaks down all 16 VBench dimensions for Self Forcing (chunk-wise, frame-wise), SkyReels-V2, MAGI-1, CausVid, Wan2.1, and LTX-Video. The paper highlights several pattern-level findings:
+
+- **Semantic alignment:** Self Forcing achieves high scores in scene, object class, multiple objects, and human action dimensions — the dimensions that evaluate whether the generated content matches the text prompt's described content. This aligns with the high Semantic Score in Table 1 (81.28 for chunk-wise, 80.30 for frame-wise) and supports the claim that Self Forcing mitigates the semantic drift that afflicts CausVid (Semantic Score 69.80).
+
+- **Frame-wise quality:** Both variants achieve good scores on aesthetic quality and imaging quality, comparable to Wan2.1 and better than the other baselines. This is notable because autoregressive models are expected to lose visual fidelity compared to full-sequence bidirectional models due to error accumulation; Self Forcing appears to completely close this gap.
+
+- **Temporal consistency tradeoff:** The frame-wise AR variant exhibits "more dynamic motion (high dynamic degree score) but worse temporal consistency (worse background consistency, motion smoothness, and larger temporal flickering) than the chunk-wise AR variant" (Appendix C). This is an expected tradeoff: generating one frame at a time (81 AR steps) gives the model more flexibility to introduce motion and changes but makes it harder to maintain consistent backgrounds and smooth transitions. Generating 3-frame chunks (27 AR steps) constrains the model to produce locally coherent motion at the cost of reduced dynamic range. This tradeoff is not a failure mode but a design choice — users can select the variant based on their application's priorities (motion diversity vs. temporal smoothness).
+
+### Ablation Studies and Robustness Checks
+
+**Distribution matching objective (DMD vs. SiD vs. GAN):** Table 2 shows that all three objectives produce competitive quality when applied to Self Forcing's self-generated distribution. For chunk-wise AR: DMD achieves 84.31 Total Score (85.07 Quality, 81.28 Semantic), SiD achieves 84.07 (85.52 Quality, 78.24 Semantic), GAN achieves 83.88 (85.06 Quality, 79.16 Semantic). SiD trades semantic alignment for visual quality (highest Quality, lowest Semantic), while DMD balances both. For frame-wise AR: the pattern holds — DMD 84.26, SiD 83.54, GAN 83.27. The finding that all three losses work well (within ~0.5 Total Score points) when applied to the correct distribution, while none work well when applied to TF/DF distributions (TF+DMD: 82.32, DF+DMD: 82.76), is the key ablation result — it isolates the distributional alignment as the primary driver of performance rather than the specific divergence measure.
+
+**Chunk-wise vs. frame-wise autoregression:** The robustness of Self Forcing to increased AR steps is demonstrated by comparing chunk-wise and frame-wise variants. Self Forcing (DMD) scores 84.31 (chunk-wise) vs. 84.26 (frame-wise) — a negligible 0.05-point drop. In contrast, DF+DMD drops from 82.76 to 80.56 (−2.20), and the many-step baselines drop even more (DF: 82.95 → 77.24, −5.71; TF: 83.58 → 80.34, −3.24). This ablation is the most direct test of the exposure bias hypothesis: if exposure bias causes error accumulation over more AR steps, and Self Forcing mitigates exposure bias, then Self Forcing's frame-wise performance should degrade less than the baselines' — which is exactly what the data show. The near-identity of the chunk-wise and frame-wise scores further suggests that within the training context length, Self Forcing has effectively eliminated the train-test gap, making the number of AR steps irrelevant to final quality (within the budget of 81 steps / 5 seconds).
+
+**Gradient step configuration (1-step vs. multi-step backpropagation):** Figure 6 (left) shows the per-iteration time for Self Forcing with different numbers of gradient-tracked denoising steps. The 1-step configuration (backprop through only the final denoising step) takes ~4 seconds per iteration; the 4-step configuration (full backprop through all denoising steps) takes ~17–18 seconds — a 4.25× increase. Since iterative training time is reported as comparable to or better than TF/DF (Figure 6, right), and the stochastic step sampling ensures all steps receive supervision over time, the 1-step variant is the practical choice. The paper does not provide a quality comparison between 1-step and 4-step gradient variants, so we cannot assess whether the additional gradient steps improve quality enough to justify the cost — this is a missing ablation.
+
+**Real score network configuration (14B vs. 1.3B for SiD):** Table 3 notes that DMD uses the 14B Wan2.1 model as the real score network while SiD uses the 1.3B model. The quality difference is modest (84.31 DMD vs. 84.07 SiD for chunk-wise, a 0.24-point gap), suggesting that the larger teacher provides a small benefit but is not essential — SiD with a same-scale teacher achieves comparable results. This has practical implications for deployment: the 14B model is computationally expensive to run during training even in inference mode (no gradients), so SiD's reliance on the 1.3B teacher makes training more accessible.
+
+**Training data dependence (DMD/SiD data-free vs. GAN data requirements):** DMD and SiD variants are explicitly described as "data-free, capable of converting a pre-trained video diffusion model into an autoregressive model without any video training data" (Section 4). This is a remarkable and robust finding — the 14B (or 1.3B) frozen teacher encodes sufficient knowledge about the video distribution that no actual video clips are needed for post-training. GAN training, by contrast, used 70k videos generated by the 14B Wan2.1 model as real examples. Despite this data advantage, GAN underperforms data-free DMD (83.88 vs. 84.31), suggesting that the DMD/SiD score-based gradients are more effective training signals than adversarial gradients, at least for this task and scale. This is a practically significant finding: the best configuration (DMD) is also the one with the lowest data requirements, making Self Forcing accessible without large video datasets.
+
+**Rolling KV cache training strategy (with/without localized attention):** The qualitative ablation in Figure 7 (Appendix B) and the throughput measurements in Section 4 directly compare three approaches: KV recomputation (prior work), naive rolling KV cache, and rolling KV cache with localized attention training. The naive approach produces "severe visual artifacts" (Figure 7 shows examples of distorted frames during extrapolation), confirming that the distribution mismatch is a real and visible problem. The localized attention training — restricting the model's attention window during training so it cannot attend to the first chunk when denoising the last chunk — eliminates these artifacts while maintaining 16.1 FPS throughput. This ablation validates the specific mechanism by which Self Forcing enables long video generation: it's not just KV caching that matters, but training the model to operate without the special first-frame latent.
+
+**Classifier-free guidance weight (real score network):** Table 3 specifies a CFG weight of 3.0 for both DMD and SiD's real score networks. The paper does not ablate this value, but the choice is notable — 3.0 is relatively low compared to typical generation CFG weights (often 7–10), suggesting that during distillation, lower guidance produces better training signals. This is consistent with findings in image distillation literature (DMD, SiD) where the teacher is evaluated at moderate CFG to balance mode coverage and sample quality.
+
+**Many-step vs. few-step baselines:** Table 2 includes both many-step (50×2) and few-step (4-step) models for TF and DF. The many-step models use the standard denoising loss without distribution matching. Comparing many-step DF (82.95) to few-step DF+DMD (82.76), the few-step variant nearly matches the many-step variant for chunk-wise AR despite using 25× fewer denoising iterations. This validates the few-step diffusion backbone as a strong base for Self Forcing. For frame-wise AR, few-step DF+DMD (80.56) substantially outperforms many-step DF (77.24), suggesting that the DMD loss provides some robustness to error accumulation even when applied to the wrong (DF) distribution — but not enough to match Self Forcing (84.26).
+
+### Critical Assessment
+
+The experiments are well-designed for the paper's core claims but have several important limitations that qualify the strength and generality of the conclusions.
+
+**The claim "Self Forcing achieves state-of-the-art quality while enabling real-time generation" is well-supported for the specific models, resolutions, and hardware tested.** Table 1 shows Self Forcing achieving the highest VBench Total Score (84.31) at 17.0 FPS on a single H100 GPU — objectively impressive numbers. However, the comparison set, while diverse, is not exhaustive. Missing are several prominent models in this space: Sora [6], MovieGen [64], HunyuanVideo [39], CogVideoX [97], and Phenaki [80] are not benchmarked, presumably because they are not open-source or not available at the tested resolution. The claim of "state-of-the-art" should therefore be understood as "state-of-the-art among open-source models of ~1.3B parameters at 832×480 resolution" rather than an absolute performance claim. Additionally, VBench scores are known to have significant variance depending on prompt preprocessing — the paper uses LLM-rewritten prompts (Qwen2.5-7B-Instruct) and notes that baseline results are also reported with prompt rewriting when the model supports it, but this introduces a potential confound if different models benefit differently from prompt expansion.
+
+**The exposure bias mitigation claim is strongly supported by the controlled ablation in Table 2, but only for one base model and one dataset.** The pattern — Self Forcing maintaining near-identical quality between chunk-wise and frame-wise AR while baselines degrade 2.2–5.7 points — is exactly the signature of exposure bias mitigation. This is clean, controlled evidence. However, it is limited to Wan2.1-1.3B and VBench. Would a different base model (e.g., a larger Wan variant, HunyuanVideo, CogVideoX) show the same pattern? Does the frame-wise degradation in TF/DF depend on the base model's pretraining quality? These are open questions. The paper also does not evaluate on alternate benchmarks (EvalCrafter, FETV, VideoPhy) that might test different aspects of video quality — temporal physics, prompt relevance, long-range consistency — where exposure bias could manifest differently.
+
+**The CausVid diagnosis ("matching the wrong distribution") is supported by the DF+DMD vs. Self Forcing comparison in Table 2, but the mechanism is not directly measured.** The paper claims that CausVid's training outputs are drawn from the wrong distribution, but there is no direct distributional measurement — no FID, no IS, no density estimation comparing DF-generated videos to AR-generated videos. The evidence is indirect: DF+DMD (82.76) underperforms Self Forcing (84.31), and the gap is larger for frame-wise AR. This is consistent with the diagnosis but does not prove it. An informative missing experiment would be: train Self Forcing but evaluate the distributional distance between its training-time outputs and inference-time outputs (they should be identical by construction), versus the same measurement for DF and CausVid (where they should differ). Without such a measurement, alternative explanations for the quality gap cannot be ruled out — for example, Self Forcing may simply provide more diverse training contexts (self-generated rather than data-generated) that act as a form of data augmentation, improving robustness without necessarily "fixing a distribution mismatch."
+
+**The training efficiency claims (Figure 6) are strong but specific to the few-step, post-training regime.** The finding that Self Forcing converges faster in wall-clock time than TF/DF is convincing within the tested configuration (4-step diffusion, post-training from ODE-initialized weights, 64 H100 GPUs, DMD loss). However, the paper explicitly positions Self Forcing as a post-training algorithm — it is not claiming that Self Forcing would be efficient for pre-training from scratch, where the number of gradient updates would be orders of magnitude larger. The "parallel pre-training + sequential post-training" paradigm depends on the sequential phase being short relative to the parallel phase; this is true in the paper's setting (1.5 hours vs. the base model's pretraining cost), but the paper provides no analysis of how this ratio scales with model size or pretraining budget.
+
+**The rolling KV cache results are compelling but the evaluation is qualitative and throughput-focused, lacking quantitative quality metrics for extrapolated videos.** The paper reports 16.1 FPS throughput for long video generation, but does not provide VBench scores, FVD, or user study results for videos longer than the training context. The qualitative examples in Figure 7 show that the naive approach introduces "severe" artifacts and the proposed method avoids them, but the baseline for comparison is only the naive rolling cache — there is no comparison to the KV recomputation approach or to a bidirectional model generating the same long video. For a paper whose central motivation is enabling long, interactive video generation, the lack of quantitative long-generation evaluation (beyond throughput) is a significant gap. The paper acknowledges that "quality degradation remains observable when generating videos substantially longer than those seen during training" (Section 5), but does not quantify this degradation or characterize how it scales with extrapolation length.
+
+**The user study design uses single-annotator evaluations, which limits statistical reliability.** Each of the 1003 prompts is evaluated by a single user comparing two videos. With a single annotation per prompt, there is no measure of inter-annotator agreement, and the preference rates (e.g., 66.1% vs. CausVid) cannot be tested for statistical significance. While the sample size (1003 comparisons) is adequate for detecting moderate effects, the lack of multiple annotators per comparison means we cannot distinguish between robust preferences and noise. A standard practice in such studies is 3–5 annotators per comparison with majority voting or mean opinion scores; the paper's approach provides directional evidence but not statistically rigorous preference measurement.
+
+**Missing ablation: the effect of stochastic step sampling.** The paper proposes randomly sampling a denoising step `s` at which to compute the loss, but never ablates this against alternatives (e.g., always using the final step, always using the first step, using multiple steps). Since this is a core component of the gradient truncation strategy, understanding whether random sampling matters — and whether the uniform distribution is optimal — would strengthen the method's grounding. The convergence behavior in Figure 6 (right) suggests it works, but we don't know if it's necessary or merely convenient.
+
+**Missing baseline: Self Forcing without distribution matching (frame-wise denoising loss).** Table 2 compares Self Forcing+DMD/SiD/GAN against TF/DF with and without DMD, but does not include a Self Forcing variant trained with the standard frame-wise denoising loss. This would separate the effect of self-rollout training from the effect of distribution matching objectives. Would Self Forcing with a per-frame MSE loss still outperform TF/DF with per-frame MSE? If so, self-rollout is sufficient to mitigate exposure bias; if not, the distribution matching loss is essential. The paper implies both are necessary but does not isolate their contributions.
+
+**The resolution and duration are fixed.** All experiments use 832×480 resolution and 5-second videos (81 frames at 16 FPS). The paper does not evaluate at higher resolutions, longer durations, different frame rates, or different aspect ratios. For claims about "real-time streaming" and "live video streaming" applications, evaluating at standard streaming resolutions (720p, 1080p) and longer durations (30s, 60s) would be more compelling. The O(TL) complexity of the rolling KV cache suggests scaling should be favorable, but this is not empirically demonstrated.
+
+**The GAN variant's data requirement undercuts the "data-free" narrative.** While DMD and SiD are data-free, the GAN variant requires 70k videos generated by the 14B model. This is not a large dataset by modern standards, but it means the "data-free" property is specific to DMD/SiD, not a general property of Self Forcing. The paper could be clearer about this distinction.
+
+**Statistical rigor is generally lacking.** No confidence intervals, standard deviations, or significance tests are reported for any quantitative result — VBench scores, user study preferences, throughput measurements, or training times. For a paper making claims about state-of-the-art performance where differences between top models are small (84.31 vs. 84.26 for Wan2.1, a 0.05-point gap), statistical significance matters. Without error bars, we cannot distinguish between a genuine quality advantage and noise in the evaluation protocol. The VBench evaluation in particular can be sensitive to prompt phrasing and random seed; reporting results over multiple seeds and with standard deviations is standard practice that this paper omits.
 
 ## 6. Limitations and Trade-offs
-- Dependence on a strong base model and teacher components
-  - Self Forcing is a post-training stage; it assumes a capable pre-trained diffusion backbone. DMD/SiD moreover leverage a pre-trained “real score” network (Wan2.1-14B or 1.3B) (Appendix A Table 3), which may not always be available or aligned with the deployment domain.
 
-- Long-horizon limits
-  - The method mitigates error accumulation within the training context, but quality still degrades on videos “substantially longer than those seen during training” (Section 5, Limitation).
+### No Quantitative Evaluation of Long-Video Quality Beyond Training Context Length
 
-- Gradient truncation trade-off
-  - Truncating gradients to the final step per frame and detaching across frames reduces memory and enables speed, but may limit learning of very long-range temporal dependencies (Section 5).
+**The assumption or constraint.** Self Forcing is trained on videos with a fixed context length (5 seconds, 81 frames at 16 FPS for the frame-wise variant; 27 chunks for the chunk-wise variant). The paper explicitly acknowledges in Section 5 (Discussion) that "quality degradation remains observable when generating videos substantially longer than those seen during training." The rolling KV cache mechanism (Section 3.4, Algorithm 2) enables efficient extrapolation to arbitrary lengths, and the localized attention training prevents the specific first-frame distribution mismatch artifact, but the model's parameters are never optimized for generating frame 200 conditioned on frame 150 — it has only seen conditioning chains up to the training length.
 
-- Objective- and compute-related considerations
-  - GAN training requires a generated dataset (70k videos) and careful regularization; DMD/SiD avoid real data but rely on teacher scores and involve training an auxiliary “fake score” head (Appendix A).
-  - Few-step diffusion is an approximation; while effective here, extremely high-fidelity demands might benefit from more denoising steps, at the cost of speed.
+**The consequence.** A practitioner deploying Self Forcing for long-form video generation (e.g., 30-second clips, minute-long streams) has no quantitative evidence about how quickly quality degrades beyond the training horizon. The paper reports throughput for 10-second extrapolation (16.1 FPS) and shows qualitative examples where "severe visual artifacts" are avoided (Figure 7), but provides no VBench scores, FVD, user preference rates, or any quantitative quality metric for extrapolated frames. The error accumulation that Self Forcing mitigates *within* the training context may re-emerge *beyond* it — the model has learned to handle its own imperfect context, but only imperfect context of a kind it encountered during training. When the KV cache contains frames entirely unlike those seen in training (e.g., frames generated 10+ seconds into a sequence, which may have drifted from the training distribution despite Self Forcing's mitigation), the model is operating out-of-distribution once again. The problem Self Forcing solves for short videos may recur for long ones, just at a longer timescale.
 
-- Rolling KV cache assumptions
-  - The local-attention training fix is tailored to the statistical mismatch of the first latent; other datasets or VAEs might require different adjustments (Section 3.4; Appendix B).
+**What evidence exists in the paper.** The paper provides only qualitative evidence (Figure 7) and throughput measurements (16.1 FPS) for extrapolation. It does not report any quantitative quality metric for videos longer than 5 seconds. Section 5 explicitly calls this a limitation: "Future work could explore both improved extrapolation techniques and inherently recurrent architectures like state-space models that better balance memory efficiency with long-context modeling."
+
+**Mitigation status.** Not addressed. The paper identifies this as a future direction but provides no mechanism for it. A practitioner would need to empirically characterize the degradation curve for their specific use case — at what frame count does quality drop below an acceptable threshold? — with no guidance from the paper.
+
+---
+
+### Gradient Truncation Prevents Learning of Long-Range Temporal Dependencies
+
+**The assumption or constraint.** Self Forcing's gradient truncation strategy (Section 3.2, detailed in Algorithm 1) detaches gradients at two boundaries: (a) gradients from the KV cache do not flow backward to improve previous frames' generation, and (b) for each frame, gradients flow only through a single randomly-sampled denoising step `s`. The paper states this tradeoff explicitly in Section 5: "our gradient truncation strategies — while necessary for memory efficiency — may limit the model's ability to learn long-range dependencies." The model receives no direct gradient signal connecting an error in frame 20 to the parameters that generated frame 5; it receives only the aggregate, holistic distribution-matching loss on the complete sequence.
+
+**The consequence.** The model cannot learn that a particular type of error in early frames consistently causes failures in later frames, because there is no gradient path connecting those outcomes. The only learning signal about temporal interactions is the holistic loss's scalar evaluation of the complete video. If the loss indicates the video is unrealistic, it cannot attribute that unrealism to frame 7's blurry background rather than frame 15's unnatural motion — all frames receive gradient updates based on the same global signal. This means the model may learn to generate individually plausible frames that collectively form an implausible sequence, so long as the aggregate video-level features match the training distribution's statistics. For applications requiring precise long-range consistency — a character maintaining a specific expression through a conversation, an object persisting with stable properties across a scene change, a physical constraint that depends on events separated by many frames — this truncation may be a fundamental limitation that no amount of additional training can overcome.
+
+**What evidence exists in the paper.** There is no ablation comparing gradient truncation to full backpropagation — the 4-step gradient variant in Figure 6 (left) is measured for throughput only, not quality. We do not know whether full BPTT would improve long-range consistency, and if so, by how much, for what computational cost. The near-identity of chunk-wise and frame-wise Self Forcing quality in Table 2 (84.31 vs. 84.26) suggests that within the training context length, truncation does not hurt — but this says nothing about dependencies near the boundary of the context window, which would be most affected by the truncation.
+
+**Mitigation status.** Not addressed. The paper frames this as an inherent tradeoff — memory efficiency vs. credit assignment — and does not propose mechanisms to recover long-range gradient signals without the memory cost of full BPTT. Future work on "inherently recurrent architectures like state-space models" (Section 5) is suggested as a path toward resolving this, but that represents a different model family, not an extension of the current approach.
+
+---
+
+### Single Base Model and Single Benchmark Limit Generality Claims
+
+**The assumption or constraint.** All experiments in the paper use exactly one base model (Wan2.1-T2V-1.3B) and one evaluation benchmark (VBench, with supplementary user study on MovieGenBench prompts). The paper states this explicitly in the Implementation paragraph (Section 4): "We implement Self Forcing with Wan2.1-T2V-1.3B." The broader applicability claims — that Self Forcing is "a general principle applicable to other autoregressive diffusion models in any continuous-data domain" (Section 5) — are extrapolated from this single configuration with no empirical support from other model families, architectures, or data modalities.
+
+**The consequence.** Several aspects of Self Forcing's success may be specific to Wan2.1-1.3B and would not transfer to other base models:
+
+- **The 4-step diffusion configuration works because Wan2.1 was trained with Flow Matching**, which is known to support few-step generation more naturally than standard DDPM formulations. A base model trained with a standard diffusion loss and different noise schedule might require more denoising steps, increasing the sequential cost of Self Forcing's autoregressive rollout proportionally.
+
+- **The causal attention fine-tuning stage** (16k ODE solution pairs from the base model) relies on Wan2.1 generating high-quality ODE trajectories. A base model with less stable ODE dynamics might produce poor fine-tuning data, making the initialization for Self Forcing weaker.
+
+- **The VBench evaluation** emphasizes semantic alignment and frame-wise quality, which aligns with Self Forcing's strengths (mitigating exposure bias that causes temporal quality degradation). On benchmarks that emphasize different aspects — motion realism (VideoPhy), long-range narrative coherence (StoryBench), or fine-grained temporal dynamics (Something-Something V2) — the relative ranking of Self Forcing vs. baselines might differ.
+
+- **The DMD/SiD data-free property** depends on a strong pretrained score network. Wan2.1-14B is a high-quality model; for a domain where no such large pretrained model exists, the data-free advantage disappears and the GAN variant (which requires training data) becomes necessary, with its different computational and stability profile.
+
+The paper acknowledges "we believe this model is representative" (Section 5, though this specific phrasing appears in the paper's discussion of generality) but provides no evidence for this belief beyond the Wan2.1 results.
+
+**What evidence exists in the paper.** None. There are no experiments with alternative base models, alternative benchmark suites, or alternative data modalities. The paper's generality claims are entirely extrapolative.
+
+**Mitigation status.** Not addressed. The paper does not suggest specific experiments to validate cross-model or cross-domain generality, instead making the conceptual argument that "our framework is general and can be applied to other sequence domains, especially where the data is continuous" (Section 5). A practitioner considering Self Forcing for a non-Wan2.1 model or non-video domain would need to replicate the entire experimental pipeline — ODE initialization, Self Forcing post-training, and evaluation — with no guidance on whether the efficiency and quality advantages will persist.
+
+---
+
+### Difficulty Estimation for Rollout Length Is Absent — Uniform Training Budget May Be Suboptimal
+
+**The assumption or constraint.** Self Forcing trains all videos with the same generation procedure: the same number of frames `N`, the same number of denoising steps `T=4` for all frames, and the same stochastic step sampling distribution (uniform over `{1,...,T}`). The paper does not estimate or condition on any notion of "video difficulty" — the autoregressive rollout budget is uniform across all training samples and all prompts at inference. This contrasts sharply with the compute-optimal test-time scaling literature (e.g., the companion paper analyzed previously in this series) where difficulty-adaptive allocation yields `~4×` efficiency gains.
+
+**The consequence.** For simple videos (static backgrounds, minimal motion, short prompts), `T=4` denoising steps and `N=27` chunks (chunk-wise) likely provide more computation than needed — the model could produce acceptable quality with fewer steps, freeing compute budget for other purposes. For complex videos (rapid motion, scene changes, detailed multi-object interactions), the fixed budget may be insufficient — the model might benefit from more denoising steps per frame or a longer context window. Self Forcing's training provides no mechanism for the model to learn *when* it needs more computation; it must use the same budget for all videos, leaving efficiency on the table for easy cases and potentially under-serving hard cases. This is particularly relevant for the real-time streaming use case: a system that could dynamically allocate fewer resources to easy frames (e.g., motionless segments) and more to complex ones would achieve lower average latency or higher average quality at the same compute budget.
+
+**What evidence exists in the paper.** None. The paper does not analyze whether generated video quality varies with prompt complexity, whether certain videos would benefit from more or fewer denoising steps, or whether an adaptive budget allocation policy would improve the quality-efficiency Pareto frontier. The VBench evaluation reports aggregate scores over all test prompts without difficulty stratification.
+
+**Mitigation status.** Not addressed and not discussed. The paper does not mention difficulty estimation, adaptive compute allocation, or variable-length rollout as directions for future work. This is a notable gap given that the efficiency gains from adaptive allocation are well-established in the inference-time compute literature, and Self Forcing's autoregressive structure naturally supports variable per-frame computation (unlike bidirectional models where all frames are generated simultaneously).
+
+---
+
+### The `~14×` Larger Teacher Model Comparison Absent in the Main Evaluation
+
+**The assumption or constraint.** The paper uses the ~14× larger Wan2.1-T2V-14B model in two limited capacities: (1) as the frozen real score network for the DMD loss (Table 3), and (2) to generate 70k videos as training data for the GAN variant (Appendix A). It does not include the 14B model as a generation-quality baseline in Table 1 or the user study. The FLOPs-matched comparison framework that could establish whether Self Forcing's 1.3B model + inference-time autoregressive computation outperforms a ~14× larger model with greedy decoding (analogous to the test-time compute vs. pretraining analysis in the companion paper) is entirely absent.
+
+**The consequence.** A central motivation of the paper is that autoregressive models can achieve bidirectional-scale quality at a fraction of the latency, making real-time applications feasible. But the relevant comparison is not just against Wan2.1-1.3B (same model size, worse latency) — it is against the *best available* bidirectional model of any size, to establish the quality ceiling. If Wan2.1-14B achieves substantially higher VBench scores than Self Forcing's 1.3B model (as is likely, given scaling trends), then the quality gap between what is *possible* (large bidirectional) and what is *real-time* (small autoregressive) remains large, even if Self Forcing closes the gap relative to the 1.3B bidirectional model. The paper's framing — "matching or surpassing the generation quality of significantly slower bidirectional diffusion models" (abstract) — is technically correct for the 1.3B comparison but may be misleading about the absolute quality ceiling. A practitioner choosing between deploying a fast 1.3B model and a slow 14B model (perhaps with model parallelism) needs to know whether the quality difference justifies the latency cost; the paper provides no data for this decision.
+
+**What evidence exists in the paper.** None. The 14B model's generation quality and latency are not reported. The paper does not discuss scaling behavior, FLOPs-matched comparisons between model sizes, or whether Self Forcing's benefits would transfer to larger base models (e.g., Wan2.1-14B fine-tuned with causal attention and Self Forcing post-training).
+
+**Mitigation status.** Not addressed. The paper's comparison set (Table 1) focuses on models of similar parameter count (0.6B–4.5B), and the largest model evaluated is MAGI-1 at 4.5B. The 14B teacher is treated as a training resource, not a generation baseline. A natural experiment — train Self Forcing on Wan2.1-14B and compare to bidirectional Wan2.1-14B — is not performed, leaving open the question of whether Self Forcing's advantages persist at larger scales or whether larger models exhibit different exposure bias characteristics.
 
 ## 7. Implications and Future Directions
 - Shift in training paradigm for sequential generative models

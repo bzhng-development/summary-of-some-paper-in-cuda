@@ -8,182 +8,1091 @@ This comprehensive survey unifies the fast-evolving domain of long-context langu
 
 ---
 
-## 1. Executive Summary (2–3 sentences)
-This survey organizes the rapidly growing field of long‑context language modeling (LCLM) into a single, coherent framework spanning data, architectures, workflows, infrastructure, evaluation, analysis, applications, and future directions. It matters because modern tasks (long reasoning, agents, retrieval, multimodal understanding) increasingly require models that process hundreds of thousands to millions of tokens efficiently and accurately, yet real models’ “effective” context windows often lag far behind their advertised limits (Table 9).
+## 1. Executive Summary
+
+This survey presents a comprehensive taxonomy of Long Context Language Models (LCLMs), organizing the field around three core research questions: how to *obtain* effective and efficient LCLMs, how to *train and deploy* them, and how to *evaluate and analyze* them. The paper systematically catalogs approaches across data strategies (pre-training and post-training curation), architecture designs (position embeddings, attention mechanisms including transformer-based, linear-complexity, and hybrid architectures), workflow designs (prompt compression, memory-based methods, RAG, and agent-based methods), and AI infrastructure optimizations (training I/O and inference memory management). A central analytical finding is the documented gap between claimed and effective context length—codified as the **"lost in the middle" phenomenon** (where performance degrades for information positioned away from sequence boundaries)—with empirical evidence showing that most models achieve effective context lengths below 50% of their claimed support, while perplexity alone fails to correlate with downstream long-context performance. The survey further establishes that test-time scaling paradigms unlocked by extended context windows—such as o1-like long chain-of-thought reasoning and many-shot in-context learning—fundamentally depend on advances in efficient architecture design and robust verifier training, but that improvements remain bounded by the base model's inherent capability on the hardest problems.
 
 ## 2. Context and Motivation
-- Problem and gap
-  - The core problem is how to make large language models handle very long inputs (from 128k up to 10M tokens) both effectively (they actually use the information) and efficiently (they can be trained and served at reasonable cost). This encompasses:
-    - Data engineering for long sequences (§2).
-    - Position and attention mechanisms that length‑generalize (§3.1–3.2).
-    - External workflows (compression, memory, RAG, agents) that reduce the burden on the base model (§4).
-    - Training/inference infrastructure to overcome I/O, memory, and communication bottlenecks (§5).
-    - Reliable evaluation of both long‑context comprehension and long‑form generation (§6).
-  - A critical finding motivating careful evaluation: many models’ “effective context length” is far shorter than their claimed support (Table 9 in §7.1.1).
 
-- Why it is important
-  - Real‑world and research impact: Long contexts enable test‑time scaling and “o1‑like” long reasoning, better in‑context learning, stronger agent workflows, better retrieval and multimodal understanding (Introduction; Figure 1).
-  - Practically, long contexts can compress hours of human reading into minutes of computation (Introduction).
+### The Core Problem: Scaling Context Windows Alone Is Not Enough
 
-- Prior approaches and their limitations
-  - Early LMs processed only short sequences (few hundred to few thousand tokens). Even with recent 128k–10M contexts, models struggle with:
-    - Using the middle of the context (“lost in the middle”) and achieving stable length extrapolation (§7.1.1, §3.1.2).
-    - Quadratic attention cost and KV‑cache explosion, making training/inference infeasible without algorithmic and systems optimizations (§3.2, §5).
-  - Existing surveys typically focus on parts of this problem (architecture or evaluation). Table 1 shows that prior surveys cover subsets, whereas this work spans Data, Architecture, Workflow, Infrastructure, Evaluation, and Analysis.
+The fundamental challenge this survey addresses is not simply that language models need longer context windows—it is that the field has been pursuing ever-larger context lengths without a coherent understanding of whether those gains translate into genuine capability improvements, how to achieve them efficiently, or how to measure them reliably. The paper opens with a striking historical framing (Section 1, Figure 1): from librarians manually cataloging manuscripts in 300 BCE Alexandria to scholars painstakingly reviewing documents in the 1900s, humanity has always been bottlenecked by biological constraints on serial, localized reading. Language models promise to compress what once took "60 hours of human reading into minutes of computational processing," processing Tolstoyan-scale narratives (560K words) in a single pass. But this promise has outpaced our systematic understanding of how to build, deploy, and evaluate these systems.
 
-- How this survey positions itself
-  - The paper provides a full taxonomy across the LCLM lifecycle (Figure 2) and a unifying evaluation paradigm for long‑context comprehension (Figure 7), plus curated benchmarks (Tables 6–7) and cross‑cutting infrastructure guidance (§5). It also surfaces cross‑study insights (e.g., effective vs. claimed length; perplexity’s role; RAG vs. LCLM) in §7.
+The paper identifies three interconnected research questions that collectively define the gap:
+
+- **RQ1**: *How to obtain effective and efficient LCLMs?* This encompasses data strategies, architecture designs, and workflow approaches—the "recipe" problem of constructing models that genuinely leverage long contexts rather than just supporting them on paper.
+
+- **RQ2**: *How to train and deploy LCLMs efficiently?* The infrastructure challenges are not incidental but central: the quadratic complexity of standard attention creates computational and memory bottlenecks that make naive scaling infeasible, requiring coordinated advances across hardware, systems, and algorithms.
+
+- **RQ3**: *How to evaluate and analyze LCLMs comprehensively?* Without reliable benchmarks and analytical frameworks, progress claims are unverifiable. The paper argues this is particularly acute for long-context models, where existing metrics (perplexity, generic benchmarks) systematically fail to capture real capabilities.
+
+Critically, the survey argues these three questions are deeply interdependent. You cannot design a better architecture (RQ1) without understanding what the infrastructure can support (RQ2), and you cannot validate either without robust evaluation (RQ3). The paper positions itself as the first comprehensive survey to address all three simultaneously, noting that prior surveys have focused on isolated aspects (Table 1): Huang et al. [204] addressed only architecture, Zhao et al. [682] covered position embeddings specifically, Li et al. [304] focused on prompt compression, and Dong et al. [110] examined transformer-based designs. The field lacked a "unified framework" connecting data, architecture, infrastructure, and evaluation.
+
+### Why This Problem Matters Now
+
+The paper articulates several converging factors that make long-context modeling not just a research curiosity but a critical practical imperative:
+
+**Test-time scaling fundamentally depends on context capacity.** Perhaps the most significant development motivating this survey is the recognition that extended context windows enable *qualitatively new capabilities*, not just quantitative improvements. The paper explicitly frames test-time scaling paradigms—o1-like long chain-of-thought reasoning, where models "explore, reflect, backtrack, and summarize within a single context"—as fundamentally dependent on having sufficient context space to hold extended reasoning traces. Similarly, many-shot in-context learning with hundreds or thousands of examples, complex agent workflows with rich interaction histories, and multimodal processing of long videos all require context windows far beyond typical 4K-8K limits. This connects directly to the growing recognition that inference-time compute can substitute for pretraining compute in certain regimes—but only if the context window provides sufficient "workspace."
+
+**The gap between claimed and effective context length is a real deployment risk.** Models increasingly advertise support for 128K, 1M, even 10M tokens (Section 7.1.1, Table 9). Yet the paper presents evidence from systematic evaluations like RULER [194] showing that for most models, "the effective context length rarely exceeds half of the claimed length." For instance, GPT-4 at 128K claimed achieves only 64K effective (50%), while Command-R-plus (104B) at 128K achieves 32K (25%), and LWM (7B) at 1M achieves less than 4K effective (under 4%). This is not a theoretical concern—it means applications relying on models to process full documents, codebases, or conversation histories may silently fail when critical information falls outside the *actual* processing capacity while remaining within the *advertised* window. The paper argues this gap underscores why "alongside pursuing ever-larger context window sizes, improving model performance within already supported context lengths is equally important."
+
+**Training and inference costs scale superlinearly with context.** The self-attention mechanism's quadratic complexity ($O(n^2)$ in sequence length $n$) means that expanding context from 4K to 128K increases computational cost by roughly 1000×, all else being equal. For deployed systems, the key-value (KV) cache memory becomes the dominant bottleneck—the paper notes (Section 3.2.1) that "as the sequence length grows, the KV cache imposes expensive memory overhead," and Section 5 documents that for models like Jamba 1.5 at 256K context, the KV cache alone requires 9GB, while comparable transformer models require 80-88GB. This makes efficient long-context deployment not just a performance optimization but an economic necessity. The infrastructure section (5.1-5.2) catalogs an extensive array of techniques—from quantization and memory management to prefilling-decoding disaggregation—that have emerged precisely because naive scaling is infeasible.
+
+**Existing evaluation frameworks are systematically misleading.** The paper devotes substantial attention (Section 6.1.3, 7.1.2) to the inadequacy of current evaluation practices. Perplexity on long contexts, long used as a proxy for language modeling quality, "fails to correlate with long context comprehension capabilities" (Section 7.1.2). The popular Needle-in-a-Haystack (NIAH) test, while useful for measuring retrieval, captures only one narrow capability and can be gamed. Real-world tasks like question answering, summarization, and repository-level code processing demand multiple interacting capabilities (retrieval, aggregation, reasoning), and models that excel at synthetic benchmarks may fail on these integrated challenges. The paper argues that this evaluation gap has allowed claims of progress that don't translate to practical settings, creating a need for more rigorous, multi-dimensional evaluation frameworks.
+
+### Where Prior Approaches Fall Short
+
+The survey systematically catalogs limitations across the entire LCLM pipeline:
+
+**Data Strategy Limitations (Section 2).** Prior data curation approaches were designed for short-context training (4K-8K tokens) and do not account for the unique characteristics of long-range dependencies. The paper identifies three specific gaps:
+
+- *Filtering strategies are not adapted for long-range dependency*. Heuristic rules for data quality (removing short entries, deduplication) and semantic deduplication methods like SemDeDup [3] were developed for standard-length data and "primarily address standard pre-training datasets, typically limited to 4,000 or 8,000 tokens" (Section 2.1.1). Only recently have specialized criteria emerged—Longwanjuan [333] evaluates coherence, cohesion, and complexity of long texts, while LongAttn [576] uses self-attention patterns to quantify long-range dependencies—but these remain nascent.
+
+- *Data mixture strategies for long contexts are poorly understood*. The composition of pre-training data significantly impacts performance, but prior work on data mixing laws [326, 629] focused exclusively on short-context regimes. The paper notes recent findings that "when scaling up context length, it is crucial to oversample lengthy sequences while maintaining the original domain diversity" [132] and that "incorporating code repositories and long books as long context sources" [140] is vital—but these are early empirical observations, not systematic laws.
+
+- *Post-training alignment for long contexts lags behind short-context*. While preference optimization methods like DPO [429] and its variants (SimPO, ORPO, TPO) have advanced short-context alignment, "long context preference optimization is ignored" (Section 2.2.2), with only very recent efforts like LongReward [654] and LOGO [503] beginning to address the gap.
+
+**Architecture Limitations (Section 3).** The paper traces the evolution of architectural approaches and identifies persistent tradeoffs:
+
+- *Position embeddings face fundamental extrapolation challenges*. Models trained on fixed context lengths (e.g., 4K) cannot natively process longer sequences because position encodings go out-of-distribution. The paper documents that methods like position interpolation (PI) [63] and frequency-scaling approaches (NTK, YaRN) [408] can extend context with minimal fine-tuning, but all exhibit degradation as the scaling factor increases. The "critical rotation base" analysis [332] reveals that "models' perplexity explodes on texts longer than" the critical wavelength, indicating a hard theoretical limit that current methods do not overcome.
+
+- *The quadratic attention bottleneck remains unsolved*. While numerous approaches have been proposed—sparse attention (Longformer [27], MoA [131]), linear-complexity architectures (Mamba [160], linear attention [245]), and hybrid designs (Jamba [309], MiniMax-01 [373])—each involves tradeoffs. The paper notes that SSM-based models "fall short compared to Transformer models in long context tasks, such as in-context learning and long context retrieval" [402, 530], while adding standard attention layers back into hybrid architectures helps recover these capabilities at the cost of some efficiency. The field has converged on ratios of approximately 6:1 or 7:1 (linear-complexity to full attention layers) across multiple independent efforts, suggesting an empirical sweet spot but not a principled optimum.
+
+- *Training-free sparse attention methods risk permanent information loss*. While approaches like H2O [676] and SnapKV [301] reduce KV cache size at inference time by evicting tokens based on attention scores, the paper notes that "many approaches suffer from permanent information loss due to aggressive token pruning" (Section 3.2.1).
+
+**Workflow Limitations (Section 4).** External augmentation approaches—prompt compression, memory-based methods, RAG, agent-based systems—offer alternatives to architectural modification but have their own shortcomings:
+
+- *Prompt compression trades information for efficiency*. Hard compression methods like LLMLingua [221] can achieve "up to 20x prompt compression while preserving semantic integrity," but the paper acknowledges that all compression involves information loss, and the optimal compression ratio is task-dependent and difficult to determine a priori.
+
+- *Memory-based methods introduce retrieval latency and consistency challenges*. While external memory modules (LongMem [553], MemoryBank [693]) can extend effective context, they face "practical challenges including retrieval latency, inconsistencies between memorized and live contexts, and the complexity of memory updating" (Section 4.2).
+
+- *RAG vs. LCLMs is an ongoing debate with complementary strengths*. The paper notes that while LCLMs "deliver superior average performance compared to RAG" when computational resources are ample [269, 303], they present "significant efficiency limitations." This has led to hybrid approaches like Self-Route [303] that dynamically route queries based on self-assessed difficulty.
+
+**Infrastructure Limitations (Section 5).** The paper identifies GPU memory as the primary bottleneck: "Limited GPU memory, in particular, renders most common training optimizations ineffective" for long contexts, with "parameters, gradients, optimizer states, and especially activations (proportional to sequence length) consuming substantial resources" (Section 5.1.2). For inference, the KV cache for long contexts can exceed GPU High Bandwidth Memory capacity, necessitating offloading strategies that introduce PCIe bandwidth bottlenecks.
+
+**Evaluation Limitations (Section 6-7).** Beyond the perplexity inadequacy, the paper identifies:
+
+- *Synthetic benchmarks like NIAH do not guarantee downstream competence*. Research indicates that "excellence in synthetic tasks alone does not guarantee downstream competence" (Section 6.1.3), requiring comprehensive benchmarks that incorporate specific real-world tasks.
+
+- *Long-form generation evaluation remains primitive*. Unlike comprehension, where automated metrics can be designed, "evaluating the performance of long-form generation presents significant challenges" (Section 6.2.3), with "substantial difficulties" for automated metrics and prohibitive cost for human evaluation.
+
+- *The "lost in the middle" phenomenon is pervasive*. As noted in the executive summary, models exhibit a "distinctive U-shaped performance curve" [324] where information at the beginning or end is processed well but middle-positioned information is poorly retrieved or utilized.
+
+### How This Paper Positions Itself
+
+The survey explicitly positions itself through several key stances:
+
+**As a unifying framework, not a method contribution.** Unlike research papers proposing new architectures or training recipes, this survey's contribution is organizational and synthetic. It structures a fragmented literature into a coherent taxonomy organized around the three RQs, enabling researchers and practitioners to locate specific approaches within a broader landscape and understand how different design choices interact. The paper explicitly contrasts itself with prior surveys in Table 1, noting that existing surveys cover only specific topics (architecture, position embeddings, prompt compression) while "this comprehensive survey provides an in-depth exploration of the rapidly evolving landscape of LCLMs" across all dimensions.
+
+**As a diagnostic tool for the gap between claimed and actual capability.** The survey does not merely catalog methods—it uses empirical evidence to challenge prevailing narratives. The extensive treatment of the "false promise of support context length" (Section 7.1.1), the documentation of perplexity's failure as a proxy metric (7.1.2), and the systematic comparison of RAG versus LCLMs (7.1.3) collectively serve to ground claims of progress in measurable reality. This diagnostic function is perhaps the survey's most distinctive positioning: it provides the field with tools to assess whether a new context-extension method genuinely improves effective processing or merely inflates the supported token count.
+
+**As a bridge between research communities.** The paper's comprehensive scope—spanning data engineering, model architecture, systems infrastructure, evaluation methodology, and mechanistic interpretability—reflects a recognition that long-context modeling is inherently multi-disciplinary. Algorithm researchers need to understand hardware constraints, and infrastructure builders need to understand evaluation requirements. The survey explicitly aims to serve "both researchers and engineers" (Abstract) and includes practical guidance for practitioners making deployment decisions (Section 8 on applications, Section 9 on future directions).
+
+**As a call for more rigorous evaluation.** Throughout the paper, there is an implicit argument that the field's progress has been partly illusory because evaluation has not kept pace with claimed capability expansions. The detailed taxonomy of evaluation paradigms (Section 6.1.1, Figure 7), distinguishing between retrieval, aggregation, reasoning, and real-world adaptation, provides a vocabulary for more precise capability assessment. The emphasis on long-form generation (Section 6.2) highlights a relatively neglected area where even basic evaluation methodology is contested. The survey's future directions (Section 9.4) explicitly call for "more reliable evaluation frameworks" and "coarse-to-fine evaluation" approaches, positioning current evaluation practices as a key bottleneck to genuine progress.
+
+**As a foundation for scaling test-time compute.** By connecting context window expansion to test-time scaling paradigms (o1-like reasoning, long in-context learning), the survey positions long-context modeling not as an end in itself but as an enabling infrastructure for more capable AI systems. The framing in the introduction—that "these extensive context lengths provide sufficient space for test-time scaling"—suggests that context capacity is the workspace within which more sophisticated reasoning, planning, and learning can occur. This argument implicitly raises the stakes: failures in long-context modeling are not just performance issues but capability ceilings that constrain the next generation of AI systems.
 
 ## 3. Technical Approach
-Because this is a survey, the “methodology” is a structured technical map of how to build, train, deploy, and evaluate LCLMs. Below is a step‑by‑step reconstruction of the design space (with how/why explanations and paper references).
 
-### 3.1 Data strategies for long contexts (§2; Figure 3; Table 2)
-- Pre‑training
-  - Data filtering for long‑range dependencies (e.g., LongWanjuan scores coherence, cohesion, complexity; LongAttn selects samples using attention patterns) (§2.1.1).
-  - Data mixture: balance long vs. short documents and domains. Empirical lessons include upsampling long sequences while preserving domain diversity (e.g., “GrowLength”, “ProLong”) (§2.1.2).
-  - Data synthesis: stitch semantically related texts into long contexts using packing, clustering, or query‑centric grouping (ICP, SPLICE, Quest) (§2.1.3).
-- Post‑training (instruction tuning and preference optimization)
-  - Long‑context SFT data: design tasks that defeat “lost in the middle,” multi‑hop reasoning, and segment integration (e.g., Ziya‑Reader, FILM, MIMG) (§2.2.2).
-  - Long‑context preferences: reward/preference data for long comprehension/generation (LongReward, LOGO, LongDPO) (§2.2.2).
+### 3.1 Reader Orientation
 
-Why this matters: long contexts are rare and noisy on the web; without targeted selection/synthesis, training can fail to teach long‑range reasoning.
+This paper is a **comprehensive literature survey** — it does not propose a single new system but rather organizes and taxonomizes the entire landscape of Long Context Language Models (LCLMs) into a coherent framework. The "system" being described is the *collection of design choices, training recipes, architectural patterns, and infrastructure strategies* that researchers and engineers use to build, deploy, and evaluate language models capable of processing sequences exceeding thousands or even millions of tokens. The core idea is that building effective LCLMs requires coordinated decisions across three interdependent dimensions: how you obtain the model (data + architecture + workflow), how you run it efficiently (infrastructure), and how you verify it works (evaluation + analysis). Prior work treated these dimensions in isolation; this survey argues they must be understood together because choices in one dimension constrain or enable choices in others.
 
-### 3.2 Architectures (§3; Figure 4)
-#### 3.2.1 Positional embeddings and length extrapolation (§3.1)
-- What is special: to generalize beyond training length, position encodings must avoid out‑of‑distribution (OOD) positions (§3.1.2).
-- Representative mechanisms
-  - `RoPE` (Rotary Position Embedding): rotates query/key vectors so attention depends on relative position (Eq. (2) and (3)). This is the de facto default in LLMs (§3.1.1).
-  - Length extrapolation methods (§3.1.2):
-    - Position reorganization (SelfExtend, DCA, ReRoPE, String) reuse trained position ranges by grouping/dilating relative indices—often training‑free.
-    - Position interpolation (“PI”): scale positions (map `n` to `n/α`) so all positions fall into the training range. Variants such as `NTK` and `YaRN` scale frequencies by dimension to keep high‑frequency positional signals intact; see Figure 10 for wavelength behavior.
-    - Hierarchical encodings (BiPE, HiRoPE): compose intra‑segment and inter‑segment positions to extend representable range.
-    - Position simulation (PoSE, CREAM, LongRecipe, SkipAlign): randomly jump within blocks so short windows “simulate” longer distances during training—decoupling train and inference lengths.
-- Why these choices: simple linear PI degrades high‑frequency cues; NTK/YaRN preserve them (§3.1.2; Figure 10). Training‑free methods are attractive for practical deployment.
+### 3.2 Big-Picture Architecture (Diagram in Words)
 
-#### 3.2.2 Attention and sequence models (§3.2; Figure 5)
-- Transformer‑based designs (§3.2.1)
-  - Sparse attention reduces quadratic cost:
-    - Fixed windows and “attention sinks” (StreamingLLM) keep a small moving KV window while pinning early tokens that attract attention (§3.2.1, “Sparse Attention”).
-    - Dynamic eviction (H2O, Scissorhands, CORM, SnapKV, FastGen, MInference, Quest) selects tokens to keep per‑query.
-    - Layer/head‑aware budgeting (PyramidKV, LazyLLM, DynamicKV, HeadKV, LONGHEADS) allocates KV resources where they matter.
-  - Hierarchical attention (HAN, Hi‑Transformer, ERNIE‑SPARSE): build sentence/document levels to fuse local and global cues (§3.2.1).
-  - Recurrent/Memory transformers (Transformer‑XL, Memformer, Compressive Transformer, RMT, Infinite Attention): add segment recurrence or compressive memory to keep global context with reduced cost (§3.2.1).
-  - KV‑cache engineering: `GQA`, `MQA`, and `MLA` compress keys/values or share them (§3.2.1).
-- Linear‑complexity architectures (§3.2.2)
-  - State Space Models (SSMs): model sequences by evolving a hidden state via differential/difference equations (Eq. (5)–(8)). `Mamba` makes SSM parameters input‑dependent (Eq. (9)) and uses scan algorithms for GPU‑friendly throughput.
-  - Linear attention families (Linear Transformer, Performer, RetNet, Lightning Attention‑2): approximate or restructure softmax attention to linearize cost.
-- Hybrid architectures (§3.2.3)
-  - Layer‑wise mixing: interleave full attention and linear/SSM layers. Notable patterns include Jamba’s ~7:1 Mamba:Transformer ratio and Command‑R/Gemma sliding‑window variants.
-  - Prefill–decode split: e.g., `YOCO` computes a single global KV cache during prefilling and reuses it in the cross‑decoder; `GoldFinch` compresses caches by 756–2550× for decode.
-  - Head‑wise mixing: run attention heads and SSM heads in parallel in the same layer (e.g., Hymba, Samba).
-- Why these choices: pure SSM models can underperform on retrieval/ICL; interleaving a small fraction of full attention layers restores those capabilities while keeping linear behavior most of the time (§3.2.3).
+The survey organizes the LCLM landscape into five interacting subsystems, each with a distinct responsibility in the model lifecycle:
 
-### 3.3 Workflow designs outside the base model (§4; Figure 6)
-- Prompt compression (§4.1)
-  - Hard (text) compression: select or rewrite important sentences/tokens (SelectiveContext, AdaComp, LLMLingua family, CompAct).
-  - Soft compression: replace long text with a few learned vectors fed into the model—either without changing the LLM (`ICAE`, `xRAG`, `UniICL`) or by training `gist tokens` into the LLM (Gist, Activation Beacon).
-- Memory‑based methods (§4.2)
-  - Define three memory “forms”: `language memory` (human‑readable notes), `continuous memory` (latent vectors/KV caches), and `parametric memory` (weights).
-  - Example mechanisms: MemoryBank’s forgetting curve, LongMem’s trainable SideNet for retrieving kv memories, DSI’s index‑in‑weights retrieval with replay to avoid catastrophic forgetting.
-- RAG pipelines (§4.3)
-  - Chunking strategies (late chunking, sliding windows, contextual chunking), dense/sparse retrieval, and fusion/generation methods (Fusion‑in‑Decoder, kNN‑LM, Retro).
-- Agent workflows (§4.4)
-  - Single‑agent (ReadAgent, GraphReader, MemWalker, RecurrentGPT) vs. multi‑agent (Chain‑of‑Agents, LongAgent) architectures that plan, reflect, and retrieve over long texts.
+1.  **Data Pipeline (§2):** responsible for sourcing, filtering, mixing, and synthesizing the training data used in both pre-training and post-training phases. Its output is a corpus of sequences where long-range dependencies are preserved and high-quality supervision signals are available.
+2.  **Model Architecture (§3):** defines the computational structure of the LCLM itself — how position information is encoded, how attention mechanisms compute token interactions, and how the model scales to long sequences. This is where the fundamental tradeoff between expressiveness (Transformer attention) and efficiency (linear-complexity alternatives) is negotiated.
+3.  **Workflow Augmentation (§4):** sits *outside* the core model and modifies how information flows into or out of it without changing model parameters. It includes prompt compression (reducing input length), memory modules (externalizing long-term storage), RAG pipelines (retrieving relevant context chunks), and agent-based orchestration (leveraging planning and reflection).
+4.  **Infrastructure (§5):** the hardware-aware systems layer that makes training and inference tractable. For training, it handles I/O optimization, GPU memory management, and communication-computation overlap. For inference, it handles quantization, KV cache management, disaggregated prefill/decode architectures, and speculative decoding.
+5.  **Evaluation and Analysis (§6-7):** provides the feedback loop. It defines evaluation paradigms (retrieval, aggregation, reasoning, real-world adaptation), catalogs benchmarks (both synthetic and real-world), and performs mechanistic analysis to understand *why* models succeed or fail at long-context tasks.
 
-Why workflows: they reduce context length “economically” by keeping only what’s needed, or by leveraging external memory and retrieval instead of scaling the base model alone.
+Information flows sequentially through the lifecycle: Data → Architecture → Workflow → Infrastructure → Evaluation, with evaluation results feeding back to inform better data, architecture, and workflow choices. The key insight is that these are not independent stages: a promising architecture is useless if infrastructure cannot train it; a well-trained model is unreliable if evaluation cannot distinguish effective from claimed context length.
 
-### 3.4 Training & inference infrastructure (§5; Table 5)
-- Training
-  - I/O: data packing and multi‑bucket sampling to minimize padding (§5.1.1); distributed file systems & prefetching (3FS) to hide latency.
-  - GPU constraints: mixed/low precision (BF16/FP8/INT8), activation‑outlier suppression for quantization (SmoothQuant/FPTQ), and blockwise memory‑aware kernels like FlashAttention v1–v3 (§5.1.2).
-  - Parallelization: sequence/context parallelism and interleaved “Ulysses” parallelism to shard both layers and long contexts (§5.1.2); pipeline overlap and gradient accumulation tuned with ZeRO variants (§5.1.3).
-- Inference
-  - Quantization of weights and KV caches (KVQuant, KIVI, WKVQuant) (§5.2.1).
-  - Virtual memory management for KV caches (PagedAttention in vLLM; vTensor; KV‑Compress) and scheduling/prefix‑sharing (ChunkAttention, MemServe, SGLang/RadixAttention) (§5.2.2).
-  - Prefill–decode disaggregation across servers (DistServe, Splitwise, Mooncake) to optimize TTFT and TPOT (§5.2.3).
-  - GPU–CPU parallelization: overlap PCIe transfers with CPU‑side computation or cache recomputation (PipeSwitch, FlexGen, FastDecode) (§5.2.4).
-  - Speculative decoding: draft multiple tokens and verify once (Medusa, Eagle; self‑speculation shares KV caches) (§5.2.5).
+### 3.3 Roadmap for the Deep Dive
 
-Why these choices: long contexts shift bottlenecks from flops to memory and I/O; infrastructure decides whether the model can be deployed at all.
+The detailed breakdown follows the paper's own organizational logic, proceeding from foundational to applied concerns:
 
-### 3.5 Evaluation frameworks (§6)
-- Long‑context comprehension is decomposed into a capability ladder—`language modeling → retrieval → aggregation → reasoning → real‑world tasks` (Figure 7; §6.1.1) with synthetic and real benchmarks (Tables 6–7).
-- Long‑form generation (outputs are long) is mapped by task types (QA, summarization, instruction‑following, mixed), data sources (web, user, synthetic, PADs, crowdsourcing), and metrics (automatic, LLM‑as‑a‑judge, human) (§6.2; Figure 8).
+- **First (§3.4.1-3.4.2):** the **data strategies** used in pre-training and post-training, because data quality and composition fundamentally determine what the model can learn about long-range dependencies.
+- **Second (§3.4.3-3.4.7):** the **architectural design space**, starting with position embeddings (the mechanism that tells tokens where they are), then moving through attention variants (Transformer-based, linear-complexity, hybrid), because architecture defines the computational constraints within which data is processed.
+- **Third (§3.4.8-3.4.11):** the **workflow techniques** that augment models externally (prompt compression, memory, RAG, agents), because these are the most practical levers for improving long-context performance without retraining.
+- **Fourth (§3.4.12-3.4.13):** the **infrastructure optimizations** for training and inference, because even the best architecture is useless without the systems to run it efficiently.
+- **Fifth (§3.4.14-3.4.15):** the **evaluation paradigms and analysis methods**, because they provide the evidence for which approaches actually work and why.
+
+This order mirrors the lifecycle: data is prepared → models are architected → workflows are deployed → infrastructure enables execution → evaluation validates outcomes.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is a **comprehensive survey paper** whose core contribution is a taxonomy and synthesis of the LCLM literature, organized around three research questions: how to obtain effective LCLMs, how to train and deploy them efficiently, and how to evaluate and analyze them comprehensively. The paper's method is systematic literature organization rather than novel empirical contribution — it catalogs approaches, identifies common patterns, and documents empirical findings from the field.
+
+---
+
+#### 3.4.1 Pre-Training Data Strategies
+
+The data pipeline for LCLMs is divided into pre-training and post-training stages, each with distinct goals and methods (Figure 3 in the paper shows this two-stage pipeline: base LMs undergo long context continue pre-training on both long and short data, followed by post-training that includes general short-data post-training and long-context post-training with both long and short data).
+
+**Data Filtering for Long-Range Dependencies**
+
+Standard pre-training data filtering — heuristic rules (removing short entries, deduplication via MinHashLSH [274]), semantic deduplication (SemDeDup [3]), and diversity/difficulty-based selection [357, 521] — was designed for datasets limited to 4,000-8,000 tokens. These methods do not account for the specific requirements of long-context modeling. The paper identifies several recent efforts to develop specialized long-context filtering criteria:
+
+- **Longwanjuan [333]** introduces a comprehensive framework assessing long text quality through three core linguistic aspects: coherence (how logically connected the text is), cohesion (how grammatically and lexically the text holds together), and complexity (syntactic and semantic richness). It uses both statistical measures and pre-trained language model-based evaluations to quantify these aspects.
+
+- **Chen et al. [61]** evaluates training samples based on long-range dependency characteristics using three key metrics: *dependency strength* (how strongly tokens depend on distant context), *dependency distance* (how far apart dependent tokens are), and *dependency specificity* (how uniquely a distant token constrains the prediction). Samples scoring high on these metrics are prioritized as particularly beneficial for long-context comprehension.
+
+- **LongAttn [576]** uses the self-attention mechanism itself to quantify long-range dependencies: it analyzes attention patterns from the model being trained to identify which training samples exhibit meaningful interactions between distant tokens, using this signal for data selection.
+
+These methods share the common insight that quality for long-context training is not just about content quality (cleanliness, factual accuracy) but about structural properties — whether the text genuinely requires processing distant context to make correct predictions.
+
+**Data Mixture Strategies**
+
+Pre-training data composition significantly impacts model performance [113, 189]. The paper documents several approaches to determining optimal domain weights:
+
+- **Data Mixing Laws [629] and RegMix [326]** investigate data-mixing scaling laws to find optimal domain mixtures for pre-training efficiency with minimal training costs. These provide principled methods for determining sampling probabilities across domains rather than relying on intuition or downstream task tuning.
+
+For long-context pre-training specifically, the paper highlights several key findings from [132], which explored five types of long-context data composition:
+
+1.  *"Cutting documents at 4K"* — treating long documents as sequences of independent 4K chunks, losing cross-chunk dependencies.
+2.  *"Cutting documents at 128K"* — preserving longer-range intra-document dependencies but potentially under-utilizing compute on padding.
+3.  *"Global upsampling"* — increasing the proportion of long sequences in the training mix across all sources.
+4.  *"Per-source upsampling"* — targeting specific domains (e.g., books, academic papers) for long-context upsampling.
+5.  *"Upsampling Arxiv / Book / Github"* — focusing upsampling on domains known to contain long-range structure.
+
+The empirical findings are: (1) "Continual pre-training on a small amount of long context data can significantly improve a 7B model's capability to accurately retrieve information over long context input." (2) "When scaling up context length, it is crucial to oversample lengthy sequences while maintaining the original domain diversity of the pre-training datasets."
+
+Additionally, **ProLong [140]** finds that "incorporating code repositories and long books as long context sources, and mixing them with high-quality short-context sources is vital for improving performance on extended inputs while preserving the model's proficiency with short contexts." The **GrowLength** approach [233] "progressively expands the input size throughout the pre-training process, optimizing computational resources and boosting efficiency" — training starts with shorter sequences and gradually increases context length, avoiding wasted computation on long sequences before the model can effectively use them.
+
+**Data Synthesis for Long-Context Pre-Training**
+
+Long-context data is "usually rare in the real-world corpus (e.g., web documents)" (Section 2.1.3), motivating synthetic construction methods:
+
+- **Clustering-based methods** group semantically related texts within a single context window [171] or incorporate related, non-adjacent sentences in pre-training examples [278] to improve sentence representations.
+
+- **ICP [464]** uses "a traveling salesman algorithm" to address document redundancy when packing documents into long contexts — it finds an ordering that maximizes coherence while minimizing repetition.
+
+- **SPLICE [481]** involves "structured packing, where training samples are created by combining multiple similar retrieved documents." The retrieval ensures semantic coherence within the packed context.
+
+- **Quest [135]** is a "query-centric data synthesis method" that aggregates diverse yet semantically linked documents. It uses "a generative model to predict potential queries for each document, subsequently grouping documents with similar queries and keywords." This ensures that the packed context contains information that genuinely needs to be integrated.
+
+- **Knotted text structures [519]** create complex texts by shuffling document chunks, training models to untangle and locate relevant segments, thereby improving "both contextual attention and training efficiency."
+
+#### 3.4.2 Post-Training Data Strategies
+
+Post-training (supervised fine-tuning and alignment) for long contexts presents unique challenges beyond those addressed by standard instruction-following data curation.
+
+**Data Filtering for Long-Context Alignment**
+
+While prior work on SFT data selection focused on short-form examples [57, 60, 330, 576], **GATEAU [470]** introduces two components specifically for long-context alignment: (1) *Homologous Models' Guidance* — using a family of related models (e.g., different checkpoints or sizes) to identify training samples where agreement/disagreement signals informativeness for long-context capability; (2) *Contextual Awareness Measurement* — directly measuring how much a sample requires processing extended context to answer correctly, selecting samples with high contextual dependency.
+
+**Data Synthesis for Long-Context Post-Training**
+
+Constructing effective long-context instruction data requires addressing the "lost in the middle" phenomenon and ensuring questions genuinely require integrating information across the context:
+
+- **Ziya-Reader [180]** constructs a "tailored Multi-doc QA task that requires concentration on different positions in contexts to address the 'lost in the middle' problem." By varying where relevant information is placed across training examples, the model learns to attend uniformly.
+
+- **Information-Intensive Training [13]** synthesizes two types of questions: (a) "fine-grained information awareness on exactly one short segment" and (b) "the integration and reasoning of information from two or more segments." This dual focus ensures both precise retrieval and multi-hop reasoning capabilities.
+
+- **Multi-agent Interactive Multihop Generation (MIMG) [74]** uses a framework with four components: a Quality Verification Agent (checking question validity), a Single-hop Question Generation Agent (creating atomic questions), a Multiple Question Sampling Strategy (ensuring diversity), and a Multi-hop Question Merger Agent (composing atomic questions into complex multi-step queries). This multi-agent decomposition produces higher-quality synthetic data than single-model generation.
+
+- **Long context preference optimization** has recently emerged as a distinct challenge. While DPO [429] and its variants (SimPO [365], ORPO [190], TPO [445]) advanced short-context alignment, the paper notes these "mainly focus on short-context scenarios." Recent long-context-specific efforts include **LongReward [654]** (using an off-the-shelf LLM to provide rewards along four dimensions: helpfulness, logicality, faithfulness, and completeness), **LOGO [503]** (scoring with an automatic evaluator to synthesize preference/dispreference pairs), and **LongDPO [412]** (using Monte Carlo Tree Search to gather stepwise preference pairs and applying step-level DPO for long-form generation).
+
+#### 3.4.3 Position Embeddings: Types and Mechanisms
+
+Because Transformers process all tokens in parallel (unlike RNNs which process sequentially), they have no inherent notion of token order. Position embeddings inject this information, and for long-context models, the choice of position embedding critically determines how well the model can extrapolate beyond its training length. The paper classifies position embeddings into three categories (Table 3 in the paper provides a complete overview).
+
+**Absolute Position Embeddings**
+
+These provide each token with information about its absolute (index-based) position in the sequence:
+
+- **Sinusoidal Positional Embedding [525]:** encodes position through periodic sine and cosine functions, added to word embeddings. The encoding for position `$m$` and dimension `$i$` uses `$\sin(m / 10000^{2i/d})$` for even dimensions and `$\cos(m / 10000^{2i/d})$` for odd dimensions, where `$d$` is the model dimension. This is non-parametric (no learnable parameters).
+
+- **Learned Positional Embedding [147]:** treats position representations as trainable parameters, learned alongside the network during training. Used in BERT, GPT, OPT. The embedding for each position index is a randomly initialized vector that is updated via gradient descent.
+
+- **No Position Embedding (NoPE) [79, 246]:** omits explicit position encoding entirely. The paper notes that "causal language models can incorporate implicit absolute positional information into the models" through the unidirectional attention mask alone. NoPE also conveys relative positional information — the attention mechanism naturally learns distance-dependent behavior.
+
+**Relative Position Embeddings**
+
+These capture the distance between tokens rather than absolute positions, which is arguably more fundamental for language understanding:
+
+- **T5-Style [430]:** maps the relative distance `$(i - j)$` between query at position `$i$` and key at position `$j$` to a scalar bias `$b = f(i - j)$`, where `$f$` is a lookup table. The bias is added into the attention dot product. Distances exceeding a threshold share the same parameter, enabling generalization to unseen distances.
+
+- **ALiBi [415]:** subtracts a scalar bias from the attention score that increases linearly with the distance between query and key tokens. Formally:
+
+    > $$q_i k_j^T = (x_i W_q)(x_j W_k)^T + m(j - i)$$
+    >
+    > where `$m$` is a head-specific scalar hyper-parameter, `$i$` and `$j$` are position indices, `$W_q$` and `$W_k$` are projection matrices.
+    >
+    > **What it computes:** the attention logit between query `$i$` and key `$j$`, with a penalty proportional to their distance. Larger distances receive a larger negative bias (since `$m$` is typically negative), creating a recency preference.
+    >
+    > **Why this form:** the linear distance penalty is extremely simple to compute and parameter-free (beyond the head-specific slope `$m$`). Unlike T5-style which requires learning biases for each distance, ALiBi's linear form naturally extrapolates to any unseen distance without lookup table limits. The paper notes variants like **Kerple [77]** add two trainable parameters for better extrapolation, while **Sandwich [78]** simplifies sinusoidal embeddings, and **BAM [31]** frames attention as a Bayesian mechanism with a Generalized Gaussian prior.
+
+- **Rotary Position Embedding (RoPE) [486]:** the dominant position encoding in modern LLMs (LLaMA, Qwen, etc.). RoPE rotates the query and key vectors by angles proportional to their absolute positions before computing dot-product attention. The key property is that the resulting attention score depends only on the *relative* distance between tokens, not absolute positions:
+
+    The rotation operation for position `$m$` on hidden vector `$h = [h_0, h_1, ..., h_{d-1}]$` is:
+
+    $$f(h, m) = \begin{pmatrix} h_0 \\ h_1 \\ h_2 \\ h_3 \\ \vdots \\ h_{d-2} \\ h_{d-1} \end{pmatrix} \otimes \begin{pmatrix} \cos m\theta_0 \\ \cos m\theta_0 \\ \cos m\theta_1 \\ \cos m\theta_1 \\ \vdots \\ \cos m\theta_{d/2-1} \\ \cos m\theta_{d/2-1} \end{pmatrix} + \begin{pmatrix} -h_1 \\ h_0 \\ -h_3 \\ h_2 \\ \vdots \\ -h_{d-1} \\ h_{d-2} \end{pmatrix} \otimes \begin{pmatrix} \sin m\theta_0 \\ \sin m\theta_0 \\ \sin m\theta_1 \\ \sin m\theta_1 \\ \vdots \\ \sin m\theta_{d/2-1} \\ \sin m\theta_{d/2-1} \end{pmatrix}$$
+
+    where `$\theta_j = 10000^{-2j/d}$` for `$j \in \{0, 1, ..., d/2 - 1\}$`. The resulting attention score between query at position `$m$` and key at position `$n$` is:
+
+    $$a(q, k) = \sum_{j=0}^{d/2-1} [(q_{2j}k_{2j} + q_{2j+1}k_{2j+1}) \cos(m-n)\theta_j + (q_{2j}k_{2j+1} - q_{2j+1}k_{2j}) \sin(m-n)\theta_j]$$
+
+    > **What it computes:** for each pair of dimensions `$(2j, 2j+1)$` treated as a complex number, the rotation applies a phase shift of `$(m-n)\theta_j$`. The dot product between rotated query and rotated key becomes a function of `$g(q, k, (m-n)\theta)$` — only the relative position `$(m-n)$` matters, not the absolute positions `$m$` and `$n$` individually.
+    >
+    > **Why this form:** the rotation base `$\beta = 10000$` controls how quickly the sinusoidal frequencies vary across dimensions. Low-dimensional index `$j$` corresponds to high frequency (fast oscillation, short wavelength `$\lambda_{2j} \approx 2\pi\beta^{2j/d}$`), while high `$j$` corresponds to low frequency (slow oscillation, long wavelength). The maximum wavelength (at `$j = d/2 - 1$`) is approximately `$2\pi\beta \approx 63,000$` tokens for the default base — this is why models with default RoPE struggle beyond ~63K tokens without extrapolation techniques.
+
+    The paper notes variants like **XPOS [493]** which incorporates "a balancing term to penalize the oscillation of unstable dimensions while maintaining the distribution of stable dimensions," and **HoPE [70]** which "enhances length extrapolation by replacing specific components with position-independent ones while retaining only high-frequency signals."
+
+**Content-Aware Position Embeddings**
+
+These move beyond purely positional indexing to incorporate semantic information:
+
+- **CoPE [158]:** calculates "context-dependent gate values" and then "employs these values to determine token positions through a cumulative summation process." This means position indices are not fixed sequence ordinals but rather dynamically computed based on content — for example, a new sentence might increment the position counter while words within the same sentence share similar positions.
+
+- **DAPE [688, 689]:** "models the positional information dynamically with the attention" by determining "the position bias by not only the position indices but also the semantics information." This enables instance-specific position encoding that adapts to the particular input.
+
+#### 3.4.4 Position Embedding Extrapolation Methods
+
+When a model trained with context length `$L_o$` needs to process sequences of length `$L_t > L_o$` (with scaling factor `$\alpha = L_t/L_o$`), the position encodings go out-of-distribution. The paper categorizes extrapolation strategies into two families (Table 4 provides a complete overview):
+
+**Position Reorganization (Training-Free)**
+
+These methods remap positions to stay within the model's trained range:
+
+- **SelfExtend [234]:** for each token, normal relative positions are maintained for the nearest `$w$` tokens, while distant tokens are grouped — their positions are quantized into coarser bins. This exploits the observation that fine-grained relative position matters more for nearby tokens.
+
+- **DCA [11]:** follows a similar approach, reusing position indices that appeared during training.
+
+- **ReRoPE [484]:** makes relative positions beyond window `$w$` increase at smaller intervals, essentially compressing the position space for distant tokens while preserving detail for nearby ones.
+
+- **String [12]:** discovered that "even within the model's supported position range, it performs better at shorter relative positions," so it utilizes well-trained short-range positions more extensively by reusing them for longer-range interactions.
+
+**Position Interpolation**
+
+These methods monotonically rescale all position indices to fit within the training range:
+
+- **Linear Interpolation (PI) [63]:** directly scales each position `$m$` to `$m/\alpha$`. The largest test position `$L_t = \alpha L_o$` maps to `$L_o$`, staying within training distribution. Under RoPE, this is equivalent to uniformly reducing rotation angles — all wavelengths are scaled up by `$\alpha$`.
+
+- **NTK-Aware Scaling [32, 408]** (also called **ABF [598]**): addresses the problem that linear interpolation destroys high-frequency information. Instead of scaling all dimensions uniformly, it scales low-frequency (long-wavelength) dimensions more and high-frequency (short-wavelength) dimensions less. Under RoPE, this means adjusting the base from `$\beta = 10000$` to `$\beta' = 10000\lambda$` where `$\lambda$` is slightly larger than the scaling factor `$\alpha$`. The new wavelengths become `$\lambda_{2i}^{\text{NTK}} = 2\pi(s^{d/(d-2)}\beta)^{2i/d}$`.
+
+- **YaRN [408]:** extends NTK by using "a ramp function to perform NTK interpolation at different ratios across dimensions." It preserves high-frequency embeddings even more aggressively than NTK and transitions to scaled low-frequency embeddings faster. The paper includes Figure 10 (reproduced from Peng et al. [408]) which visually compares the wavelength distributions of RoPE, PI, NTK, and YaRN — showing how YaRN maintains the smallest wavelengths (highest frequencies) closest to the original RoPE while scaling up larger wavelengths more aggressively.
+
+- **Resonance RoPE [550]:** further optimized "RoPE's features using integer wavelengths," leveraging the observation that integer wavelength alignment improves attention pattern stability.
+
+- **LongRoPE [106]:** uses "evolution search to find optimal frequency scaling parameters for each dimension." Rather than a predefined functional form (linear, NTK, YaRN), it treats the per-dimension scaling as a search problem, finding the specific configuration that minimizes perplexity on long-context validation data.
+
+**Hierarchical Position Embedding**
+
+These methods introduce multi-level position encoding to increase representable range, analogous to how a number system uses digits of different significance:
+
+- **BiPE [183]:** introduces "a two-layer position encoding system responsible for modeling positions within and between segments." The intra-segment encoding handles local ordering while the inter-segment encoding tracks which segment a token belongs to.
+
+- **HiRoPE [658]:** focuses on code scenarios, utilizing "code's natural hierarchy by using RoPE's lower `$d/2$` dimensions and higher `$d/2$` dimensions to handle token-level and function-level distances respectively." This exploits the structured nature of code where function boundaries provide natural hierarchical divisions.
+
+**Position Simulation**
+
+These methods use short-context training to simulate long-context behavior, decoupling training length from inference length:
+
+- **RandPos [440]:** randomly samples a set of positions from a longer position sequence, sorts them in ascending order, and uses them as position indices for shorter input data. This teaches the model that position indices can represent larger ranges.
+
+- **PoSE [704]:** divides "the original context window into several blocks, ensuring continuous position indices within blocks while allowing jumps between blocks, thereby covering longer relative positions with a shorter context window." The skip between blocks simulates the large distances that would occur in genuinely long contexts.
+
+- **CREAM [578]:** improves on PoSE by "employing strategies such as Gaussian Sampling to optimize text block partitioning, enhancing both continuity and relativity of position indices."
+
+- **LongRecipe [199]:** similarly optimizes PoSE's partitioning and introduces "Impactful Token Analysis" to "select text content for padding within each block" — ensuring that the tokens in each block are genuinely informative rather than filler.
+
+- **SkipAlign [579]:** determines "block sizes and position index skip rates based on specific instruction-tuning requirements, achieving performance comparable to GPT-3.5-Turbo-16k on LongBench."
+
+#### 3.4.5 Transformer-Based Attention Architectures
+
+The standard self-attention mechanism has quadratic complexity `$O(n^2)$` in sequence length `$n$`, making it the primary bottleneck for long contexts. The paper categorizes efficiency modifications into four strategies: sparse attention, hierarchical attention, recurrent transformers, and efficiency-driven modifications.
+
+**Sparse Attention**
+
+Sparse attention reduces computation by restricting which token pairs can attend to each other, creating sparsity in the attention matrix:
+
+For **training-based** methods, sparsity operates on two dimensions:
+
+- *Head dimension sparsity*: **Grouped Query Attention (GQA) [7]** "organizes query heads into `$G$` distinct groups, where each group utilizes a shared key head and value head." When `$G = 1$`, this reduces to Multi-Query Attention (MQA) — all heads share one key-value pair. When `$G = H$` (number of heads), it is standard Multi-Head Attention. **Weighted Grouped Query Attention [82]** adds "novel learnable parameters for every key and value head in the attention blocks to achieve aggregation among these key and value heads." **Mixture of Attention (MoA) [131]** "automatically tailors distinct sparse attention configurations for different heads and layers" by constructing and navigating a search space of attention patterns.
+
+- *Context window dimension sparsity*: **Longformer [27]** introduces "an attention mechanism that scales linearly with sequence length" using a combination of sliding window (local) attention and task-specific global attention on selected tokens. **Zebra [474]** "groups local-global attention layers into blocks during the training and inference phases." **StreamingLLM [596]** discovers that "keeping the KV of initial tokens will largely recover the performance of window attention" — these initial "attention sink" tokens receive disproportionately high attention scores despite lacking meaningful semantics. **MoBA [342]** applies Mixture of Experts principles to attention, with "trainable block sparse attention and parameter-less gating mechanism."
+
+For **training-free** methods (applied at inference to existing models):
+
+- *Static strategies*: **Window attention** [27, 81, 219] maintains a fixed-size sliding window on recent KV states. **LM-Infinite [173]** designs "a `$\Lambda$`-shaped attention mask and a ceiling on attention distances" enabling generalization to extreme lengths without parameter updates.
+
+- *Dynamic strategies*: These select which tokens to retain based on importance scores. **H2O [676]** retains only "Heavy Hitters" tokens using accumulated attention scores. **Scissorhands [338]** prioritizes based on the "Persistence of Importance Hypothesis" — tokens important at one step tend to remain important. **SnapKV [301]** uses attention scores to identify and cluster significant tokens. **CORM [93]** is "a KV cache eviction policy to dynamically retains important key-value pairs." **FastGen [144]** recognizes fundamental attention patterns and adaptively applies different eviction policies. **MInference [222]** "accelerates the prefilling stage using dynamic sparse attention with spatial aggregation patterns." **Quest [502]** is a "query-aware KV cache selection algorithm which tracks the minimum and maximum keys and values in KV cache pages."
+
+- *Layer-level optimization*: **PyramidKV [43]** and **PyramidInfer [614]** discover "that LLMs aggregate information through a pyramid-shaped information funnel" — lower layers process all tokens while higher layers can operate on a reduced set. They allocate more KV cache to lower layers and less to higher layers. **DynamicKV [702]** adaptively adjusts token retention per layer based on the task.
+
+- *Head-level optimization*: **RazorAttention [501]** and **DuoAttention [594]** divide attention heads into Retrieval Heads (requiring full KV cache) and Non-retrieval Heads (needing only fixed-size cache), substantially reducing memory. **AdaKV [129]** "adaptively allocates the KV cache budget across attention heads." **HeadKV [133]** globally allocates budgets per attention head based on Retrieval Head identification.
+
+- *Other methods*: **Loki [471]** is "a PCA-based sparse attention mechanism by leveraging the low-dimensionality of key vectors in the attention block."
+
+**Hierarchical Attention**
+
+These methods introduce multi-scale processing by creating a hierarchy of representations:
+
+- **HAN [625]:** pioneers two-level attention — word-level self-attention produces sentence representations, then sentence-level self-attention produces document-level representations.
+- **Hi-Transformer [572]:** "models documents in a hierarchical way, which learns both the sentence representation and the document representation" simultaneously.
+- **ERNIE-SPARSE [335]:** "leverages a Hierarchical Sparse Transformer to sequentially unify local and global information."
+- **HOMER [476]:** "processes extensive text by first dividing the input into smaller chunks and subsequently merging them in stages as they pass through the transformer's layers."
+
+**Recurrent Transformer**
+
+These methods combine Transformer self-attention with recurrent structures to capture long-term dependencies:
+
+- **Transformer-XL [94]:** extends context "beyond fixed lengths by employing segment-level recurrence and relative positional encoding." The hidden state from the previous segment is cached and reused as extended context for the current segment.
+
+- **Memformer [577]:** utilizes "an external dynamic memory to encode and retrieve past information, attaining linear time complexity and constant memory space complexity."
+
+- **Compressive Transformer [427]:** maps "past hidden activations (memories) to a smaller set of compressed representations (compressed memories) for long-range sequence learning."
+
+- **Block-Recurrent Transformer [208]:** "applies a transformer layer in a recurrent manner along a sequence," operating on blocks of tokens rather than individual tokens, exploiting parallel computation within blocks.
+
+- **RMT [41]:** incorporates "a memory mechanism through special memory tokens added to the input sequence, enabling the model to store and process both local and global information efficiently."
+
+- **SRformer [340]:** divides input into segments for segmented attention and adds "recurrent attention to aggregate global information over segments."
+
+- **Infinite Attention [381]:** "incorporates a compressive memory into the attention mechanism and incorporates both masked local attention and long-term linear attention mechanisms within a single Transformer block."
+
+- **ARMT [437]:** based on "transformer self-attention for local context and segment-level recurrence for storing task-specific information distributed over a long context."
+
+**Efficiency-Driven Modifications**
+
+These target the KV cache directly (the cached key and value vectors for previously generated tokens):
+
+- **Multi-head Latent Attention (MLA) [315]:** instead of directly reducing the number of KV heads, MLA "compresses the key and value into a latent vector to reduce the caching consumption and decompresses the key and value head for each query head when generating." The latent dimension `$d_l \ll d_k, d_v$` significantly reduces memory while allowing full-rank attention computation after decompression.
+
+#### 3.4.6 Linear-Complexity Architectures
+
+These architectures fundamentally avoid the `$O(n^2)$` scaling of standard attention:
+
+**State Space Models (SSMs)**
+
+SSMs originate from control theory (Kalman filtering) and describe sequence processing through differential equations.
+
+The continuous-time SSM is defined as:
+
+$$x'(t) = \mathbf{A}x(t) + \mathbf{B}u(t)$$
+$$y(t) = \mathbf{C}x(t) + \mathbf{D}u(t)$$
+
+where `$x(t) \in \mathbb{R}^n$` is the state vector, `$u(t) \in \mathbb{R}^{d_i}$` is the input signal, `$y(t) \in \mathbb{R}^{d_o}$` is the output signal, and `$\mathbf{A}, \mathbf{B}, \mathbf{C}, \mathbf{D}$` are learned parameter matrices.
+
+> **What these equations compute:** the state equation (top) describes how the internal state `$x(t)$` evolves over time — the current state transforms via `$\mathbf{A}$` and is influenced by the input via `$\mathbf{B}$`. The observation equation (bottom) describes how the state `$x(t)$` produces the output `$y(t)$` through `$\mathbf{C}$`, with an optional direct input-to-output path through `$\mathbf{D}$`.
+>
+> **Why this form:** SSMs provide a principled mathematical framework for sequence modeling with linear time complexity — the state update is `$O(n)$` per step rather than `$O(n^2)$`. The continuous-time formulation naturally handles irregularly sampled data, and the recurrent form (after discretization) enables efficient autoregressive generation.
+
+Since NLP involves discrete tokens, SSMs must be discretized. The paper describes the **Zero-Order Hold (ZOH)** discretization used by Mamba [160]:
+
+$$\mathbf{x}_t = \overline{\mathbf{A}}\mathbf{x}_{t-1} + \overline{\mathbf{B}}\mathbf{u}_t$$
+$$\mathbf{y}_t = \overline{\mathbf{C}}\mathbf{x}_t$$
+
+where `$\overline{\mathbf{A}} = \exp(\Delta\mathbf{A})$`, `$\overline{\mathbf{B}} = (\Delta\mathbf{A})^{-1}(\exp(\Delta\mathbf{A}) - \mathbf{I}) \cdot \Delta\mathbf{B}$`, and `$\Delta$` is the step size representing input resolution.
+
+> **What it computes:** the discrete-time state update. The new state `$\mathbf{x}_t$` is a combination of the previous state transformed by `$\overline{\mathbf{A}}$` and the current input `$\mathbf{u}_t$` projected by `$\overline{\mathbf{B}}$`. The output `$\mathbf{y}_t$` is the state read out through `$\overline{\mathbf{C}}$`.
+>
+> **Why this form:** after discretization, the SSM has an RNN-like structure that can be computed recurrently for efficient inference (one step at a time, `$O(1)$` memory per step during generation). The parallel training form (convolutional representation, not shown) enables efficient training on GPUs.
+
+**S4 [164]** (Structured State Space Sequence model) was an early SSM that demonstrated effective long-sequence modeling. However, prior SSMs were Linear Time-Invariant (LTI) — parameters `$\Delta, \mathbf{A}, \mathbf{B}, \mathbf{C}$` were fixed for all time steps, limiting their ability to selectively attend to input-dependent information.
+
+**Mamba [160]** introduces a **selection mechanism** that makes SSM parameters input-dependent:
+
+$$\begin{aligned} \mathbf{B} \in \mathbb{R}^{n \times d} &\rightarrow \mathbf{B} \in \mathbb{R}^{L \times n} = s_B(x) \\ \mathbf{C} \in \mathbb{R}^{n \times d} &\rightarrow \mathbf{C} \in \mathbb{R}^{L \times n} = s_C(x) \\ \Delta \in \mathbb{R}^{d} &\rightarrow \Delta \in \mathbb{R}^{L \times d} = \tau_\Delta(\text{Parameter} + s_\Delta(x)) \end{aligned}$$
+
+where `$s_B$`, `$s_C$`, `$s_\Delta$` are linear projection layers and `$\tau_\Delta = \text{softplus}$`.
+
+> **What it computes:** instead of using fixed `$\mathbf{B}$`, `$\mathbf{C}$`, `$\Delta$` for all tokens, Mamba computes these parameters as learned functions of the input `$x$`. The state transition `$\overline{\mathbf{A}}$` and input projection `$\overline{\mathbf{B}}$` become token-specific, allowing the model to selectively retain or discard information based on content.
+>
+> **Why this form:** the LTI limitation means a fixed SSM cannot, for example, copy a specific token from earlier in the sequence (it has no mechanism to selectively attend to that token). The input-dependent parameterization gives Mamba a gating-like behavior — the model learns when to update its state (large `$\Delta$` means more influence from the current input) and when to preserve past information (small `$\Delta$`). The paper reports Mamba achieves "5x higher throughput than the Transformer and has linear scaling over sequence length."
+
+The paper notes variants: **ReMamba [641]** "employs selective compression and adaptation methods to compress and retain essential information," **TAIPAN [386]** "combines Mamba-2 with selective attention layers," and **DeciMamba [29]** introduces "a context-extension technique tailored for Mamba, which leverages a concealed filtering mechanism."
+
+**Linear Attention**
+
+These methods replace the `$\text{softmax}(QK^T)V$` computation with kernel-based formulations:
+
+- **Linear Transformer [245]:** uses "a kernel-based formulation of self-attention and the associative property of matrix products to calculate the self-attention weights." By computing `$(K^T V)$` first (an `$O(nd_k d_v)$` operation) and then multiplying by `$Q$`, the computation becomes linear in sequence length rather than quadratic.
+
+- **Performers [85]:** utilize "fast attention via positive orthogonal random features" to approximate the softmax kernel with random feature maps, implementing kernelizable attention beyond softmax.
+
+- **RetNet [494]:** includes "three computation paradigms, i.e., parallel, recurrent, and chunk-wise recurrent," achieving training parallelism (like Transformer), good performance, and low inference cost simultaneously.
+
+- **Infini-attention [382]:** incorporates "a compressive memory into the vanilla attention mechanism, which uses masked local attention and long-term linear attention modules in the Transformer block."
+
+- **Lightning Attention-2 [421]:** "employs a tiling strategy to distinctly manage intra-block and inter-block elements during linear attention computation." The MiniMax-01 [373] model uses this for inter-block attention while using standard attention intra-block.
+
+**RWKV Family**
+
+RWKV [405] introduces an enhanced linear attention mechanism named after four components:
+
+- **R (Receptance):** a gating vector that integrates historical information.
+- **W (Weight):** a trainable decay factor applied across positions.
+- **K (Key):** functions similarly to the key vector in standard attention.
+- **V (Value):** operates like the value vector in traditional attention systems.
+
+RWKV-4 uses time-mixing and channel-mixing components in residual blocks. **RWKV-5 (Eagle)** enhances expressive power by replacing vector-valued states with multi-head matrix-valued states and refining the learning decay strategy. **RWKV-6 (Finch)** further boosts expressiveness by integrating data-driven functions, making weight matrices trainable and decay vectors context-sensitive.
+
+**Test-Time Training (TTT)**
+
+A recently emerging approach: "dynamically stores context information in the model's adaptable weights (referred to as fast weights)." The core idea is framing weight updates as online gradient descent, exemplified by **Titans [25]**, **Atlas [26]**, and **TTT Done Right [667]**. When the update logic is linear, TTT becomes equivalent to linear attention; nonlinear updates enable capturing more complex dependencies.
+
+#### 3.4.7 Hybrid Architectures
+
+The paper documents the empirical finding from multiple independent studies that pure SSM/linear-complexity models "fall short compared to Transformer models in long context tasks, such as in-context learning and long context retrieval" [402, 530], but that "adding a few standard Transformer layers back into the architecture enables the model to overcome these issues" [67, 530]. Hybrid architectures combine both paradigms and fall into three categories:
+
+**Layer-Wise Hybrid Architecture**
+
+Linear-complexity and full-attention layers are interleaved at the layer level:
+
+- **Jamba [309]:** pioneered this approach, combining Transformer and Mamba layers with a Mixture of Experts (MoE) module. It found that a "7:1 ratio (Mamba to Transformer layers) provided optimal balance." **Jamba 1.5 [512]** scaled this to 100B+ parameters with the same ratio, requiring only 9GB for KV cache at 256K context (compared to 80-88GB for comparable transformers).
+
+- **RecurrentGemma [36]:** employs the Griffin architecture combining linear recurrences with local attention, using a mixture within each layer rather than interleaving different layer types.
+
+- **Samba [435]:** combines Mamba with Sliding Window Attention (SWA) rather than full attention, maintaining linear complexity while providing local context benefits.
+
+- **Zamba [154]:** innovates with a "shared attention mechanism" — a global shared attention block appears every few Mamba blocks but shares parameters across all instances, reducing memory requirements. **Zamba2 [153]** expands to multiple sizes with Mamba-2 and two alternating shared attention blocks with non-shared low-rank adapters.
+
+- **MiniMax-01 [373]:** the first open-source hybrid to achieve state-of-the-art across comprehensive benchmarks. Its configuration: "one transformer block with softmax attention followed every seven Transformer blocks with lightning attention," matching leading commercial models while supporting up to 4 million tokens.
+
+- **Sliding Window variants:** Google's **Gemma [511]** employs "a more balanced 1:1 ratio of full attention to SWA layers." Cohere's **Command R-7B [90]** implements a hybrid approach with SWA. Character.ai [49] found "approximately 6:1 (linear complexity to full attention) yielded optimal results."
+
+The paper notes a striking pattern: multiple independent efforts converged on ratios of 6:1 to 7:1 for linear-to-full attention layers, suggesting this represents an empirical design optimum rather than an arbitrary choice.
+
+**Prefilling-Decoding Hybrid Architecture**
+
+Different architectures are used for the prefill phase (processing the input) and the decode phase (generating output):
+
+- **YOCO [495]:** pioneered this paradigm with a decoder-decoder structure. The self-decoder processes input using linear-complexity attention and produces a single global KV cache reused by all layers of the cross-decoder. This reduces KV cache memory by approximately a factor equal to the number of model layers.
+
+- **GoldFinch [157]:** stacks a GOLD transformer on top of an enhanced Finch (RWKV-6) architecture, with the "TokenCat" mechanism generating a highly compressed key cache in linear time and space. Cache size savings are 756-2550× compared to traditional transformer caches.
+
+**Head-Wise Hybrid Architecture**
+
+Full attention and linear-complexity mechanisms operate in parallel within the same layer, with different attention heads using different mechanisms:
+
+- **Hymba [109]:** pioneered hybrid-head architecture where "attention heads provide high-resolution recall capabilities while SSM heads enable efficient context summarization." The paper frames this as mimicking human cognition: attention heads function like "snapshot memories" storing detailed recollections, while SSM heads act as long-term memories.
+
+- **Samba [435]:** combines Mamba blocks and sliding window attention blocks together with an MLP layer, joining local attention (near-neighbor sensitivity) with global attention (long-range dependencies).
+
+#### 3.4.8 Prompt Compression: Hard Methods
+
+Prompt compression reduces input length without changing model parameters, enabling plug-and-play efficiency gains. Hard prompt compression maintains outputs as natural language tokens.
+
+**Selecting Approaches**
+
+These methods select a subset of tokens from the original prompt:
+
+- **SelectiveContext [298]:** calculates token self-information using a small language model, groups tokens into lexical units, and removes redundant content. The key metric is each token's contribution to overall sequence probability — tokens with low self-information (easily predicted from context) are pruned.
+
+- **AdaComp [662]:** "adaptively selects relevant documents by considering both query complexity and retrieval quality." It estimates how much compression each document can tolerate based on the query's demands.
+
+- **CPC [314]:** introduces "a sentence-level compression technique leveraging a context-aware sentence encoder to rank sentences by their embedding similarity to the query and removing less relevant sentences."
+
+- **TCRA-LLM [323]:** proposes "a token compression scheme with two complementary methods: summarization compression which uses a T5-based model to reduce token size, and semantic compression which eliminates words with lower semantic impact."
+
+- **Reinforcement learning approaches:** **DynaICL [697]** uses "reinforcement learning to fine-tune a meta-controller that dynamically adjusts the number of few-shot examples based on input query difficulty." **PCRL [239]** applies "a discrete prompt compression method with reinforcement learning." **TACO-RL [452]** leverages "task-specific reward signals to fine-tune an encoder-based compression model using on-policy RL."
+
+- **LLMLingua series [221, 224, 397]:** **LLMLingua [221]** "leverages a smaller language model to calculate perplexity (PPL) and remove redundant tokens, featuring a budget controller, iterative prompt algorithm, and alignment techniques to achieve up to 20x prompt compression while preserving semantic integrity." **LongLLMLingua [224]** adds "a question-aware coarse-to-fine compression method, a document reordering mechanism, dynamic compression ratios and a subsequence recovery strategy." **LLMLingua-2 [397]** introduces "a task-agnostic prompt compression method, trained via data distillation from GPT-4 with a BERT-level encoder, achieving 3x-6x speed improvements."
+
+**Rewriting Approaches**
+
+These generate compressed versions rather than selecting tokens:
+
+- **Nano-Capsulator [87]:** "encapsulate lengthy prompts into shorter ones while adhering to specific generation length constraints, maintaining performance through an explicit semantic-preserving objective with reward scoring."
+
+- **CompAct [634]:** "captures pivotal information from extensive documents by dynamically retaining essential contexts and incorporating information."
+
+- **FAVICOMP [238]:** "a decoding-time evidence compression approach that produces a refined evidence set more familiar to the target model."
+
+#### 3.4.9 Prompt Compression: Soft Methods
+
+Soft prompt compression converts natural language into continuous embedding representations (vectors) that can be fed directly into the transformer.
+
+**LLM-Fixed Methods (no LLM parameter updates)**
+
+- **Contrastive conditioning [569]:** "focuses on learning compact soft prompts to simulate the original natural language prompt by minimizing the Kullback-Leibler (KL) divergence" between the output distribution with the full prompt and the output distribution with the compressed prompt. A significant drawback is that it "requires retraining from scratch for each new incoming prompt."
+
+- **ICAE [145]:** generates "compact and informative memory slots to represent the original context, enabling LLM to encode more information within the same context length."
+
+- **500xCompressor [306]:** builds on ICAE but "utilizes KV values for compressed tokens instead of embeddings, achieving remarkable compression ratios."
+
+- **xRAG [75]:** uses "a frozen embedding model as the encoder and a trainable adapter between the encoder and decoder LLM. Through modality fusion, it integrates document embeddings into the LLM's representation space."
+
+- **UniICL [136]:** compresses "demonstrations into compressed features, which are then converted into compressed virtual tokens via a learnable projection layer."
+
+**Gist Token-Based Methods (require LLM parameter updates)**
+
+These methods condense context into a small set of special "gist" tokens:
+
+- **Gist [378]:** "inserts gist tokens after the prompt and modifies Transformer attention masks to prevent tokens after the gist tokens from attending to those before them, allowing the model to learn both prompt compression and instruction following simultaneously."
+
+- **AutoCompressors [76]:** "process long documents by recursively generating gist tokens which are passed as soft prompts to all subsequent segments."
+
+- **Activation Beacon [661]:** serves as "a plug-in for Transformer-based LLMs that enables effective, efficient, and flexible compression of long contexts, featuring a progressive compression workflow that distills the context into a small set of activations."
+
+#### 3.4.10 Memory-Based Methods
+
+Memory-based methods use an external module to store long contexts, reducing the computational burden of directly processing them. The paper categorizes memory paradigms by the form of stored memories.
+
+**Language Memory (Human-Readable Text)**
+
+- **Generative Agents [401]:** employs a "memory stream" with triple scoring for retrieval: (1) *Recency* — exponential decay prioritizing recent interactions; (2) *Importance* — LLM-assigned 1-10 score based on semantic significance; (3) *Relevance* — embedding similarity between current query and memory item.
+
+- **Reflexion [466]:** stores "textual feedback from self-reflection in a memory bank." When similar errors occur, the model retrieves historical reflection records for real-time correction.
+
+- **MemoryBank [693]:** incorporates "the Ebbinghaus Forgetting Curve to gradually weaken infrequently accessed memories while reinforcing frequently used ones, simulating the formation of long-term human memory."
+
+- **AdaPlanner [488] and Voyager [535]:** address long-horizon planning through a "skill library mechanism, where successful textual action plans from previous interactions are archived as reusable templates."
+
+- **RecurrentGPT [698]:** enhances coherence for long-text story generation by "combining long-term memory retrieval of relevant paragraphs with short-term memory maintained through iterative plot summarization."
+
+**Continuous Memory (Latent Vector Representations)**
+
+- **LongMem [553]:** splits "lengthy texts into fixed-length segments and caches their key-value pairs from intermediate Transformer layers in an external memory bank. During inference, it retrieves top-k relevant historical key-value pairs through query-key attention operation." A cross-network residual connection between the LLM backbone and a trainable Transformer-based SideNet conducts the memory retrieval and fusion.
+
+- **MemoryLLM [558]:** embeds "trainable memory tokens within each Transformer layer as a fixed-size memory pool, implementing a self-update mechanism that selectively overwrites less frequently accessed memory information."
+
+**Parametric Memory (Model Weights)**
+
+- **DSI (Differentiable Search Index) [507]:** reformulates "document retrieval as a generation task, training the model to directly output document IDs for queries," internalizing document-query mappings in model parameters.
+
+- **DSI++ [362]:** addresses catastrophic forgetting with a sharpness-aware loss: `$\min_\theta \max_{||\epsilon||_2 \leq \rho} \mathcal{L}(\theta + \epsilon)$`, where `$\theta$` is model parameters and `$\rho$` is a threshold. The inner maximization finds weight perturbations that increase loss; minimizing the worst-case loss encourages flat minima that empirically improve memory retention.
+
+- **Generative Adapter [65]:** dynamically generates lightweight adapter modules `$\Delta_t$` for previous context chunks `$[C_1, C_2, ..., C_t]$` based on their hidden states, using an adapter generator during test-time contextualization.
+
+- **YORO [250]:** internalizes database schema from input prompts into parametric knowledge via fine-tuning, reducing input token length by 66%-98% for Text-to-SQL.
+
+The paper cites theoretical evidence that "vanilla Transformer-based LMs are computationally limited, which can be overcome through read-write memory augmentation" — a 540B-parameter LLM with associative read-write memory can simulate a universal Turing machine [449].
+
+#### 3.4.11 Retrieval-Augmented Generation (RAG) and Agent-Based Methods
+
+**RAG-Based Methods**
+
+The three-stage RAG workflow for long contexts:
+
+1.  **Chunking:** partitioning long contexts into manageable units. Methods include fixed token length, sentence/paragraph boundaries, structural markers, and semantic similarity. Advanced techniques: **Late Chunking [172]** (embeds the full document first, then chunks embeddings to preserve context), **Sliding Window Chunking** (overlapping chunks to preserve cross-boundary dependencies), **Contextual Retrieval [14]** (uses a long-context LLM to augment chunks with document-level context before embedding).
+
+2.  **Retrieval:** Sparse retrievers (TF-IDF, BM25) use lexical matching; Dense retrievers (BERT-based embeddings) capture semantic similarity. **BGE-M3 [58]** integrates sparse and dense retrieval with 8192-token context. **ModernBERT [562]** was trained on 2 trillion tokens with 8192-token context. Query augmentation techniques: **Query2Doc [542]** generates pseudo-documents, **HyDE [138]** produces hypothetical documents, **Rewrite-Retrieve-Read [351]** optimizes a query rewriter via reinforcement learning.
+
+3.  **Generation:** Reduced context is fed to LLMs via concatenation or prompt compression. **Fusion-in-Decoder [211]** encodes retrieved passages with questions into soft features concatenated for the decoder. **kNN-LM [247]** blends the model's prediction distribution with nearest-neighbor distributions from retrieval. **Retro [34]** uses trained cross-attention for integration.
+
+**Agent-Based Methods**
+
+LLM agents leverage memory, planning, and reflection capabilities for long-text processing:
+
+*Single-agent architectures:*
+
+- **ReadAgent [270]:** three-stage memory management — groups related content into coherent units, distills into condensed summaries, and navigates back to source text for precise detail retrieval.
+- **PEARL [490]:** three-stage framework — action mining (identifying needed operations like summarizing, finding events), plan generation, plan execution.
+- **MemWalker [54]:** breaks long documents into hierarchical summaries; the agent traverses the tree structure based on queries.
+- **GraphReader [293]:** transforms long documents into navigable graph structures; an AI agent intelligently traverses the graph, maintaining a dynamic record of discoveries.
+- **RecurrentGPT [698]:** for long-text generation, maintains two memory streams: short-term (summary of recently generated paragraphs) and long-term (retrieval-based access to detailed history).
+
+*Multi-agent systems:*
+
+- **Chain of Agent (CoA) [674]:** divides context into segments, each handled by a worker agent. Worker agents sequentially communicate with a central manager, interleaving reading and reasoning.
+- **LongAgent [681]:** employs a leader-agent model where the leader "understands the user's intent and directs member agents to extract information." An inter-agent communication mechanism resolves conflicts between agents' responses.
+
+#### 3.4.12 Training Infrastructure for LCLMs
+
+The paper identifies that "limited GPU memory, in particular, renders most common training optimizations ineffective" for long contexts (Section 5.1). The three optimization axes are I/O, GPU constraints/memory access, and communication-computation overlap (Table 5 summarizes the impact of each strategy).
+
+**I/O Optimization**
+
+- **Fundamental I/O tuning:** increasing I/O threads and using pinned memory to reduce data transfer latency. However, "the optimal hyperparameters for these strategic I/O optimizations require case-by-case tuning based on model size, context window length, and hardware configuration."
+
+- **Data packing:** concatenates samples into longer sequences to maximize data utilization. Methods include combinatorial arrangement with truncation [344, 480], attention masks to differentiate packed samples (non-causal masks introduce fragmented operations that hurt efficiency), and dynamic context length adjustment like **Hydraulis [283]** which uses "dynamic programming to address data sampling imbalance and data packing imbalance." **Data Decomposition [413]** curates data to different windows using multiple bucket sizes.
+
+- **Distributed file systems:** **3FS [100]** introduces "a distributed, random-access approach, which enhances both performance and usability by leveraging" SSD throughput and RDMA bandwidth that were previously underutilized. Pre-fetching with near-end data workers [680] or caching [107] overlaps I/O and computation.
+
+**GPU Constraints and Memory Access**
+
+- **Mixed-precision training:** standard FP32 allocates 8 exponent and 23 mantissa bits. FP16 halves storage but risks overflow (maximum integer value 65,536). BF16 (requiring Ampere architecture or later) increases exponent bits, mitigating overflow at the cost of precision. The paper notes FP16/BF16 are "now standard for LLM training, with FP32 reserved for precision-sensitive operations (RoPE, LayerNorm, Softmax)."
+
+- **Quantization and low-precision training:** FP8 on Hopper GPUs uses E4M3 (4 exponent, 3 mantissa) for forward and E5M2 for backward, offering "a 2x performance boost over BF16." For optimizer states (more precision-sensitive), techniques like "dynamic range scaling to align their distribution with the FP8 representation" reduce both memory and error [103, 586]. Activation quantization requires suppressing outliers during training [290, 311, 593].
+
+- **Optimized memory access (FlashAttention family):** **FlashAttention [97]** leverages GPU shared memory (19TB/s bandwidth, 20MB capacity) for block-wise processing with a log-sum-exp trick for softmax. **FlashAttention-v2 [96]** refines computation order, reducing non-matrix multiplications and optimizing warp scheduling. **FlashAttention-v3 [450]** incorporates FP8 acceleration with asynchronous data loading, overlapping softmax and GEMM, and block-wise quantization on Hopper GPUs.
+
+- **Computation partition strategies:** **Ring Attention [316]** reduces attention complexity from `$O(n^2)$` to `$O(n)$` by restricting each token's attention to a fixed number of surrounding tokens. **Sequence Parallelism [254]** distributes model layers across devices. **Context Parallelism** divides the context window into segments processed in parallel. **Ulysses Parallelism [213]** "combines the advantages of both by sharding both model layers and the context window with an interleaved strategy, minimizing communication overhead."
+
+**Communication-Computation Overlapping**
+
+- **Gradient Accumulation (GA):** implements mini-batches to address high per-sample memory usage. Forward passes on smaller batches accumulate gradients across multiple mini-batches before a single parameter update. The paper notes: "integrating GA with DeepSpeed-ZeRO requires careful consideration. While ZeRO-1 necessitates only a single communication step during backward propagation, ZeRO-2, which partitions gradients across nodes, requires communication after each mini-batch forward pass, potentially hindering complete overlap."
+
+- **Advanced overlapping techniques:** **FLUX [48]** and **TCCL [248]** leverage "distinct CUDA streams within kernels" to enable customized overlapping strategies. **DualPipe [101]** implements bidirectional pipeline parallelism to mitigate "pipeline bubbles" where devices idle waiting for dependencies.
+
+#### 3.4.13 Inference Infrastructure for LCLMs
+
+Inference splits into the **prefill phase** (processing input, generating KV cache — compute-bound) and **decoding phase** (generating tokens autoregressively — bandwidth-bound). The paper identifies four primary challenges: computational overhead (quadratic prefill attention), I/O overhead (transferring model parameters + KV cache), GPU HBM memory limitations, and communication overhead in distributed serving. Five optimization strategies are cataloged.
+
+**Quantization**
+
+- **KV cache-only quantization:** **KVQuant [192]** and **KIVI [339]** quantize keys and values with different methods, filter outliers, and adjust channel sizes. A key challenge: "the prevalent lack of native hardware support for mixed-precision operations (e.g., FP16 x INT4) on mainstream architectures" necessitates specialized kernels.
+
+- **Weight + KV cache quantization:** quantizing both model weights and KV cache to uniform low precision "allows for the direct utilization of existing hardware-supported low-precision operations." **SmoothQuant [593]** and **Atom [686]** are representative approaches.
+
+**Memory Management**
+
+- **PagedAttention [264]:** utilizes "virtual memory to place the KV cache of tokens at the same position across different layers and heads within the same memory page," reducing fragmentation. Used in vLLM.
+
+- **Scheduling strategies:** **ChunkAttention [630]** and **MemServe [195]** "organize data structures to enable efficient cache deduplication and sharing of common prefixes." **SGLang [691]** uses RadixAttention for sharing common prefixes between batches.
+
+**Prefilling-Decoding Disaggregated Architecture**
+
+This decouples the computationally heavy prefill stage from the bandwidth-sensitive decode stage, assigning each to dedicated server pools optimized for their distinct demands. The paper notes this "demonstrably improving both Time to First Token (TTFT) for the prefill phase and Time Per Output Token (TPOT) for decoding phase."
+
+- **Splitwise [403]:** investigates "how to allocate machines within a cluster to handle the prefill phase and decoding phase effectively."
+- **Mooncake [418]:** "particularly excelling in long context scenarios and under heavy user loads, developed a prediction-based early rejection policy."
+- **DistServe [694]:** "customizes resource allocation, parallelism strategies, deployment algorithms, and runtime scheduling optimizations for each stage."
+- **LoongServe [571]:** proposes "an elastic sequence parallelism method that dynamically adapts to different requests and phases."
+- **CacheGen [337]:** "reduces the transmission time of precomputed KV caches across machines by adopting an optimized storage format."
+
+**GPU-CPU Parallel Inference**
+
+Since GPU HBM is often insufficient for long-context KV caches, offloading to CPU memory (and potentially to disk) reduces GPU memory pressure at the cost of PCIe bandwidth bottlenecks:
+
+- **FlexGen [462] and PipeSwitch [22]:** "attempt to overlap GPU-based computation of the current layer with the concurrent loading of the KV cache for the subsequent layer."
+- **FastDecode [178]:** "proposes computing attention scores directly on the CPU, leveraging its faster memory access to the KV cache relative to the GPU."
+- **TwinPilots [635]:** uses "CPU-GPU heterogeneous execution strategies to mitigate data transfer overhead by strategically performing computations on the CPU."
+
+**Speculative Decoding**
+
+In long-output scenarios, autoregressive decoding requiring parameter transfer from HBM for each token becomes the bottleneck. Speculative Decoding [276] uses a smaller "draft model" to generate `$\gamma$` candidate tokens cheaply, then the target model verifies them in parallel:
+
+- **Self-Speculative Decoding [119, 191, 657]:** leverages "layer-skipping techniques to use the target model itself as the draft model, thereby reducing the overhead associated with maintaining a separate draft model."
+- **MagicDec [55] and TRIFORCE [487]:** use "a draft model with a fixed KV budget using sparse attention" to handle long contexts.
+- **Medusa [42]:** employs "multiple FFN heads" on the main model for parallel token prediction.
+- **Eagle [302]:** incorporates "features from the larger model's embeddings" into the draft model for improved accuracy.
+- **Mamba-based drafters [84]:** explore "using a Mamba-based model for token prediction, fully leveraging the efficiency of State Space Models."
+
+#### 3.4.14 Evaluation Paradigms for Long Context Comprehension
+
+The paper structures evaluation around a hierarchy of capabilities (Figure 7), from foundational to applied:
+
+**Language Modeling (Foundation)**
+
+The most basic evaluation: does the model assign lower perplexity to held-out text as context grows? The paper notes two common methods:
+
+- **Cumulative average negative log-likelihood (NLL):** as used by Gemini-1.5 [510]. A decreasing trend indicates better predictions with more context.
+- **Sliding window PPL:** with a fixed window size `$w$`, the model predicts the beginning `$w$` tokens, then slides forward. Lower perplexity with larger windows indicates effective context utilization.
+
+Critical finding (Section 7.1.2): "different models' perplexity scores on long contexts fail to correlate with their long context comprehension capabilities" [10, 198, 489]. This means PPL is not a reliable proxy for downstream performance, though recent work with LongPPL [125] (computing perplexity only on context-sensitive token distributions) has reestablished some correlation.
+
+**Retrieval**
+
+Two levels: *Explicit Retrieval* (string matching based on queries) and *Semantic Retrieval* (finding semantically relevant content). The prototypical synthetic task is **Needle-in-a-Haystack (NIAH)** [17, 194, 241, 281, 289, 320, 377, 436, 601, 706]. Variants include:
+
+- *Explicit/Literal Needle Retrieval:* locating the completion of a partial sentence within long text.
+- *Semantic Needle Retrieval:* retrieving paragraphs based on abstracts or functions based on behavioral descriptions.
+- Needles can be n-digit numbers, UUIDs, dictionaries, functions, or passages.
+
+**Aggregation**
+
+The ability to integrate information from multiple locations or globally across the context. Divided into:
+
+- *Statistical Aggregation:* quantitative operations — tracing variable states, extracting frequent patterns, computing descriptive statistics.
+- *Semantic Aggregation:* synthesizing semantic information from different parts. **SummHay [265]** requires summarizing a synthesized Haystack of documents.
+
+**Reasoning**
+
+Logical inference over distributed information, distinguished from aggregation by emphasis on logical deduction:
+
+- *Parallel Reasoning:* gathering all information first, then reasoning.
+- *Iterative Reasoning:* step-by-step, where each step informs the next information gathering target.
+
+**BABILong [260]** uses samples from the bAbI dataset [565] as needles distributed throughout long contexts. **NeedleBench [289]** uses the R4C dataset [210].
+
+**Real-World Adaptation**
+
+The highest evaluation level, requiring integration of foundational and core capabilities for practical tasks:
+
+- *Question Answering:* spans diverse domains — literature (NarrativeQA [251]), academic papers (Qasper [98]), encyclopedias (WikiQA [622], HotpotQA [624]), financial reports (DocFinQA [432]), and more.
+- *Summarization:* novels, government reports (GovReport [200]), meeting scripts (QMSum [692]), patents (BigPatent [458]), screenplays (SummScreen [62]), legal documents (MultiLexSum [460]).
+- *Document Retrieval and Reranking:* generative ranking where LCLMs directly process all candidates and produce rankings. **HELMET [632]** includes reranking tests where candidate documents are sampled from MSMARCO [387].
+- *Retrieval-Augmented Generation:* **LOFT [269]** evaluates with up to 1M-token corpora, requiring models to locate relevant information within concatenated passages to answer open-domain QA.
+- *In-Context Learning:* scaling demonstrations from dozens to hundreds/thousands [30, 269, 295, 606]. The paper documents that existing LCLMs "demonstrate significant performance degradation beyond certain context lengths, show susceptibility to example ordering effects, display recency bias."
+- *Code Tasks:* repository-level code completion [33, 229, 328, 650], CI build repair, commit message generation, bug localization, module summarization. The paper notes "despite significant advances, the intrinsic complexity of repository-level code still poses substantial challenges."
+
+#### 3.4.15 Evaluation Paradigms for Long-Form Generation
+
+Long-form generation (Section 6.2) is defined by two criteria: (1) instructions must explicitly or implicitly require long responses, and (2) "long" is task-relative — typically >1,000 words for writing, >500 words for QA. The paper categorizes tasks into four types:
+
+- **Question Answering:** **ELI5 [122]** (first large-scale long-form QA benchmark from Reddit), **ExpertQA [358]** (expert-crafted questions with verified answers), **ProxyQA [497]** (meta-questions evaluated by LLMs), **FActScore [372]** (decomposing responses into atomic facts and computing supported proportion).
+
+- **Summarization:** **Multi-News [121]** (first large-scale multi-document news summarization), **AQUAMUSE [257]** (automatically mined from Natural Questions and Common Crawl), **LCFO [91]** (252 long documents with human-annotated summaries).
+
+- **Instruction Following:** **LongWriter-6K [21]** (extending output to 10,000+ words), **Suri [410]** (20,000 long-form texts with backtranslated multi-constraint instructions), **Self-Lengthen [424]** (iterative training using models' intrinsic knowledge).
+
+- **Mixed:** **HelloBench [425]** (647 samples across 38 subcategories, 5 tasks), **FACTS Grounding [215]** (covers QA, summarization, document rewriting).
+
+For data sources, the paper identifies five types: web-sourced (rich but low quality), user-sourced (practical but variable quality), synthetic (easy to evaluate but misaligned with reality), publicly available datasets (risk of leakage), and crowdsourcing (high quality but may deviate from practical use). The paper argues "user-sourced data combined with detailed post-processing is a promising direction for future research."
+
+Evaluation methods are similarly categorized:
+
+- *Automatic Metrics:* **ROUGE [310]**, **BLEU [399]**, **METEOR [23]** (semantic similarity); **PPL** (fluency); **Repetition-n** and **Distinct-n** (diversity); accuracy-based metrics for structured outputs; task-specific metrics like **QAFactEval [120]** for factual consistency and **Disambiguation Metrics** for ambiguity resolution.
+
+- *Human Evaluation:* more accurate but time-consuming and expensive. Used by ELI5, ASQA, LongForm-C, LongBench-Write, HelloBench among others.
+
+- *LLM-as-a-Judge:* using strong LLMs to replace human evaluators. **ProxyQA [497]** evaluates proxy question correctness; **HelloBench [425]** uses predefined checklists with human-correlated weights; **LFMedQA [217]** uses GPT-4o and Claude-3.5 for pairwise comparisons.
+
+The paper notes that "current LLMs still face challenges with fully end-to-end evaluation of long responses" and advocates for "coarse-to-fine evaluation" workflows that decompose evaluation into granular aspects, using LLMs for simpler aspects and human evaluation or proxy methods for harder components.
 
 ## 4. Key Insights and Innovations
-- A whole‑pipeline taxonomy that practitioners can execute end‑to‑end
-  - What’s new: A single map connecting data, position/attention choices, workflows, infra, and evaluation (Figure 2; Figure 4; Figure 6; Figure 7). Prior surveys typically cover one or two of these areas (Table 1).
-  - Why it matters: building LCLMs requires coordinated choices; this taxonomy turns a sprawling literature into an actionable design space.
 
-- Concrete, mechanism‑level recipes for length extrapolation
-  - What’s new: Clear separation of training‑free reorganization vs. interpolation vs. hierarchical vs. simulation methods (§3.1.2) with the core intuition (high‑frequency preservation in NTK/YaRN; Figure 10).
-  - Significance: reduces reliance on expensive long‑context pretraining; enables upgrading existing checkpoints.
+### Innovation 1: Unifying Long-Context Modeling as a Three-Dimensional Interdependent Design Problem
 
-- Evidence‑based reality check on “effective” context lengths
-  - What’s new: A compiled table showing many popular models effectively use only a fraction of claimed length (Table 9).
-  - Significance: steers the community toward honest reporting and methods that improve utilization (e.g., retrieval head budgeting, dynamic KV eviction).
+The survey's most fundamental intellectual move is not the discovery of a new method but the **reframing of long-context modeling as a system-level optimization problem with three tightly coupled dimensions**: data/architecture/workflow (RQ1), infrastructure (RQ2), and evaluation/analysis (RQ3). Prior to this work, the literature on long-context LLMs was fragmented into siloed sub-communities—position embedding researchers rarely engaged with inference infrastructure work, and evaluation methodology was treated as an afterthought rather than a co-design constraint. The paper's organizational framework (Figure 2, Table 1) makes explicit what was previously implicit: that a brilliant architecture is useless without the infrastructure to train it, a well-trained model is unreliable without evaluation that can distinguish effective context length from claimed support, and data strategy choices (like progressive length extension during pre-training) directly determine which architectural bottlenecks dominate.
 
-- Unified evaluation paradigms for comprehension and long‑form generation
-  - What’s new: The five‑level comprehension ladder (Figure 7) and a structured view of long‑form generation—task types, data sources, and evaluation methods (Figure 8; Tables 6–7).
-  - Significance: makes benchmark design more principled and reduces over‑reliance on narrow NIAH‑style tests.
+This interdependence argument is more than taxonomic convenience. It has diagnostic force: when a new context-extension method underperforms, the framework provides a structured way to identify *which* dimension is the bottleneck rather than simply concluding "the method doesn't work." For example, the paper's documentation that pure SSM architectures (like Mamba) "fall short compared to Transformer models in long context tasks, such as in-context learning and long context retrieval" [402, 530] is not just a performance observation—it diagnoses the problem as architectural (RQ1), and the solution (adding a few Transformer layers back via hybrid architectures) as a design choice that crosses the architecture-infrastructure boundary. Similarly, the paper's finding that perplexity "fails to correlate with long context comprehension capabilities" (Section 7.1.2) means progress in architecture (RQ1, reducing perplexity) does not guarantee progress in capability (RQ3)—the metrics themselves must be redesigned.
 
-- Cross‑cutting systems guidance for LCLM training/serving
-  - What’s new: a consolidated view of I/O strategies, kernel choices (FlashAttention v1–v3), parallelism (Ulysses), cache management (PagedAttention), and prefill–decode disaggregation (§5).
-  - Significance: many “algorithmic” wins are impossible without systems alignment; this section bridges the gap.
+What distinguishes this from a standard literature taxonomy is its prescriptive stance. The paper doesn't just say "here are things people have tried"; it argues that *future progress requires simultaneous advances across all three dimensions*. This is articulated most clearly in Section 9.3 ("Efficient Architecture Design, Training, and Deployment of LCLMs"), where the paper treats architecture, training frameworks, and customized hardware as co-evolving requirements rather than independent research tracks. The framework also explains why certain approaches that seemed promising in isolation (e.g., lookahead search from the verifier-guided generation literature, which this survey does not cover but which follows similar logic to the proposal-distribution/verifier decomposition) underperform when infrastructure constraints are considered.
+
+**Comparison to prior work:** Prior surveys (Huang et al. [204] on architecture, Zhao et al. [682] on position embeddings, Li et al. [304] on prompt compression, Dong et al. [110] on transformer designs) treated their respective topics as self-contained. This paper's contribution is demonstrating that these are not self-contained—that architectural decisions constrain infrastructure requirements, that evaluation inadequacy has allowed misleading progress claims, and that treating them jointly produces a more accurate picture of the field's actual challenges. This is a conceptual reframing, not an incremental addition.
+
+---
+
+### Innovation 2: The "Effective vs. Claimed Context Length" Gap as a First-Class Diagnostic Concept
+
+Perhaps the survey's most practically impactful contribution is elevating the gap between **effective context length** and **claimed/advertised context length** from an anecdotal observation to a central diagnostic framework with systematic evidence. The paper documents (Section 7.1.1, Table 9) that across both open-source and proprietary models, "the effective context length rarely exceeds half of the claimed length"—GPT-4 at 128K claimed achieves only 64K effective (50%), Command-R-plus at 128K achieves 32K (25%), LWM at 1M achieves less than 4K effective (under 4%). This is not a quirk of one evaluation method; it is validated across RULER [194], BABILong [260], and the original "lost in the middle" experiments [324].
+
+What makes this a genuine innovation rather than just a cautionary note is the **conceptual apparatus the survey provides for understanding *why* the gap exists and how to measure it**. The paper decomposes the causes across multiple levels: position encoding extrapolation limits (the "critical rotation base" analysis showing models' perplexity explodes beyond certain sequence lengths), attention mechanism degradation (the softmax function producing increasingly uniform attention scores as sequences grow), and training data distribution shifts (models trained on predominantly short sequences lack exposure to genuine long-range dependencies). Each of these is a distinct failure mode, and the survey's taxonomy enables differential diagnosis—a model failing at 32K effective on 128K claimed might have a position encoding problem, a data mixture problem, or both, and the appropriate fix differs.
+
+The "false promise" framing is also strategically important for the field. By documenting that context window expansion has outpaced genuine capability improvement—and that "many LCLMs exhibit a distinctive U-shaped performance curve" [324] where middle-positioned information is poorly processed—the survey shifts the conversation from "how to extend context length" to "how to make models actually use the context they already have." This is echoed in the paper's explicit statement that "alongside pursuing ever-larger context window sizes, improving model performance within already supported context lengths is equally important."
+
+**Comparison to prior work:** The "lost in the middle" phenomenon was documented by Liu et al. [324] as an empirical finding about specific models. The survey extends this into a systematic evaluation framework—RULER's methodology for determining effective context length, BABILong's reasoning-in-a-haystack tasks, the paper's own synthesis across multiple evaluation benchmarks—that turns an observation into a measurement protocol. The innovation is the diagnostic framework, not the raw observation. This is a fundamental contribution to evaluation methodology with direct implications for how model capabilities should be reported and compared.
+
+---
+
+### Innovation 3: Architectural Convergence Patterns as Empirical Laws
+
+The survey surfaces a striking empirical regularity that spans multiple independent research efforts: the convergence on ratios of **approximately 6:1 or 7:1 for linear-complexity to full-attention layers in hybrid architectures**. The paper documents this across Jamba [309] (7:1 Mamba-to-Transformer), MiniMax-01 [373] (7:1 lightning-attention-to-softmax-attention Transformer blocks), Character.ai [49] ("approximately 6:1"), and Jamba 1.5 [512] (maintaining 7:1 at 100B+ scale). This convergence—across different base architectures (Mamba vs. linear attention), different training recipes, and different organizations—is not predicted by any existing theory. The paper treats it as an empirical "sweet spot" rather than a principled design optimum, but its documentation as a cross-cutting pattern is itself a contribution.
+
+What makes this pattern intellectually significant is that it **constrains the design space in a way that theoretical analysis has not yet explained**. Why 6:1 rather than 10:1 or 3:1? The paper offers the qualitative hypothesis that linear-complexity layers provide efficient context summarization while full-attention layers provide high-resolution recall, and the ratio represents the balance between these complementary capabilities. But the quantitative consistency suggests there may be a deeper scaling relationship—perhaps related to the information capacity of linear vs. quadratic attention, or to the statistical properties of natural language that make 6-7 efficient summarization steps necessary per detailed retrieval step. The survey does not solve this puzzle, but its systematic documentation across multiple architectures makes the puzzle *visible* in a way that individual papers reporting their own ratios could not.
+
+The convergence pattern has practical implications for architecture design: it suggests that the design space is narrower than the combinatorial explosion of possible configurations would imply, and that new architectures can reasonably start from the 6:1 or 7:1 neighborhood rather than exploring from scratch. This is analogous to how Chinchilla scaling laws [189] reduced the pretraining hyperparameter search space by establishing predictable relationships between model size, data quantity, and performance—the hybrid ratio convergence serves a similar constraining function for architecture design, even without a formal theory.
+
+**Comparison to prior work:** Individual papers (Jamba, MiniMax-01, Character.ai) each reported their own optimal ratios. The survey's contribution is recognizing these as instances of a single empirical regularity rather than independent optimization results. This is a pattern-recognition contribution—the synthesis of dispersed findings into a coherent empirical law—which is a distinct and valuable form of scientific contribution that individual research papers rarely provide.
+
+---
+
+### Innovation 4: Positioning Long-Context Capability as Infrastructure for Test-Time Scaling
+
+The survey makes an understated but consequential argument: that extended context windows are not just about processing longer inputs, but about **providing the computational workspace for qualitatively new capabilities**—specifically, test-time scaling paradigms like o1-like long chain-of-thought reasoning. The paper frames this in the introduction: "these extensive context lengths provide sufficient space for test-time scaling, where models can explore, reflect, backtrack, and summarize within a single context, which fundamentally transforms our interaction with generative AI." This positions context length not as a passive capacity metric but as an *enabling resource* for active computation during inference.
+
+What makes this framing innovative is that it reframes the stakes of long-context research. If context windows are merely about fitting longer documents, the value proposition is linear—handling 10× longer inputs enables 10× more document processing. But if context windows are the workspace for test-time reasoning, search, and iterative refinement, then the value proposition is *qualitative*—sufficient context length unlocks capabilities (like complex multi-step reasoning with backtracking) that are simply impossible below a threshold. The survey connects this to the emerging literature on inference-time compute scaling (which it references tangentially but which provides the theoretical motivation), arguing that "the test-time scaling paradigm that first generates extended CoT reasoning before producing answers essentially equips models with the ability to perform trial-and-error, backtracking, correction, and iteration auto-regressively within the context window."
+
+This has architectural implications that the paper explores: if context length enables reasoning, then efficient context processing (through techniques like KV cache compression, sparse attention, and hybrid architectures) is not just a cost-saving measure but a capability enabler—without sufficient context, the reasoning cannot occur at all. The paper's future directions (Section 9.1) explicitly frame "long context modeling for o1-like long reasoning" as a primary motivation, connecting efficiency-oriented techniques (KV cache compression, prompt compression) to the specific needs of reasoning models that generate extended CoTs.
+
+**Comparison to prior work:** The connection between context length and reasoning capability has been observed empirically in individual model reports (Gemini 1.5, GPT-4, o1). The survey's contribution is elevating this connection to a **framing principle** that organizes research priorities. By positioning context windows as workspace for test-time compute, the paper provides a coherent motivation for why efficiency matters (it's not just about cost—it's about enabling capabilities that require workspace beyond what naive scaling can provide) and why the "effective vs. claimed" gap is so consequential (a model that advertises 128K but effectively processes only 32K cannot support the extended reasoning traces that test-time scaling requires). This is a conceptual reframing that recontextualizes the entire survey's technical content within a broader vision of where language model capabilities are heading.
 
 ## 5. Experimental Analysis
-This survey synthesizes results rather than running a single model. Still, it reports concrete numbers and evaluation protocols.
 
-- Evaluation methodology (how the field evaluates)
-  - Long‑context comprehension is framed as: language modeling (sliding‑window PPL curves), retrieval (explicit/semantic NIAH), aggregation (statistical and semantic tasks like SummHay), reasoning (multi‑needle reasoning), and real tasks (QA, summarization, reranking, RAG, ICL, code) (Figure 7; §6.1.1).
-  - Long‑form generation uses QA/summarization/instruction‑following datasets; evaluations combine automatic metrics (ROUGE/BLEU/METEOR/BERTScore; task‑specific scores like FActScore), LLM‑as‑judge, and human evaluation (Figure 8; §6.2.3; Table 8).
+### Evaluation Methodology
 
-- Main quantitative outcomes gathered in the survey
-  - Effective vs. claimed context length (Table 9; §7.1.1). Examples:
-    > GPT‑4 (claimed 128k) → effective 64k (50%); Llama‑3.1‑70B (128k) → 64k (50%); Qwen2‑72B (128k) → 32k (25%); LWM‑7B (1M) → <4k (<4%).
-    This reinforces the “false promise” gap: many models use ≤ 1/2 of their claimed window.
-  - Perplexity and downstream performance (§7.1.2):
-    > When starting from a fixed base model (LLaMA2‑7B) and varying only long‑context extension methods (PI, NTK, YaRN, LongLoRA, Landmark, CLEX), the model’s PPL on long documents correlates with downstream long‑context benchmarks (Needle‑in‑a‑Haystack, LongBench, RULER).  
-    Moreover, LongPPL refines PPL by masking context‑irrelevant tokens and shows stronger correlation with long‑context task scores.
-  - RAG vs. LCLM (§7.1.3):
-    > With abundant compute, large‑window LCLMs often outperform classic RAG pipelines in average accuracy; however, RAG remains far more efficient. Hybrid routes—query routing between RAG/LCLM, LCLM‑defined retrieval units, and hard‑negative handling—tend to work best in practice.
+**Dataset.** The paper does not present original empirical experiments—it is a comprehensive literature survey. Consequently, there is no single "evaluation dataset" in the traditional sense. The survey catalogs and analyzes evaluation methodologies across the field rather than applying a unified protocol. The paper's "experimental" content consists of synthesizing and comparing results reported across dozens of prior papers, each using their own datasets and evaluation protocols. The synthetic benchmarks surveyed include Needle-in-a-Haystack (NIAH) variants [17, 194, 241, 289, 320, 377, 436, 601, 706], BABILong [260], RULER [194], SummHay [265], LongBench [17], and LongBench-v2 [20] for comprehension, and ELI5 [122], LongWriter [21], HelloBench [425] for generation. These benchmarks span context lengths from 8K to 10M tokens. The paper does not specify a single test split or size used across analyses; rather, it reports results from individual studies, each with their own splits. Key evaluation suites that the paper draws heavily on include RULER [194] (for effective context length measurement), LongBench [17] (bilingual, multi-task comprehension), LongBench-v2 [20] (up to ~2M tokens), and the LOFT benchmark [269] (up to 1M tokens for retrieval-augmented generation tasks). The paper explicitly notes that many benchmarks consist of 500 test questions (LongBench), up to 2M tokens per sample (LongBench-v2), or 100-1,000 samples (various synthetic benchmarks), but does not aggregate these into a single meta-analysis—it reports findings qualitatively.
 
-- Ablations, failure modes, robustness (as synthesized in §3–§7)
-  - Sparse attention and KV eviction:
-    - Static windows are simple but risk permanent information loss once tokens fall out (§3.2.1). Dynamic policies (H2O, CORM, SnapKV, FastGen) mitigate this but add scheduling complexity and can still miss late‑needed tokens.
-    - Head/layer‑aware budgeting (HeadKV, PyramidKV) shows that not all layers/heads need the same KV budget; ablations identify “retrieval heads” whose removal harms performance (§7.2.2).
-  - Length extrapolation:
-    - Simple PI can collapse high‑frequency signals; NTK/YaRN improve robustness; position‑simulation (PoSE/CREAM) helps when long training data are scarce (§3.1.2; Figure 10).
-  - Hybrid architecture:
-    - Studies such as Jamba’s 7:1 layer ratio and Minimax‑01’s lightning‑attention blocks show that adding a small fraction of full attention is often sufficient to restore retrieval/ICL while keeping linear phases for efficiency (§3.2.3).
+**Base model(s).** Because the paper is a survey, it reports results for a wide range of models rather than a single base model. Models analyzed include open-source families: LLaMA-2 (7B), LLaMA-3.1 (8B, 70B) [159, 522], Qwen2 (72B) [611], Mistral-v0.2 (7B) [219], Mixtral-8x22B (39B/141B), Yi (34B), GLM4 (9B) [152], Command-R-plus (104B) [90], MiniMax-01 [373], Jamba [309], and proprietary models including GPT-4, Gemini-1.5-Pro [510], and Claude variants. The paper's choice to survey such a broad range is deliberate—it aims to identify cross-model patterns (like the effective-vs-claimed context length gap, or convergence on 6:1 hybrid ratios) that hold across families and scales. For specific analyses like the critical rotation base [332], the paper uses LLaMA-family models with RoPE encoding. For infrastructure benchmarks, it draws on reported throughput and memory measurements from papers like Jamba [309] (reporting 9GB KV cache at 256K context vs. 80-88GB for comparable transformers). The paper acknowledges but does not resolve the challenge that different base models, training recipes, and evaluation protocols make direct comparisons difficult—this is a limitation of the survey methodology rather than a controlled experimental finding.
 
-- Do the experiments support the claims?
-  - The “effective length” evidence is persuasive because it aggregates multiple public models and reports explicit numbers (Table 9).
-  - The perplexity insight is careful: earlier mixed results are reconciled by controlling the base model and adopting LongPPL (§7.1.2), which credibly explains when PPL can be trusted.
+**Metrics.** The paper reports and critically analyzes several key metrics used across the surveyed literature:
 
-## 6. Limitations and Trade‑offs
-- Assumptions and scope
-  - Literature cut‑off: while comprehensive up to March 2025, the space evolves quickly (e.g., new o1‑like recipes, new long video agents).
-  - The survey aggregates disparate experimental setups; cross‑paper comparisons can be noisy even with careful curation (§6.1.3 notes MC‑style QA is often chosen to ease scoring).
+- **Context Length:** both *claimed* (advertised support length, e.g., 128K tokens) and *effective* (the length up to which performance remains above some threshold, as measured by RULER [194] or similar). The effective length is operationalized as the maximum sequence length where the model maintains acceptable accuracy on retrieval or aggregation tasks—however, the paper notes that "acceptable" is benchmark-specific and not standardized across studies.
 
-- Method‑level trade‑offs highlighted by the survey
-  - Position methods:
-    - Training‑free reorganization/interpolation are easy to deploy but may still degrade local/high‑frequency cues; hierarchical/simulation methods require training or data curation (§3.1.2).
-  - Attention/memory:
-    - Sparse/windowed attention saves cost but risks losing distant facts; dynamic retention reduces risk but increases scheduling and latency variance (§3.2.1).
-    - SSM/linear attention scale well but may underperform on in‑context learning and retrieval; hybrid stacks add complexity (§3.2.2–§3.2.3).
-  - Workflows:
-    - Prompt compression and memory systems reduce tokens but introduce failure modes (missed evidence; retrieval latency; memory drift and inconsistency across “parametric” vs. external memories) (§4.1–§4.2).
-    - RAG remains sensitive to chunking, retrieval quality, and hallucination without citations (§4.3).
-  - Systems:
-    - Prefill–decode disaggregation improves throughput but complicates cluster scheduling and KV shipping (§5.2.3).
-    - GPU–CPU parallelism alleviates HBM pressure but can be PCIe‑bound and sensitive to CPU choice (§5.2.4).
-    - Quantization of KV caches requires robust outlier handling and custom kernels to avoid accuracy loss (§5.2.1).
+- **Perplexity (PPL):** computed as `$\exp(-\frac{1}{N}\sum_{i=1}^{N} \log P(w_i|w_{<i}))$` on held-out long-context text, typically using sliding window approaches [63, 415, 704]. The paper devotes substantial analysis (Section 7.1.2) to documenting that standard PPL "fails to correlate with long context comprehension capabilities" [10, 198, 489], while noting that LongPPL [125] (computing perplexity exclusively on context-sensitive token distributions) partially rehabilitates the metric. When reporting PPL results, the paper qualifies them as measuring language modeling quality rather than downstream task performance.
 
-- Open questions
-  - How to measure and close the gap between supported and effective context lengths in a standardized way beyond NIAH‑style probes (§6.1.3)?
-  - How to evaluate long‑form generation efficiently and reliably (the paper advocates coarse‑to‑fine LLM‑as‑judge pipelines, §6.2.4)?
-  - How to train reward/preference models that can grade long reasoning traces and long‑document faithfulness (§9.2 “Long Context RL”)?
+- **Task Accuracy:** the primary downstream metric, defined as the fraction of test questions answered correctly. For comprehension tasks, this covers QA accuracy, retrieval precision, aggregation correctness, and reasoning accuracy. For generation tasks, this covers ROUGE [310], BLEU [399], BERTScore [665], and LLM-as-a-Judge evaluations. The paper is careful to note that different benchmarks use different accuracy definitions—some require exact string match, others use multiple-choice format, still others rely on LLM evaluation.
+
+- **Effective Context Length Ratio:** defined as `Effective Length / Claimed Length`, expressed as a percentage. The paper presents this systematically in Table 9, drawing on RULER [194] measurements. This is positioned as a diagnostic metric revealing the gap between marketing and reality.
+
+- **Throughput and Memory:** for infrastructure evaluation (Section 5), metrics include tokens per second (throughput), GPU memory consumption (GB), KV cache size, and Time to First Token (TTFT) for the prefill phase and Time Per Output Token (TPOT) for the decoding phase. The paper reports these in qualitative comparisons (e.g., Jamba's "5x higher throughput than the Transformer" [160]) rather than unified quantitative benchmarks.
+
+- **KV Cache Size:** measured in GB per context length. The paper cites Jamba 1.5 requiring "only 9GB for its KV cache with a 256K context length—compared to 80-88GB for similarly sized transformer models" [512]. This metric is infrastructure-specific and contextualized within hardware constraints (GPU HBM capacity).
+
+- **Scaling Ratios/Convergence Patterns:** for architecture analysis, the paper tracks the ratio of linear-complexity to full-attention layers across models, noting convergence around 6:1 to 7:1 (Jamba at 7:1, MiniMax-01 at 7:1, Character.ai at "approximately 6:1") [49, 309, 373, 512]. This is a qualitative pattern rather than a computed metric.
+
+**Baselines.** The paper does not conduct original experiments with a unified baseline; instead, it reports and compares baselines from the literature. The key baselines discussed include:
+
+- **Standard Transformer with full attention:** serves as the quality ceiling against which efficient architectures (sparse, linear-complexity, hybrid) are compared. The paper notes that pure SSM/linear-complexity models "fall short compared to Transformer models in long context tasks, such as in-context learning and long context retrieval" [402, 530], establishing full-attention Transformer performance as the reference point.
+
+- **Position interpolation (PI) [63]:** serves as the baseline for position embedding extrapolation methods. NTK-aware scaling [32, 408], YaRN [408], and LongRoPE [106] are all compared against linear interpolation in terms of perplexity and downstream task performance after context extension.
+
+- **Standard best-of-N and majority voting:** discussed tangentially through the "lost in the middle" analysis—models retrieving information from different positions serve as their own baselines, with beginning-of-context and end-of-context performance compared against middle-of-context performance [324].
+
+- **Greedy decoding and standard sampling:** for generation evaluations, compared against techniques like speculative decoding [276, 302] and various decoding strategies.
+
+- **Vanilla KV cache management:** for inference infrastructure, standard full KV cache serves as the memory baseline against which PagedAttention [264], quantization [192, 339], and sparse attention methods [301, 594] are compared.
+
+- **RAG vs. LCLM direct processing:** Section 7.1.3 discusses the comparative baseline where RAG pipelines (retrieve-then-generate) are evaluated against long-context models directly processing entire corpora. Li et al. [303] and Lee et al. [269] find LCLMs "deliver superior average performance compared to RAG, despite not being specifically trained for these tasks."
+
+- **Short-context fine-tuning:** for post-training evaluation, standard short-context instruction tuning serves as the baseline against which long-context alignment methods (GATEAU [470], LongReward [654]) are compared.
+
+**Generation budget / compute accounting.** The paper discusses computational budgeting at two levels:
+
+- **For architecture and inference:** compute is measured in FLOPs (for attention complexity comparisons—`$O(n^2)$` for standard, `$O(n)$` for linear-complexity) and memory (GB of GPU HBM for KV cache). The paper notes that "limited GPU memory, in particular, renders most common training optimizations ineffective" for long contexts (Section 5.1.2), establishing GPU memory as the primary constraint rather than total FLOPs. For inference, the budget is measured by KV cache size and throughput in tokens/second. The paper emphasizes that "each I/O operation requires transmitting both the model parameters and the KV cache into the computation unit" (Section 5.2), making memory bandwidth the binding constraint during decoding.
+
+- **For training:** the budget is determined by sequence length (number of tokens processed in parallel), which directly determines activation memory. The paper describes techniques like gradient accumulation and sequence parallelism as ways to effectively increase batch size under fixed GPU memory constraints. FlashAttention [97, 96, 450] is discussed as reducing the memory footprint of attention computation through block-wise processing.
+
+**Cross-validation / statistical protocol.** The paper does not report original cross-validation or statistical significance testing. As a survey, it synthesizes results from papers that each employ their own validation protocols. The paper discusses evaluation methodology critically (Section 6.1.3), noting that "comprehensive benchmarks must incorporate specific downstream long context tasks, particularly question answering, summarization, RAG, and in-context learning, which serve as a relatively complete proxy for real-world applications." It also notes the limitation that many benchmarks use test sets of "500 questions" split into quintiles of ~100 each (for difficulty analysis), with the implication that results may have high variance for the hardest and easiest bins. The paper advocates for more rigorous evaluation but does not itself conduct statistical comparisons or meta-analyses.
+
+---
+
+### Main Quantitative Results
+
+#### The Effective-vs-Claimed Context Length Gap
+
+The paper's most quantitatively striking finding is the systematic documentation (Section 7.1.1, Table 9) of the discrepancy between claimed and effective context lengths across models. The headline numbers from RULER [194] evaluations:
+
+- **GPT-4** (proprietary, 128K claimed): effective length 64K (50% of claimed)
+- **Llama3.1 (70B)** (128K claimed): effective length 64K (50%)
+- **Qwen2 (72B)** (128K claimed): effective length 32K (25%)
+- **Command-R-plus (104B)** (128K claimed): effective length 32K (25%)
+- **Mixtral-8x22B** (64K claimed): effective length 32K (50%)
+- **GLM4 (9B)** (1M claimed): effective length 64K (6.4%)
+- **GradientAI/Llama3 (70B)** (1M claimed): effective length 16K (1.6%)
+- **LWM (7B)** (1M claimed): effective length <4K (<4%)
+- **Llama3.1 (8B)** (128K claimed): effective length 32K (25%)
+- **DBRX (36B/132B)** (32K claimed): effective length 8K (25%)
+
+The pattern is consistent: "For most models across both categories, the effective context length rarely exceeds half of the claimed length." Models claiming 1M token support perform particularly poorly, with effective ratios of 1.6-6.4%. This is presented as a systematic finding rather than an isolated observation—the paper cites additional evidence from BABILong [260] which replicates the pattern.
+
+#### Perplexity as an Unreliable Proxy for Downstream Performance
+
+Section 7.1.2 synthesizes multiple studies demonstrating that long-context perplexity does not correlate with downstream task performance:
+
+> "Hu et al. [198], An et al. [10], and Sun et al. [489] all observed that different models' perplexity scores on long contexts fail to correlate with their long context comprehension capabilities."
+
+However, the paper notes a more recent, qualified finding: **LongPPL** [125], which computes perplexity exclusively on context-sensitive token distributions, partially rehabilitates the metric. According to the paper's synthesis, when different context-extension methods (PI [63], YaRN [408], NTK [407], LongLora [71], Landmark Attention [377], CLEX [53]) are applied to the same base model (LLaMA2-7B), "the resulting models' perplexity scores on the GovReport [200] dataset exhibit significant correlation with their performance on long context downstream tasks" [345]. This suggests that PPL comparisons are meaningful *within* a single base model family but not *across* different base models.
+
+#### Architectural Convergence on 6:1 to 7:1 Hybrid Ratios
+
+The paper documents (Section 3.2.3) a striking empirical convergence across multiple independent model development efforts:
+
+- **Jamba [309]:** first large-scale hybrid, with "a 7:1 ratio (Mamba to Transformer layers) provided optimal balance." Scaled to 100B+ parameters in Jamba 1.5 [512] while maintaining the same 7:1 ratio.
+- **MiniMax-01 [373]:** "one transformer block with softmax attention followed every seven Transformer blocks with lightning attention"—equivalent to a 7:1 ratio of linear-complexity to full-attention blocks. Context length up to 4M tokens.
+- **Character.ai [49]:** independently found "approximately 6:1 (linear complexity to full attention) yielded optimal results."
+- **RecurrentGemma [36]:** uses a mixture within each layer (not interleaving), so the ratio concept applies differently, but maintains a similar philosophy of combining both mechanisms.
+
+The paper frames this as evidence of a design "sweet spot" (Section 3.2.3), noting: "This convergence on ratios of approximately 6:1 or 7:1 across multiple independent research efforts indicates a sweet spot in the design space, suggesting that hybrid architectures represent not just a compromise but potentially the optimal approach."
+
+#### RAG vs. LCLM Performance Tradeoffs
+
+Section 7.1.3 synthesizes the comparison between RAG pipelines and long-context direct processing:
+
+- **Performance advantage for LCLMs:** Lee et al. [269] and Li et al. [303] found that "when ample computational resources are available, LCLMs deliver superior average performance compared to RAG, despite not being specifically trained for these tasks."
+- **Efficiency advantage for RAG:** The paper notes that "compared to RAG, directly employing LCLMs to generate responses based on entire corpora presents significant efficiency limitations."
+- **Hybrid approaches emerging:** Li et al. [303] proposed Self-Route, which "dynamically directs queries to either RAG or LCLMs based on the model's self-assessment, thereby optimizing the balance between performance and computational cost." Jiang et al. [228] used "LCLMs to obtain larger, semantically more coherent retrieval units for RAG."
+
+The paper does not provide specific accuracy numbers for this comparison—it reports the directional finding from the cited studies rather than conducting a meta-analysis.
+
+#### Position Embedding Extrapolation Scaling Laws
+
+Section 7.2.1 discusses the "critical rotation base" analysis from Liu et al. [332]:
+
+> "When scaling down the rotation base from `$\beta$` to `$\beta_{\text{down}}$`, phase change happens when the largest wave length `$2\pi\beta_{\text{down}}$` is equal to `$\lambda_c$`. The gains of scaling down the rotation base is prominent until `$\beta_c$`. When scaling up the rotation base from `$\beta$` to `$\beta_{\text{up}}$`, `$\lambda_c$` would correspond to `$\{\lambda_c\}_{\text{up}}$`, which is indicative of the phase change point: model's perplexity would explode on texts longer than `$\{\lambda_c\}_{\text{up}}$`."
+
+This provides a quantitative theoretical bound on context extension via rotation base scaling. The paper also cites Men et al. [363], who "derive the lower bound of the rotation base for an expected model context length" and establish "a polynomial relationship between effective context lengths and rotation bases."
+
+#### Inference Efficiency Gains
+
+Section 5.2 reports several quantitative efficiency improvements from infrastructure optimizations (citing original papers, not direct measurements):
+
+- **PagedAttention [264]:** addresses "memory fragmentation and inefficient usage" for KV caches. Specific throughput numbers are not quoted in the survey, but the mechanism is described as enabling "flexible virtual memory management" for KV caches.
+- **Jamba 1.5 KV cache [512]:** "requiring only 9GB for its KV cache with a 256K context length—compared to 80-88GB for similarly sized transformer models."
+- **GoldFinch KV cache compression [157]:** "cache size savings 756-2550 times smaller than traditional transformer caches."
+- **Mamba throughput [160]:** "5x higher throughput than the Transformer and has linear scaling over sequence length."
+- **FlashAttention-3 performance [450]:** described as incorporating "FP8 acceleration and three key techniques" with "asynchronous data loading and computation, overlapping softmax and GEMM computations, and block-wise quantization"—specific throughput numbers are not quoted.
+- **Speculative decoding efficiency:** The paper generally describes these methods as reducing the "frequency of transferring model parameters from HBM to the computation units" without quoting specific speedup factors across models.
+
+---
+
+### Ablation Studies and Robustness Checks
+
+Since the paper is a survey rather than an original empirical study, "ablation studies" in this context refer to controlled comparisons documented within the surveyed literature that isolate the effect of specific design choices. The paper does not present these as formal ablations with consistent methodology, but synthesizes findings that serve ablation-like diagnostic functions.
+
+**Attention mechanism type (full vs. linear-complexity vs. hybrid):** Multiple studies converge on the finding that pure SSM/linear-complexity models underperform full-attention Transformers on specific long-context capabilities (in-context learning, long-context retrieval), while hybrid architectures recover most of the Transformer's capability at a fraction of the computational cost. Waleffe et al. [530] and Park et al. [402] show that Mamba/Mamba-2 "fall short compared to Transformer models in long context tasks." Chen et al. [67] finds that "adding a few standard Transformer layers back into the architecture enables the model to overcome these issues." This ablation (pure Mamba vs. hybrid Mamba-Transformer vs. pure Transformer) establishes that linear-complexity layers alone are insufficient for tasks requiring precise long-range retrieval.
+
+**Hybrid architecture ratio:** The convergence around 6:1 to 7:1 ratios (linear-to-full attention layers) documented across Jamba [309], MiniMax-01 [373], and Character.ai [49] implicitly represents a ratio-sweep ablation—these organizations presumably tested different ratios and found this neighborhood optimal. The paper does not provide the raw sweep data but reports the consensus finding.
+
+**Position embedding type (RoPE variants):** The comparison of PI [63], NTK [408], YaRN [408], and LongRoPE [106] for context extension (Section 7.2.1, Figure 10) shows that frequency-specific scaling (NTK, YaRN) outperforms uniform scaling (PI) by preserving high-frequency information. YaRN's ramp function outperforms NTK's smoother transition by preserving high frequencies "more conservatively" and transitioning to low frequencies "faster." LongRoPE's evolution-based search outperforms all predefined functional forms. This is not a formal ablation in the survey but represents a parameter sweep across position encoding strategies.
+
+**Perplexity computation method (standard vs. LongPPL):** Fang et al. [125] demonstrate that "computing perplexity exclusively on context-sensitive token distributions" (LongPPL) reestablishes the correlation between perplexity and downstream performance that standard PPL loses. This is an ablation of the PPL metric—showing that the failure of standard PPL is due to "interference from context-irrelevant tokens" rather than an inherent limitation of probabilistic evaluation.
+
+**Training data composition for context extension:** Fu et al. [132] ablates five types of long-context data composition: cutting at 4K, cutting at 128K, global upsampling, per-source upsampling, and upsampling specific domains (Arxiv/Book/Github). The finding is that "when scaling up context length, it is crucial to oversample lengthy sequences while maintaining the original domain diversity." This ablation isolates the effect of data mixture strategy on downstream long-context performance.
+
+**Position information type for extrapolation:** The distinction between position reorganization (SelfExtend [234], DCA [11], ReRoPE [484]) and position interpolation (PI [63], NTK [408], YaRN [408]) methods serves as an ablation of the mechanism: reorganization preserves exact relative positions at short range while coarsening long-range positions; interpolation smooths all positions but introduces frequency shifts. The paper notes that reorganization methods are typically "training-free" while interpolation methods often "rely on training to be effective"—ablating the tradeoff between ease of deployment and final performance.
+
+**Hierarchical position embedding vs. flat extrapolation:** BiPE [183] and HiRoPE [658] ablate the benefit of introducing hierarchy in position encoding. The paper reports this as qualitative improvement in extrapolation capability, though specific quantitative comparisons across methods are not aggregated.
+
+**Single-agent vs. multi-agent for long-context processing:** Chain of Agent (CoA) [674] and LongAgent [681] represent an architectural ablation at the workflow level—distributing long-context processing across multiple agents vs. single-agent approaches like ReadAgent [270] or GraphReader [293]. The paper reports that multi-agent approaches "ensure efficient context processing by assigning each agent a short context and interleaving reading and reasoning" but does not provide specific comparative accuracy numbers.
+
+**Negative result: ReST$^{EM}$ for context extension fails:** While not a direct ablation in this survey, the paper notes (in the context of position simulation methods and training strategies) that "on-policy data collection in [context extension] amplifies spurious correlations," leading some iterative self-improvement approaches to degrade performance when applied to long-context scenarios. This is presented as a cautionary finding rather than a controlled ablation.
+
+**Prefilling-decoding disaggregation vs. monolithic serving:** Splitwise [403], DistServe [694], and Mooncake [418] demonstrate that decoupling the compute-bound prefill phase from the bandwidth-bound decode phase "demonstrably improving both Time to First Token (TTFT) for the prefill phase and Time Per Output Token (TPOT) for decoding phase." This is an ablation at the infrastructure level, isolating the benefit of phase-specific hardware allocation.
+
+**KV cache management strategy (fixed window vs. dynamic selection vs. pyramid):** The comparison of static sparse attention methods (StreamingLLM [596], window attention [27]) against dynamic methods (H2O [676], SnapKV [301]) and layer-aware methods (PyramidKV [43], PyramidInfer [614]) serves as an ablation of the token retention strategy. The finding is that layer-aware methods outperform flat strategies because "LLMs aggregate information through a pyramid-shaped information funnel"—lower layers need more tokens, higher layers can operate with fewer.
+
+---
+
+### Critical Assessment
+
+#### Claim 1: The effective context length rarely exceeds half of the claimed length.
+
+**Assessment:** Supported with robust evidence from multiple independent evaluations across diverse model families.
+
+The evidence from RULER [194] summarized in Table 9 is systematic: 11 out of 17 evaluated models show effective ratios of 50% or below, with many far lower. The pattern holds across open-source (LLaMA, Qwen, Mistral) and proprietary (GPT-4) models, across scales (7B to 104B), and across claimed lengths (32K to 1M). BABILong [260] provides convergent validation. The paper also provides mechanistic explanations (position encoding extrapolation limits documented in Section 7.2.1, softmax attention dissipation, training data distribution mismatch in Section 2.1) that make the phenomenon theoretically grounded rather than purely observational.
+
+However, the claim has important qualifications that the paper acknowledges but could emphasize more strongly:
+
+- **The effective length depends on the evaluation methodology.** The paper notes that RULER measures effective length as the maximum context where performance on specific tasks (NIAH variants, variable tracking, etc.) remains above a threshold. Different tasks impose different demands—a model might maintain retrieval capability at 64K but lose reasoning capability at 32K. The effective length is task-relative, and the survey does not disaggregate by task type in Table 9.
+
+- **Effective length is a moving target as training recipes improve.** The paper reports these findings as a snapshot, but newer models may achieve higher effective ratios. The survey does not provide temporal trends, making it unclear whether the gap is narrowing over time or is a structural limitation.
+
+- **The survey cannot verify the RULER methodology independently.** The paper relies entirely on Hsieh et al. [194] for the numbers in Table 9 without discussing potential limitations of that evaluation—for example, whether the needle placement strategy biases results, whether the specific tasks used to define "effective" are representative of real-world demands, or whether alternative evaluation protocols might produce different ratios.
+
+A stronger analysis would have included a discussion of evaluation methodology variance—how much does the effective ratio change if you use BABILong [260] vs. RULER [194] vs. LongBench [17]? The paper mentions multiple benchmarks but does not systematically compare their effective length estimates for the same models.
+
+#### Claim 2: Perplexity fails to correlate with long-context comprehension capabilities.
+
+**Assessment:** Supported with important qualifications that partially undermine the strength of the original claim.
+
+The negative finding (PPL does not correlate across different models) is well-documented by Hu et al. [198], An et al. [10], and Sun et al. [489]. This is a genuinely important finding because PPL is the most commonly reported metric in context-extension papers. If it does not predict downstream performance, many published comparisons are unreliable.
+
+However, the paper's subsequent discussion of LongPPL [125] and the Lu et al. [345] finding—that PPL does correlate with downstream performance *within a single base model family* using different context-extension methods—significantly qualifies the claim. This is not acknowledged as a qualification in the paper's narrative, which frames PPL as broadly unreliable. The more precise claim should be: **Standard PPL computed on all tokens fails to correlate across different base models, but LongPPL (context-sensitive tokens only) and within-model-family comparisons partially restore the correlation.** This is a more nuanced finding than the paper's headline suggests.
+
+Additionally, the paper does not discuss *why* standard PPL fails. The mechanism is important: long documents contain many tokens that are predictable from short-range context (function words, common phrases), and these dominate the PPL computation, masking the model's ability to handle tokens that genuinely require long-range dependencies. LongPPL addresses this by filtering to context-sensitive tokens, but the paper does not explore whether alternative filtering strategies would also work, or whether the PPL failure is specific to certain document types.
+
+#### Claim 3: Hybrid architectures converge on a 6:1 to 7:1 ratio of linear-complexity to full-attention layers as an empirical optimum.
+
+**Assessment:** An intriguing pattern supported by multiple independent observations, but the evidence is circumstantial rather than systematic.
+
+The convergence is striking: Jamba [309] reports 7:1, MiniMax-01 [373] uses effectively 7:1, Character.ai [49] found "approximately 6:1," and Gemma [511] uses 1:1 (an outlier that the paper frames as emphasizing "balanced performance across tasks rather than maximizing context length"). The paper treats this as evidence of a design sweet spot.
+
+However, several caveats weaken this claim:
+
+- **The "optimal" ratio is model-scale-dependent and task-dependent.** Jamba found 7:1 at its scale; Character.ai found ~6:1 at its scale; Gemma found 1:1. The paper does not analyze whether the optimal ratio changes with model size, training data composition, or target task distribution. A model optimized for in-context learning might need more full-attention layers than one optimized for retrieval.
+
+- **The paper does not have access to the optimization process that produced these ratios.** We do not know whether Jamba systematically swept ratios (testing 3:1, 5:1, 7:1, 9:1) and found 7:1 optimal, or tested only a few. The convergence could be coincidental—7:1 might simply be a commonly tried ratio that produced good results, not a globally optimal configuration. The survey cannot distinguish these interpretations.
+
+- **The ratio concept applies differently across architectures.** For layer-wise hybrids (Jamba), the ratio is clear. For head-wise hybrids (Hymba [109]), full attention and SSM operate in parallel within the same layer, so the ratio concept is incommensurable. For prefilling-decoding hybrids (YOCO [495]), different mechanisms are used in different phases, and the ratio is not well-defined.
+
+- **There is no theoretical explanation for why 6:1 or 7:1 is optimal.** The paper offers a qualitative hypothesis (linear layers provide summarization, full-attention layers provide recall) but no mathematical model. Without theory, the convergence could be an artifact of shared design intuitions in the research community rather than a genuine scaling law.
+
+This pattern is best characterized as a **suggestive empirical regularity that merits systematic investigation** rather than an established law. The paper appropriately qualifies it ("suggesting that hybrid architectures represent not just a compromise but potentially the optimal approach") but the hedging ("suggesting," "potentially") is buried in a single sentence.
+
+#### Claim 4: The field lacks reliable evaluation frameworks for long-context models.
+
+**Assessment:** Strongly supported by the paper's own evidence, but the paper does not go far enough in demonstrating the practical consequences.
+
+The paper makes a compelling case that evaluation is inadequate: PPL fails to correlate with downstream performance, synthetic benchmarks like NIAH do not guarantee real-world competence, long-form generation evaluation is "primitive," and the effective-vs-claimed gap means that stated context lengths are often meaningless. The taxonomy of evaluation paradigms (Section 6.1.1, Figure 7) provides a useful framework for diagnosing what specific capabilities are being tested.
+
+However, the paper misses an opportunity to demonstrate the *magnitude* of the problem. It does not provide side-by-side comparisons showing that Model A outperforms Model B on NIAH but underperforms on real-world QA—which would be the strongest evidence that synthetic benchmarks are misleading. It catalogs benchmarks and notes the problem in principle, but does not present quantitative evidence of evaluation-induced ranking reversals.
+
+Additionally, the paper does not critically analyze the limitations of its own proposed evaluation hierarchy. The division into retrieval, aggregation, reasoning, and real-world adaptation is clean conceptually, but the paper does not provide evidence that these categories are separable in practice—real tasks often require all three simultaneously, and models that excel at isolated retrieval may not combine retrieval with reasoning effectively. The hierarchy may impose a structure that does not match how models actually process information.
+
+#### Missing Experiments and Analyses
+
+As a survey, the paper is not expected to conduct original experiments, but several types of analysis would have substantially strengthened its contributions:
+
+**Missing: A meta-analysis quantifying the effective-vs-claimed gap across benchmarks.** The paper reports RULER [194] results (Table 9) but does not aggregate across BABILong [260], LongBench [17], and other evaluations to produce a multi-benchmark estimate of effective length for each model. Different benchmarks test different capabilities, and a model might show 50% effective length on retrieval but 25% on reasoning. Without disaggregation, the headline claim ("rarely exceeds half") is an oversimplification.
+
+**Missing: A controlled comparison of hybrid architectures at identical scale.** The paper documents convergence around 6:1-7:1 ratios but cannot verify whether this is optimal because the models being compared differ in scale, training data, and evaluation protocol. A systematic study fixing model size and data and sweeping the ratio would transform this circumstantial evidence into an empirical law.
+
+**Missing: Quantitative evaluation of prompt compression tradeoffs.** The paper extensively catalogs prompt compression methods (Section 4.1) but does not report the compression-accuracy tradeoff in a unified framework. What is the Pareto frontier? At what compression ratio do different methods break down? Without this, practitioners cannot make informed choices among compression approaches.
+
+**Missing: End-to-end latency/throughput comparisons for inference infrastructure techniques.** Section 5.2 discusses quantization, memory management, PD disaggregation, and speculative decoding, but provides isolated throughput/memory numbers from individual papers rather than comparisons at equivalent hardware scales. How much does PagedAttention actually improve throughput over naive KV cache management at 128K context? The paper reports qualitative mechanisms but not quantitative head-to-heads.
+
+**Missing: Analysis of evaluation benchmark contamination.** Many of the benchmarks discussed (LongBench, NIAH variants, summarization datasets) are publicly available. The paper does not discuss whether the models it analyzes may have been trained on these benchmarks, nor does it assess the risk that reported results reflect memorization rather than genuine long-context capability. Given the survey's emphasis on evaluation reliability, this is a notable omission.
+
+#### Conditional Validity of Claims
+
+The paper's claims are generally well-supported but under specific conditions that are sometimes implicit:
+
+- **The effective-vs-claimed gap holds for models evaluated by mid-2024 benchmarks.** Newer models (Gemini-1.5-Pro achieves >128K effective on 1M claimed in Table 9—one of the few examples exceeding 50%) may narrow the gap. The survey's findings are time-stamped by the literature it surveys.
+
+- **The architectural convergence claim holds for general-purpose language models.** Domain-specific or task-specific models may benefit from different ratios. The paper does not analyze whether code models, for instance, converge to the same 6:1-7:1 ratio.
+
+- **The PPL correlation failure holds for cross-model comparisons.** Within a single model family, PPL may be more informative (per Lu et al. [345]), a qualification that should accompany the headline claim.
+
+- **The RAG vs. LCLM comparison holds in the "ample computational resources" regime.** The paper's own synthesis notes that when resources are constrained, the advantage may shift to RAG—but the specific resource threshold is not characterized.
+
+## 6. Limitations and Trade-offs
+
+### 6.1 The Survey Provides No Quantitative Meta-Analysis Despite Synthesizing Cross-Study Findings
+
+**The assumption or constraint.** As a comprehensive survey, the paper's primary contribution is organizing and taxonomizing a vast literature rather than conducting controlled experiments. However, the paper makes several quantitative claims that would benefit from systematic meta-analysis—most prominently, the "effective context length rarely exceeds half of the claimed length" claim (Section 7.1.1). The paper sources these findings from individual studies (primarily RULER [194] for Table 9) but does not aggregate across multiple benchmarks to produce confidence intervals, test for statistical significance of the effective-vs-claimed gap, or examine how the gap varies by task type (retrieval vs. reasoning vs. aggregation).
+
+**The consequence.** The headline quantitative claims in the paper—particularly the effective context ratios in Table 9—are presented as point estimates from a single evaluation protocol (RULER) without discussion of variance across benchmarks, model checkpoints, or evaluation methodologies. A practitioner reading that GPT-4 has "50%" effective context length cannot determine whether this is a robust finding (consistent across multiple evaluation suites) or whether alternative benchmarks like BABILong [260] or LongBench [17] would produce different ratios for the same model. The paper discusses RULER, BABILong, and LongBench as separate evaluation tools but never provides side-by-side effective length estimates for the same models across these benchmarks, leaving the quantitative reliability of its central diagnostic metric unverified.
+
+**What evidence exists in the paper.** The paper explicitly acknowledges this scope limitation only indirectly. Section 6.1.3 notes that "excellence in synthetic tasks alone does not guarantee downstream competence" and argues for "comprehensive benchmarks," but the survey itself does not perform the cross-benchmark validation it advocates. Table 9 presents RULER data as the authoritative effective context measurement without qualification, and the paper draws strong conclusions ("the effective context length rarely exceeds half of the claimed length") as though this is a settled finding rather than a measurement that depends on the specific evaluation protocol. The paper does not report confidence intervals for any of the effective ratios, does not discuss whether the RULER threshold for "acceptable performance" is task-appropriate, and does not examine whether the ranking of models by effective length is stable across benchmarks.
+
+**Mitigation status.** Not addressed. The paper acknowledges that "comprehensive benchmarks must incorporate specific downstream long context tasks" (Section 6.1.3) but treats this as a recommendation for future benchmark design rather than a gap in its own synthesis. The absence of quantitative meta-analysis is inherent to the survey format—the paper's contribution is organizational, not empirical—but the strong quantitative claims it makes are not proportionally supported by the evidence synthesis methodology it employs. A more transparent approach would have been to report effective length estimates from multiple benchmarks side by side for the same models, qualifying the RULER findings with alternative measurements.
+
+---
+
+### 6.2 The Survey Cannot Distinguish Genuine Architectural Convergence from Shared Community Intuitions
+
+**The assumption or constraint.** One of the paper's most striking empirical claims is that hybrid architectures converge on "approximately 6:1 or 7:1" ratios of linear-complexity to full-attention layers, which the paper characterizes as "a sweet spot in the design space, suggesting that hybrid architectures represent not just a compromise but potentially the optimal approach" (Section 3.2.3). The evidence for this claim consists of five data points: Jamba [309] (7:1), Jamba 1.5 [512] (7:1), MiniMax-01 [373] (described as 7:1), Character.ai [49] ("approximately 6:1"), and Gemma [511] (1:1, noted as an outlier focused on balanced performance). The paper treats these as independent observations converging on a design optimum.
+
+**The consequence.** The convergence may be an artifact of shared research community practices rather than a genuine empirical law. The paper has no visibility into the optimization process that produced these ratios—we do not know whether Jamba systematically swept ratios (testing 3:1, 5:1, 9:1) and found 7:1 optimal, or whether 7:1 was an initial guess that happened to work well enough. The research groups behind these models are aware of each other's work; MiniMax-01 [373] was released after Jamba [309], so its architecture may have been influenced by Jamba's reported ratio rather than representing an independent discovery. The paper also does not analyze whether the optimal ratio depends on model scale (Jamba at 52B parameters vs. Character.ai at unreported scale vs. MiniMax-01 at 456B parameters), on training data composition, or on the specific linear-complexity mechanism used (Mamba vs. lightning attention)—all factors that could shift the optimum. Without this analysis, the convergence could be a self-reinforcing pattern in the research community rather than evidence of a fundamental design principle.
+
+**What evidence exists in the paper.** The paper acknowledges that Gemma's 1:1 ratio represents a different design choice "emphasizing balanced performance across tasks rather than maximizing context length," which hints at task-dependence but does not explore it. The paper also notes that RecurrentGemma [36] uses "a mixture of mechanisms within each layer rather than interleaving different layer types," making the ratio concept incommensurable across architectures—yet this observation is not used to qualify the convergence claim. The paper does not provide any theoretical analysis (e.g., information-theoretic bounds, scaling law derivations) that would predict a 6:1-7:1 optimum, and does not discuss alternative explanations for the observed ratios.
+
+**Mitigation status.** Not addressed beyond a single hedging phrase ("potentially the optimal approach"). The paper treats the convergence as an established empirical finding (Section 4, Key Insights) without examining the possibility that it reflects methodological coupling between research groups. A survey's role is precisely to contextualize such patterns—to ask whether apparently independent findings are truly independent—and the paper does not perform this critical function for one of its central architectural claims.
+
+---
+
+### 6.3 The Evaluation Taxonomy Has No Empirical Validation of Its Separability Assumption
+
+**The assumption or constraint.** Section 6.1.1 and Figure 7 present a hierarchical capability framework for long-context comprehension, dividing competencies into five levels: language modeling (foundation), retrieval, aggregation, reasoning, and real-world adaptation. This taxonomy is presented as a conceptual framework for organizing evaluation, with synthetic tasks mapped to specific capability levels (e.g., NIAH tests retrieval, SummHay tests semantic aggregation, BABILong tests reasoning). The implicit assumption is that these capabilities are separable—that performance on a retrieval task reflects retrieval capability rather than a combination of retrieval, aggregation, and reasoning.
+
+**The consequence.** The paper provides no evidence that models' performance on tasks at different levels of the hierarchy is driven by distinct capabilities rather than a common underlying factor. A model that performs poorly on a "reasoning" benchmark like BABILong [260] may be failing at the retrieval stage (failing to find the relevant information) or at the aggregation stage (failing to combine found information), not at the reasoning stage as the taxonomy would suggest. Similarly, the paper argues that "excellence in synthetic tasks alone does not guarantee downstream competence" (Section 6.1.3), which implies that the hierarchy's levels are not additive—being good at retrieval + aggregation + reasoning does not necessarily make a model good at real-world adaptation. But if the levels are not additive, the taxonomy's diagnostic value is limited: knowing that a model excels at NIAH (retrieval) tells us little about whether it will succeed at multi-hop QA (real-world adaptation), even though both require retrieval. The paper does not provide the correlation matrix between task types that would validate or invalidate the separability assumption.
+
+**What evidence exists in the paper.** The paper's own synthesis provides indirect evidence against strict separability. It notes that "models that excel at synthetic benchmarks may fail on these integrated challenges" (Section 6.1.3), and that the "lost in the middle" phenomenon (Section 7.1.1) affects both retrieval and reasoning tasks—suggesting a common positional bias mechanism rather than task-specific failures. The paper also documents that SSM-based models "fall short compared to Transformer models in long context tasks, such as in-context learning and long context retrieval" [402, 530] (Section 3.2.3), implying that the architectural determinant of capability cuts across the taxonomy's categories. None of this is presented as a critique of the taxonomy, but it undermines the assumption that the categories are cleanly separable.
+
+**Mitigation status.** Not addressed. The taxonomy is presented as a conceptual framework without empirical validation, and the paper does not discuss the possibility that the categories may overlap, interact, or collapse into fewer underlying factors. The future directions (Section 9.4) call for "more reliable evaluation frameworks," but do not suggest empirically validating the proposed capability hierarchy itself. This is a missed opportunity: a survey that proposes an evaluation framework should critically examine that framework's assumptions, particularly when the surveyed evidence provides relevant data.
+
+---
+
+### 6.4 The Training Data Synthesis Discussion Omits the Difficulty Estimation Bottleneck
+
+**The assumption or constraint.** Section 2 extensively discusses data strategies for long-context pre-training and post-training, including data filtering (Longwanjuan [333], LongAttn [576]), data mixture (Fu et al. [132], ProLong [140]), and data synthesis (Quest [135], SPLICE [481]). These methods assume access to either high-quality long documents with genuine long-range dependencies or the ability to synthesize such data through packing, retrieval, or model generation. The paper does not discuss the practical challenge of *identifying* which training samples have useful long-range dependencies—a prerequisite for filtering and synthesis approaches to work.
+
+**The consequence.** The methods the paper catalogs for improving data quality depend on being able to measure long-range dependency quality, but the paper's own evaluation analysis (Section 7.1.2) shows that standard metrics (perplexity) fail to correlate with downstream long-context performance. This creates a circularity problem: filtering training data for long-range dependencies requires a reliable metric for long-range dependency quality, but the paper has already argued that no such metric reliably exists (since PPL fails across models, and downstream task performance requires trained models). A practitioner reading Section 2 might assume that Longwanjuan's coherence/cohesion/complexity metrics or LongAttn's attention-based filtering provide reliable quality signals, but the paper does not validate these metrics against downstream performance—it simply reports that they exist.
+
+The paper notes that LongAttn [576] "uses the self-attention mechanism to quantify the long-range dependencies for accurate and efficient data selection" (Section 2.1.1), but does not discuss whether attention-based dependency scores from a base model (trained on short contexts) generalize to identifying training data that would improve a long-context model. If the base model's attention patterns do not capture the dependencies a long-context model would learn, the filtering may be systematically biased toward dependencies visible in short-context models.
+
+**What evidence exists in the paper.** None directly. The paper does not report validation studies for any of the data filtering metrics it catalogs. Section 2.1.1 presents filtering methods as proposed approaches without evaluating their effectiveness. The evaluation discussion in Sections 6-7 focuses on model evaluation, not data quality evaluation. The gap is structural: the paper's organization separates data strategies (Section 2) from evaluation (Section 6) and analysis (Section 7), so the interdependency between data quality measurement and model evaluation methodology is never examined.
+
+**Mitigation status.** Not addressed. The paper does not acknowledge that data filtering for long-context training inherits the same evaluation challenges it documents for model evaluation. The future directions (Section 9.2) mention "developing fine-grained filtering strategies beyond heuristics to identify training data with long-range dependencies" as a promising direction, implicitly acknowledging that current strategies are heuristic, but the paper does not connect this to its own findings about the unreliability of long-context evaluation metrics.
+
+---
+
+### 6.5 The Paper Treats Hardware Constraints as a Static Snapshot Rather Than a Co-Evolving Dimension
+
+**The assumption or constraint.** Section 5 (Infrastructure) catalogs current optimization techniques for training and inference, assuming contemporary GPU hardware architectures (Hopper, Ampere) and memory hierarchies (HBM capacity, PCIe bandwidth). The paper acknowledges that hardware is evolving—mentioning NVIDIA architectures from Volta through Blackwell—but treats the relationship as unidirectional: algorithms and systems adapt to hardware constraints. It does not explore how hardware evolution might change which architectural design choices are optimal, or whether infrastructure innovations might make certain tradeoffs (e.g., linear-complexity vs. full attention) obsolete.
+
+**The consequence.** The architectural convergence findings (6:1-7:1 hybrid ratios) and infrastructure recommendations (quantization, PD disaggregation, speculative decoding) are implicitly predicated on current hardware constraints. If future GPUs significantly increase HBM capacity (making KV cache size less of a bottleneck), the advantage of linear-complexity architectures over full attention would shrink—the primary motivation for hybrid architectures is memory efficiency, not compute efficiency. Similarly, if PCIe bandwidth increases substantially, the tradeoffs between GPU-CPU offloading strategies and pure GPU inference would shift. The paper does not discuss which of its architectural and infrastructure recommendations are robust to plausible hardware evolution trajectories (larger HBM, higher bandwidth interconnects, specialized attention hardware) and which are artifacts of current hardware limitations.
+
+This limitation is particularly consequential given the paper's role as a survey meant to guide future research. If a researcher reads Section 5 and designs a new architecture optimized for current HBM constraints, that architecture may be suboptimal on next-generation hardware with 10x larger HBM—but the survey provides no framework for anticipating such shifts.
+
+**What evidence exists in the paper.** Section 5.1 discusses FP8 acceleration on Hopper GPUs and notes that "FP8 are currently usable in TransformerEngine and other derivative acceleration libraries on Hopper GPUs" (Section 5.1.2), implicitly acknowledging hardware-specificity. Section 5.2 notes that "decoding processes are inherently characterized by substantial demands for GPU with more HBM capacity and higher bandwidth" and Section 9.3 calls for "dedicated hardware specifically engineered for decoding"—these passages recognize that current hardware is not optimized for long-context inference, but they frame the solution as hardware adapting to algorithms (building specialized decoding hardware) rather than algorithms needing to be robust to evolving hardware.
+
+**Mitigation status.** Partially addressed through future directions. Section 9.3 states that "prospective research endeavors focused on exploring even lower precision quantization levels, and the expanded application of quantization across a broader spectrum of model modules, are anticipated to yield substantial performance enhancements." But this is forward-looking within the current hardware paradigm, not an analysis of how algorithmic choices should be robust to hardware shifts. The paper does not discuss whether, for example, the convergence on 6:1 hybrid ratios would persist if HBM capacity doubled relative to compute throughput.
+
+---
+
+### 6.6 The Survey Does Not Address the Relationship Between Long-Context Capability and Factual Accuracy or Hallucination
+
+**The assumption or constraint.** The paper's evaluation framework (Sections 6-7) focuses on measuring whether models can retrieve, aggregate, reason over, and generate from long contexts—that is, capability metrics. It does not systematically address whether longer contexts increase or decrease the risk of hallucination, factual inconsistency, or unfaithful generation. The paper discusses "faithfulness" briefly in the context of long-form generation (Section 6.2.1 mentions FActScore [372], LongFact [563], and LongFaith [613]), but treats these as specialized evaluation sub-tasks rather than as a cross-cutting concern that interacts with all long-context capabilities.
+
+**The consequence.** A practitioner deploying an LCLM for document-grounded QA needs to know not just whether the model can find relevant information in a 128K context, but whether providing that full context increases the probability of generating plausible-sounding but factually incorrect answers (hallucination). The "lost in the middle" phenomenon (Section 7.1.1) documents that models fail to retrieve information from middle positions—but what happens when that information is critical for factual accuracy? Does the model *know* it is uncertain and refuse to answer, or does it confidently generate an incorrect answer based on information from more accessible positions? The paper's capability-focused evaluation framework does not address this safety-relevant question.
+
+Furthermore, as context windows grow to 1M+ tokens, the number of potentially distracting or contradictory pieces of information in the context increases. The paper does not discuss whether models become more susceptible to being misled by irrelevant context (distractibility) as context length grows, or whether techniques like prompt compression (Section 4.1) and RAG (Section 4.3) help or hurt factual reliability.
+
+**What evidence exists in the paper.** Section 6.2.1 notes that FActScore [372] evaluates factual precision by decomposing responses into atomic facts and measuring the proportion supported by the context. Section 8.3 mentions the application of long-context models in "therapeutic counseling" and "healthcare monitoring," domains where factual errors have serious consequences. But the paper does not synthesize findings across the surveyed literature on whether longer contexts make models more or less factually reliable, nor does it include factual reliability as a dimension in its evaluation taxonomy (Figure 7).
+
+The paper also does not discuss whether the architectural choices it catalogs—linear-complexity attention, sparse attention, KV cache eviction—affect factual accuracy differently than they affect retrieval or reasoning. A model using SnapKV [301] for efficient inference might maintain retrieval accuracy while losing the ability to verify factual consistency across dispersed context pieces, but the paper provides no framework for analyzing this tradeoff.
+
+**Mitigation status.** Not addressed. Section 9 (Future Directions) does not mention factual accuracy, hallucination, or faithfulness as research priorities for long-context modeling. Section 9.4 calls for "more reliable evaluation frameworks," but frames this in terms of task coverage and human annotation efficiency rather than safety-relevant metrics. Given that the paper discusses high-stakes applications (medical QA in MedOdyssey [123], financial analysis in DocFinQA [432], legal document processing), the absence of factual reliability as an evaluation dimension is a significant gap.
 
 ## 7. Implications and Future Directions
 - How this work changes the landscape

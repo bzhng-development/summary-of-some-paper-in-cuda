@@ -8,156 +8,763 @@ This paper introduces In-Context Pretraining (ICLM), a novel approach that impro
 
 ---
 
-## 1. Executive Summary (2-3 sentences)
-This paper introduces in-context pretraining (ICLM), a way to pretrain language models by ordering the training corpus so that each training context contains multiple semantically related documents rather than random, unrelated ones. By only changing document ordering (not the loss, model, or tokenizer), the method consistently improves tasks that require reasoning over long or multi-document contexts, including in-context learning, reading comprehension, retrieval-augmented QA, and long-context synthesis (see §3.3 and Tables 1–5).
+## 1. Executive Summary
+
+This paper introduces **IN-CONTEXT PRETRAINING**, a new pretraining method that reorders documents so that semantically related documents appear together in the same context window, thereby teaching language models to read and reason across document boundaries rather than treating each document in isolation. The authors pretrain LLaMA-architecture models from 0.3B to 7B parameters on 300B tokens from CommonCrawl, using a retrieval model (contriever) paired with approximate nearest neighbor search to build a document graph and a greedy graph traversal algorithm to create coherent input contexts without repeating any data. Compared to standard pretraining with randomly concatenated documents, IN-CONTEXT PRETRAINING yields consistent improvements across model scales: in-context learning accuracy increases by an average of 8% across seven classification datasets, reading comprehension improves by 15% across eight benchmarks, faithfulness to prior contexts rises by 16% on knowledge conflict datasets, long-context reasoning gains 5% on the SCROLL benchmark, and retrieval-augmented open-book QA improves by 9% — establishing that simply changing document ordering during preprocessing can substantially enhance an LM's ability to leverage its full context window without modifying the training objective or model architecture.
 
 ## 2. Context and Motivation
-- Problem/gap
-  - Standard pretraining creates long input sequences by randomly concatenating documents until the context window is full. The earlier documents in the window usually have no predictive value for the next document’s tokens, so the model wastes compute attending to irrelevant text and does not learn to connect information across document boundaries (§1).
-  - Many downstream tasks depend on multi-document reasoning: open-domain question answering with retrieved passages, multi-hop reading comprehension, or long-context synthesis (§1).
-- Why this matters
-  - Practical impact: Better cross-document reasoning boosts performance for search-assisted assistants, evidence-grounded generation, and long-context tasks (§1, §3.3.3–§3.3.6).
-  - Theoretical significance: It tests the hypothesis that next-token prediction benefits from exposing the model to coherent, related context beyond single-document scope (§1).
-- Prior approaches and shortcomings
-  - Random concatenation (the de facto standard) introduces little to no useful cross-document signal (§1).
-  - Retrieval-augmented pretraining that packs each document with its top-k neighbors (`kNN`) can repeat popular documents across many contexts, reducing corpus diversity and risking overfitting (§2.2).
-  - Link- or metadata-based grouping (e.g., hyperlinks, dates, curated multi-document datasets) exists but does not scale broadly or requires metadata not available for most web text (§5, “Pretraining with related documents”).
-- How this work positions itself
-  - ICLM reframes the problem as a data-ordering task: efficiently sort billions of documents so that consecutive items in the training stream are semantically related (§2). It uses scalable approximate nearest neighbor retrieval to find related documents (§2.1; Appendix A.2) and a graph traversal algorithm to build a single long path that visits each document once, maximizing local relatedness while avoiding repetition (§2.2; Algorithm 1).
+
+### The Core Problem: Context Windows Are Underutilized During Pretraining
+
+The fundamental problem this paper addresses is deceptively simple: **pretraining data is assembled by randomly concatenating documents, which means that knowing one document provides no signal for predicting the content of the next**. This matters because large language models are trained to be *context-dependent predictors* — their entire architecture is designed around attending to and synthesizing information across the preceding token sequence. When that sequence is incoherent, the model never learns to *use* long-range context for genuine reasoning; it only learns to use the local context within a single document.
+
+The paper identifies a specific disconnect between how LMs are trained and how they are expected to behave at deployment. At inference time, we expect LMs to do things like:
+- Read a long document and answer questions about it (reading comprehension)
+- Synthesize information across multiple provided documents (retrieval-augmented QA, multi-hop reasoning)
+- Follow complex instructions that reference prior conversation turns (instruction-following)
+- Learn from a handful of demonstration examples prepended to the prompt (in-context learning)
+- Remain faithful to provided context even when it contradicts the model's memorized knowledge (factuality under knowledge conflict)
+
+All of these capabilities fundamentally depend on the model's ability to *read and reason across document boundaries* — to see connections between different pieces of information in its context window. But during standard pretraining, the model almost never sees a context where one document is relevant to another. Each document in the concatenated sequence is a randomly selected island. As the paper puts it (Section 1):
+
+> "the prior documents provide no signal for predicting the next document, incurring unnecessary computational overhead for tokens that do not require communication between them"
+
+This is not just an inefficiency — it's a **supervision gap**. The model spends the vast majority of its pretraining compute learning to predict the next token within a single document's coherent narrative, and essentially zero compute learning to *link* information across documents. The consequence is that deployed models struggle precisely on tasks that require cross-document reasoning.
+
+### Why This Problem Matters
+
+The paper's framing matters for several interconnected reasons:
+
+**1. The rise of long-context models makes the gap more acute.** Recent work has extended context windows dramatically — from the original 512–1024 tokens of BERT/GPT-2 to 8192, 32K, or even 100K+ tokens in modern models. However, as the paper notes, de Vries (2023) observed that simply making the context window longer does not automatically make models better at using it, because the pretraining data itself contains very few naturally long documents. The paper cites that *less than 5% of documents in CommonCrawl have longer than 2k tokens*. When models are trained on concatenations of short, random documents, longer context windows just mean more irrelevant tokens between potentially useful information. The model never learns that distant tokens might be semantically connected, because during pretraining, they almost never are.
+
+**2. Retrieval-augmented generation (RAG) is becoming a dominant deployment paradigm.** In a RAG pipeline, an external retriever fetches relevant documents from a knowledge corpus (e.g., Wikipedia) and prepends them to the user's query. The language model is then expected to *read* those documents and *integrate* their information with the query and with each other to produce an answer. This is precisely the skill — reading and reasoning across a set of related documents — that standard pretraining neglects. The paper's open-book QA results (Table 3) directly demonstrate this gap: the standard model improves from closed-book to open-book, but the In-Context Pretrained model improves dramatically more (+9%), suggesting that standard models are relatively poor at extracting and synthesizing information from provided documents because they were never trained to do so.
+
+**3. In-context learning is brittle in practice.** While large LMs famously demonstrate in-context learning — the ability to perform a new task from a handful of examples in the prompt — this capability is highly variable and sensitive to the choice and ordering of demonstrations (Zhao et al., 2021). The paper's hypothesis is that this brittleness stems partly from the model never being explicitly trained to *learn from examples in context*. Standard pretraining provides no explicit mechanism for the model to practice extracting patterns from a set of related provided examples, because related examples are never deliberately placed together. In-Context Pretraining changes this by exposing the model to sequences of related documents, giving it natural practice at identifying and leveraging shared structure across a coherent set of context items.
+
+**4. Factual faithfulness to context is critical for safe deployment.** Language models have memorized vast amounts of factual knowledge during pretraining, but this parametric knowledge can be outdated, incorrect, or inapplicable. In many applications, the user *explicitly provides* correct information in the prompt and expects the model to use it, even if it contradicts what the model "knows." The paper's evaluation on NQ-Swap and MemoTrap (Section 3.3.5, Table 4) demonstrates that standard models often fail at this — they default to their memorized knowledge rather than the provided context. The paper frames this as a direct consequence of random-concatenation pretraining: the model was never trained in a regime where prior context systematically provides new, usable information about what comes next, so it underweights the context signal relative to its internal knowledge.
+
+### Where Existing Approaches Fall Short
+
+The paper identifies several prior lines of work that touch on the problem but have important limitations:
+
+**Random concatenation is the universal default — and it's wasteful.** The standard approach in pretraining pipelines (GPT-3, OPT, LLaMA, BLOOM — essentially all major models) is to concatenate documents randomly until the maximum context length is reached. This has the advantage of simplicity and diversity: any two documents can appear together, so the model sees the full distribution of the corpus. But the paper argues this comes with a hidden cost: *the computational overhead of processing tokens from prior documents provides no meaningful learning signal about those documents*. As de Vries (2023) pointed out, if document A provides no information about document B, then processing A before B consumes compute without adding any information to the language modeling objective for B. In-Context Pretraining transforms this computation from overhead into a genuine training signal — now the tokens in the prior documents *do* help predict the next document, because they are semantically related.
+
+**Retrieval-augmented pretraining (kNN) introduces data repetition problems.** Several prior works (Guu et al., 2020; Levine et al., 2022; Zhong et al., 2022) have explored pretraining with related documents by using retrieval to find relevant documents and placing them together in the same context. The simplest approach — for each document, find its top-k nearest neighbors and place them together — has a fundamental flaw that the paper identifies clearly: *the same document can appear as a nearest neighbor of many different query documents*. This means popular or broadly relevant documents get repeated across many different contexts, reducing the effective diversity of the pretraining data and potentially causing overfitting to those high-frequency documents. The paper provides empirical evidence for this (Figure 3): the kNN baseline performs *worse* than standard random concatenation on language modeling perplexity, despite being conceptually aligned with In-Context Pretraining.
+
+The paper also notes that prior retrieval-augmented pretraining methods often required metadata or domain-specific structure that limits their generality. For example, Yasunaga et al. (2022) used Wikipedia hyperlinks, Lewis et al. (2020) grouped documents by publication date, and Caciularu et al. (2021) used a human-curated multi-document summarization dataset of only 11 million tokens — a scale that cannot support large-scale pretraining. These approaches demonstrate the *idea* of related-document pretraining works, but they don't provide a scalable, general-purpose solution that can be applied to a web-scale corpus like CommonCrawl without human annotation or domain-specific metadata.
+
+**Multitask instruction/in-context fine-tuning addresses the symptom, not the root cause.** A line of work (Min et al., 2022; Chen et al., 2022; Wang et al., 2022; Gu et al., 2023) has shown that fine-tuning language models on collections of downstream tasks with in-context examples improves their in-context learning ability. While effective, this approach has two fundamental limitations that In-Context Pretraining aims to address:
+
+1. **It operates at the fine-tuning stage, not pretraining.** The majority of compute and data are consumed during pretraining. If the model never learns cross-document reasoning during pretraining, the fine-tuning stage must work against an architectural "prior" that was optimized for single-document prediction.
+2. **It is narrow in scope.** These methods specifically target in-context learning and instruction following, but do not address the broader set of cross-context capabilities — reading comprehension, faithfulness to context, multi-document synthesis, long-context reasoning — that In-Context Pretraining improves.
+
+**Long-context fine-tuning methods don't change what the context contains.** Recent work on extending context length (Press et al., 2022; Chen et al., 2023) modifies position encodings and fine-tunes models on longer sequences, but the *content* of those sequences remains random document concatenations. The paper's insight is that making the context longer is necessary but not sufficient — the model also needs to learn that *distant tokens can be meaningfully related*. If the long context is filled with unrelated documents, the model learns to ignore (or downweight) distant tokens, since they were never predictive during training. In-Context Pretraining addresses the orthogonal dimension of context *quality* rather than context *length*.
+
+### How This Paper Positions Itself
+
+The paper positions In-Context Pretraining as a **minimal intervention with maximal leverage**. Its key conceptual claim is that the problem of training LMs to reason across document boundaries can be solved at the *data preprocessing* level, without modifying the model architecture, the training objective, or the optimization procedure. By simply changing how documents are ordered before batching, all the existing machinery of large-scale pretraining (the LLaMA architecture, standard LM objective, FlashAttention, distributed training infrastructure) can remain untouched.
+
+This is a strategic positioning. The paper is not proposing a new architecture (like Transformer-XL or Memorizing Transformers), a new training objective (like XLNet's permutation LM or ELECTRA's replaced token detection), or even a new data source. It is proposing to **sort existing data differently**. This makes the method:
+- **Immediately integrable**: any pretraining pipeline can adopt In-Context Pretraining by replacing the random shuffle step with the document graph traversal algorithm.
+- **Scalable by construction**: the retrieval and graph traversal algorithms are designed to handle billions of documents using approximate nearest neighbor search and greedy graph traversal.
+- **Complementary to other advances**: since it doesn't conflict with architectural innovations, training objective improvements, or fine-tuning methods, it can be combined with any of them.
+
+The paper explicitly draws a contrast with prior related-document pretraining methods along the axis of **scalability without metadata**. Earlier approaches required hyperlinks, publication dates, human curation, or task-specific retrievers. In-Context Pretraining requires only the raw text and a pretrained dense retrieval model (contriever), making it applicable to any text corpus regardless of domain or structure. The retrieval model can be any off-the-shelf dense retriever; the paper uses contriever for its strong zero-shot performance and efficiency.
+
+Finally, the paper positions itself as addressing a **fundamental, not a narrow, capability**. It argues that cross-document reasoning is not a specialized skill — it's what makes the attention mechanism useful. By training models on coherent multi-document contexts, In-Context Pretraining aligns the pretraining objective with what we actually want models to do at deployment: read a set of related inputs and reason about them together. The breadth of the evaluation — spanning in-context learning, reading comprehension, retrieval augmentation, factuality under knowledge conflict, long-context reasoning, and language modeling — is designed to demonstrate that this alignment benefits a wide range of downstream behaviors, not just one narrow capability.
 
 ## 3. Technical Approach
-High-level idea: Keep the usual next-token prediction objective and architecture, but change how training contexts are formed: instead of random concatenation, concatenate related documents. The pipeline has three core steps (see Figure 2 and §2):
 
-1) Find related documents at scale (retrieval; §2.1)
-- Each document `d_i` is embedded with the `contriever` model (mean-pooled final-layer token embeddings). Only the first 512 tokens of each document are encoded to reduce cost (§3.1).
-- Similarity between documents is the cosine similarity of their embeddings, `s(d_i, d_j) = cos(E(d_i), E(d_j))` (Equation 1).
-- For each `d_i`, retrieve the top-k neighbors `N(d_i)` using FAISS with an IVF-PQ index and big-batch offline search (OIVFBBS). Practical details:
-  - Scale: 235,266,464 documents (768-dim float32 embeddings) from CCNet/English; index size ≈62 GB (§A.2).
-  - Indexing/search: IVFPQ (32,768 lists), 256-byte codes, nprobe=64; batches of 50M embeddings; search time ≈6 hours on 32 GPUs; traversal ≈12 hours on 20 CPUs (§3.1; §A.2).
-- Semantic deduplication: The retrieval scores are reused to detect near-duplicates; highly similar pairs are pruned so a context does not contain trivial paraphrases that would encourage copying (§2.1; Appendix A.1).
+### 3.1 Reader Orientation (Approachable Technical Breakdown)
 
-2) Construct a single, coherent document path (graph traversal; §2.2; Algorithm 1)
-- Build an undirected weighted graph `G=(D, L)` where nodes are documents and an edge exists if either document is in the other’s `k` nearest neighbors. Edge weights are the cosine similarities from Equation 1 (§2.2).
-- Goal: visit each document exactly once while making consecutive documents as similar as possible; formulated as a maximum traveling salesman problem (TSP) on `G` (§2.2).
-- Exact TSP is intractable at this scale, so a greedy traversal is used (Algorithm 1):
-  - Start from an unvisited node with minimum degree (“hard-to-connect” document). Intuition: such nodes are most at risk of being attached to a poor neighbor if left for later (§2.2).
-  - Repeatedly extend the path by moving to the highest-weight unvisited neighbor (most similar document). This produces locally coherent runs (Figure 2).
-  - When reaching a node whose neighbors are all visited (graph is sparse), add a zero-weight jump to a random unvisited minimum-degree node and continue. This creates several coherent segments stitched together without repeating any document (§2.2).
-- Finally, slide along this path and chunk it into fixed-length training contexts (e.g., 8192 tokens) for pretraining (§2.2; Figure 2). Batches are formed to keep contexts within a batch diverse (to avoid batch-level redundancy).
+In-Context Pretraining is a **data preprocessing method** that reorders the pretraining corpus so that each context window (the input sequence the model sees during training) contains semantically related documents rather than randomly shuffled ones, without modifying the model architecture or training objective in any way. It solves the problem that standard pretraining teaches models to treat every document as an island by giving them practice at reading and reasoning across document boundaries — the shape of the solution is a two-stage pipeline: first use dense retrieval to find which documents are related in a web-scale corpus, then use a greedy graph traversal algorithm to pack those related documents together into training sequences without repeating any document.
 
-3) Pretrain as usual
-- Architecture: LLaMA-style transformer; sizes 0.3B, 0.7B, 1.5B, 7B; context length 8192; AdamW optimizer; cosine LR schedule; FlashAttention for memory (§3.1).
-- Data: 235M CCNet English documents, 306B tokens; same corpus and number of updates across all compared methods for fair compute (§3.1; §3.2).
-- Methods compared:
-  - `Standard`: random document order, the common practice (§3.2).
-  - `kNN`: pack each document with its top-k retrieved neighbors directly; allows repeats across contexts (§3.2).
-  - `ICLM`: the proposed sorted-order scheme with graph traversal and no repeats (§2.2, §3.2).
+### 3.2 Big-Picture Architecture (Diagram in Words)
 
-Illustrative example (Figure 1):
-- Predicting “For 2022, FIFA set the prize money at $42m … the highest so far.” becomes easier if earlier in the same context there is a document noting “World Cup never awarded more than $10M before 2022.” This shows why semantically related prior documents provide useful predictive signal across document boundaries (§1; Figure 1).
+The system has five major components, organized into two sequential stages:
+
+**Stage 1: Document Graph Construction (finding related documents)**
+1. **Embedding Model (contriever)** — encodes each document in the pretraining corpus into a fixed-length vector representation that captures its semantic content.
+2. **Approximate Nearest Neighbor (ANN) Index (FAISS with IVFPQ)** — stores all document embeddings and efficiently finds, for each document, its top-k most similar neighbors in embedding space based on cosine similarity.
+3. **Deduplication Filter** — removes near-duplicate documents by thresholding on retrieval scores, preventing the model from simply copying text from nearly identical prior documents.
+
+**Stage 2: Context Assembly (packing related documents into training sequences)**
+4. **Document Graph Traversal Algorithm** — solves a maximum traveling salesman problem on the document similarity graph to produce a single ordered path that visits every document exactly once while maximizing the likelihood that related documents appear consecutively.
+5. **Context Window Segmenter** — traverses the ordered path and concatenates consecutive documents into fixed-size context windows (e.g., 8192 tokens) suitable for standard language model training, ensuring diversity across different context windows within the same training batch.
+
+Information flows as follows: the raw text corpus enters → each document is encoded by contriever into an embedding → FAISS builds an index over all embeddings → for each document, FAISS retrieves its top-k nearest neighbors, forming a document similarity graph → near-duplicate documents are filtered out → the graph traversal algorithm produces a single Hamiltonian path through all documents → the path is segmented into fixed-length context windows → these context windows are batched and fed into standard LLaMA pretraining with the usual next-token prediction objective.
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First**, the document embedding and retrieval infrastructure (§3.4.1), because all subsequent steps depend on having a similarity measure between documents. I'll explain the embedding model, the FAISS index construction, and how approximate nearest neighbor search works at the scale of 235 million documents.
+- **Second**, the deduplication mechanism (§3.4.2), which filters out near-duplicate documents using the retrieval scores. This is explained early because it's a preprocessing step that modifies the document graph before traversal, and the paper's ablation shows it is critical for good performance.
+- **Third**, the document graph traversal algorithm (§3.4.3), which is the core algorithmic contribution. I'll explain why the naive kNN approach fails (data repetition), how the maximum traveling salesman formulation avoids this, and the details of the greedy algorithm including the minimum-degree starting node heuristic and the zero-weight edge fallback.
+- **Fourth**, the context window assembly and batching strategy (§3.4.4), which connects the algorithm's output to actual training — how the path is segmented, how context windows inherit coherence, and how batch diversity is maintained.
+- **Fifth**, the pretraining setup details (§3.4.5), including model architecture, optimizer configuration, hardware setup, and exactly how In-Context Pretraining integrates into existing pretraining pipelines as a preprocessing step — emphasizing that nothing else changes.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily a **data engineering and systems paper** whose core idea is that pretraining language models on contexts of related documents — rather than random ones — teaches them to read and reason across document boundaries, and that this can be achieved at web scale without modifying the model or training objective, only by intelligently reordering the pretraining data.
+
+---
+
+#### 3.4.1 Document Embedding and Retrieval at Scale
+
+The first stage of In-Context Pretraining builds a document similarity graph by computing, for every document in the pretraining corpus, which other documents are most semantically related to it. Doing this for 235 million documents requires a retrieval infrastructure that is both efficient (pairwise comparison of all documents would be computationally impossible) and semantically meaningful (the similarity measure must capture genuine topical and conceptual relatedness, not just lexical overlap).
+
+**Embedding model choice and usage.** The paper uses the **contriever model** (Izacard et al., 2022), an unsupervised dense retrieval model trained with contrastive learning. For each document `$d_i$` in the pretraining corpus `$\mathcal{D}$`, the system encodes the first 512 tokens into a fixed-length vector embedding. The embedding is obtained by taking the **mean pooling** of the last hidden representation over all tokens in the document (or, for efficiency, over the first 512 tokens). The result is a 768-dimensional vector in float32:
+
+$$E(d_i) = \frac{1}{|\text{tokens}(d_i)|} \sum_{t \in \text{tokens}(d_i)} h_t^{\text{last}}$$
+
+where `$h_t^{\text{last}}$` is the final-layer hidden state of the contriever model at token `$t$`, and the sum is taken over the first 512 tokens of the document.
+
+**What it computes:** for each document, a single 768-dimensional vector that represents its semantic content in a space where documents with similar meaning are close together (high cosine similarity) and documents with different meaning are far apart (low cosine similarity). The mean pooling operation collapses the sequence of token representations into a single fixed-size representation by averaging, which is the standard approach for dense retrieval.
+
+**Why contriever and mean pooling:** contriever was chosen because it provides strong zero-shot retrieval performance without requiring task-specific fine-tuning, making it directly applicable to any pretraining corpus without annotation. Mean pooling (as opposed to using the [CLS] token or max pooling) is the standard in dense retrieval because it creates a representation that captures the overall topic and content of the document rather than any specific span, which is appropriate for finding topically related documents. Using only the first 512 tokens is an efficiency tradeoff — long documents could be informative beyond 512 tokens, but encoding full documents would be prohibitively expensive at this scale, and the first 512 tokens typically contain the document's main topic.
+
+**Similarity computation.** Once every document has an embedding, the similarity between any two documents `$d_i$` and `$d_j$` is defined as the cosine similarity of their embeddings:
+
+$$s(d_i, d_j) = \cos(E(d_i), E(d_j)) = \frac{E(d_i) \cdot E(d_j)}{||E(d_i)|| \cdot ||E(d_j)||}$$
+
+where `$\cdot$` denotes the dot product and `$||\cdot||$` denotes the L2 norm.
+
+**What it computes:** a scalar between -1 and 1 (though in practice nearly always between 0 and 1 for contriever embeddings) where higher values indicate greater semantic similarity. Cosine similarity measures the angle between the two embedding vectors, ignoring their magnitudes — two documents with the same topical distribution but different "intensities" (e.g., a short document and a long document on the same topic) will have high cosine similarity, which is the right invariance for finding related content.
+
+**Why cosine similarity:** alternatives like Euclidean distance would be sensitive to the magnitude (norm) of the embedding vectors, which can vary with document length, writing style, or other factors unrelated to topic. Cosine similarity normalizes out magnitude, focusing purely on direction in embedding space. The paper does not explore other similarity functions (dot product, learned similarity), likely because cosine similarity is the standard in dense retrieval and works well with the contriever model, which was trained with a contrastive objective that optimizes for cosine-based nearest neighbor retrieval.
+
+**FAISS index construction for scalable retrieval.** Computing pairwise cosine similarity between all 235 million documents would require `$O(N^2)$` comparisons — approximately `$2.76 \times 10^{16}$` pairwise operations — which is computationally infeasible. Instead, the paper uses approximate nearest neighbor (ANN) search via the FAISS library (Johnson et al., 2019; Douze et al., 2024) with two key efficiency techniques:
+
+**1. Product Quantization (PQ) for memory reduction.** Product quantization (Jégou et al., 2011) compresses the 768-dimensional float32 embeddings by decomposing each vector into subvectors and quantizing each subvector independently using a learned codebook. The paper uses a code size of 256, meaning each subvector is represented by one of 256 possible codes, dramatically reducing memory from `$768 \times 4 = 3072$` bytes per embedding (float32) to a much smaller compressed representation. The total index size is reported as 62 gigabytes for 235,266,464 embeddings, which is approximately 277 bytes per embedding compressed — roughly 11x compression from the original 3KB per embedding for float32.
+
+**2. Inverted File (IVF) index structure for fast search.** An IVF index partitions the embedding space into `$32768$` Voronoi cells (the paper uses this specific number of inverted lists), each defined by a centroid. When searching for the nearest neighbors of a query document, only a small fraction of these cells are probed. The paper sets `nprobe = 64`, meaning only `$64 / 32768 \approx 0.2\%$` of the inverted lists are examined per query. This reduces the search complexity from `$O(N)$` (checking every document) to `$O(\text{nprobe} \times N / \text{nlists})$` (checking only documents in probed cells), a speedup of roughly 500x compared to brute-force search.
+
+**Index construction procedure.** The index is built in stages:
+- The index is first **trained** on a sample of 1,572,864 embeddings to learn the PQ codebooks and IVF centroids. Training time: 423 seconds.
+- The full dataset of 235 million embeddings is then **split into batches of 50 million** embeddings. For each batch (called an "index shard"), embeddings are added to the trained index. Average adding time per shard: 628.4 seconds.
+- For each batch of 50 million, **approximate nearest neighbor search** is conducted independently, retrieving the top-10 nearest neighbors (`$k=10$`) for each document in the batch. The search then proceeds to the next batch, and results from all batches are merged at the end using FAISS's big batch search functionality (`OIVFBBS` — Offline IVF Big Batch Search).
+
+The paper notes that search is conducted using 8 GPUs per batch (50M), with a total search time of 6 hours over 32 GPUs. The average search time per batch is 4,738 seconds.
+
+**Why this index design:** the combination of PQ and IVF is the standard approach for billion-scale ANN search in production systems. PQ addresses the memory bottleneck (storing 235M × 768 × 4 bytes ≈ 720 GB of raw embeddings would require far more memory than is typically available), while IVF addresses the computation bottleneck (brute-force search over 235M items per query would be prohibitively slow). The key tradeoff is between accuracy and speed — approximate search with PQ and IVF will occasionally miss some true nearest neighbors, but for the purpose of finding the top-10 most related documents for pretraining, perfect accuracy is not required. The paper does not report recall metrics for their ANN search, but the downstream improvements suggest the retrieval quality is sufficient.
+
+**Choice of `$k=10$`.** For each document, the system retrieves the 10 most similar other documents. This value determines the density of the document similarity graph — each node has at most 10 outgoing edges to its nearest neighbors. The choice of 10 balances two considerations: too small a value would create a sparse graph where true related documents might not be connected, potentially causing the graph traversal algorithm to connect unrelated documents; too large a value would increase the computational cost of graph construction and traversal, and would increase the risk of including marginally related documents that don't provide useful cross-document signal. The paper does not report ablation experiments on `$k$`.
+
+**The retrieval output.** After this stage, the system has, for each document `$d_i$`, a set `$\mathcal{N}(d_i)$` of up to 10 documents that are its nearest neighbors in embedding space. This defines the edges of the document graph — an undirected edge exists between `$d_i$` and `$d_j$` if `$d_j \in \mathcal{N}(d_i)$` or `$d_i \in \mathcal{N}(d_j)$`. Note that the relationship is not symmetric by construction (retrieval is not a symmetric operation — `$d_j$` can be in `$\mathcal{N}(d_i)$` without `$d_i$` being in `$\mathcal{N}(d_j)$`), but the graph is constructed to be undirected by including edges in both directions, ensuring that the traversal algorithm can navigate freely between related documents regardless of the retrieval direction.
+
+---
+
+#### 3.4.2 Semantic Deduplication
+
+Once the retrieval step has computed pairwise similarity scores for all document pairs in the graph, a critical preprocessing step removes **near-duplicate documents** from the pretraining corpus. The paper observes that many documents in web-scale corpora are semantically duplicate — they contain substantially the same information expressed in slightly different words — and that including such near-duplicates in the same context window is harmful to training because "language models might merely copy from the prior document, leading to training instability" (Appendix A.1).
+
+**Deduplication mechanism.** The paper leverages the retrieval scores directly: since each document is connected to its top-k nearest neighbors with associated cosine similarity scores, documents with very high similarity to other documents can be identified as near-duplicates. The paper does not specify the exact threshold used, but the procedure involves removing documents that have cosine similarity above some threshold with another document in the corpus, ensuring that each remaining document is sufficiently distinct from all others.
+
+**Why this matters.** The paper's ablation study (Section 4.2, Figure 5) shows that removing the deduplication step causes a significant degradation in perplexity: the perplexity on Wikipedia increases from 7.3 (with deduplication) to 8.3 (without deduplication). The authors hypothesize that when a near-duplicate of the target document appears earlier in the context, the language modeling objective becomes trivial — the model can simply copy tokens from the prior document rather than learning to understand and generate content — which wastes training compute and prevents the model from developing genuine language understanding. This is consistent with the broader observation in pretraining literature that data deduplication is important for training stability and efficiency.
+
+**Relationship to prior deduplication work.** The paper cites Abbas et al. (2023) and Yasunaga et al. (2023) as prior work establishing the importance of deduplication. Their approach differs from simpler exact-deduplication methods (which only remove identical documents) by identifying semantic near-duplicates — documents that express the same content differently — which are common in web data (e.g., multiple news articles covering the same event) but would be missed by exact string matching.
+
+---
+
+#### 3.4.3 Document Graph Traversal: The Maximum Traveling Salesman Algorithm
+
+This is the core algorithmic contribution of the paper. Given the document similarity graph constructed in §3.4.1 (after deduplication), the goal is to produce an ordering of all documents such that:
+
+1. **Every document appears exactly once** in the final ordered sequence.
+2. **Related documents appear consecutively** as often as possible, so that when the sequence is segmented into context windows, each window naturally contains a coherent set of related documents.
+
+The naive approach — the kNN baseline — fails condition 1 by simply placing each document alongside its top-k retrieved neighbors, resulting in the same popular document appearing in many different contexts. The paper formalizes condition 1 as a **Hamiltonian path constraint** (each node visited exactly once) and condition 2 as a **maximum weight objective** (maximize the sum of edge weights — document similarities — along the chosen path). This is the **maximum traveling salesman problem** (Flood, 1956): given an undirected weighted graph `$G = (\mathcal{D}, \mathcal{L})$` where nodes are documents, edges exist between documents that are nearest neighbors of each other, and edge weights are cosine similarities, find the path that visits every node exactly once and maximizes the total edge weight.
+
+**Why the maximum traveling salesman formulation (rather than alternatives).** Several alternative formulations would fail to satisfy the constraints:
+
+- **kNN (place each document with its neighbors):** fails the "each document once" constraint, causing data repetition, reduced diversity, and overfitting (as demonstrated empirically in Figure 3).
+- **Clustering (group documents into topic clusters, then sample from clusters):** the paper's ablation (Section 4.2, Figure 5) shows that clustering provides topical similarity but not the tight semantic relatedness that nearest-neighbor linking provides. Documents in the same cluster share a broad topic (e.g., "sports") but may not be directly relevant to each other (e.g., a document about soccer rules and a document about basketball scores). The maximum traveling salesman objective directly optimizes for pairwise similarity along the path, which is the precise property needed for coherent context windows.
+- **Random ordering:** provides no cross-document signal at all, which is the baseline the paper aims to improve upon.
+
+**Why a greedy approximate algorithm.** The maximum traveling salesman problem is NP-hard — solving it exactly for 235 million nodes is computationally impossible. The paper adopts a greedy algorithm, which is known to provide efficient approximate solutions for TSP variants. The greedy approach makes locally optimal choices at each step (pick the highest-weight unvisited neighbor) without backtracking, which runs in `$O(|V| \log |V|)$` time (dominated by the need to find the highest-weight neighbor at each step, which requires sorting or priority queue operations on the adjacency lists). This makes it scalable to the full corpus.
+
+**Algorithm 1: Maximum Traveling Salesman greedy path construction.**
+
+The algorithm (reproduced from the paper's Algorithm 1) operates as follows:
+
+```
+Algorithm 1 Maximum Traveling Salesman
+Input: Document graph G = (D, L)
+       N(d_i) returns nearest neighbors for d_i
+       min_deg(D) returns a min-degree doc
+Output: A path P
+ 1: P ← []
+ 2: while |D| > 0 do
+ 3:     d_i ← min_deg(D)
+ 4:     P.append(d_i)
+ 5:     D.remove(d_i)
+ 6:     while N(d_i) ∩ D ≠ ∅ do
+ 7:         d_j ← arg max_{d ∈ N(d_i) ∩ D} sim(d_i, d)
+ 8:         d_i ← d_j
+ 9:         P.append(d_i)
+10:         D.remove(d_i)
+11:     end while
+12: end while
+13: return P
+```
+
+Let me walk through the algorithm step by step, explaining the rationale behind each design choice.
+
+**Outer loop: starting new path segments from minimum-degree nodes.** The outer `while` loop (line 2) continues until all documents have been visited and placed in the path. At each iteration of the outer loop, the algorithm selects a starting node — specifically, the **unvisited document with the minimum degree** in the graph (line 3). The degree of a document is the number of edges incident to it in the similarity graph — i.e., how many other documents consider it a nearest neighbor or vice versa.
+
+The motivation for starting at minimum-degree documents is subtle and important. Since the graph is not complete (edges only exist between nearest-neighbor pairs), the traversal will eventually reach a node where all its neighbors have already been visited — a dead end in the graph. When this happens, the inner loop terminates, and the algorithm must "jump" to a new unvisited node, creating a break in the path where two consecutive documents are *not* related (connected by a zero-weight artificial edge). The paper's insight is that minimum-degree nodes are the ones *most likely to become isolated early* — since they have few connections, their neighbors are more likely to be visited first by other paths, leaving them stranded. By starting from minimum-degree nodes, the algorithm ensures that these hard-to-connect documents are placed at the beginning of path segments, and the breaks (zero-weight edges) occur between path segments rather than within them. This minimizes the number of unrelated documents that end up adjacent in the final path. If the algorithm were to start from high-degree nodes instead, it would consume their many neighbors first, leaving the minimum-degree nodes isolated and forcing breaks right before or after them, which would create more unrelated document pairs.
+
+**Inner loop: greedy traversal along highest-weight edges.** Once a starting node `$d_i$` is selected, the inner `while` loop (line 6) extends the path forward as long as the current node has any unvisited neighbors. At each step, the algorithm:
+
+1. Identifies the set of unvisited neighbors: `$\mathcal{N}(d_i) \cap \mathcal{D}$` — those documents that are nearest neighbors of `$d_i$` and have not yet been added to the path.
+2. Selects the neighbor with the **maximum** cosine similarity: `$\arg\max_{d \in \mathcal{N}(d_i) \cap \mathcal{D}} \text{sim}(d_i, d)$` — the most semantically related unvisited document.
+3. Moves to that document, appends it to the path, and removes it from the set of unvisited documents.
+
+This is a classic greedy algorithm: at each step, it makes the locally optimal choice (go to the most similar unvisited neighbor). Since the traveling salesman problem with a triangle inequality approximately satisfies that local optimality leads to near-global optimality (for maximization), and since the cosine similarity metric does satisfy the triangle inequality when treated appropriately, this greedy approach is a reasonable heuristic.
+
+**Handling dead ends: the zero-weight edge fallback.** The inner loop terminates when the current document `$d_i$` has no unvisited neighbors — all its nearest neighbors have already been placed in the path. This is inevitable because:
+- The graph is sparse (each node has at most 10 edges by construction).
+- The graph is not necessarily connected (there may be multiple connected components).
+- Even within a connected component, greedy traversal can "paint itself into a corner" by visiting nodes in an order that leaves a node with all neighbors already visited.
+
+When this happens, the outer loop starts a new path segment from the next minimum-degree unvisited document. The transition between the end of one segment and the start of the next has **zero implicit weight** — since there is no edge between these documents, they are effectively unrelated. The algorithm implicitly adds an edge of weight 0 (the paper describes this as "extend the graph with an edge of weight 0 to a random unvisited minimum degree document"). These zero-weight transitions represent the points where the final path sacrifices coherence — two unrelated documents appear consecutively — and the algorithm's design (starting from minimum-degree nodes) aims to keep these breaks as infrequent as possible.
+
+**Why this algorithm over alternatives.** The paper considered other approaches:
+
+- **Nearest-neighbor insertion:** build a tour iteratively by inserting each document at the position where it is most similar to its neighbors. This is a common TSP heuristic but requires maintaining a complete ordering and testing many insertion positions, which is computationally more expensive than the greedy traversal for graphs of this size.
+- **Spectral ordering:** use the graph Laplacian eigenvectors to find a continuous ordering that minimizes a smoothness criterion. This would be mathematically elegant but computationally expensive (requiring eigen decomposition of a 235M × 235M matrix) and would not naturally handle the "each document once" constraint without additional rounding steps.
+- **Simulated annealing / genetic algorithms:** would likely find better solutions but at dramatically higher computational cost — the paper's greedy approach completes in 12 hours on 20 CPUs, which would be impossible with iterative optimization methods.
+
+**Computational complexity of the traversal.** The traversal phase requires 12 hours on a setup of 20 CPUs (Section 3.1). For each of the 235 million documents, the algorithm performs a constant amount of work: checking the unvisited status of up to 10 neighbors, selecting the maximum, and removing the document from the unvisited set if it's a dead-end check. The dominant cost is likely the data structure operations — maintaining the set of unvisited documents and efficiently finding the minimum-degree unvisited node at each outer loop iteration. The paper does not provide detailed profiling of the traversal step.
+
+**Output of the algorithm.** The output is a single ordered list `$P = [d_{p_1}, d_{p_2}, ..., d_{p_N}]$` where `$N = 235,266,464$`, containing every document exactly once. Consecutive documents in this list are either nearest neighbors (connected by an edge in the similarity graph with weight equal to their cosine similarity) or unrelated (separated by a zero-weight artificial edge where a path segment ended and a new one began). The path thus consists of multiple segments of related documents, connected by "jumps" between unrelated documents.
+
+---
+
+#### 3.4.4 Context Window Assembly and Batching
+
+Once the global document ordering `$P$` is computed, it must be converted into fixed-size input contexts suitable for language model pretraining. This step involves **segmenting the path** and **diversifying batches**.
+
+**Path segmentation into context windows.** The ordered list `$P$` is traversed sequentially, and documents are concatenated until the total token count reaches the maximum context length (8192 tokens for the models in this paper). When a document would push the context beyond 8192 tokens, a new context window is started. This is identical to how standard pretraining concatenates random documents, except that the document *order* now comes from the graph traversal rather than from a random shuffle.
+
+The key property of this segmentation is that **each context window naturally contains a coherent set of related documents**. Because the path was constructed to keep related documents consecutive, a context window of 8192 tokens will typically encompass one or more complete path segments of related documents, with the occasional zero-weight transition between unrelated segments falling somewhere within (or at the boundary of) the window. This means that within a context window, the prior documents are genuinely informative about the next document — the language modeling objective now provides a meaningful cross-document learning signal because the model can use information from earlier documents to help predict the content of later ones.
+
+**Why segmentation into fixed windows (rather than path-segment-aligned windows).** An alternative approach would be to create context windows that align exactly with path segments — each window contains exactly one connected component of related documents — and pad or truncate to fit the length constraint. The paper does not explore this option, likely because it would create variable-length contexts and complicate the batching pipeline (which expects uniform sequence lengths for efficient training). Standard pretraining pipelines are optimized for fixed-length contexts, and In-Context Pretraining deliberately preserves this compatibility.
+
+**Batch diversity maintenance.** Within a training batch, it is important that the model sees diverse documents to ensure stable gradient estimates. If all context windows in a batch came from the same region of the document path, they would all contain similar topics, creating highly correlated gradients and potentially limiting the model's ability to learn from diverse data.
+
+The paper addresses this by ensuring that context windows within the same batch come from **different parts of the path**. The exact mechanism is not detailed, but the likely approach is to interleave the path: rather than taking consecutive path segments as consecutive batches, the system samples (or strides through) the path such that each batch contains windows drawn from widely separated positions. This is analogous to how standard pretraining shuffles documents randomly before batching — the shuffle ensures batch diversity. In In-Context Pretraining, the "shuffle" happens at the batch level rather than the document level: the document ordering along the path is fixed (to maintain within-context coherence), but the assignment of path segments to batches is shuffled (to maintain across-context diversity).
+
+**Why batch diversity matters (and why it's harder with sorted data).** In standard pretraining, random shuffling naturally provides diversity because any batch of randomly selected documents is likely to cover many topics. In In-Context Pretraining, the sorted ordering means that consecutive context windows (along the path) are likely to contain similar topics (since they come from the same path segment). If batches were formed by simply taking consecutive windows from the path, a single batch would contain highly correlated examples, reducing the effective sample size for gradient estimation and potentially creating training instability. The paper's batching strategy mitigates this by explicitly ensuring diverse batches.
+
+**Relationship to standard pretraining batching.** The paper emphasizes that the batching step is the integration point with existing pretraining pipelines: "In-Context Pretraining leaves other details of model training unchanged, and only changes the document ordering so that each context contains related documents, we can directly integrate it into pretraining pipelines as a preprocessing step during batching" (Section 3.1). In practice, this means replacing the random document shuffle step with the path segmentation and interleaved batching described above. All downstream components — tokenization, masking (if any), model forward/backward pass, optimizer update — remain identical.
+
+---
+
+#### 3.4.5 Pretraining Setup and Integration
+
+In-Context Pretraining is designed to be a **drop-in replacement for the document ordering step** in any standard pretraining pipeline. The paper validates this by applying it to the LLaMA architecture and training recipe, demonstrating that no model architecture changes, objective function modifications, or hyperparameter adjustments are needed.
+
+**Model architecture.** The paper uses the LLaMA architecture (Touvron et al., 2023a) exactly as specified, with no modifications. This is a standard decoder-only transformer with:
+- Pre-normalization using RMSNorm (rather than LayerNorm)
+- SwiGLU activation function in the feed-forward layers (rather than ReLU or GELU)
+- Rotary position embeddings (RoPE) (rather than learned absolute or relative position embeddings)
+- Standard causal (autoregressive) attention mask
+
+The paper trains models at four sizes: 0.3B, 0.7B, 1.5B, and 7.0B parameters. All models use a context window of 8192 tokens. The 8192-length context window is noteworthy because it is longer than the 2048-token context used in the original LLaMA paper, reflecting the trend toward longer contexts. This choice aligns with the paper's motivation: longer context windows make the cross-document reasoning capability more relevant, because as the window grows, the model sees more prior documents and has more opportunity to leverage relationships between them.
+
+**Pretraining objective.** The training objective is standard autoregressive language modeling: for each input sequence `$x_1, x_2, ..., x_T$`, the model is trained to minimize the negative log-likelihood of each token given all previous tokens:
+
+$$\mathcal{L} = -\frac{1}{T} \sum_{t=1}^T \log P_\theta(x_t | x_1, ..., x_{t-1})$$
+
+where `$\theta$` are the model parameters, `$T$` is the sequence length (8192), and the probability is computed by the transformer's output softmax layer.
+
+**What it computes:** the average cross-entropy between the model's predicted next-token distribution and the actual next token, summed over all positions in the sequence. This is the standard pretraining objective for autoregressive LMs and is completely unchanged from standard pretraining.
+
+**Why this objective works with In-Context Pretraining:** the key difference is not in the objective but in the data distribution the objective is applied to. In standard pretraining, `$P(x_t | x_1, ..., x_{t-1})$` is typically conditioned on tokens from the same document (and possibly some unrelated prior documents). In In-Context Pretraining, `$x_t$` is often a token in a document that is semantically related to prior documents in the context, so the conditional probability distribution genuinely depends on those prior documents. The objective rewards the model for using information from earlier documents to improve its prediction of later documents, naturally teaching cross-document reasoning without any explicit auxiliary loss.
+
+**Optimizer and training hyperparameters.** The paper follows the LLaMA training recipe:
+- Optimizer: AdamW (Loshchilov & Hutter, 2018) with `$\beta_1 = 0.9$` and `$\beta_2 = 0.95$`
+- Learning rate schedule: cosine decay
+- Batch size: 4 million tokens (approximately 488 sequences of 8192 tokens per batch)
+
+The paper does not specify the peak learning rate, warmup steps, weight decay, or gradient clipping values, likely because they follow LLaMA's settings exactly and refer readers to the original LLaMA paper.
+
+**Hardware and training time.** The 7B model is trained using 128 A100 GPUs across 16 nodes (8 GPUs per node). Training takes 9 days to complete the full 306 billion token corpus. Flash Attention (Dao et al., 2022) is used to reduce memory consumption during pretraining, which is necessary for the 8192-length context window with a 7B parameter model — without Flash Attention, the `$O(n^2)$` memory cost of the attention matrix would be prohibitive.
+
+**Pretraining data.** All models are trained on the same data: a random sample of 235 million documents from the English CommonCrawl dataset (Wenzek et al., 2020), totaling 306 billion tokens. The random sample is taken before applying In-Context Pretraining's document reordering, so the baseline and the ICLM are trained on exactly the same set of documents — the only difference is the order in which those documents appear within context windows.
+
+**Comparison with baselines (fairness of comparison).** The paper ensures fair comparison with two baselines:
+
+1. **Standard pretraining:** uses the same 235M documents but with random shuffling (the default in LLaMA and most other pretraining recipes). This is the primary baseline.
+2. **kNN pretraining:** for each document, its top-10 retrieved nearest neighbors are placed directly in the same context window. This exposes the model to related documents but with the data repetition problem (popular documents appear in many contexts). The kNN baseline is trained for the same number of steps as the ICLM, on the same underlying data, with the same compute budget.
+
+All models (ICLM, Standard, kNN) are trained from scratch with the same architecture, optimizer, and number of training steps. This ensures that any performance differences are attributable to the document ordering strategy rather than to differences in model size, training data volume, or optimization.
+
+**Why train from scratch rather than continue pretraining.** The paper trains all models from scratch rather than starting from a pretrained checkpoint and continuing with In-Context Pretraining. This is the strongest experimental design for demonstrating that In-Context Pretraining *causes* the improvements: if the method were applied as continued pretraining on top of a standard model, the improvements could be attributed to seeing additional data rather than to the reordering itself. From-scratch training on identical token counts eliminates this confound.
+
+**Key design choice: no hyperparameter tuning for In-Context Pretraining.** The paper uses the exact same hyperparameters for the ICLM as for the standard baseline — no learning rate sweep, no architecture modifications, no objective function adjustments specific to In-Context Pretraining. This is a deliberate choice to demonstrate that the method "leaves all other aspects of LM pretraining untouched" (Section 2) and requires no special tuning. It also means the reported improvements are likely a *lower bound* — tuned hyperparameters for the sorted-data regime might yield even larger gains.
+
+**Computational overhead of the preprocessing.** The paper reports the preprocessing costs:
+- Embedding retrieval: 6 hours on 32 GPUs
+- Graph traversal: 12 hours on 20 CPUs
+
+Combined, the preprocessing takes 18 hours and requires both GPU and CPU resources. This is a one-time cost that is amortized over the entire pretraining run (9 days for the 7B model on 128 GPUs). For the 7B model, the preprocessing represents approximately `$(18 \text{ hours} \times 32 \text{ GPUs}) / (9 \text{ days} \times 128 \text{ GPUs} \times 24 \text{ hours/day}) = 576 / 27648 \approx 2.1\%$` of the total compute budget, making it a relatively small overhead. For larger training runs (e.g., the full CommonCrawl rather than a 300B token subset, or larger models trained for longer), this percentage would be even smaller. This cost-efficiency is key to the paper's claim that the method is "highly scalable."
+
+However, the computational cost of the preprocessing step is not zero, and the paper does not include it in the training cost comparison with baselines. This is a reasonable choice for a research paper demonstrating feasibility, but production deployments would need to account for this overhead, especially if the document ordering needs to be recomputed frequently (e.g., when the pretraining data changes or when experimenting with different retrieval models).
+
+**Summary of the integration claim.** The paper's central technical claim is that In-Context Pretraining is a **pure data preprocessing change**: it takes the same set of pretraining documents, the same model architecture, the same training objective, and the same optimizer, and produces a better-trained model by simply changing the order in which documents are grouped into context windows. The retrieval and graph traversal steps are offline preprocessing operations that produce a new document ordering; once this ordering is computed, it feeds into the standard pretraining pipeline with no other modifications required. This design principle — minimal intervention, maximal leverage — is what the paper argues makes In-Context Pretraining immediately adoptable by any team running large-scale LM pretraining, since it requires changing only the batching logic and not any model code or training infrastructure.
 
 ## 4. Key Insights and Innovations
-- Reframing pretraining as a document-ordering problem
-  - What’s new: Treats “how to pack the context window” as the central lever, not the loss or model. The method uses only reordering of existing data (§1–§2).
-  - Why it matters: It produces cross-document predictive signal without changing the objective and scales to web corpora; the training recipe remains compatible with standard pipelines (§2; §3.1).
 
-- Scalable relatedness graph + greedy maximum-TSP traversal
-  - What’s new: Build a nearest-neighbor graph over hundreds of millions of documents and extract a single, non-repeating path that locally maximizes similarity (§2.1–§2.2; Algorithm 1; Appendix A.2).
-  - Why it matters: Avoids the “data repeating problem” of `kNN` packing, where popular documents appear in many contexts and reduce training diversity (§2.2).
+### Innovation 1: Cross-Document Reasoning as a Pretraining Primitive, Not a Downstream Skill
 
-- Retrieval-driven semantic deduplication as a stability and quality control
-  - What’s new: Use the same similarity signals to remove near-duplicates before packing contexts (§2.1; Appendix A.1).
-  - Why it matters: Ablation shows dedup is crucial; removing it worsens perplexity (PPL 8.3 without vs 7.3 with dedup in Figure 5), likely because near-duplicate contexts encourage copying and destabilize training (§4.2).
+The paper's foundational conceptual move is to reframe *reasoning across document boundaries* — traditionally treated as a downstream capability that models should somehow acquire from single-document pretraining — as a **first-class pretraining objective that must be explicitly practiced during training**. This is a fundamental shift, not an incremental refinement.
 
-- Strong multi-task gains specifically tied to cross-document reasoning
-  - What’s new: A single data-ordering change yields consistent improvements on diverse evaluations that require using information from prior context: +8% in in-context learning (ICL), +14–15% in reading comprehension, +9% in retrieval-augmented QA, +5% in long-context reasoning, and +16% in context faithfulness (Tables 1–5; §3.3.2–§3.3.6).
-  - Why it matters: Pinpoints that multi-document exposure during pretraining strengthens abilities central to modern LLM usage (RAG, ICL, long context).
+Before this work, the field operated on an implicit assumption: LMs trained on individual documents would naturally learn to handle cross-document tasks (reading comprehension, in-context learning, retrieval augmentation) because the attention mechanism is architecturally capable of linking information across long contexts. The model *could* attend to prior documents, so — the thinking went — it would learn to do so when needed. The paper's diagnostic insight is that this reasoning does not hold when the pretraining data provides no incentive to develop the capability. The authors phrase this as a supervision gap (Section 1):
+
+> "the prior documents provide no signal for predicting the next document"
+
+This is not merely an inefficiency claim. It is an argument that **standard pretraining actively teaches models to ignore cross-document relationships**. When every document in a concatenated sequence is randomly selected, attending to prior documents provides no useful signal for the next-token prediction objective. The optimal strategy for minimizing loss is to treat each document as an independent segment, using only local context within that document. The model learns that distant tokens are *distracting*, because they were never predictive during training. This explains a cluster of puzzling failure modes — documented by prior work but never unified under a single cause:
+
+- Models struggle to follow instructions accurately (McKenzie et al., 2023; Efrat & Levy, 2020) when the instruction contradicts habits learned from single-document memorization.
+- Models exhibit high variance in in-context learning (Zhao et al., 2021) because they have no practiced mechanism for extracting task patterns from a set of related examples.
+- Models default to memorized parametric knowledge over provided context (Longpre et al., 2021; Liu & Liu, 2023) because the pretraining objective never rewarded context-over-memory weighting.
+- Models underutilize long context windows (Liu et al., 2023) despite architectural capability, because long contexts during training were filled with unrelated content.
+
+The paper's reframing connects these disparate observations into a single root cause: *standard pretraining teaches single-document completion, not cross-document reasoning*. The solution is correspondingly elegant — not a new architecture, an auxiliary loss, or a fine-tuning stage, but a change to the pretraining data distribution so that the existing next-token prediction objective naturally rewards cross-document reasoning. This is what makes In-Context Pretraining conceptually distinctive: it does not add a capability-training mechanism on top of LM pretraining; it modifies pretraining so that **the same objective that teaches language modeling also teaches cross-document reasoning**.
+
+The evidence for this reframing is not primarily in any single metric, but in the breadth of improvements across tasks that all require the same underlying skill (in-context learning: 8% average improvement, Table 1; reading comprehension: 15%, Table 2; faithfulness to context: 16%, Table 4; retrieval augmentation: 9%, Table 3; long-context reasoning: 5%, Table 5). The pattern of improvements supports the claim that a single underlying capability — using prior context documents to inform prediction — has been strengthened, rather than multiple independent skills being independently enhanced.
+
+This reframing is also predictive: it explains why the kNN baseline (which places related documents together but repeats data) underperforms standard pretraining on language modeling benchmarks (Figure 3). The kNN model sees related documents and thus gets the cross-document signal, but the repetition of popular documents reduces effective data diversity, creating an overfitting cost that outweighs the cross-document benefit. In-Context Pretraining's graph traversal solves both problems simultaneously — coherent contexts *and* no data repetition — confirming that both conditions are necessary.
+
+---
+
+### Innovation 2: Document Ordering as a Maximum Traveling Salesman Problem
+
+The paper's second conceptual contribution is the insight that the problem of assembling related documents into training contexts without data repetition can be formalized as **finding a Hamiltonian path in a document similarity graph that maximizes the total edge weight** — i.e., a maximum traveling salesman problem. This formulation is the intellectual linchpin that makes In-Context Pretraining scalable and practical, and it represents a genuine algorithmic contribution rather than a straightforward application of existing techniques.
+
+Prior work on pretraining with related documents fell into two categories, neither of which solved the joint constraints of coherence and no-repetition at web scale:
+
+- **Retrieval-augmented pretraining (kNN)** simply places each document with its top-k retrieved neighbors in the same context window (Guu et al., 2020; Levine et al., 2022). This satisfies coherence trivially but violates the no-repetition constraint — popular documents appear repeatedly across many contexts. The paper demonstrates that this causes worse perplexity than standard pretraining (Figure 3), making it a non-starter for the core language modeling task even before considering downstream evaluations.
+- **Metadata-based grouping** uses external signals — Wikipedia hyperlinks (Yasunaga et al., 2022), publication dates (Lewis et al., 2020), or human-curated multi-document datasets (Caciularu et al., 2021) — to identify related documents. These approaches naturally avoid repetition (each document belongs to its source article or date) and solve coherence partially, but they are fundamentally limited by their dependence on metadata that does not exist for arbitrary web corpora. A method requiring Wikipedia-style hyperlinks cannot train on CommonCrawl.
+
+The maximum traveling salesman formulation reveals that **the core difficulty is a graph constraint satisfaction problem**, not a retrieval problem. The retrieval step is easy — any dense retriever can find related documents. The hard part is *packing* those related documents into a single-pass ordering that visits every document exactly once while maximizing pairwise similarity along the path. By recognizing this as a TSP variant, the paper connects a pretraining data engineering problem to a well-studied algorithmic framework with known approximate solutions, rather than treating it as an ad-hoc data preparation challenge.
+
+The greedy approximate algorithm (Algorithm 1) is not itself a novel TSP solver — greedy path construction is one of the simplest heuristics. What is novel is the **adaptation to the specific structure of the document graph**: the graph is sparse (k=10 edges per node), undirected, and not necessarily connected. These properties break standard TSP assumptions (complete graphs, strong connectivity). The paper's algorithm design choices — starting from minimum-degree nodes to minimize dead ends, implicitly adding zero-weight edges between disconnected components, traversing greedily along maximum-weight edges — are tailored to these properties and represent domain-specific algorithmic thinking rather than off-the-shelf TSP solver application.
+
+The evidence for the formulation's correctness comes from the ablation study (Section 4.2, Figure 5): documents grouped by *clustering* (broad topical similarity) achieve a perplexity of 7.9, while documents grouped by the nearest-neighbor *linking* of In-Context Pretraining achieve 7.3. The implication is that the graph-based formulation captures a tighter notion of relatedness — pairwise nearest-neighbor relationships — than cluster-based topical similarity. This tighter relatedness translates to better language modeling, presumably because documents that are direct nearest neighbors in embedding space are more likely to share specific factual content, reasoning patterns, or terminology that provides useful predictive signal, while cluster-mates may only share a broad domain and provide weaker signal.
+
+---
+
+### Innovation 3: Semantic Deduplication as a Subtractive Enabler of Cross-Document Learning
+
+A subtle but critical insight in the paper is that **near-duplicate documents in the same context actively harm cross-document learning** by providing a degenerate shortcut to the language modeling objective. This is a diagnostic contribution — identifying *why* a seemingly innocuous data quality issue becomes particularly damaging when documents are sorted for relatedness — rather than a method contribution.
+
+The problem is specific to In-Context Pretraining and would not arise with random document concatenation: when related documents are placed together, some of those "related" documents are actually near-duplicates — expressing substantially the same information in slightly different wording. When a near-duplicate of the target document appears earlier in the context, the next-token prediction task collapses from "understand the content and predict what comes next" to "copy text from the prior document with minor paraphrasing." The model learns a trivial copy-and-rephrase shortcut rather than genuine cross-document reasoning about how different documents relate.
+
+In random concatenation, this problem is rare — what are the chances that two near-duplicate documents happen to be randomly placed in the same 8192-token window from a corpus of 235 million documents? But in In-Context Pretraining, where documents are deliberately grouped by semantic similarity, the probability of near-duplicate co-occurrence is dramatically higher. The very property that makes In-Context Pretraining useful — semantic clustering — also concentrates the near-duplicate problem that random ordering disperses.
+
+The paper's evidence for this insight comes from the ablation in Section 4.2 (Figure 5): removing deduplication degrades perplexity from 7.3 to 8.3, a larger drop than moving from nearest-neighbor linking (7.3) to clustering (7.9) or random (8.2). This means that **the presence of near-duplicates can undo nearly all the benefit of sorting documents by relevance** — the gap between "perfect relatedness with duplicates" (8.3) and random (8.2) is essentially zero. The implication is that deduplication is not an optional quality improvement for In-Context Pretraining; it is a necessary precondition for the cross-document signal to exist at all.
+
+This insight connects to a broader pattern in the pretraining literature — that data quality and data ordering interact (Abbas et al., 2023; Yasunaga et al., 2023) — but adds the specific diagnostic that **the interaction is asymmetric**: ordering for coherence amplifies the harm of poor data quality, because coherence brings low-quality documents (near-duplicates) into proximity where they would otherwise be separated by randomness. This suggests a general design principle for data preprocessing pipelines: when grouping data by similarity, invest more heavily in deduplication and quality filtering, because similarity grouping concentrates quality problems that random ordering disperses.
+
+---
+
+### Innovation 4: The Pretraining Objective Is Sufficient — No Auxiliary Losses Needed
+
+A striking negative finding in the paper — negative in the sense of what the paper *chooses not to do* — is that **standard autoregressive language modeling on sorted data produces cross-document reasoning capabilities without any auxiliary contrastive, retrieval, or cross-document objectives**. This is a conceptual contribution about the **sufficiency of the standard pretraining objective** when the data distribution provides the right structure.
+
+The natural expectation, given prior work on retrieval-augmented pretraining (Guu et al., 2020; Lewis et al., 2020; Zhong et al., 2022), would be that training a model to reason across documents requires an explicit mechanism: a retrieval loss that teaches the model to align related passages, a contrastive objective that distinguishes relevant from irrelevant contexts, or a cross-document masking objective that forces information synthesis. Many prior methods introduced precisely such auxiliary objectives under the assumption that the standard LM loss, applied to multi-document contexts, would not be sufficient to teach cross-document reasoning — the model might simply learn to ignore the extra documents if not explicitly incentivized to use them.
+
+The paper's finding contradicts this assumption. Despite using *only* the standard next-token prediction objective — with no contrastive loss, no retrieval supervision, no cross-document attention mask, no special tokens indicating document boundaries — the models trained with In-Context Pretraining substantially outperform standard models on every cross-document reasoning task evaluated. The Language modeling objective naturally rewards using prior document information when that information genuinely helps predict the next token, and the sorted data ensures that prior document information is genuinely helpful often enough for the model to learn this behavior.
+
+This finding matters for several reasons:
+
+- **It separates data structure from training methodology.** The paper demonstrates that what matters for learning cross-document reasoning is not a clever training objective but the structure of the pretraining data. The existing objective is already capable of teaching this skill; it simply never had the right data distribution to do so.
+- **It simplifies adoption.** Because no objective modification is needed, In-Context Pretraining integrates into any existing pretraining codebase without changes to the loss computation, model architecture, or training loop. This is a practical advantage that compound with the paper's core claim of being "immediately integrable."
+- **It suggests a principle for pretraining design more broadly.** Rather than designing new objectives for each desired capability, there may be value in first asking whether the standard objective, applied to appropriately structured data, would naturally teach that capability. This inverts the typical research pattern of "new capability → new loss function" to "new capability → new data distribution."
+
+The evidence for this insight is not a single ablation but the entire experimental design: none of the models in the paper use any objective beyond standard next-token prediction, and yet the improvements span language modeling (Figure 3), in-context learning (Table 1), reading comprehension (Table 2), factuality (Table 4), long-context reasoning (Table 5), and retrieval augmentation (Table 3). This breadth is the strongest evidence for sufficiency — it is unlikely that a single auxiliary loss would have produced improvements across such diverse tasks, suggesting that the standard objective, applied to the right data, naturally teaches a general cross-document reasoning capability.
+
+---
 
 ## 5. Experimental Analysis
-- Evaluation setup (§3)
-  - Data/model: All methods use the same 306B-token CCNet corpus and identical LLaMA-style models at 0.3B–7B with 8192 context (§3.1–§3.2).
-  - Baselines: `Standard` random concatenation; `kNN` direct top-k neighbor packing that allows repeats (§3.2).
-  - Metrics and tasks:
-    - Language modeling: Perplexity (lower is better) on Wikipedia, ArXiv, Books; documents randomly ordered at evaluation time (Figure 3; §3.3.1). Perplexity measures how well the model predicts text; lower PPL indicates better predictive fit.
-    - In-context learning: 32-shot classification across 7 datasets; accuracy (Table 1; §3.3.2).
-    - Reading comprehension: 2-shot on RACE-High/ Middle, SQuAD, BoolQ, DROP, HotpotQA; EM or accuracy as standard (Table 2; §3.3.3).
-    - Retrieval augmentation (RAG): Natural Questions (NQ) and TriviaQA (TQA), closed-book (no retrieval) vs open-book (prepend top-10 Wikipedia passages); Exact Match (Table 3; §3.3.4).
-    - Context faithfulness under knowledge conflict: NQ-Swap and MemoTrap; EM (Table 4; §3.3.5).
-    - Long-context reasoning: SCROLL benchmark (NarrativeQA, Qasper, ContractNLI, QMSum, GovReport); F1 or ROUGE-1 after fine-tuning (Table 5; §3.3.6).
-  - Training dynamics: Learning curves and downstream performance during pretraining (Figure 4; §4.1). Ablations on relevance strategy and dedup (Figure 5; §4.2). Effect of number of ICL examples (Figure 6; §4.3).
 
-- Main quantitative results
-  - Language modeling:
-    - Figure 3: Across all sizes and datasets, `ICLM` has lower perplexity than `Standard` and `kNN`. This holds even though evaluation uses random ordering, showing benefits generalize beyond sorted inputs (§3.3.1).
-  - In-context learning (32-shot; Table 1):
-    - Average accuracy: `ICLM` 71.3 vs `Standard` 66.0 and `kNN` 61.8. Gains are uniform across sentiment, hate-speech, and topic classification (§3.3.2).
-    - Quote:
-      > Table 1: ICLM outperforms baselines on all seven datasets; average +8% over Standard.
-  - Reading comprehension (2-shot; Table 2):
-    - Average: `ICLM` 43.2 vs `Standard` 37.6 and `kNN` 36.0. Largest relative gains on HotpotQA (21.9 vs 10.5, +11.4 absolute) and DROP (35.7 vs 27.2, +8.5 absolute) where multi-hop reasoning and numerical operations rely on context (§3.3.3).
-    - Quote:
-      > Table 2: ICLM > Standard and kNN on all six datasets; average improvement ≈14–15%.
-  - Retrieval augmentation (Table 3):
-    - Closed-book: similar or slightly worse (NQ: 17.0 vs 17.0; TQA: 48.0 vs 49.3). Open-book: strong gains (NQ: 32.2 vs 28.5; TQA: 51.6 vs 48.1), ≈+9% (§3.3.4).
-    - Interpretation: Better use of provided passages; slight reduction in pure parametric memorization.
-    - Quote:
-      > Table 3: In open-book settings, ICLM outperforms Standard by +3.7 EM on NQ and +3.5 EM on TQA.
-  - Context faithfulness under conflict (Table 4):
-    - NQ-Swap: 45.8 vs 39.6; MemoTrap: 56.2 vs 48.4. This shows improved adherence to provided context when it contradicts pretraining memory (§3.3.5).
-    - Quote:
-      > Table 4: ICLM yields +6.2 EM (NQ-Swap) and +7.8 EM (MemoTrap) over Standard.
-  - Long-context reasoning (SCROLL; Table 5):
-    - Average: `ICLM` 34.1 vs `Standard` 32.5; gains across all five datasets even after fine-tuning (§3.3.6).
-    - Quote:
-      > Table 5: ICLM improves NarrativeQA F1 (17.1 vs 16.5), Qasper ROUGE-1 (36.7 vs 34.2), ContractNLI F1 (80.7 vs 78.6), QMSum ROUGE-1 (26.8 vs 25.1), GovReport ROUGE-1 (9.1 vs 8.2).
-  - Training dynamics (Figure 4):
-    - Lower training loss throughout and stable downstream improvements emerging after ≈150B tokens (§4.1).
-  - Ablations (Figure 5):
-    - Increasing document relevance improves PPL: Random 8.2 → Clustering 7.9 → Link-based (ICLM) 7.3 (§4.2).
-    - Dedup is crucial: No dedup 8.3 PPL vs Dedup 7.3 (§4.2).
-  - ICL example scaling (Figure 6):
-    - Gains persist as shots increase, with diminishing returns after 32 examples (§4.3).
+### Evaluation Methodology
 
-- Do the experiments support the claims?
-  - The breadth of tasks (LM perplexity, ICL, RC, RAG, conflict tests, long-context) and consistent superiority of `ICLM` over two strong baselines support the central claim that cross-document coherence during pretraining improves multi-document reasoning (§3.3).
-  - The open-book vs closed-book contrast (Table 3) provides a nuanced view: ICLM excels when external context is provided, aligning with the method’s training signal; slight closed-book decreases suggest a trade-off discussed below.
-  - Ablations isolate two key design choices—document relevance and dedup—as causal factors (Figure 5).
+- **Dataset.** The pretraining corpus is a random sample of 235 million documents from the English CommonCrawl dataset (Wenzek et al., 2020), totaling 306 billion tokens. This is the same data used for all models (ICLM, Standard, kNN). For evaluation, the paper uses a wide range of downstream benchmarks described in each result subsection: text classification datasets (SST-2, Amazon, Yelp, Hate, Offensive, Agnews, Dbpedia), reading comprehension benchmarks (RACE-High, RACE-Middle, SQuAD, BoolQ, DROP, HotpotQA), open-domain QA (Natural Questions, TriviaQA), knowledge conflict datasets (NQ-Swap, MemoTrap), and the SCROLL long-context reasoning benchmark (NarrativeQA, Qasper, ContractNLI, QMSum, GovReport). Language modeling perplexity is evaluated on Wikipedia, Arxiv, and Books corpora.
 
-- Failure cases and trade-offs visible in results
-  - Slightly worse closed-book QA on TQA (48.0 vs 49.3) suggests reduced reliance on parametric memory when no context is provided (Table 3).
-  - Long-context gains after fine-tuning are smaller than in zero-shot/ICL settings (Table 5), indicating partial wash-out during task-specific training (§3.3.6).
+- **Base model(s).** All experiments use the LLaMA architecture (Touvron et al., 2023a) with standard autoregressive language modeling objective. Models are trained from scratch at four scales: 0.3B, 0.7B, 1.5B, and 7.0B parameters, all with an 8192-token context window. The LLaMA architecture is chosen because it is representative of modern decoder-only transformer design and provides a strong baseline for comparison. The 7B model requires 128 A100 GPUs across 16 nodes and trains for 9 days on the 306B token corpus.
+
+- **Metrics.** The paper employs task-specific standard metrics: accuracy for classification tasks (sentiment analysis, topic classification, hate speech detection), exact match (EM) for open-domain QA and SQuAD/HotpotQA, accuracy for multi-choice reading comprehension (RACE, BoolQ, DROP), F1 score for NarrativeQA, Qasper, and ContractNLI, ROUGE-1 score for QMSum and GovReport, and perplexity for language modeling evaluation. Perplexity is computed on randomly-ordered documents following standard evaluation protocol, measuring the model's per-token negative log-likelihood exponentiated: `$\text{PPL} = \exp(-\frac{1}{T}\sum_{t=1}^T \log P_\theta(x_t|x_{<t}))$`.
+
+- **Baselines.** The paper compares against two baselines, both trained from scratch on the identical 306B token corpus with the same architecture and hyperparameters: (1) **Standard** — the default pretraining approach that concatenates randomly shuffled documents into context windows, as used by LLaMA, OPT, BLOOM, and essentially all major LMs; (2) **kNN** — the retrieval-augmented pretraining approach (Guu et al., 2020; Levine et al., 2022) that directly places each document alongside its top-10 retrieved nearest neighbors in the same context window, allowing documents to repeat across different contexts. All models undergo identical number of training steps, ensuring the same computational cost.
+
+- **Generation budget / compute accounting.** The primary unit of compute comparison is training tokens: all models are trained on exactly 306 billion tokens with the same batch size (4 million tokens) and number of optimization steps. The document retrieval and graph traversal preprocessing for In-Context Pretraining requires 6 hours on 32 GPUs for embedding search plus 12 hours on 20 CPUs for graph traversal, representing approximately 2.1% of the total compute budget for the 7B model. The paper does not include this preprocessing overhead in the training cost comparison, arguing it is a one-time cost amortized over the full pretraining run.
+
+- **Cross-validation / statistical protocol.** The paper does not employ cross-validation or report confidence intervals for downstream evaluations. Each downstream task is evaluated once on the standard test split for that benchmark. For in-context learning experiments, 32 demonstration examples are used (identified via dataset-specific label words from Min et al., 2022), with the exact examples presumably drawn from the training split, though the paper does not specify the selection procedure or whether multiple random draws are averaged. The absence of statistical significance testing or confidence intervals is a limitation — the sample sizes for some benchmarks are modest (RACE-High has 3,497 questions, but HotpotQA's test set is smaller), so the observed differences could have non-trivial variance.
+
+### Main Quantitative Results
+
+#### Language Modeling (Perplexity)
+
+**Headline result:** ICLM consistently achieves lower perplexity than both Standard and kNN baselines across all three evaluation corpora (Wikipedia, Arxiv, Books) and all model sizes (0.3B to 7B), with the gap widening or remaining stable as model scale increases (Figure 3).
+
+**Per-corpus and per-scale breakdown:** Figure 3 shows three subplots (one per evaluation corpus) with perplexity on the y-axis (lower is better) and model size on the x-axis. Across all conditions:
+- On Wikipedia, the 7B ICLM achieves a perplexity of approximately 7.3 (estimated from the figure), compared to roughly 8.2 for Standard and approximately 8.5 for kNN.
+- On Arxiv, the ICLM advantage is smaller but consistent — roughly 14.5 vs. 16.0 for Standard at 7B.
+- On Books, the pattern is similar — roughly 12.0 vs. 13.5 for Standard at 7B.
+- The kNN baseline consistently underperforms Standard across all corpora and scales, despite conceptually grouping related documents. This negative result is important because it demonstrates that simply placing related documents together is insufficient — the data repetition problem in kNN creates overfitting that outweighs any cross-document learning benefit.
+- The ICLM advantage over Standard is present even at the smallest scale (0.3B) and either stays consistent or widens at 7B, suggesting the method provides a fundamental data efficiency improvement rather than merely benefiting from larger capacity.
+
+**Key detail:** Perplexity is evaluated with randomly-ordered documents (the standard protocol), meaning the ICLM is tested in a regime different from its training distribution (sorted documents). The fact that ICLM still outperforms Standard on inherently random-order eval suggests that the cross-document reasoning ability learned during training transfers to better single-document language modeling — the model has learned to be a better general-purpose predictor, not just a better cross-document integrator.
+
+---
+
+#### In-Context Learning for Text Classification
+
+**Headline result:** ICLM outperforms Standard by an average of 8 percentage points across seven text classification datasets (71.3% vs. 66.0% mean accuracy), with improvements on every single dataset (Table 1).
+
+**Per-dataset breakdown (Table 1, all results with 32 in-context examples, 7B model):**
+
+| Dataset | Standard | kNN | ICLM | ICLM Gain over Standard |
+|---|---|---|---|---|
+| Amazon | 94.6 | 88.0 | 96.5 | +1.9 |
+| SST2 | 83.7 | 80.2 | 93.2 | +9.5 |
+| Yelp | 74.3 | 65.1 | 77.4 | +3.1 |
+| Hate | 52.7 | 50.1 | 60.6 | +7.9 |
+| Offensive | 55.7 | 53.1 | 57.3 | +1.6 |
+| Agnews | 68.3 | 65.7 | 76.0 | +7.7 |
+| Dbpedia | 61.5 | 56.4 | 63.2 | +1.7 |
+| **Average** | 66.0 | 61.8 | 71.3 | +5.3 (8% relative) |
+
+**Pattern analysis:**
+- The largest absolute gains appear on SST2 (+9.5), Hate (+7.9), and Agnews (+7.7) — datasets where the task requires the model to extract patterns from demonstration examples that are semantically nuanced (sentiment, hate speech detection, news topic classification). The smaller gains on Amazon (+1.9) and Yelp (+3.1) may reflect ceiling effects, since the Standard model already achieves 94.6% on Amazon with 32-shot prompting.
+- The kNN baseline performs *worse* than Standard on all seven datasets (average 61.8% vs. 66.0%), reinforcing the pattern from perplexity: data repetition in kNN harms performance even when the model sees related documents.
+- The 8% relative improvement is the average percentage-point difference (66.0 → 71.3), reported as an 8% increase over the 66.0 baseline. This is a substantial gain for a method that changes only data ordering.
+
+**Why this matters for the paper's claims:** In-context learning is one of the most direct tests of cross-document reasoning — the model must read a set of demonstration examples (which the paper explicitly frames as "related documents" — they share the same task format and domain) and extract the underlying pattern to apply to a new query. The fact that ICLM improves ICL without any meta-training or instruction-tuning during pretraining supports the paper's central claim that the standard LM objective on sorted data naturally teaches cross-document pattern extraction.
+
+---
+
+#### Reading Comprehension
+
+**Headline result:** ICLM outperforms Standard by an average of 14% relative improvement across six reading comprehension datasets (43.2% vs. 37.6% mean accuracy/EM), with particularly large gains on multi-hop and reasoning-intensive tasks (Table 2).
+
+**Per-dataset breakdown (Table 2, all results with 2-shot in-context learning, 7B model):**
+
+| Dataset | Standard | kNN | ICLM | ICLM Gain |
+|---|---|---|---|---|
+| RACE-High | 39.5 | 36.2 | 41.5 | +2.0 |
+| RACE-Middle | 53.3 | 51.4 | 56.9 | +3.6 |
+| BoolQ | 68.9 | 65.3 | 73.0 | +4.1 |
+| SQuAD | 26.3 | 23.5 | 30.3 | +4.0 |
+| HotpotQA | 10.5 | 14.4 | 21.9 | +11.4 |
+| DROP | 27.2 | 25.1 | 35.7 | +8.5 |
+| **Average** | 37.6 | 36.0 | 43.2 | +5.6 (14.9% relative) |
+
+**Pattern analysis:**
+- **HotpotQA shows the largest gain (+11.4 points, more than doubling from 10.5% to 21.9%).** HotpotQA explicitly requires multi-hop reasoning across multiple provided documents to answer a question — precisely the skill that In-Context Pretraining is designed to teach. This result is the strongest single-dataset evidence for the paper's central claim that the method improves cross-document reasoning.
+- **DROP also shows a large gain (+8.5 points).** DROP requires discrete reasoning (arithmetic, sorting, counting) over paragraphs, which benefits from the model's improved ability to integrate numerical and factual information across the full context.
+- **RACE-High shows only a modest gain (+2.0 points).** RACE questions are drawn from English exams and often require deep single-passage comprehension rather than cross-document synthesis. The smaller gain here is consistent with the method's mechanism — when the task is primarily about understanding a single coherent passage (the domain where standard pretraining already excels), the cross-document advantage is less pronounced.
+- **The kNN baseline slightly outperforms Standard on HotpotQA (14.4% vs. 10.5%).** This is the only case where kNN beats Standard in the entire paper, and it makes sense — HotpotQA's multi-hop requirement benefits from seeing related documents during training, and the kNN model at least gets some of that signal, even if the data repetition problem partially cancels the benefit on other tasks.
+- The paper uses only 2-shot prompting because "some documents in reading comprehension tasks are very long" (Section 3.3.3), making higher shot counts infeasible within the 8192-token context window. This means the reading comprehension evaluation is inherently limited to low-shot settings, where the model has fewer examples from which to extract the task pattern.
+
+---
+
+#### Retrieval-Augmented Question Answering
+
+**Headline result:** In the open-book setting (with top-10 Wikipedia passages provided as context), ICLM improves over Standard by 9% relative on Natural Questions (32.2% vs. 28.5%) and 7% on TriviaQA (51.6% vs. 48.1%), while performing comparably or slightly worse in the closed-book setting (Table 3).
+
+**Per-setting breakdown (Table 3, 7B model):**
+
+| Method | NQ (Closed) | NQ (Open) | TQA (Closed) | TQA (Open) |
+|---|---|---|---|---|
+| Standard | 17.0 | 28.5 | 49.3 | 48.1 |
+| kNN | 13.5 | 20.1 | 40.2 | 43.2 |
+| ICLM | 17.0 | 32.2 | 48.0 | 51.6 |
+
+**Two key patterns emerge:**
+1. **ICLM underperforms Standard in closed-book TriviaQA (48.0% vs. 49.3%).** The paper interprets this as ICLM memorizing less factual knowledge during pretraining, possibly because the sorted-document training distribution reduces the model's exposure to isolated facts divorced from context. This is a trade-off: ICLM trades some parametric memorization for stronger context-utilization ability. For applications where the model must answer from memory without retrieval, this is a small disadvantage; for applications with retrieval augmentation, the trade-off is decisively favorable.
+2. **ICLM gains substantially more from retrieval augmentation than Standard.** On NQ, ICLM improves by 15.2 points from closed to open (17.0 → 32.2), while Standard improves by only 11.5 points (17.0 → 28.5). On TQA, ICLM improves by 3.6 points (48.0 → 51.6) while Standard *degrades* by 1.2 points (49.3 → 48.1) — the Standard model actually performs worse when given retrieved documents than when answering from memory, consistent with prior observations that standard LMs can be "distracted" by irrelevant context (Shi et al., 2023a). ICLM's positive gain on TQA with retrieval suggests it has learned to selectively use relevant context rather than being misled by it.
+
+**The TQA closed-to-open degradation for Standard is especially telling.** It corroborates the paper's framing that standard pretraining teaches models to underweight context relative to memorized knowledge. When Wikipedia passages are prepended, the Standard model cannot effectively distinguish between useful and distracting information in the retrieved documents, and the confusion outweighs the benefit. ICLM avoids this failure mode because it was trained in a regime where prior documents genuinely help predict what comes next, so it has learned to attend to and selectively integrate context information.
+
+---
+
+#### Factuality Under Knowledge Conflict
+
+**Headline result:** ICLM improves over Standard by 6.2 points on NQ-Swap (45.8% vs. 39.6%) and 7.8 points on MemoTrap (56.2% vs. 48.4%), representing a 16% relative improvement in faithfulness to provided context when that context contradicts the model's parametric knowledge (Table 4).
+
+**Per-dataset breakdown (Table 4, 7B model):**
+
+| Method | NQ-Swap | MemoTrap |
+|---|---|---|
+| Standard | 39.6 | 48.4 |
+| kNN | 42.1 | 54.3 |
+| ICLM | 45.8 | 56.2 |
+
+**What these datasets test:** NQ-Swap (Longpre et al., 2021) replaces the correct answer entity in Natural Questions with a swapped entity, so the model must rely on the provided (swapped) context rather than its memorized knowledge. MemoTrap (Liu & Liu, 2023) provides instructions and context that are in conflict with the model's parametric knowledge, testing whether the model follows the instruction or defaults to memorization. Both datasets isolate the *context-vs-memory* conflict that the paper argues is a direct consequence of random-concatenation pretraining.
+
+**The kNN baseline shows intermediate performance on both datasets** — better than Standard but worse than ICLM. This suggests that even the imperfect kNN approach (with its data repetition problem) provides some cross-document training signal that improves context faithfulness, but the lack of data diversity limits the benefit. The 16% average improvement from ICLM over Standard is the largest relative gain across all evaluation categories, suggesting that faithfulness to context is the capability most bottlenecked by standard pretraining's lack of cross-document signal — exactly what the paper's motivation predicts.
+
+**Connection to the paper's central thesis:** These results are arguably the cleanest test of the paper's hypothesis because they require the model to actively *override* its internal knowledge in favor of provided context. Standard models struggle with this because they never learned to weight context information strongly during pretraining (context was never predictive). ICLM learned that prior context is informative and thus naturally weights it more heavily, producing outputs that are more faithful to what was actually provided rather than what was memorized.
+
+---
+
+#### Long-Context Reasoning (SCROLL Benchmark)
+
+**Headline result:** ICLM outperforms Standard by an average of 5% relative improvement across five long-context reasoning datasets from the SCROLL benchmark (34.1 vs. 32.5 mean score), with gains concentrated on datasets requiring synthesis of information across multiple parts of a long document (Table 5).
+
+**Per-dataset breakdown (Table 5, with fine-tuning on each task's training set):**
+
+| Dataset | Standard | kNN | ICLM | Metric |
+|---|---|---|---|---|
+| NarrativeQA | 16.5 | 16.8 | 17.1 | F1 |
+| Qasper | 34.2 | 34.1 | 36.7 | F1 |
+| ContractNLI | 78.6 | 79.5 | 80.7 | F1 |
+| QMSum | 25.1 | 24.3 | 26.8 | ROUGE-1 |
+| GovReport | 8.2 | 6.6 | 9.1 | ROUGE-1 |
+| **Average** | 32.5 | 32.3 | 34.1 | — |
+
+**Important methodological note:** Unlike the in-context learning and reading comprehension evaluations (which use few-shot prompting), the SCROLL evaluation involves *fine-tuning* the pretrained model on each task's training set. This means the evaluation measures not just the pretrained model's zero/few-shot capability but how the pretrained representations support downstream fine-tuning. The paper acknowledges this distinction: "We hypothesize that the gains from ICLM may fade out to some extent when the LMs are fine-tuned" (Section 3.3.6).
+
+**Pattern analysis:**
+- **Qasper shows the largest absolute gain (+2.5 F1).** Qasper involves answering questions over NLP papers and requires synthesizing information across different sections of a paper — a form of cross-segment reasoning that maps naturally to In-Context Pretraining's cross-document training.
+- **GovReport shows a small absolute gain (+0.9 ROUGE-1) but a large relative gain (11%).** GovReport requires generating summaries of government reports, which involves distilling information across long documents.
+- **ContractNLI shows a modest gain (+2.1 F1).** ContractNLI is a natural language inference task over contracts, requiring careful reading of legal text. The pretrained model already achieves 78.6% F1, so headroom is limited.
+- **The gains are uniformly smaller than in the few-shot evaluations** (Tables 1–4), consistent with the paper's hypothesis that fine-tuning partially compensates for deficiencies in pretraining. When the model is fine-tuned on the specific task, it can learn task-specific cross-document strategies that it failed to acquire during pretraining.
+
+**Why the SCROLL results matter despite smaller gains:** They demonstrate that In-Context Pretraining's benefits persist even through the fine-tuning stage — the pretrained representations provide a better initialization that fine-tuning cannot fully replicate, suggesting that some cross-document reasoning patterns learned during pretraining are not easily acquirable from limited fine-tuning data.
+
+---
+
+#### Evolution of Performance During Pretraining
+
+**Headline result:** The training loss for ICLM remains consistently below Standard throughout pretraining, and the downstream performance advantage on reading comprehension (RACE) and retrieval augmentation becomes established after approximately 150 billion tokens and remains stable through the remainder of training (Figure 4).
+
+**Figure 4 reveals three subplots:**
+1. **Training loss (left):** ICLM's loss is lower from the very beginning of training, with the gap remaining roughly constant throughout the full 300B tokens. This is consistent with the paper's explanation: when the training context contains related documents, the next-token prediction task is genuinely easier because the prior documents provide useful signal for predicting the next document. The standard model faces a harder task (predicting random documents) and thus has higher loss at convergence.
+2. **RACE performance (middle):** After about 150B tokens, ICLM pulls ahead of Standard and maintains the advantage through 300B tokens. The gap does not widen further with additional training, suggesting that the cross-document reasoning capability is largely established by mid-training and additional tokens primarily refine existing capabilities rather than open new gaps.
+3. **Retrieval augmentation performance (right):** Similar pattern to RACE — the ICLM advantage emerges by ~150B tokens and remains stable.
+
+**What this means for the paper's claims:** The stability of the performance gap after 150B tokens suggests that In-Context Pretraining's benefits are not merely a transient effect of seeing sorted data — they represent a persistent change in what the model learns that is not "caught up" by the standard model even with additional training on the same number of tokens. This is evidence against the hypothesis that standard pretraining would eventually achieve the same capabilities if trained for longer — there is a distinct capability that standard pretraining does not teach, regardless of training duration.
+
+---
+
+### Ablation Studies and Robustness Checks
+
+All ablations are conducted with 1.5B parameter models and evaluated with perplexity on Wikipedia (Section 4.2, Figure 5).
+
+**Document relevance method (random → clustering → nearest-neighbor linking):** Perplexity decreases monotonically as the relevance between documents in the context increases (random: 8.2 → clustering: 7.9 → nearest-neighbor links: 7.3). The clustering approach groups documents into 11K clusters based on embedding similarity and samples from the same cluster to form contexts (following Abbas et al., 2023), which provides broad topical coherence but not the tight pairwise relatedness of nearest-neighbor linking. The 0.6 perplexity gap between clustering and linking (7.9 vs. 7.3) demonstrates that the granularity of "relatedness" matters — cluster-level topical similarity is helpful but insufficient; direct nearest-neighbor similarity provides a meaningfully stronger training signal.
+
+**Semantic deduplication (on vs. off):** Removing deduplication causes perplexity to spike from 7.3 to 8.3, nearly erasing the entire benefit of sorting documents by relevance (random baseline is 8.2). This is the strongest ablation result in the paper and establishes deduplication as a necessary precondition for In-Context Pretraining to work. The paper's interpretation is that near-duplicate documents in the same context provide a "copy shortcut" — the model learns to paraphrase the prior near-duplicate rather than learning genuine content prediction — and this shortcut crowds out the intended cross-document reasoning signal. The magnitude of the effect (0.9 perplexity increase, compared to 0.9 for the entire sorting benefit) suggests that in web-scale corpora, semantic near-duplication is pervasive when documents are grouped by similarity, making deduplication not just helpful but essential.
+
+**kNN baseline (not a formal ablation, but an informative comparison):** The kNN method consistently underperforms Standard across language modeling (Figure 3), in-context learning (Table 1, average decline from 66.0% to 61.8%), and reading comprehension (Table 2, 37.6% to 36.0%). This is an important negative result that validates the "no data repetition" constraint in the graph traversal formulation. The kNN approach correctly identifies that related documents should be together, but fails because the same popular documents appear in many contexts, reducing effective data diversity and causing overfitting. The graph traversal algorithm solves both problems simultaneously — relatedness and no repetition — and the ablation confirms that both properties are necessary.
+
+**Number of in-context examples (Figure 6):** The performance advantage of ICLM over Standard persists across all numbers of demonstration examples (from 0 to 128), with both models improving as more examples are provided and both plateauing after approximately 32 examples. The gap between ICLM and Standard is roughly constant (neither widening nor narrowing) as shot count increases, suggesting that In-Context Pretraining provides a fixed capability improvement rather than an improvement that compounds with more in-context information. The plateau at 32 examples is consistent with prior observations about in-context learning saturation and is not specific to In-Context Pretraining.
+
+### Critical Assessment
+
+**Claim 1: In-Context Pretraining improves cross-document reasoning by changing document ordering alone, without modifying the model or objective.**
+
+The experiments support this claim with breadth and consistency. Across five distinct evaluation categories (language modeling, in-context learning, reading comprehension, retrieval augmentation with knowledge conflict, long-context reasoning), encompassing 20+ individual datasets, ICLM outperforms Standard in every single comparison. The improvements range from modest (5% on long-context reasoning with fine-tuning, Table 5) to substantial (16% on knowledge conflict, Table 4), and no experiment shows Standard outperforming ICLM by a meaningful margin. The consistency across model scales (0.3B to 7B, Figure 3) and the stability of the advantage through training (Figure 4) further supports the claim that the effect is genuine and not an artifact of a specific model size or training checkpoint.
+
+However, there are two important caveats about the breadth of support:
+
+- **Single model family, single training run.** All experiments use the LLaMA architecture with one training run per model size. There is no evidence that the results generalize to encoder-decoder architectures (T5), mixture-of-experts models, or non-transformer architectures. The paper does not report multiple training runs with different random seeds, so the statistical reliability of the comparisons cannot be assessed — a 2-point accuracy difference on a dataset with a 500-question test set could easily arise from training variance. This is a significant omission for a paper claiming consistent improvements.
+- **Single data source (English CommonCrawl).** The pretraining data is exclusively English web text. Whether the method works for multilingual corpora (where the retrieval model must bridge languages), code (where document boundaries are fuzzier), or domain-specific corpora (biomedical, legal) is untested. The paper mentions "using multilingual retriever to group related multilingual documents" as future work (Section 6), implicitly acknowledging this limitation.
+
+**Claim 2: The method is scalable and integrates into existing pretraining pipelines as a preprocessing step.**
+
+Partially supported but with unaddressed practical concerns:
+
+- **The retrieval preprocessing cost is non-trivial but amortizable.** The paper reports 18 total hours of preprocessing (6 hours GPU + 12 hours CPU) for 235M documents. For the 7B model trained on 128 GPUs for 9 days, this represents ~2% overhead. However, the paper uses a *subset* of CommonCrawl (235M out of billions of available documents). If the method were applied to the full CommonCrawl or to the multi-trillion-token corpora used for frontier models (LLaMA 2 used 2 trillion tokens), the retrieval cost would scale roughly linearly with the number of documents, while the training cost scales with total tokens. The relative overhead would depend on the ratio of documents to tokens (average document length) — a corpus with many short documents would have higher relative preprocessing overhead. The paper does not analyze this scaling relationship.
+
+- **The difficulty estimation is a one-time cost, but the method may need recomputation if the data or retrieval model changes.** If the pretraining corpus is updated (additional data, different filtering), the retrieval and graph traversal must be re-run. If a better retrieval model becomes available (e.g., an improved contriever), re-running might be desirable for better quality. The paper frames the preprocessing as a fixed cost, but in a production pretraining pipeline with iterative data improvement, it may be recurrent.
+
+- **The batch diversity strategy is under-described.** The paper states that "when forming the input training batches, we ensure the diversity among different input contexts within the same batch" (Section 2.2) but provides no details on the mechanism, its computational cost, or ablation on its importance. This is a gap in the method description that would affect reproducibility.
+
+- **No hyperparameter tuning was performed for ICLM.** The paper deliberately uses the same hyperparameters as Standard to demonstrate simplicity, but this means the reported results may understate ICLM's potential. Conversely, it's possible that the Standard hyperparameters are suboptimal for ICLM in ways that create an unfair comparison — there is no evidence either way.
+
+**Claim 3: Cross-document reasoning deficits in standard LMs are caused by random document concatenation during pretraining, and fixing this distribution solves the problem.**
+
+The experiments provide strong correlational evidence but stop short of a causal proof. The paper demonstrates that (a) standard pretraining with random concatenation produces models that struggle with cross-document tasks, and (b) In-Context Pretraining with sorted concatenation produces models that perform better on those tasks. However, the causal claim requires ruling out alternative explanations:
+
+- **Data diversity.** The kNN baseline shows that placing related documents together *without* the no-repetition constraint actually *hurts* performance. This rules out the simple explanation that "any related-document exposure helps" and supports the specific mechanism (no-repetition coherent contexts). But it does not rule out that the benefit comes from something other than cross-document reasoning — for example, sorted training might simply produce better representations for individual documents because the surrounding context provides useful semantic disambiguation, analogous to how word embeddings benefit from contextual diversity.
+
+- **The breadth of improvements suggests a general capability rather than task-specific effects.** The fact that ICLM improves on in-context learning, reading comprehension, retrieval augmentation, knowledge conflict, and long-context reasoning — tasks with very different surface forms — makes it unlikely that the benefit is an artifact of task-specific data similarities. A method that merely improved sentiment analysis because training documents happened to cluster by sentiment would not explain improvements on HotpotQA or NQ-Swap. The pattern of results is consistent with a general cross-document reasoning capability being strengthened.
+
+- **Missing experiment: training on single long coherent documents (not concatenated short ones).** An alternative hypothesis is that the benefit of In-Context Pretraining comes not from cross-*document* reasoning per se, but from exposure to long, coherent contexts of any kind. If a baseline were trained on naturally long documents (fiction books, Wikipedia articles concatenated with their own sections), would it match ICLM? The paper does not include this comparison, which would distinguish between "cross-document" and "long-coherent-context" as the active mechanism. The fact that CommonCrawl has few naturally long documents (less than 5% over 2K tokens, as cited) makes this comparison practically difficult but conceptually important.
+
+**Claim 4: In-Context Pretraining produces models that are more faithful to provided context, even when it contradicts memorized knowledge.**
+
+The NQ-Swap and MemoTrap results (Table 4) provide direct evidence for this claim with the largest relative improvements in the paper (16% average). However, these evaluations are limited to two datasets and one type of knowledge conflict. The paper does not evaluate on other knowledge conflict scenarios — temporal conflicts (provided context contains more recent information than the model's training data), source authority conflicts (provided context comes from an unreliable source but contains the correct answer), or multi-document conflicts (two provided documents contradict each other). These are important real-world scenarios where context faithfulness matters, but the paper's evaluation only covers entity-swapping (NQ-Swap) and explicit instruction-vs-memory conflicts (MemoTrap).
+
+Additionally, the ICLM gains on MemoTrap are partly matched by the kNN baseline (54.3% vs. 56.2% for ICLM), suggesting that some of the context-faithfulness benefit comes from simply seeing related documents during training (which kNN provides), while the additional benefit from the no-repetition constraint is smaller. This nuance is not discussed in the paper.
+
+**Missing or weak aspects of the evaluation:**
+
+- **No human evaluation.** All metrics are automated (accuracy, exact match, F1, perplexity). For tasks like reading comprehension and summarization (SCROLL), automated metrics can miss qualitative differences in output quality — e.g., whether ICLM generates more coherent or better-justified answers even when both models get the same accuracy score.
+
+- **No analysis of which specific documents in the context are being used.** The paper claims that In-Context Pretraining teaches models to "read and reason across document boundaries," but provides no attention analysis, probing experiment, or ablation (e.g., removing the most relevant prior document and measuring impact) to verify that the model is actually using information from earlier documents. It is possible that the benefit comes from better within-document representations (due to semantic disambiguation from related context) rather than from explicit cross-document information transfer. This is a significant gap between the mechanistic claim and the behavioral evidence.
+
+- **Single retrieval model (contriever).** The paper does not ablate the choice of retrieval model. Would a weaker retriever (e.g., BM25) produce similar benefits? Would a stronger one (e.g., a fine-tuned retriever) produce larger benefits? The sensitivity of In-Context Pretraining to retrieval quality is unexamined, which is relevant for practitioners who might use different retrieval models.
+
+- **No analysis of document similarity distribution.** The paper does not report statistics on the similarity scores in the constructed graph — what is the distribution of cosine similarities between connected documents? What fraction of edges are "strongly related" vs. "weakly related"? This information would help other researchers calibrate expectations about what level of relatedness is necessary for the method to work.
+
+- **No evaluation of negative side effects.** The paper reports only positive results. Two potential concerns are unexamined: (1) whether ICLM's reduced parametric memorization (suggested by slightly lower closed-book TriviaQA) harms performance on knowledge-intensive tasks where retrieval is unavailable, and (2) whether training on sorted data creates any domain-specific overfitting — e.g., does ICLM perform worse than Standard on tasks that require ignoring context (a skill that is useful when the context contains misinformation or adversarial content)?
+
+**Summary of experimental rigor:**
+
+The paper's evaluation is comprehensive in breadth — 20+ datasets across 5 task categories — and establishes a clear, consistent pattern of improvements from In-Context Pretraining over the standard baseline. The ablation study, though limited to two variables (document relevance method and deduplication) on one metric (perplexity) at one model size (1.5B), convincingly establishes that both nearest-neighbor linking and deduplication are necessary for the method's benefits. The evolution-of-performance analysis (Figure 4) provides evidence that the advantage is stable and persistent, not a transient training artifact.
+
+However, the evaluation has several significant gaps that limit the strength of the paper's causal claims: no attention or mechanistic analysis to verify that the model is actually performing cross-document reasoning rather than benefiting from improved within-document representations; no ablation of retrieval model quality; no evaluation of potential negative side effects (reduced memorization, domain overfitting); no analysis of which types of cross-document relationships (factual overlap, narrative continuity, argumentative structure, etc.) drive the benefits; and no statistical reliability assessment (single training run, no confidence intervals). These gaps are common in large-scale pretraining papers where computational constraints limit experimental design, but they mean that the paper's claims should be understood as strong behavioral evidence rather than mechanistic proof.
 
 ## 6. Limitations and Trade-offs
-- Dependence on retrieval quality (§2.1; Appendix A.2)
-  - The neighbor sets come from the `contriever` embedding of the first 512 tokens. If a document’s most informative content occurs later or if the embedding model misses topical nuance, the graph may connect suboptimal neighbors.
-- Approximate path construction (§2.2; Algorithm 1)
-  - The greedy maximum-TSP traversal is not optimal and includes zero-weight jumps when stranded nodes are reached (graph sparsity). This can stitch together unrelated segments and occasionally insert weak transitions.
-- Diversity vs coherence
-  - While traversal avoids repeated documents across contexts, extended runs of highly similar documents might reduce topical breadth in a training step. The batching strategy shuffles contexts to reintroduce diversity (§2.2), but global effects were not deeply audited.
-- Compute and engineering overhead
-  - One-time costs include embedding billions of tokens, building a 62 GB FAISS index, GPU-based big-batch search, and CPU traversal (hours to a day-scale; §3.1; Appendix A.2). This is tractable at lab scale but adds nontrivial infrastructure requirements.
-- Closed-book knowledge trade-off
-  - Small drops on some closed-book tasks (Table 3) suggest a shift from memorization toward context use. Depending on application (e.g., when retrieval is not available), this may be a disadvantage.
-- Scope
-  - Experiments are on English web text (CCNet) with LLaMA-like models up to 7B and 8k context. Behavior at larger scales (100B+ parameters), different domains (code, legal), languages, and much longer windows remains to be tested (§6 “Conclusion” hints at future avenues).
+
+### Limitation 1: Retrieval Model Dependency and Sensitivity
+
+**The assumption or constraint.** In-Context Pretraining's document sorting pipeline relies entirely on the quality of a single off-the-shelf dense retrieval model — contriever (Izacard et al., 2022) — to determine which documents are "related." The paper uses contriever with no ablation of alternative retrieval models, no analysis of retrieval recall quality, and no investigation of how sensitive downstream performance is to the choice of retriever. The authors state that "the retrieval model can be any off-the-shelf dense retriever" (Section 2.1) and describe their specific setup with contriever, but provide no evidence that the method works comparably with weaker or stronger retrievers, or that the improvements are robust to retrieval noise.
+
+**The consequence.** A practitioner implementing In-Context Pretraining faces immediate uncertainty: if they use a different retrieval model (because contriever does not support their domain or language, or because a better retriever is available, or because they want to use a lexical retriever like BM25 for cost reasons), will the benefits transfer? If the retrieval model systematically misses certain types of document relationships — cross-lingual connections, code-to-documentation links, long-range narrative dependencies — those relationships will be absent from the training data, and the model will not learn to handle them. Conversely, if a stronger retrieval model is used, the benefits might be larger than reported, making the paper's headline numbers conservative. Without a sensitivity analysis, the method's performance envelope is unknown.
+
+**What evidence exists in the paper.** None. The paper does not report retrieval recall metrics (what fraction of true related-document pairs were found by the ANN search?), does not ablate the choice of retrieval model (BM25, different dense retrievers, ensemble methods), and does not analyze the distribution of cosine similarities in the constructed document graph (what fraction of edges are high-quality vs. marginal?). The only indirect evidence comes from the ablation on document relevance methods (Section 4.2, Figure 5), which shows that nearest-neighbor linking (7.3 perplexity) outperforms clustering (7.9) and random (8.2) — but this comparison varies the *method of grouping*, not the *quality of the retrieval model* used within the linking approach. A stronger or weaker contriever variant would likely produce different document graphs and different downstream results, but the magnitude of this sensitivity is unmeasured.
+
+**Mitigation status.** Not addressed. The paper frames contriever as a practical choice for its "strong zero-shot performance and efficiency" (Section 2.1 implied context) rather than a design constraint to be tested. Future work could measure the correlation between retrieval quality metrics (recall@k, nDCG on a labeled document-similarity dataset) and downstream ICLM performance to establish quality requirements. The paper also does not investigate whether the retrieval model's representations could be jointly optimized with the language model during training — a natural extension that would make the method less dependent on a frozen external retriever.
+
+---
+
+### Limitation 2: The Difficulty Estimation Cost Is Excluded from Compute Budgets
+
+**The assumption or constraint.** The paper treats the document retrieval and graph traversal preprocessing as an offline, one-time cost that is amortized over the full pretraining run, and explicitly excludes this cost from the compute comparison with the standard baseline. The preprocessing requires 6 hours on 32 GPUs (embedding and retrieval) plus 12 hours on 20 CPUs (graph traversal), totaling 18 hours of combined GPU/CPU time for the 235M-document corpus. The authors note this represents approximately 2% of the total compute budget for the 7B model (9 days × 128 GPUs) and do not factor it into any head-to-head efficiency comparison.
+
+The paper does not, however, analyze how this overhead scales when the method is applied to larger corpora. Frontier models are typically trained on multi-trillion-token datasets drawn from much larger raw corpora than the 306B-token CommonCrawl subset used here. If In-Context Pretraining were applied to the full CommonCrawl (billions of documents) or to the 2-trillion-token corpora used for LLaMA 2, the retrieval preprocessing cost would scale roughly linearly with the number of documents — embedding each document, building the FAISS index, and performing the graph traversal would all grow proportionally.
+
+**The consequence.** For larger-scale pretraining, the retrieval preprocessing could become a substantial computational burden rather than a negligible overhead. The paper's 2% figure applies only to the specific scale tested: 235M documents, 306B tokens. For a hypothetical corpus with 10× more documents (2.35B documents, ~3T tokens), the retrieval cost would grow by an order of magnitude (roughly 180 hours on 32 GPUs + 120 hours on 20 CPUs) while training time would also grow. The ratio of preprocessing to training compute depends on the average document length — corpora with many short documents (like CommonCrawl, which the paper's data comes from) have a higher ratio of documents to tokens, meaning preprocessing overhead is larger. The paper provides no framework for estimating this scaling relationship, so practitioners cannot assess whether the method is cost-effective for their target scale.
+
+Additionally, the preprocessing must be re-run if any of these conditions change: (1) the pretraining corpus is updated (new data, different filtering), (2) a different or improved retrieval model is desired, or (3) different hyperparameters for the graph traversal (e.g., k for nearest neighbors, deduplication threshold) are explored. In a production pretraining pipeline with iterative data improvement, the preprocessing cost may not be truly "one-time."
+
+**What evidence exists in the paper.** The paper reports raw preprocessing costs (Section 3.1, Appendix A.2) but does NOT scale them, amortize them into the cost comparison with Standard, or analyze how they grow with corpus size. The ablation in Figure 4 evolution-of-performance graph does not show a version of the curves where the preprocessing cost is subtracted from the ICLM compute budget. The paper also does not report whether the document graph traversal algorithm's runtime complexity (which appears to be `O(|V| log |V|)` for the greedy traversal, plus the cost of maintaining the minimum-degree unvisited set) is practical for corpora with 10× or 100× more documents.
+
+**Mitigation status.** The paper explicitly acknowledges that estimating difficulty "still incurs additional computation cost during inference" — a quote from the prior sections referring to difficulty estimation in the compute-optimal scaling framework, but the principle applies here as well: In-Context Pretraining incurs additional computation cost during *pretraining data preparation*. The paper does not suggest mitigation strategies for this overhead. Potential approaches not explored include: using a smaller/cheaper retrieval model for document linking (and measuring whether the quality degradation is acceptable), subsampling documents for retrieval rather than embedding the full corpus, or amortizing retrieval across multiple training runs that share the same data ordering.
+
+---
+
+### Limitation 3: Single Model Family, Single Data Source, Single Language
+
+**The assumption or constraint.** Every experiment in the paper uses a single model architecture (LLaMA decoder-only transformer), a single pretraining data source (English CommonCrawl), a single retrieval model (contriever), and a single language (English). The authors describe their model as "representative of the capabilities of many contemporary LLMs" (Section 3.1 context) but provide no replication on encoder-decoder architectures, mixture-of-experts models, non-English languages, code corpora, or domain-specific text (biomedical, legal, scientific). The paper also uses a single training run per model size — there is no assessment of training variance across random seeds.
+
+**The consequence.** The generalizability of In-Context Pretraining's benefits to other settings is entirely unverified. Several specific failure modes or reduced-benefit scenarios are plausible but unexamined:
+
+- **Non-English languages.** The contriever model was trained primarily on English data; its retrieval quality for non-English documents may be substantially lower, potentially degrading the quality of the document graph and reducing or eliminating the ICLM benefit. Even if a multilingual retriever were used, cross-lingual document similarity is inherently harder than monolingual similarity, so the effective "relatedness" of concatenated documents would be weaker.
+
+- **Code corpora.** Code documents have a fundamentally different notion of "relatedness" — two files from the same repository are related by function and import dependencies, not by semantic similarity in natural language embedding space. A contriever-style dense retriever trained on natural language would likely fail to capture code structural relationships, making In-Context Pretraining's document linking much weaker for code pretraining. The paper acknowledges this implicitly in Section 6: "For example, the code scripts within the same repository are related," suggesting repository structure as an alternative relatedness signal for code, but does not test this.
+
+- **Encoder-decoder architectures (T5, BART).** These models use a different pretraining objective (span corruption/masked language modeling) and different context processing (bidirectional encoder). Whether the cross-document reasoning benefit transfers to encoder-decoder pretraining is unclear — the mechanism by which sorted documents provide predictive signal depends on the autoregressive next-token objective, where prior documents genuinely help predict later ones. A masked LM objective on concatenated documents might provide a weaker cross-document signal, since the model can attend to both prior and subsequent documents when filling in masked spans.
+
+- **Training variance.** With a single training run per model size, the observed accuracy differences — some as small as 1–2 percentage points on individual datasets — could theoretically arise from random initialization or data ordering variance rather than from the In-Context Pretraining method. The consistency of improvements across many datasets makes this unlikely for the broad pattern, but the specific magnitudes are uncertain.
+
+**What evidence exists in the paper.** The paper contains no cross-architecture, cross-language, or cross-domain experiments, and no analysis of training variance. The authors acknowledge the scope limitation in Section 6: "Future research may delve into the inherent connections between documents within specific corpus domains or using multilingual retriever to group related multilingual documents in the same context." This framing — as future work — confirms that the current paper does not address these dimensions.
+
+**Mitigation status.** Not addressed experimentally. The paper's claim that the method "can be easily integrated into existing pretraining pipelines for large-scale LMs" (Section 2) and that "the retrieval model can be any off-the-shelf dense retriever" (Section 2.1) implies generalizability, but these are assertions, not evidence. The specific architecture, data, retriever, and language choices are fixed, and the reader cannot determine from the paper alone whether In-Context Pretraining transfers to their setting.
+
+---
+
+### Limitation 4: No Mechanistic Evidence That the Model Performs Cross-Document Reasoning
+
+**The assumption or constraint.** The paper's central claim is behavioral — ICLM achieves higher accuracy on tasks that benefit from cross-document reasoning — and the authors attribute this to the model learning to "read and reason across document boundaries" and to "explicitly enabling the model to read and reason about much more varied and longer contexts that go beyond document boundaries" (Section 1). However, the paper provides no attention analysis, probing experiments, ablation studies, or causal interventions to verify that the model is actually using information from prior documents in its context window. The capability attribution is based entirely on input-output behavior: the model was trained on sorted documents, and its downstream accuracy on cross-document tasks improved, therefore it must have learned cross-document reasoning.
+
+**The consequence.** An alternative explanation for the results is that In-Context Pretraining improves **within-document representations** rather than **cross-document information integration**. When a document is surrounded by related documents during training, the model's hidden representations may develop richer semantic features because the surrounding context provides a form of semantic disambiguation — similar to how word embeddings trained with contextual diversity are more informative. If this is the mechanism, then ICLM would be better at understanding individual documents (due to better representations), but not necessarily better at explicitly linking information across documents when multiple documents are present at test time. This distinction matters for practitioners: if the benefit is representational, then ICLM would improve single-document tasks (reading a passage and answering questions) but might provide no additional benefit for multi-document synthesis tasks beyond what improved single-document understanding provides. If the benefit is genuinely cross-document integration, then ICLM should show disproportionate gains on tasks requiring information synthesis across multiple provided documents compared to tasks requiring deep understanding of a single document.
+
+The paper's results are partially consistent with both interpretations. The largest gain is on HotpotQA (+11.4 points, Table 2), which explicitly requires multi-hop reasoning across documents. But reading comprehension on RACE-High (+2.0 points) and RACE-Middle (+3.6) — which primarily require single-passage understanding — also improve. The pattern does not cleanly distinguish between the two mechanisms.
+
+**What evidence exists in the paper.** None that addresses the mechanism directly. The paper does not:
+- Analyze attention patterns to see whether ICLM attends more uniformly or strategically across prior documents compared to Standard.
+- Perform ablation experiments where the most relevant prior document in the context is removed at test time, measuring whether ICLM's performance drops more than Standard's (which would indicate actual cross-document information use).
+- Probe the model's internal representations to determine whether information from prior documents is encoded in the representations of later documents.
+- Report whether the ICLM advantage depends on the *position* of relevant information in the context window — does ICLM overcome the "lost in the middle" problem (Liu et al., 2023) that affects standard models? The paper cites Liu et al. (2023) in Section 1 but never evaluates ICLM's sensitivity to information position.
+- Compare ICLM's performance on tasks where cross-document synthesis is required vs. tasks where all needed information is in a single document, matched for difficulty. The existing evaluation suite includes both types but was not designed for this comparison.
+
+**Mitigation status.** Not addressed. The paper takes the behavioral improvements as sufficient evidence for the claimed mechanism, which is standard practice in pretraining papers where computational constraints limit analysis depth, but it leaves the central causal claim unverified. The authors could have added a simple diagnostic: on the reading comprehension benchmarks, compare performance when the relevant passage is placed as the first vs. last document in the context. If ICLM shows less degradation than Standard when the passage is earlier (further from the question), that would provide behavioral evidence for improved cross-document attention. But this experiment is not reported.
+
+---
+
+### Limitation 5: Potential Negative Trade-off Between Context Faithfulness and Parametric Knowledge Retention
+
+**The assumption or constraint.** In-Context Pretraining teaches models to rely more on provided context and less on memorized parametric knowledge — this is the intended mechanism of improvement, and it succeeds on benchmarks designed to test context faithfulness (NQ-Swap, MemoTrap). However, this represents a **trade-off**, not a pure improvement: stronger reliance on context can become a liability when the context is incomplete, irrelevant, or adversarial, and the model's own parametric knowledge would have produced a better answer. The paper provides preliminary evidence for this trade-off in the closed-book TriviaQA result (Table 3), where ICLM underperforms Standard (48.0% vs. 49.3%), but does not systematically characterize when the trade-off helps vs. hurts.
+
+**The consequence.** A practitioner deploying ICLM in a retrieval-augmented setting faces uncertainty about robustness. If the retrieval system occasionally returns low-quality or irrelevant documents (which is common in production RAG pipelines), will ICLM be more likely than Standard to be misled by those documents? The paper's TQA open-book result (Table 3) provides a hint: Standard actually *degrades* from closed-book to open-book (49.3% → 48.1%) despite receiving relevant Wikipedia passages, while ICLM improves (48.0% → 51.6%). This suggests Standard is already resistant to using context (to its detriment), while ICLM is more willing to use it. But this experiment used *gold-standard Wikipedia passages*, not noisy retrieved documents. In a realistic RAG pipeline with retrieval errors, ICLM's context-trusting behavior might cause it to incorporate incorrect information from irrelevant retrieved passages more readily than Standard would.
+
+The problem is broader than retrieval quality. Consider: an adversary who can inject content into the context window (e.g., via a prompt injection attack in a chatbot); a user who provides contradictory information in a multi-turn conversation (e.g., correcting an earlier statement); a setting where the model's memorized knowledge is actually more up-to-date than the provided context (e.g., a user provides an outdated document). In each case, ICLM may be more vulnerable because it has been trained to weight context information more heavily relative to parametric knowledge.
+
+**What evidence exists in the paper.** The closed-book TQA difference (48.0% vs. 49.3%) is the only direct evidence, and it is both small in magnitude and dataset-specific — closed-book NQ shows no difference (17.0% vs. 17.0%). The paper interprets this as ICLM "memorizing less factual knowledge" but does not explore whether this reduced memorization is a necessary cost of improved context utilization or whether the two capabilities could be independently optimized. The paper does not evaluate:
+- Performance when provided context contains misinformation or irrelevant text.
+- Whether ICLM can appropriately ignore irrelevant context (a necessary complement to using relevant context).
+- Performance differences stratified by how much the parametric answer and context answer disagree.
+- Whether fine-tuning on a mix of relevant and irrelevant contexts could recover parametric knowledge while preserving context faithfulness (a natural mitigation that the paper does not explore).
+
+**Mitigation status.** The paper acknowledges this limitation implicitly through its discussion of the closed-book results but does not treat it as a fundamental trade-off requiring solution. Section 6 ("Conclusion") mentions future work on "inherent connections between documents within specific corpus domains" but does not mention balancing context-faithfulness with parametric knowledge retention. The paper frames ICLM's improvements as uniformly positive, which is accurate for the evaluated benchmarks (which were selected because they benefit from cross-document reasoning) but potentially misleading for practitioners who need their models to handle both context-heavy and context-free scenarios.
+
+---
+
+### Limitation 6: The Greedy Traversal Algorithm Provides No Quality Guarantees and Is Never Compared to Alternative Solvers
+
+**The assumption or constraint.** In-Context Pretraining's core algorithmic contribution — the greedy maximum traveling salesman path construction (Algorithm 1) — is justified primarily by its scalability: exact TSP solution is NP-hard, so an approximate algorithm is necessary for 235 million nodes. The paper selects a greedy algorithm with a minimum-degree starting heuristic and describes it as providing "an efficient approximate solution" (Section 2.2). However, the paper provides no evaluation of the algorithm's solution quality: How close to optimal is the path it finds? How does it compare to other approximate TSP solvers (nearest-neighbor insertion, 2-opt local search, Christofides algorithm for metric TSP)? How much does the specific ordering produced by the algorithm matter for downstream model performance, vs. any reasonable approximate ordering that keeps related documents near each other?
+
+**The consequence.** A practitioner seeking to implement In-Context Pretraining cannot assess whether the greedy algorithm is genuinely necessary (vs. simpler alternatives that might work nearly as well) or whether it could be improved (by using a more sophisticated approximate TSP solver that trades preprocessing time for better document ordering). The paper's ablation on document relevance methods (Section 4.2, Figure 5) compares random vs. clustering vs. nearest-neighbor linking, but does not compare different algorithms *within* the nearest-neighbor linking approach. If a simpler algorithm — say, depth-first traversal of the document graph with random tie-breaking, or simply ordering documents by their embedding-space position using a space-filling curve — achieved comparable perplexity, then the TSP formulation would be conceptually interesting but practically unnecessary. Conversely, if the greedy algorithm is substantially better than simpler alternatives, the paper provides no evidence for this.
+
+Additionally, the greedy algorithm's reliance on the minimum-degree starting heuristic (line 3 of Algorithm 1) is justified intuitively — "minimum degree documents are most likely to have all their neighbors visited first" — but not empirically. Would random starting node selection produce comparable results? Would starting from maximum-degree nodes be worse, and by how much? The minimum-degree heuristic requires computing and maintaining node degrees for 235 million documents, which adds implementation complexity and runtime cost; if the benefit is marginal, a simpler heuristic (random, round-robin) would be preferable.
+
+**What evidence exists in the paper.** The only direct evidence for the algorithm's effectiveness is the downstream performance of models trained with its output — ICLM outperforms Standard across all evaluations. But this compares the algorithm's output to *random ordering*, not to the output of alternative path-finding algorithms. The ablation study (Section 4.2, Figure 5) compares:
+- Random: documents shuffled randomly → perplexity 8.2
+- Clustering: documents grouped into 11K clusters → perplexity 7.9
+- Links (final): ICLM's greedy TSP traversal → perplexity 7.3
+
+This triplet shows that the greedy TSP approach outperforms clustering and random, but it does not isolate the contribution of the TSP formulation from the contribution of the retrieval step. Both Clustering and Links start from the same contriever embeddings; the difference is in how those embeddings are used to form contexts (cluster sampling vs. TSP path). However, clustering groups documents at a coarser granularity (11K clusters) than nearest-neighbor linking (k=10 edges per node), so the comparison confounds the grouping method with the granularity of relatedness. A fairer ablation would be: given the same nearest-neighbor graph, how does greedy TSP path construction compare to alternative path-finding or context-assembly methods?
+
+**Mitigation status.** Not addressed. The paper treats the greedy TSP algorithm as the natural solution to the "no repetition with coherence" constraint and does not investigate alternative algorithms or report solution quality metrics. The algorithm's runtime is reported (12 hours on 20 CPUs, Section 3.1) but no profiling is provided to indicate which operations dominate — is the bottleneck maintaining the minimum-degree unvisited set, or performing the adjacency lookups, or handling dead ends and restarting? Without this information, practitioners cannot optimize the implementation for their own corpora.
 
 ## 7. Implications and Future Directions
-- How this changes the landscape
-  - Demonstrates that the ordering of pretraining data—often treated as an implementation detail—is a first-class lever for improving cross-document reasoning. It complements architectural and objective innovations by exploiting context packing alone (§1–§2).
-- Follow-up research enabled/suggested
-  - Better retrieval for ordering:
-    - Train domain-adaptive or multilingual retrievers; include more than the first 512 tokens; hierarchical or dynamic neighbor selection (§6).
-  - Alternative graph objectives:
-    - Explore global tour-search heuristics (e.g., Lin–Kernighan variants) or beam/path-merging strategies to reduce zero-weight jumps; consider community detection and Hamiltonian path approximations tailored to sparse k-NN graphs (§2.2).
-  - Curriculum design:
-    - Mix coherence levels (local vs global topicality), interleave random and linked segments, or progressively increase run lengths to balance diversity and signal.
-  - Integration with instruction/multitask finetuning and long-context scaling:
-    - Combine with instruction-tuning datasets that already concatenate demonstrations (§5 “Multitask finetuning…”); pair with position-scaling methods to exploit even longer windows.
-  - Cross-modal and code repositories:
-    - Leverage inherent link structures (citations, code repos) to form even more meaningful multi-document contexts (noted in §6 “Conclusion”).
-- Practical applications
-  - Retrieval-augmented assistants: measurable gains in open-book QA (Table 3) translate directly to improved search-grounded question answering and fact-checking.
-  - Multi-document reading and summarization: stronger performance on HotpotQA, DROP, and SCROLL indicates better synthesis over multiple sources (Tables 2 and 5).
-  - Safer, more faithful generation: improvements on NQ-Swap and MemoTrap show increased willingness to follow provided evidence even when it conflicts with parametric knowledge (Table 4).
 
-Overall, in-context pretraining is a simple but powerful modification—just reorder documents—that consistently yields better cross-document reasoning. The method is easy to adopt in existing pipelines, and the paper provides concrete algorithms and scaling notes (Algorithm 1; Appendix A.2) that make replication feasible.
+### How This Work Changes the Landscape
+
+In-Context Pretraining introduces a conceptual shift that is deceptively simple but carries broad implications: **the pretraining objective is already sufficient to teach cross-document reasoning — what was missing was the right data distribution to activate that capability.** This reframes a set of problems that the field had been addressing with architectural innovations, auxiliary losses, and specialized fine-tuning stages as fundamentally being *data ordering problems*.
+
+The shift is not a paradigm overthrow — the autoregressive language modeling objective, the transformer architecture, and the standard pretraining pipeline all remain intact. Rather, it is a **reframing of what the pretraining data distribution should look like**. Before this work, the implicit assumption was that random document concatenation provided adequate diversity and that any desired cross-document capability would either emerge from scale or require explicit training mechanisms (retrieval losses, cross-document masking, instruction fine-tuning). In-Context Pretraining challenges this assumption directly: the standard LM objective, applied to contexts where prior documents genuinely help predict later ones, naturally produces the cross-document reasoning capability that the field had been engineering specialized solutions to achieve.
+
+This reframing has several specific consequences for how the field thinks about pretraining:
+
+**1. It relocates the "cross-document reasoning problem" from the training algorithm to the data pipeline.** The paper demonstrates that what appeared to be a training methodology gap — the need for contrastive losses, retrieval objectives, or multi-task fine-tuning to teach cross-document skills — was actually a data preparation gap. The standard next-token prediction objective is capable of teaching models to read and reason across document boundaries; it simply never had training contexts where prior documents were informative enough to make that behavior worth learning. This is a genuinely non-obvious finding, given how many papers have introduced specialized training methods for cross-document capabilities (Guu et al., 2020; Lewis et al., 2020; Yasunaga et al., 2022; Zhong et al., 2022). In-Context Pretraining achieves broader improvements — across in-context learning, reading comprehension, factuality, and retrieval augmentation — using none of those specialized methods, suggesting that much of that prior methodological complexity may have been compensating for suboptimal data ordering rather than providing genuinely necessary training signals.
+
+**2. It reconciles a tension between two observations in the literature.** Prior work had established both that (a) models struggle with cross-document tasks like multi-hop QA, context-faithful generation, and robust in-context learning (Liu et al., 2023; Shi et al., 2023a; Zhao et al., 2021), and (b) retrieval-augmented pretraining methods that explicitly group related documents can improve some of these capabilities (Guu et al., 2020; Levine et al., 2022). The tension was that the improvements from retrieval-augmented pretraining were often narrow and came with costs — data repetition, reduced diversity, overfitting (as the paper shows for kNN in Figure 3 and Tables 1–2). In-Context Pretraining resolves this tension by identifying the specific constraint that separates success from failure: documents must be grouped by relevance *and* each document must appear exactly once. The kNN approach satisfies the first constraint but violates the second, and it fails. The graph traversal approach satisfies both, and it succeeds broadly. This is a satisfying resolution because it explains both why prior related-document methods showed promise and why they didn't consistently beat random-concatenation baselines.
+
+**3. It realigns the research incentive structure around data engineering for pretraining.** If a change as simple as document reordering — with no new architecture, objective, or training data — can produce improvements of 8–16% across diverse downstream tasks, it suggests that there may be substantial headroom in pretraining data *structure* that the field has not explored because the default assumption was that random shuffling was "good enough." The paper makes data ordering a first-class design dimension for pretraining, alongside model architecture, training objective, and data scale. This legitimizes a class of research that might previously have been dismissed as "mere data preprocessing" — work on curriculum learning, data scheduling, and dynamic context assembly during pretraining.
+
+**4. It changes how we should think about in-context learning as a capability.** The paper's results suggest that in-context learning — widely treated as an emergent property of scale (Brown et al., 2020) — is at least partially a *learned skill* that pretraining can explicitly teach. By exposing the model to sequences of related documents during training, In-Context Pretraining gives the model practice at extracting patterns from a coherent set of context items. This is structurally identical to what happens during in-context learning at inference time (a set of related demonstration examples followed by a query). The 8% average improvement on in-context learning benchmarks (Table 1) suggests that a meaningful portion of the "emergence" attributed to scale may actually be attributable to the chance that large models occasionally see related documents together in their random training windows. If true, this has implications for how we think about scaling: it may not be that larger models *discover* in-context learning, but rather that larger models trained on more random data *eventually* see enough accidental document relatedness to bootstrap the capability. In-Context Pretraining provides this signal deliberately and efficiently, achieving at 7B parameters what might otherwise require much larger scale.
+
+**5. It highlights verifier/data-quality interactions as a general phenomenon beyond RLHF.** The paper's finding that semantic deduplication is *necessary* for In-Context Pretraining to work (perplexity degrades from 7.3 to 8.3 when deduplication is removed, Figure 5) echoes a pattern observed in RLHF and test-time compute scaling: when you optimize for a property (coherence, in this case; reward in RLHF), you concentrate quality problems that were previously dispersed. Random ordering naturally separates near-duplicate documents; coherence-based ordering brings them together, creating degenerate shortcuts. This suggests a general principle: any method that groups data by similarity should invest proportionally more in quality filtering, because the grouping amplifies the impact of any quality failures. This insight transfers beyond pretraining to retrieval-augmented generation, data curation for fine-tuning, and active learning — anywhere data is deliberately clustered, duplicates and quality issues become more damaging.
+
+### Follow-Up Research This Work Enables
+
+**1. Attention analysis to distinguish between improved within-document representations and genuine cross-document information integration.** The paper claims that ICLM learns to "read and reason across document boundaries," but provides no mechanistic evidence that the model actually transfers information from prior documents to improve predictions on later documents. A targeted follow-up would instrument ICLM vs. Standard on a controlled reading comprehension setting: provide a question followed by two passages, one containing the answer and one containing distractors, and systematically vary whether the answer-containing passage appears as the first or second document in the context window. Measure (a) whether ICLM's accuracy advantage depends on the position of the answer passage (if ICLM overcomes the "lost in the middle" problem more effectively than Standard, that would suggest genuine cross-document attention), (b) attention head patterns to quantify how much attention flows from answer-span tokens to tokens in the prior document, and (c) logit attribution (via gradient-based or attention-rollout methods) to determine whether ICLM's correct predictions are causally driven by tokens in prior documents. If ICLM shows stronger and more targeted cross-document attention than Standard, it confirms the paper's mechanistic claim. If not, the behavioral improvements may be explained by richer within-document representations (semantic disambiguation from surrounding context), which would be an important finding — it would mean the method improves single-document understanding through contextual enrichment rather than teaching explicit cross-document synthesis.
+
+**2. Retrieval model sensitivity analysis: how good does the retriever need to be?** The paper uses contriever with no ablation of retrieval quality. A critical practical question is: what is the minimum retrieval quality needed for In-Context Pretraining to provide meaningful benefits? A systematic study would vary the retrieval model along a quality spectrum — from weak (BM25 lexical retrieval) through moderate (a smaller or older dense retriever like DPR) to strong (contriever, or a fine-tuned variant) — and measure downstream ICLM performance as a function of retrieval recall@k on a human-labeled document-relatedness benchmark. The study would also test whether retrieval noise hurts gracefully (some incorrect document links dilute but don't destroy the benefit) or catastrophically (a threshold below which ICLM underperforms Standard). The paper's clustering ablation (perplexity 7.9 vs. 7.3 for linking, Figure 5) suggests a monotonic relationship between relatedness quality and benefit, but the clustering condition changes both the retriever and the grouping method, so it does not isolate retrieval quality. A clean retrieval-quality sweep would establish engineering requirements for practitioners and would inform whether investment in better retrieval models for pretraining data preparation is cost-effective.
+
+**3. Cross-lingual and cross-domain In-Context Pretraining with domain-appropriate relatedness signals.** The paper acknowledges in Section 6 that "future research may delve into the inherent connections between documents within specific corpus domains or using multilingual retriever." This is not just a scale-up — it requires rethinking what "related" means. For code, relatedness might be defined by repository co-occurrence, import/function call graphs, or API documentation links, not by natural language embedding similarity. A follow-up would apply In-Context Pretraining to a code corpus (e.g., The Stack) using file-level relatedness from repository structure: files in the same repo are the "related documents." For multilingual corpora, the extension would use a multilingual retriever (e.g., multilingual contriever or LaBSE) and measure whether cross-lingual document linking — placing an English document and its closest Spanish document in the same context — teaches the model to transfer knowledge across languages, potentially improving cross-lingual transfer in downstream tasks. For scientific text (e.g., S2ORC), relatedness could come from citation links — the citing paper and cited paper are related documents. These domain-specific variants would test whether In-Context Pretraining's benefits are universal (any coherent relatedness signal works) or dependent on the specific semantic similarity captured by dense retrieval. If repository-based code pretraining substantially improves code understanding tasks, it would demonstrate that the principle generalizes beyond the retrieval-based implementation.
+
+**4. Dynamic difficulty-adaptive context assembly during pretraining, rather than static precomputed ordering.** The paper's current approach precomputes a single global document ordering before training begins. This ordering is fixed for the entire pretraining run. A natural extension — analogous to curriculum learning — would be to dynamically adjust the relatedness threshold or the coherence-vs-diversity tradeoff as training progresses. For example: early in training, use highly coherent contexts (very similar documents) to establish basic cross-document attention patterns; later in training, gradually increase context diversity (looser relatedness) to force the model to generalize to more subtle and varied cross-document relationships. Alternatively, the system could measure the model's current cross-document capability (via periodic probing on a held-out set) and adjust the coherence level adaptively. A concrete experiment: train models with three schedules — static coherence (constant k=10 nearest neighbors throughout training), annealing coherence (start with k=5 for tight relatedness, expand to k=20 for looser relatedness), and reverse annealing (loose to tight) — and compare downstream performance. If annealing outperforms static, it would establish that when and how coherence is introduced matters beyond the total quantity of coherent contexts.
+
+**5. Negative capability evaluation: does ICLM become over-reliant on context when it should rely on parametric knowledge?** The paper shows that ICLM is more faithful to context when context and parametric knowledge conflict (Table 4, NQ-Swap +6.2, MemoTrap +7.8). But there are deployment scenarios where the model should *ignore* context and trust its training knowledge — when the context contains misinformation, when the user is mistaken, or when the model's memorized information is more up-to-date than the provided documents. A stress-test would evaluate ICLM vs. Standard on: (a) a dataset where the provided context is adversarially noisy (random sentences injected), measuring whether ICLM is more distractible; (b) a temporal knowledge conflict where the context is outdated but the model's training data is current (or vice versa), measuring whether ICLM appropriately distinguishes context authority from timeliness; (c) a multi-document conflict where two provided documents contradict each other and only one is correct, measuring whether ICLM is better or worse than Standard at adjudicating between conflicting sources. The closed-book TriviaQA result (ICLM 48.0% vs. Standard 49.3%, Table 3) hints at a real trade-off — ICLM may have sacrificed some parametric knowledge for context reliance. Characterizing this trade-off across a range of conflict types would help practitioners decide when In-Context Pretraining is appropriate and when it risks creating models that are too trusting of potentially unreliable inputs.
+
+**6. Combining In-Context Pretraining with retrieval-augmented fine-tuning for a full "train on what you test on" pipeline.** In-Context Pretraining addresses the pretraining stage; instruction tuning and RLHF address later stages. A natural integration would be to apply the same principle — related documents in context — to the fine-tuning data. Many instruction-tuning datasets already group related examples (multiple turns in a conversation, multiple demonstrations for a task). A follow-up would systematically construct fine-tuning data where each training instance is a sequence of related instruction-response pairs (e.g., multiple questions on the same topic, or a multi-turn conversation where each turn builds on previous context), analogous to how In-Context Pretraining sequences related documents. The hypothesis is that this would compound the benefits: pretraining teaches the model that context is informative; fine-tuning teaches the model that *instruction context* is informative in the specific ways needed for downstream tasks. A concrete evaluation would compare Standard pretraining + Standard fine-tuning vs. In-Context Pretraining + Standard fine-tuning vs. In-Context Pretraining + Coherent fine-tuning across a range of instruction-following and dialogue benchmarks. If the combination shows super-additive gains, it would establish a "coherent context all the way down" principle for LM training.
+
+### Practical Applications and Downstream Use Cases
+
+**1. Retrieval-augmented generation (RAG) systems.** This is the most immediate and high-impact application. In a RAG pipeline, the model receives a user query along with several retrieved documents and must synthesize an answer from those documents. Standard pretrained models are suboptimal for this because they were never trained in a regime where prior context documents are systematically helpful — as Table 3 demonstrates, the Standard model actually *degrades* on TriviaQA when given retrieved documents (49.3% closed-book → 48.1% open-book), while ICLM improves (48.0% → 51.6%). For any organization deploying RAG-based question answering, customer support, or enterprise search, replacing the standard pretrained LM with an In-Context Pretrained variant could directly translate to higher answer accuracy without any changes to the retrieval pipeline. The 9% relative improvement on NQ (28.5% → 32.2%) and 7% on TQA (48.1% → 51.6%) with identical retrieved documents suggests that the model is simply better at *using* the same retrieval results. This is pure inference-time gain — no additional latency or infrastructure cost.
+
+**2. Long-document summarization and analysis.** Many enterprise and legal applications require processing documents that exceed the model's context window when naively concatenated (contracts, financial reports, medical records). The standard approach is to chunk the document and process chunks sequentially or in parallel, but this breaks cross-chunk dependencies. In-Context Pretraining produces models that are demonstrably better at synthesizing information across document segments, as shown by the SCROLL benchmark results (Table 5: +5% average improvement, with gains on Qasper +2.5 F1 for answering questions over multi-section papers and GovReport +0.9 ROUGE-1 for summarizing government reports). For a legal tech company summarizing a 100-page contract, or a financial analyst extracting information from a 200-page annual report, the ability to better integrate information across segments translates to more complete and accurate summaries. The fine-tuned SCROLL results (Table 5) are particularly relevant because they represent the deployment scenario: take a pretrained model, fine-tune it on your specific long-document task, and benefit from the In-Context Pretrained model's stronger long-range integration capability as a better initialization.
+
+**3. Enterprise knowledge base Q&A with conflicting sources.** In enterprise settings, knowledge bases typically contain multiple documents on the same topic — different versions of policies, reports from different departments, updates and corrections to earlier documents. When a user asks a question, the retrieval system may return documents that contain conflicting information (e.g., the Q4 revenue figure from the preliminary report vs. the audited final report). Standard models are known to struggle with such conflicts, often defaulting to memorized patterns or to whichever document appears most authoritative based on surface features rather than content. In-Context Pretraining directly addresses this failure mode: the NQ-Swap and MemoTrap results (Table 4) show 16% improvement in faithfulness to provided context when it contradicts parametric knowledge, and the method's training — where the model constantly sees related documents with complementary or contradictory information — teaches it to attend to and adjudicate between multiple sources. For an enterprise deploying an internal Q&A system over policy documents, procedural manuals, or research reports, the improvement in context-faithful answering could reduce the rate at which the system gives outdated or contradicted answers. The specific numbers (NQ-Swap: 39.6% → 45.8%, MemoTrap: 48.4% → 56.2%) suggest a meaningful reduction in context-ignoring errors, though the absolute accuracy is still modest, so this would be a risk-reduction benefit rather than a solved-problem benefit.
+
+**4. In-context learning for few-shot classification in low-resource settings.** Many practical NLP deployments involve classifying text into categories where labeled data is scarce — customer feedback categorization, content moderation for niche policy violations, or medical document triage. Few-shot in-context learning with a handful of labeled examples is the go-to approach when fine-tuning is infeasible. In-Context Pretraining's 8% average improvement on in-context learning benchmarks (Table 1) translates directly to higher accuracy in these settings. The improvements are broad — sentiment (SST2 +9.5), topic classification (Agnews +7.7), hate speech (Hate +7.9) — suggesting the benefit is not task-specific. For a team that maintains a single model and uses it for dozens of few-shot classification tasks via prompt engineering, switching from a Standard-pretrained LM to an In-Context Pretrained LM could yield accuracy improvements across the board without any per-task engineering. The plateau analysis (Figure 6) further suggests that the benefit holds across different numbers of demonstration examples, so practitioners don't need to worry about choosing the optimal shot count to realize the gain.

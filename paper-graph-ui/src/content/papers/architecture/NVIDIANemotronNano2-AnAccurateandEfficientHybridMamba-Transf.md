@@ -8,135 +8,787 @@ Nemotron Nano 2 unveils NVIDIA-Nemotron-Nano-9B-v2, a cutting-edge 9B-parameter 
 
 ---
 
-## 1. Executive Summary (2-3 sentences)
-Nemotron Nano 2 introduces `NVIDIA-Nemotron-Nano-9B-v2`, a 9B-parameter hybrid Mamba–Transformer model designed specifically for long-chain reasoning with far higher generation throughput at comparable accuracy to similarly sized baselines. Starting from a 12B base model trained on 20T tokens, it combines improved data/recipes, long-context pretraining to 128k tokens, multi-stage alignment (SFT, DPO, GRPO, RLHF), and pruning+distillation (Minitron) to run 128k-context inference on a single 22 GiB A10G GPU while achieving up to 6.3× higher output-token throughput than `Qwen3-8B` in generation-heavy settings (Figure 1).
+## 1. Executive Summary
+
+This paper introduces **Nemotron-Nano-9B-v2**, a hybrid Mamba-Transformer language model designed to increase inference throughput for reasoning workloads while maintaining competitive accuracy. Built on the Nemotron-H architecture — which replaces the majority of self-attention layers with Mamba-2 layers — the model is first pre-trained as a 12B-parameter base model on 20 trillion tokens using an FP8 training recipe, aligned through supervised fine-tuning, GRPO, DPO, and RLHF, and then compressed to 9B parameters via the **Minitron** pruning and distillation strategy to enable 128k-token inference on a single NVIDIA A10G GPU (22 GiB). Compared to Qwen3-8B, Nemotron-Nano-9B-v2 achieves "on-par or better accuracy on reasoning benchmarks while achieving up to 6× higher inference throughput in reasoning settings like 8k input and 16k output tokens," establishing that hybrid Mamba-Transformer architectures combined with aggressive model compression can match or exceed dense Transformer performance on complex reasoning tasks only when the compression pipeline is coupled with staged knowledge distillation and targeted reinforcement learning phases that recover benchmark-specific degradations introduced by pruning.
 
 ## 2. Context and Motivation
-- Problem addressed
-  - Reasoning assistants generate long “thinking” traces before final answers. Generating many output tokens is the bottleneck; attention-heavy models slow down as sequence length grows and key–value (KV) cache memory explodes. The goal is to keep accuracy while dramatically increasing throughput and enabling 128k context on a 22 GiB GPU (§1, §4).
-- Why it matters
-  - Real systems (math, coding, tool use) often require 8k–16k generated tokens. Faster generation lowers latency and cost, enabling on-prem or edge deployment on modest GPUs. Long-context capability lets a single model handle large documents and multi-step traces (§1; Figure 1).
-- Prior approaches and gaps
-  - Pure Transformers are accurate but generation is costly for long sequences (quadratic attention scaling and KV cache size).
-  - Recent hybrids (e.g., Jamba; cited in §1) and `Nemotron-H` replace many attention layers with selective state-space model layers such as Mamba to reduce complexity. However, prior work lacked: (a) a full, high-accuracy open model that sustains 128k context on a single 22 GiB GPU, (b) a carefully evaluated distillation-and-pruning path for reasoning models under memory/throughput constraints, (c) explicit “thinking budget” control (§1, §§3–4).
-- Positioning
-  - Nemotron Nano 2 builds on the `Nemotron-H` hybrid architecture, but adds: large new datasets (including high-fidelity math), FP8 training, a 512k-seq long-context extension, staged alignment with truncation-aware SFT, and a compression pipeline targeting 128k context on A10G (§§2–4). It releases checkpoints and most data (§1).
+
+### The Core Problem: Reasoning Models Are Too Slow for Real-World Deployment
+
+The paper addresses a practical tension that has emerged as large language models have become increasingly capable at complex reasoning tasks. Modern reasoning models — those that generate long chains of thought before producing final answers — have demonstrated remarkable accuracy on benchmarks like AIME (math competition problems), GPQA-Diamond (graduate-level science), and LiveCodeBench (competitive programming). However, this accuracy comes at a steep cost: generating thousands of tokens of intermediate reasoning traces before producing the final answer dramatically reduces inference throughput compared to models that answer directly.
+
+This tension is not merely academic. In production deployments — whether serving individual users, powering automated data processing pipelines, or running on edge devices — **the wall-clock time and hardware cost of generating reasoning traces can render state-of-the-art accuracy economically or practically infeasible.** A model that scores 85% on AIME but requires 30 seconds to answer a single question may be less useful in practice than a model scoring 78% that answers in 5 seconds, particularly in latency-sensitive applications like interactive tutoring, coding assistants, or real-time decision support systems.
+
+The paper frames this explicitly through the lens of throughput at realistic reasoning workloads. Figure 1 sets the stage by measuring output tokens per second per GPU at input/output sequence lengths of 1k/8k and 8k/16k tokens — typical profiles for reasoning tasks where a user provides a complex problem statement and the model produces an extended reasoning trace followed by a final answer. The choice of these specific sequence lengths reveals the authors' focus: they are not optimizing for short-form chat or simple factoid QA, but specifically for the regime where long thinking traces dominate computation.
+
+### The Missing Piece: Can We Have Both Accuracy and Speed?
+
+Prior to this work, the dominant approach to building reasoning models followed a relatively uniform recipe: take a dense Transformer model (typically using only self-attention layers), pre-train it on a large corpus, align it with reasoning-focused supervised fine-tuning and reinforcement learning, and deploy it. Models like Qwen3-8B, DeepSeek-R1, and Llama-3 represent this paradigm. These models achieve strong accuracy but inherit the well-known quadratic complexity of self-attention with respect to sequence length — a cost that becomes prohibitive when generating the 8,000-16,000 token reasoning traces that constitute the "thinking" process.
+
+The architecture community has developed alternatives to self-attention specifically to address this efficiency gap. **Mamba** (Gu & Dao, 2023) and **Mamba-2** (Dao & Gu, 2024) introduce state space models that process sequences with linear complexity rather than quadratic, offering dramatically faster inference at long sequence lengths. However, the community's experience with purely Mamba-based models has been mixed: while they excel at throughput, they have generally **lagged behind dense Transformers on tasks requiring complex reasoning, long-range dependency tracking, and in-context learning** — precisely the capabilities that reasoning models need most.
+
+This creates the central question the paper tackles: **Can a hybrid architecture that strategically combines a small number of self-attention layers (for their reasoning and in-context learning capabilities) with a majority of Mamba-2 layers (for their linear-complexity efficiency) match or exceed the accuracy of purely attention-based models while delivering substantially higher throughput?** And if such an architecture is possible at training time, can it be compressed aggressively enough to enable long-context inference on consumer-grade hardware (a single A10G GPU with 22 GiB of memory) without sacrificing the accuracy gains?
+
+### Where Prior Work Falls Short
+
+The paper identifies several limitations in existing approaches that motivate its specific contributions:
+
+**1. Dense Transformers are fundamentally bottlenecked on long sequences.** The quadratic attention complexity means that generating a 16k-token reasoning trace requires compute proportional to $(16,384)^2$ for each attention operation, compared to $16,384$ for a linear-complexity alternative. This is a hardware-level constraint — it cannot be fully solved by quantization, kernel optimization, or batching improvements alone. The paper implicit argues that **architectural change is necessary**, not merely optimization of existing architectures.
+
+**2. Pure state space models (SSMs) have shown reasoning weaknesses.** The existing literature on Mamba-based models (referenced via Waleffe et al., 2024) demonstrated promising efficiency but left open the question of whether SSMs alone could handle the specific demands of reasoning: tracking multiple hypotheses simultaneously, maintaining coherence across very long chains of thought, and performing the precise token-level manipulations that mathematical and code reasoning require. The paper builds on the **Nemotron-H** architecture (NVIDIA, 2025), which previously showed that a hybrid approach — roughly 8% attention layers, 92% Mamba-2/FFN layers — could be competitive with dense Transformers at smaller scales. Nemotron-Nano-9B-v2 extends this line of work to the specific domain of reasoning models, where the sequence length characteristics (long outputs) make the efficiency advantages most pronounced.
+
+**3. Compression techniques for reasoning models are underexplored.** The **Minitron** family of pruning and distillation techniques (Muralidharan et al., 2024; Sreenivas et al., 2024; Taghibakhshi et al., 2025) had been validated on base models and general-purpose aligned models, but their application to reasoning models introduces new challenges. As the paper documents in Section 4 and Figure 6: pruning a reasoning model causes **different types of degradation across different benchmarks** — function calling (BFCL v3) drops significantly, instruction following (IFEval) fluctuates, long-context performance degrades, and conversational quality (ArenaHard) suffers. Most importantly, **the recovery process itself reveals tradeoffs**: reinforcement learning (GRPO) that restores instruction following can temporarily degrade multi-task understanding (MMLU-Pro), and RLHF alignment can cause drops in reasoning benchmarks that must be recovered through additional distillation. The paper's staged recovery pipeline — knowledge distillation, DPO, GRPO, further KD, RLHF, and model merging — is developed specifically to address this multi-objective recovery problem, which had not been systematically studied for compressed reasoning models.
+
+**4. Existing models cannot fit 128k-context inference on a single A10G GPU.** This is a hard memory constraint, not merely a performance preference. The paper explicitly notes in Section 4 that "storing just the weights of a 12B parameter model in bfloat16 precision requires 22.9 GiB, which is more than the 22 GiB memory capacity of an A10G GPU." With the KV cache for 128k-token sequences adding additional memory pressure, compression from 12B to ~9B parameters becomes a **hard necessity**, not an optimization. Existing 8B-class models like Qwen3-8B can fit on such hardware (since 8B parameters in bfloat16 require roughly 14.9 GiB), but the paper argues they achieve lower throughput due to their purely attention-based architecture. The goal is to achieve both hardware compatibility and throughput superiority simultaneously.
+
+**5. Training recipes for hybrid architectures at scale were incomplete.** Prior work on FP8 training (DeepSeek-V3's recipe), long-context extension for hybrid models, and data mixture optimization for Mamba-Transformer architectures existed in pieces across different papers and model families. The paper integrates these into a single, reproducible pipeline and adds specific innovations — the Warmup-Stable-Decay learning rate schedule applied to a hybrid model, long-context extension at 512k training sequence length (rather than the target 128k, based on ablation findings), and a careful data mixture ablation for multilingual content that shows translated synthetic QA pairs substantially outperform curated web crawl data (Table 2).
+
+### How This Paper Positions Itself
+
+The paper is best understood not as proposing a single novel technique but rather as **demonstrating that a careful integration of several existing techniques — hybrid Mamba-Transformer architectures, FP8 training, staged alignment with reasoning traces, and Minitron compression with multi-phase recovery — can produce a model that is simultaneously more accurate and 3–6× faster than comparable dense Transformer models on reasoning workloads.**
+
+The ambition is practical, not theoretical: the paper aims to produce a deployable model (released on Hugging Face with open weights and the majority of training data) that changes the Pareto frontier of reasoning model deployment. The key claim is that the throughput advantage of the hybrid architecture — roughly 8% attention layers — is not merely an inference-time optimization but is **architecturally suited to reasoning workloads**, where the majority of generated tokens are in the "thinking" phase that benefits less from full attention's quadratic complexity than from the linear efficiency of state space models.
+
+The paper also positions itself within NVIDIA's broader model release strategy, building on Nemotron-H (NVIDIA, 2025) and the Nemotron family more generally. The release of pre-training datasets totalling over 6 trillion tokens (Nemotron-CC-v2, Nemotron-CC-Math-v1, Nemotron-Pretraining-Code-v1, Nemotron-Pretraining-SFT-v1) and updated post-training data (Nemotron-Post-Training-Dataset-v2) signals an intent to contribute not just a model but a **reproducible recipe** for the community — from data curation through architecture design to compression and deployment.
+
+### The Deployment Scenario That Motivates the Design
+
+Throughout the paper, specific design choices only make sense in light of the target deployment scenario. The compression target — fitting 128k-context inference on a single A10G GPU (22 GiB) — is not arbitrary. The A10G is a widely available, modestly-priced GPU commonly used for inference serving. By targeting this specific hardware constraint, the paper addresses a practical question facing many organizations: **can we deploy state-of-the-art reasoning capability without requiring datacenter-grade GPUs (A100, H100)?**
+
+The throughput measurements at 1k/8k and 8k/16k input/output sequence lengths similarly reflect real-world reasoning workloads. A typical interaction might involve a user pasting a complex math problem (~1k tokens of input) and the model generating a long reasoning trace with a final answer (~8k tokens of output), or a coding scenario where the full file context is included (~8k tokens) and the model produces an extended reasoning trace and solution (~16k tokens). The paper's focus on these specific sequence length configurations — rather than generic throughput benchmarks — demonstrates that the optimization targets are driven by the reasoning use case specifically, not by general language modeling considerations.
 
 ## 3. Technical Approach
-Step-by-step overview across pretraining, long-context extension, alignment, and compression.
 
-- Hybrid architecture (base model; §2.1, Figure 2, Table 1)
-  - Structure: 62 layers total with only 6 self-attention layers (~8% of depth) evenly dispersed; 28 Mamba-2 layers; 28 FFN blocks (Figure 2).
-  - Key dims: hidden 5120, FFN 20480, Grouped-Query Attention (GQA) with 40 Q heads / 8 KV heads; Mamba-2 with 8 groups, state dimension 128, head dimension 64, conv window 4; squared ReLU FFN; RMSNorm; separate input/output embeddings; no dropout, no biases (Table 1).
-  - Why Mamba-2: Mamba is a state-space sequence model (SSM) whose per-token compute scales linearly and doesn’t maintain a growing KV cache like attention. Replacing most attention with Mamba accelerates long generation while retaining a few attention layers for global interactions (§2.1).
-- Pretraining data and curriculum (§§2.2–2.3; Figure 3)
-  - Curated data: updated Common Crawl (`Nemotron-CC-v2`), multilingual slices for 15 languages, a new high-fidelity math extraction pipeline (`Nemotron-CC-Math-3+` and `-4+` subsets), and curated GitHub code with license filtering and deduplication (§§2.2.1; Appendix A lists accepted licenses).
-  - Synthetic data: STEM QA; regenerated math dialogues (`MIND`-style) from higher-quality math web text; multilingual DiverseQA; code QA; academic QA; and SFT-style data for general, math, code, and a new Fundamental Reasoning (FR) SFT set targeting logical/analytical reading comprehension (§§2.2.2, 2.3.2).
-  - Three-phase curriculum (Figure 3): start broad/diverse; then pivot to higher-quality sources; switch points at 60% and 90% of tokens (§2.3).
-  - Multilingual ablation (Table 2): diverse QA translated from English crawl (`DiverseQA-crawl`) yields the best Global-MMLU scores, so it gets higher weight (§2.3.1).
-  - FR SFT ablation (Table 3): adding 5% FR-SFT improves MMLU-Pro from 44.24 to 56.36 and math average by ~1.8 points, with no harm to reasoning or code averages (§2.3.2).
-- Numerics and training schedule (§§2.4–2.5)
-  - FP8 training (E4M3 format) for all tensors with block-wise quantization; first/last four linear layers in BF16; optimizer state in FP32; stable training observed (§2.4).
-  - Scale: 20T tokens; sequence length 8192; global batch 768; WSD learning rate schedule (stable LR 4.5e-4, min 4.5e-6); Adam β1=0.9, β2=0.95; weight decay 0.1 (§2.5).
-- Long-context extension to 128k (§2.6; Table 4)
-  - Strategy: continuous pretraining (CPT) with even longer sequence length 512k at a small constant LR (4.5e-6) to avoid cutting coherent long docs during Concat&Chunk. Uses 8-way tensor parallel + 16-way context parallel, batch size ensuring ~6M tokens/batch. 18.9B tokens in this phase (§2.6).
-  - Long-doc QA synthesis: extract long academic docs >32k tokens; chunk; synthesize QAs and append; allocate 20% of blend to this data (§2.6).
-  - Ablation (Table 4): training at 512k with synthetic long-doc QA yields the best RULER-128k (81.04 for `Nemotron-H-8B` ablation).
-- Alignment pipeline (§3; Figure 4)
-  - SFT Stage 1: ~80B tokens across math, coding, science, tool-calling, multilingual, safety, conversational. Concatenate to ~128k sequences; 10% of prompts include “empty” reasoning traces so the model can answer with thinking “off” (§§3.1–3.2).
-  - SFT Stage 2: focus on tool-calling without concatenation to recover tool patterns (§3.2).
-  - SFT Stage 3: reinforce long-context; introduce truncated reasoning traces (1–2k tokens) that still end with correct answers to teach budgeted thinking (§3.2, §3.4).
-  - IFEval RL: apply rule-checked instruction-following reward; improves IFEval while other benchmarks fluctuate, so careful checkpointing is needed (§3.2).
-  - DPO (Direct Preference Optimization): on-policy data inside a verifiable multi-step tool environment (Workbench) to strengthen multi-step/multi-turn tool use; focuses on BFCL v3 tasks (§3.2).
-  - GRPO (Group Relative Policy Optimization): preference-based RL on helpfulness/chat (Arena-Hard) using `HelpSteer3` prompts; generate with/without thinking traces; a Qwen-based reward model evaluates rollouts (§3.2).
-  - Model merging: linear interpolation of checkpoints to trade off reasoning vs chat; α≈0.5 works well (§3.2).
-  - Budget control mechanism (§3.4; Figure 5): limit the number of `<think>` tokens. When the token budget is reached, the system closes `</think>` at the next newline (or forces closure within +500 tokens). Truncation-trained SFT makes outputs well-formed and avoids “compensating” by moving long rationales into the final answer (Figure 5b).
-- Compression for A10G (22 GiB) at 128k (§4)
-  - Constraint: inference memory budget set to 19.66 GiB (22.06 GiB minus framework buffer and 1.3 GiB for a vision encoder) while supporting 128k context and batch≥1 (§4.2).
-  - Throughput target: measure vLLM throughput at ISL/OSL=8k/16k at max fitting batch on A10G (§4.2).
-  - Importance estimation (lightweight, forward-only; §4.1)
-    - Layer importance: iteratively remove a candidate layer, compute logit MSE vs original, prune the lowest-impact layer at each step.
-    - FFN and embedding channel importance: aggregate neuron activations over a 1024-sample calibration set (mean and L2 norms) to rank/prune (§4.1).
-    - Mamba head importance: nested activation-based scores per group to prune heads while respecting group structure (Taghibakhshi et al., 2025); in this work, small compression ratios made head pruning less beneficial (§4.2.2).
-  - Lightweight NAS under memory constraint (§4.2)
-    - Search over depth (remove 6–10 layers from 62), embedding width (4480–5120), FFN size (13440–20480), Mamba heads (112–128). Two-stage strategy:
-      1) pick depth: after 6B KD tokens, 56 layers clearly outperform 54 and 52 (51.48 vs 47.35 and 44.92 average reasoning; Table 9);
-      2) fix depth=56 and search width. Top-3 candidates distilled for 19B tokens and benchmarked (Table 10). “Candidate 2” (hidden 4480, FFN 15680, 128 Mamba heads) gives best accuracy (63.02 avg) with strong throughput (156.42 toks/s/GPU at 8k/16k, batch 8).
-  - Distillation schedule (§4.3; Figure 6; Table 11)
-    - Distill with KL-divergence on logits (“teacher” is the 12B model).
-    - Reasoning model:
-      - Depth-only KD (~60B tokens at 8,192).
-      - Width-pruned KD: ~50B at 8,192; ~25B at 49,152; ~1B at 262,144.
-      - DPO → GRPO → short KD at 262,144 to recover drops → RLHF → model merging (Figure 6 traces per benchmark).
-      - Data mix ablation (Table 11): 70% post-training Stage 2 + 30% pretraining gives the best math accuracy after ~6B KD.
-    - Base model:
-      - KD after depth pruning (~120B at 8,192) → width-pruned KD (~360B at 8,192) → long-context KD (~2.5B at 524,288) using only pretraining data (§4.3).
+### 3.1 Reader Orientation
+
+The paper describes the end-to-end recipe for building Nemotron-Nano-9B-v2: a 9-billion-parameter language model that generates long reasoning traces (chain-of-thought) significantly faster than comparably-sized dense Transformer models while matching their accuracy, and that can process context windows up to 128,000 tokens on a single consumer-grade GPU. The solution has the shape of a three-stage pipeline — pre-train a 12B-parameter hybrid Mamba-Transformer base model, align it into a reasoning model through multi-stage post-training, then compress it to 9B parameters via pruning and staged knowledge distillation with multiple reinforcement learning recovery phases — where each stage's design choices are constrained backward from the target deployment scenario (22 GiB GPU memory, long-context reasoning throughput).
+
+### 3.2 Big-Picture Architecture
+
+The system consists of five major components connected in a sequential pipeline:
+
+1. **Hybrid Base Model Architecture (Nemotron-Nano-12B-v2-Base):** A 62-layer language model where only 6 layers (~10%) use standard self-attention, with the remaining layers split between Mamba-2 state space model layers (28 layers, ~45%) and feed-forward network layers (28 layers, ~45%). This architectural ratio is the core throughput driver: Mamba-2 processes sequences in linear time rather than the quadratic time of self-attention, but a small number of strategically-placed attention layers preserve the model's ability to track long-range dependencies and perform in-context reasoning that purely SSM-based models struggle with.
+
+2. **Pre-Training Data Pipeline:** A carefully composed mixture of curated web crawl data (from 8 recent Common Crawl snapshots processed through the Nemotron-CC pipeline), specialized math extraction data (a 133B-token corpus processed through a novel Lynx-based rendering pipeline that preserves LaTeX structure), filtered and deduplicated GitHub source code, multilingual data in 15 languages, and synthetically-generated SFT-style data across STEM, coding, academic, and reasoning domains. The data is fed in three curriculum phases with increasing quality weighting.
+
+3. **FP8 Training Infrastructure:** A mixed-precision training setup using the DeepSeek-V3 FP8 recipe — E4M3 format for all tensors with 128×128 quantization blocks for weights and 1×128 tiles for activations — that keeps model weights natively in FP8 (not just activations) to reduce memory and communication costs during distributed training, while maintaining FP32 master weights for optimizer state.
+
+4. **Multi-Stage Alignment Pipeline:** Four sequential stages — three rounds of supervised fine-tuning on ~80B tokens of reasoning-enriched prompt-response pairs (with deliberate reasoning trace truncation for budget control), followed by GRPO (Group Relative Policy Optimization) to improve instruction following, DPO (Direct Preference Optimization) to strengthen tool-calling, and RLHF for conversational alignment — culminating in **checkpoint interpolation** (linear interpolation of model weights from reasoning-strong and chat-strong checkpoints) to balance the accuracy-versus-conversational-quality tradeoff that emerges during RL training.
+
+5. **Compression via Minitron Pruning and Distillation:** A three-phase process — importance estimation (computing MSE-based layer importance and activation-based FFN/channel importance using only forward passes on 1024 calibration samples), lightweight neural architecture search (enumerating hundreds of width/depth candidates within a 19.66 GiB memory budget and selecting based on short distillation runs and throughput benchmarking), and staged knowledge distillation with logit-based forward KL divergence loss — followed by targeted RL recovery phases (DPO for tool-calling, GRPO for instruction-following, RLHF for human preference alignment) and a final model merging step that interpolates between post-RL and post-KD checkpoints.
+
+Information flows sequentially: raw web/text data → data curation and synthetic generation → three-phase pre-training with curriculum data mixtures and FP8 numerics → 12B base model → supervised fine-tuning on reasoning-augmented data with conversation concatenation to 128k-token sequences → GRPO/DPO/RLHF alignment → importance estimation on the aligned 12B model → depth pruning to 56 layers → width pruning of embedding channels and FFN dimensions within memory budget → staged knowledge distillation (teacher: aligned 12B model, student: pruned architecture) at increasing sequence lengths (8k → 49k → 262k) → DPO for tool-calling recovery → GRPO for instruction-following recovery → additional KD to restore post-GRPO benchmark drops → RLHF for human preference alignment → final checkpoint interpolation to produce Nemotron-Nano-9B-v2.
+
+### 3.3 Roadmap for the Deep Dive
+
+The explanation follows the model's lifecycle from architecture through deployment, ordered so that each component's design constraints are motivated by what comes before and what must be satisfied downstream:
+
+- **First:** The hybrid Mamba-Transformer architecture — the layer pattern, the specific Mamba-2 configuration, and WHY this particular ratio of attention to Mamba layers was chosen (rather than all-attention or all-Mamba). This is the foundation: every subsequent decision about training, alignment, and compression operates on this architecture.
+
+- **Second:** The pre-training data mixture and curriculum — explaining the 13 data categories, the three-phase blend strategy, the synthetic data generation pipelines, and the ablation studies that justify specific mixture weights. Without understanding the data, the base model's capabilities and the compression recovery behavior make less sense.
+
+- **Third:** The FP8 training recipe and hyperparameters — covering the quantization scheme (E4M3, block sizes, which layers stay in BF16), the Warmup-Stable-Decay learning rate schedule, and why these choices matter for training stability at 20-trillion-token scale.
+
+- **Fourth:** Long-context extension — the 512k-token continuous pre-training phase, the synthetic long-document QA data generation, and the ablation showing why training at 512k (not 128k or 256k) produces better 128k-context performance.
+
+- **Fifth:** The multi-stage alignment pipeline — including the reasoning trace construction, the budget control mechanism (deliberately truncated thinking traces), the GRPO/DPO/RLHF stages, and the checkpoint interpolation strategy for balancing reasoning-versus-chat tradeoffs.
+
+- **Sixth:** The Minitron compression and distillation — importance estimation (layer MSE, FFN activation scoring, Mamba head scoring), the neural architecture search over depth and width under a hard memory constraint, the staged knowledge distillation with logit-based KL divergence, and the multi-phase RL recovery pipeline that restores benchmark-specific degradations introduced by pruning.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily an **engineering systems paper** whose core idea is that a hybrid Mamba-Transformer architecture, when trained with a carefully designed data mixture and FP8 numerics, aligned through multi-stage post-training with reasoning traces, and compressed via importance-guided pruning with staged knowledge distillation and targeted RL recovery, can simultaneously achieve state-of-the-art reasoning accuracy and 3–6× higher inference throughput compared to dense Transformer models of similar size — specifically when generating the long thinking traces (8k–16k output tokens) characteristic of reasoning workloads.
+
+---
+
+#### Hybrid Mamba-Transformer Architecture
+
+The architecture of Nemotron-Nano-12B-v2-Base is defined by its **layer composition pattern**, shown in Figure 2 and Table 1. The 62 total layers are arranged in a repeating pattern: three Mamba-2 layers followed by three FFN layers, with a self-attention layer inserted after the sixth group, and this 7-layer macro-pattern repeated across the depth of the model. Specifically, out of 62 layers, 6 are self-attention layers, 28 are Mamba-2 layers, and 28 are FFN layers.
+
+**Why this ratio matters.** The paper states that "roughly 8% of the total layers in the model are self-attention layers which are evenly dispersed throughout the model." This is not arbitrary. Self-attention layers have quadratic complexity in sequence length ($O(L^2)$ for sequence length $L$), which becomes the dominant cost when generating long reasoning traces. Mamba-2 layers, by contrast, have linear complexity in sequence length because they process tokens sequentially through a structured state space model rather than computing all pairwise interactions. The key design hypothesis is that **only a small fraction of layers need the full pairwise attention mechanism** — these layers act as "synchronization points" where information from distant parts of the sequence is explicitly aggregated, while the Mamba-2 layers handle the bulk of sequential processing efficiently.
+
+The alternative extreme — a purely Mamba-based model with zero attention layers — would maximize throughput but has been shown in prior work (referenced via Waleffe et al., 2024) to struggle with tasks requiring precise long-range dependency tracking, such as in-context learning and multi-step reasoning where earlier steps must inform later ones across hundreds or thousands of tokens. The opposite extreme — a standard Transformer with all attention layers — would maximize reasoning capability but incur the full quadratic cost, defeating the throughput objective. The 8% attention ratio represents an empirical sweet spot discovered in the earlier Nemotron-H work and carried forward here.
+
+**Mamba-2 layer configuration.** Each Mamba-2 layer (Dao & Gu, 2024) is parameterized by: 8 groups (the number of independent state space models run in parallel, analogous to attention heads), a state dimension of 128 (the size of the latent state vector that carries information forward through the sequence), a head dimension of 64 (the internal representation size per group), an expansion factor of 2 (the input is projected to 2× the model dimension before the SSM computation, analogous to the expansion in attention's QKV projections), and a convolution window size of 4 (a short 1D causal convolution applied before the SSM to capture local patterns). These parameters are listed in Section 2.1 and the layer pattern appears in Figure 2.
+
+The Mamba-2 mechanism itself (not re-derived in this paper but foundational to the architecture) works by maintaining a **continuous-time state space model**:
+
+$$h'(t) = A h(t) + B x(t)$$
+
+$$y(t) = C h(t)$$
+
+where `$h(t)$` is the hidden state at continuous time `$t$`, `$x(t)$` is the input signal, `$y(t)$` is the output, and `$A$`, `$B$`, `$C$` are learned parameters (with dimensions determined by the state dimension and head dimension). The key property is that this system can be discretized and computed efficiently using a parallel scan algorithm, yielding linear complexity in the sequence length — processing a sequence of `$L$` tokens requires `$O(L)$` operations rather than `$O(L^2)$`.
+
+**Attention layer configuration.** The 6 self-attention layers use Grouped-Query Attention (GQA; Ainslie et al., 2023) with 40 query heads and 8 key-value heads. GQA reduces the KV-cache memory footprint compared to standard multi-head attention (which would have 40 key-value heads matching the 40 query heads) by sharing key-value projections across groups of query heads — here, 5 query heads share each key-value head. This is particularly important for long-context inference: the KV cache for 128k tokens with 8 KV heads of dimension 5120/40 = 128 per head at bfloat16 precision consumes:
+
+$$8 \text{ heads} \times 128 \text{ dim} \times 2 \text{ bytes} \times 128,000 \text{ tokens} \times 2 \text{ (K+V)} \times 6 \text{ layers} \approx 2.5 \text{ GiB}$$
+
+which is a substantial fraction of the 22 GiB available. Without GQA (40 KV heads instead of 8), this would be 5× larger (~12.5 GiB) and would make the 128k-context target infeasible on an A10G even after compression.
+
+**FFN layer configuration.** The 28 FFN layers use a hidden dimension of 20,480 (4× the model dimension of 5,120) with **squared ReLU activation**. Squared ReLU was introduced by So et al. (2022) and applies the function:
+
+$$\text{squared ReLU}(x) = (\max(0, x))^2$$
+
+The squaring operation after the ReLU gate introduces a non-linearity that empirically improves training stability and model quality compared to standard ReLU or GELU activations in large language models, though the paper does not ablate this choice — it is inherited from Nemotron-H.
+
+**Normalization and other architectural choices.** The model uses RMSNorm (Zhang & Sennrich, 2019) for layer normalization, which normalizes by the root-mean-square of activations rather than by mean and variance (as in LayerNorm), removing the mean-centering step for computational efficiency. No positional embeddings are used — the model must learn position information implicitly through the causal structure of the attention mask and the sequential processing in Mamba layers. The embedding layer and output (language modeling head) layer use **separate weights** rather than tied weights, following the Nemotron-H design. No dropout is applied, and no bias terms are used in linear layers — every linear transformation is purely `$y = xW$` rather than `$y = xW + b$`. These are standard efficiency choices in modern large language model design that slightly reduce parameter count and memory without measurable accuracy impact.
+
+**Summary of architectural parameters.** Table 1 captures the complete specification: 62 layers, 5120 model dimension, 20480 FFN hidden dimension, 40 query heads, 8 key-value heads, 128 Mamba state dimension, 8 Mamba groups.
+
+---
+
+#### Pre-Training Data: Curation and Synthetic Generation
+
+The pre-training data mixture is the product of multiple independent curation pipelines, each designed for a specific data modality. The full corpus comprises 20 trillion tokens, divided into 13 categories with two additional categories (crawl++ and general-sft) introduced in later curriculum phases.
+
+**English web crawl data — Nemotron-CC-v2.** The largest data category consists of Common Crawl snapshots processed through the Nemotron-CC pipeline (Su et al., 2025), which applies several stages: language identification, heuristic quality filtering (removing documents with high ratios of boilerplate, excessive repetition, or very short content), model-based quality classification using a fine-tuned classifier that assigns each document to one of four quality tiers, fuzzy deduplication via MinHash-based Locality Sensitive Hashing, and synthetic rephrasing — where the pipeline uses Qwen3-30B-A3B (replacing Mistral Nemo 12B from the original Nemotron-CC) to generate paraphrased versions of documents for data augmentation. The update from Nemotron-CC to Nemotron-CC-v2 added eight more recent Common Crawl snapshots (CC-MAIN-2024-33 through CC-MAIN-2025-13), improving the model's knowledge cutoff.
+
+The quality tiers — crawl-medium, crawl-medium-high, crawl-high, and syn-crawl-high — are assigned different weights in the data mixture (visible in Figure 3). Higher-quality tiers are upweighted. The paper notes the specific quality tiers but does not disclose the exact classifier architecture; it references Feng et al. (2024) and NVIDIA (2025) for details.
+
+In addition to Common Crawl, the model was trained on CC-NEWS data through April 23, 2025, filtered only for English language and globally fuzzy-deduplicated with no other content filtering. This provides timely factual knowledge that Common Crawl's longer processing pipeline may miss.
+
+**Math data — Nemotron-CC-Math.** This is one of the paper's most novel data contributions. The core insight driving the math pipeline is that existing web math extraction tools (OpenWebMath, MegaMath, jusText, Trafilatura, Resiliparse) "frequently discard or distort equations and flatten code formatting, severely limiting the utility of the extracted content for pretraining." The paper's solution is a **two-stage pipeline** that preserves mathematical notation:
+
+1. **URL aggregation and re-fetching:** A comprehensive list of math-related URLs is collected from prior datasets (InfiMM-WebMath, OpenWebMath, FineMath, MegaMath). Rather than using the pre-extracted text from those datasets, the raw HTML is re-fetched from 98 Common Crawl snapshots spanning 2014–2024. This ensures the original formatting is preserved.
+
+2. **Lynx rendering:** Each page is rendered using the `lynx` text-based browser. Lynx is critical because it preserves the visual layout of mathematical expressions — a property lost by most HTML-to-text extractors that strip formatting. The text-based rendering captures the spatial arrangement of equations, subscripts, superscripts, and mathematical notation.
+
+3. **LLM-based cleaning and LaTeX standardization:** Phi-4 (14B parameters) is applied to remove boilerplate, standardize mathematical notation into LaTeX, and correct inconsistencies in the rendered text. This is a generation step, not just extraction — the model actively rewrites the content to produce clean, consistently formatted mathematical text.
+
+4. **Quality filtering and deduplication:** A FineMath classifier scores each document, and only high-quality samples are retained. Fuzzy deduplication is applied via MinHash LSH through the NeMo-Curator framework.
+
+5. **Decontamination:** The LLM Decontaminator tool (Yang et al., 2023) is used to remove any examples that overlap with evaluation benchmarks, preventing data leakage.
+
+This pipeline yields two corpora: **Nemotron-CC-Math-3+** (133B tokens, all retained documents) and **Nemotron-CC-Math-4+** (52B tokens, only the highest-scoring subset). The paper reports that these datasets "yield substantial improvements across math (MATH-500), code (HumanEval+, MBPP+, MBPP), and general-domain evaluations (MMLU, MMLU-STEM, MMLU-Pro), surpassing all existing open math datasets," with full results deferred to Mahabadi et al. (2025).
+
+**Code data — Nemotron-Pretraining-Code-v1.** All code data originates from GitHub and undergoes a multi-stage processing pipeline:
+
+1. **License-based removal:** A license detection pipeline similar to that used by the BigCode project (Lozhkov et al., 2024) identifies the license of each file. However, the paper applies a more restrictive filter, accepting only licenses from an explicitly enumerated list (reproduced in Appendix A, which spans pages 36–43). Files with licenses not on this list are removed entirely.
+
+2. **Deduplication:** Both exact deduplication (via hashing) and fuzzy deduplication (via MinHash LSH) are applied. Exact deduplication is especially important for code because many files appear identically across thousands of repositories (e.g., vendored libraries, boilerplate configuration files).
+
+3. **Quality filtering:** Files are annotated with heuristic quality measures — length, proportion of alphanumeric vs. symbolic characters, presence of natural language comments, maximum line length, etc. The paper adopts the heuristic filters from OpenCoder (Huang et al., 2025), which were found to effectively identify "files that are less valuable or even detrimental for LLM pretraining."
+
+**Multilingual data — 15 languages, curated and synthetic.** Multilingual data covers Arabic, Chinese, Danish, Dutch, French, German, Italian, Japanese, Korean, Polish, Portuguese, Russian, Spanish, Swedish, and Thai. The curation pipeline uses three sources:
+
+1. **Common Crawl extraction:** Three recent snapshots (CC-MAIN-2024-51, 2025-08, 2025-18) are filtered using heuristic rules only — no model-based quality classifier, since the paper notes that "we did not have reliable multilingual model-based quality classifiers available." The heuristics are modified per-language to disable filters that show high false-positive rates for specific languages (mentioned but not enumerated).
+
+2. **FineWeb-2:** The multilingual portion of the FineWeb-2 dataset (Penedo et al., 2025), which applies a separate filtering pipeline tuned per language.
+
+3. **Wikipedia:** Standard Wikipedia dumps for the 15 target languages.
+
+In addition to curated data, **synthetic multilingual data** is generated through two methods:
+
+- **DiverseQA-crawl:** English Diverse QA data (question-answer pairs generated from web crawl text) is translated into the 15 languages using Qwen3-30B-A3B.
+- **DiverseQA-wiki:** Wikipedia articles in each language are used as seed text to generate QA pairs via the Diverse QA prompt, with the model instructed to produce all output in the target language.
+- **GSM8K augmentation:** A subset of synthetically-generated math problems (from the STEM pipeline) is translated into the 15 languages, with post-processing that appends a language-specific concluding sentence (e.g., "La respuesta es ..." in Spanish) from which the numerical answer can be extracted.
+
+Table 2 reports an ablation study comparing these multilingual data sources on the Global-MMLU benchmark. A 1B model continuous-trained for 100B tokens with 50% multilingual data is evaluated. The results show: Common Crawl multilingual data achieves an average score of 37.0 (across 8 evaluated languages), FineWeb-2 achieves 35.1, DiverseQA-wiki achieves 42.1, and DiverseQA-crawl achieves 47.0. The key finding: **synthetically-generated multilingual QA pairs dramatically outperform curated web crawl data**, with translated English QA pairs (DiverseQA-crawl) achieving the highest scores. Based on this, the final multilingual mixture assigns "a much higher weight to the DiverseQA-crawl data than the other categories."
+
+**Synthetically-generated STEM data.** The STEM data pipeline is designed to create diverse, curriculum-aligned mathematics and science training examples:
+
+1. **Seed collection:** 88,600 questions are collected from GSM8K, MATH, AOPS training sets, Stemez (an online STEM problem database), and textbooks with permissive licenses from OpenStax and the Open Textbook Library. Textbook questions are extracted using Qwen2.5-VL-72B-Instruct (a vision-language model) to process exercise sections, with instructions to drop question numbering, ignore questions requiring image interpretation, and format equations in LaTeX.
+
+2. **Manual curation:** Extracted questions are manually reviewed to fix OCR errors and remove non-self-contained questions (e.g., those referring to an example earlier in the chapter).
+
+3. **Iterative question expansion:** Three rounds of question generation are performed using four models (Qwen3-30B-A3B, Qwen3-235B-A22B, DeepSeek-R1, DeepSeek-V3, all with thinking mode enabled for the Qwen models) and three prompt types:
+   - **Similar question:** Explore similar concepts but offer a fresh challenge.
+   - **Harder question:** Require more logical steps or involve more advanced concepts.
+   - **Varied question:** Differ in type from the original question, with explicit instruction to "avoid superficial or trivial modifications and think through the solution when creating a new question."
+
+4. **Deduplication and solution generation:** Duplicates and near-duplicates are removed via fuzzy deduplication. Solutions are generated for the remaining questions using the same four models. A subset of examples is converted to multiple-choice format (MMLU or MMLU-Pro style). A few thousand few-shot examples are constructed by concatenating random synthetic samples.
+
+**Synthetically-generated math dialogue data — updated Nemotron-MIND.** The original Nemotron-MIND dataset (Akter et al., 2024) generated structured mathematical dialogues from OpenWebMath using seven prompt templates (Teacher–Student, Debate, Interview, etc.). The paper's updated version replaces the source corpus with Nemotron-CC-Math-4+ (the 52B-token high-quality subset) and generates dialogues using Phi-4 with a chunk size of 5,000 tokens. This yields a 73B-token synthetic dataset. The paper reports "consistent improvements across math reasoning and general knowledge (MMLU, MMLU-Pro, MMLU-STEM) benchmarks compared to the original MIND version."
+
+**Synthetically-generated code QA data.** Following the Nemotron-H recipe, short code snippets from the curated source code dataset are used as seed contexts. An LLM (unspecified, but presumably a strong coding model from the Qwen or DeepSeek family) is prompted to generate question-answer pairs based on each snippet, covering 11 programming languages. Post-hoc filtering uses heuristics such as Python AST parsing to verify that generated code solutions are syntactically valid. The resulting data contains both natural language and source code, targeting problem-solving capabilities.
+
+**Academic QA data generation.** Academic documents (textbooks and papers) that received attribute labels for educational difficulty at the undergraduate or graduate level in technical subjects (math, chemistry, biology, physics, medicine) are used as source material. The process:
+
+1. **Chunking and embedding:** Each document is split into 512-token snippets, embedded using the e5-large model (Wang et al., 2024), and stored in a Milvus vector database for approximate nearest neighbor search.
+
+2. **Relevance-based retrieval:** Curated query documents from complex subject areas (e.g., Mathematics: Real Analysis, Biology: Genetics, Statistics: Information Theory) are used to query the database for the 250 nearest neighbor snippets.
+
+3. **QA generation:** Retrieved snippets are passed to Qwen-2.5-72B-Instruct to generate multiple-choice and free-response QA pairs with answer justifications.
+
+The motivation, stated in Section 2.2.2, is that "content of higher educational difficulty in technical domains still proves challenging for models" and that QA-style data "has been shown to enhance knowledge storage and extraction within language models" (Allen-Zhu & Li, 2024).
+
+**SFT-style data for pre-training.** The paper includes several categories of synthetically-generated data in a supervised fine-tuning format (prompt-response pairs) during the later stages of pre-training, following the practice established by Hu et al. (2024) that "using SFT-style data in the later stages of pretraining has shown to be helpful to foster more comprehensive model learning." The categories include:
+
+- **Code SFT:** Focused on solving code problems.
+- **Math SFT:** Focused on reasoning.
+- **MMLU-style SFT:** Question-answer examples covering diverse knowledge topics.
+- **General instruction following SFT:** Broad-domain instruction-response pairs.
+- **Fundamental reasoning SFT:** Analytical reasoning, logical reasoning, and reading comprehension — a novel contribution detailed below.
+
+**Fundamental Reasoning SFT-style data.** This is a targeted intervention motivated by the observation that existing SFT data "do not help improve the model's ability in deeper reasoning tasks to discern the correct answer among a larger pool of potential distractors." The paper specifically aims to improve MMLU-Pro performance, which presents 10 answer choices rather than the typical 4 in standard MMLU.
+
+The data is constructed from three source datasets:
+1. **LSAT dataset** (Wang et al., 2022; Zhong et al., 2022): Logical reasoning, reading comprehension, and analytical reasoning questions from the Law School Admission Test.
+2. **Repurposed LogiQA** (Liu et al., 2020): Logical reasoning questions from China's National Civil Servants Examination.
+3. **AQuA-RAT** (Ling et al., 2017): Algebraic word problems.
+
+From these seeds, DeepSeek-V3 and Qwen3-30B-A3B are separately prompted to synthesize similar questions with corresponding answer options. For each generated question, DeepSeek-V3 produces a chain-of-thought reasoning process with the final solution. Post-processing applies majority voting to retain only samples where the generated solution agrees with the most common answer. The total yield is 4B tokens from DeepSeek-V3 and 4.2B tokens from Qwen3-30B-A3B — approximately 8.2B tokens of fundamental reasoning data.
+
+Table 3 reports the ablation: a Nemotron-H-8B checkpoint at 14.5T tokens, continuous-trained for another 100B tokens with 5% of the data replaced by fundamental reasoning SFT data, improves MMLU-Pro from 44.24 to 56.36 (a 12.12-point absolute gain, or 27.4% relative improvement) while the average MATH score increases by approximately 2 points. Average commonsense reasoning and code benchmarks show "no decrease." This is a remarkably large gain from a relatively small data addition (5% of 100B = 5B tokens), suggesting that targeted reasoning-format data at the pre-training stage has outsized impact on downstream reasoning capability.
+
+**Long-context synthetic data for context extension.** For the long-context continuous pre-training phase, academic documents longer than 32k tokens are used as seeds. The generation method is adapted from Llama-3 (Meta, 2024) and Qwen-2.5 (Qwen, 2025): each document is split into 1,024-token chunks, 10% of chunks are randomly selected and fed into Qwen-2.5-72B-Instruct to generate QA pairs based on the chunk content. The QA pairs are concatenated and appended to the end of the original document. This creates training examples where the model must attend to information distributed across a very long context (the document) to answer questions at the end.
+
+Table 4 reports an ablation on Nemotron-H-8B evaluating RULER-128k scores (a long-context benchmark) under different training configurations: 128k sequence length with synthetic data achieves 73.68; 256k without synthetic data achieves 70.19; 256k with synthetic data achieves 79.04; 512k with synthetic data achieves 81.04. The key finding: **training at 512k sequence length substantially outperforms training at 128k, even though the target inference length is 128k.** The paper's intuition is that "longer training sequence can effectively lower the chance of long coherent documents being cut and separated by the Concat & Chunk algorithm for pretraining data loading" — i.e., at 128k training length, many documents longer than 128k tokens get fragmented across training examples, losing their coherence, while at 512k, longer documents remain intact. The synthetic data adds further improvement by providing explicit long-range reasoning tasks.
+
+---
+
+#### Data Mixture and Curriculum
+
+The 20 trillion tokens are not presented uniformly. The paper uses a **three-phase curriculum** with different data mixtures at each phase, shown in Figure 3. The key principle stated is: "we design the data mixtures to give similar weight to data sources that have similar quality. Data sources of higher quality are weighed higher than data sources of lower quality."
+
+**Phase 1 (0–60% of training, ~12T tokens):** The most diverse phase, with 18.3% crawl-medium, 14.8% crawl-medium-high, 11.1% crawl-high, 16.2% syn-crawl-high (synthetic rephrasings of high-quality crawl), 3.2% math, 20% code, 4.4% academic, 5.0% multilingual, 3.1% stem-sft, and a remaining ~4% distributed among wikipedia, crawl++, and general-sft. The emphasis is on broad coverage: nearly 50% of the mixture is some form of web crawl, with substantial code (20%) and smaller but non-trivial portions of specialized data.
+
+**Phase 2 (60–90% of training, ~6T tokens):** Quality weighting increases sharply. The mixture shifts to emphasize higher-quality sources: 21.0% syn-crawl-high, 16.0% crawl-high, 9.5% math, 20% code, 0.9% wiki, 3.8% academic, 4.4% crawl++, 5.0% multilingual, 14.5% stem-sft, 4.4% code-sft, and a small general-sft portion. The notable changes: crawl-medium and crawl-medium-high are removed entirely; math more than doubles from 3.2% to 9.5%; stem-sft jumps from 3.1% to 14.5%; wiki is added; and code-sft appears for the first time at 4.4%. The total SFT-style data (code-sft + stem-sft + general-sft) rises to roughly 19%, up from ~3% in Phase 1.
+
+**Phase 3 (90–100% of training, ~2T tokens):** The most quality-intensive phase, almost entirely composed of curated and synthetic data: 12.7% syn-crawl-high, 10.0% crawl-high, 11.0% math, 16.0% code, 4.4% multilingual, 32.0% stem-sft, 10.9% code-sft, and a balance of crawl++. Web crawl is reduced to ~23%; SFT-style data rises to ~43% of the mixture. This aggressive shift toward synthetic, high-quality, task-formatted data in the final phase is designed to "foster more comprehensive model learning" (Hu et al., 2024) right before the learning rate decay.
+
+The curriculum is applied by switching data mixtures at the 60% and 90% points of training, using the WSD (Warmup-Stable-Decay) learning rate schedule to coordinate these phase transitions with the learning rate regime.
+
+---
+
+#### FP8 Training Recipe
+
+The entire 20-trillion-token pre-training run uses **FP8 mixed-precision training** following the recipe from DeepSeek-V3 (DeepSeek-AI, 2025b). The specific configuration:
+
+**Numerical format:** All tensors use the E4M3 format — 1 sign bit, 4 exponent bits, 3 mantissa bits (8 bits total). This provides a dynamic range of approximately `$\pm 448$` with precision of roughly `$2^{-3} = 0.125$` at the quantization step size — substantially coarser than BF16 but sufficient for neural network training when quantization is block-wise.
+
+**Block-wise quantization:** Weights are quantized in blocks of 128×128 elements. This means each 128×128 sub-matrix of a weight tensor has its own scaling factor (computed as the maximum absolute value in that block divided by the maximum representable value in E4M3), rather than using a single scaling factor for the entire tensor. Block-wise quantization reduces the quantization error because different parts of a weight matrix can have very different value ranges. Activations use 1×128 tiles — quantizing one token's activation vector at a time across 128 channels — which is natural for the autoregressive generation pattern.
+
+**What stays in BF16:** Unlike DeepSeek-V3 which keeps all model weights in FP8, the paper leaves "the first and last four linear layers in BF16." This is a practical hedge: the embedding layer and final output projection (and their immediate neighbors) are particularly sensitive to quantization error because errors in the embedding propagate through the entire model and errors in the output directly affect the token probability distribution. Keeping these layers in higher precision (BF16, 16 bits) is a small memory cost (8 layers out of hundreds of weight matrices) that prevents training instability.
+
+**Master weights and optimizer state:** Master weights are kept in FP32 — the canonical high-precision copy of model parameters that accumulates gradient updates. The optimizer state (Adam moments) is also kept in FP32, unlike DeepSeek-V3 which uses BF16 for optimizer state to reduce memory. The paper states "we observed no training instabilities from this choice of numerics" — implying that FP8 weights and activations with FP32 optimizer state is a stable configuration, at least for this model scale and data.
+
+**Distributed training benefit:** Because model weights are stored natively in E4M3 (not just activations), the all-gather operation that distributes parameters across data-parallel replicas in the distributed optimizer can be performed in FP8 rather than BF16. This halves the communication volume for parameter synchronization, which is a significant efficiency gain at scale (though the paper does not quantify the speedup directly).
+
+---
+
+#### Hyperparameters and Learning Rate Schedule
+
+The training hyperparameters are:
+
+- **Token horizon:** 20 trillion tokens (approximately 3.3 million training steps at the given batch size).
+- **Sequence length:** 8,192 tokens during the main pre-training phase.
+- **Global batch size:** 768 sequences, yielding 6,029,312 tokens per batch. No batch size ramp-up is used — training starts at full batch size immediately.
+- **Learning rate schedule:** Warmup-Stable-Decay (WSD; Hu et al., 2024). This schedule has three regions:
+  - **Warmup:** A brief initial phase where the learning rate increases from zero to the target value (details not specified, but typically a few thousand steps).
+  - **Stable:** The learning rate remains constant at the maximum value for the majority of training. The "stable" learning rate is `$4.5 \times 10^{-4}$`.
+  - **Decay:** The learning rate decays linearly or via cosine schedule to a minimum value. The decay occurs over the final 3.6 trillion tokens (18% of total training), with a minimum learning rate of `$4.5 \times 10^{-6}$` — a factor of 100× below the stable rate.
+- **Weight decay:** 0.1.
+- **Adam parameters:** `$\beta_1 = 0.9$`, `$\beta_2 = 0.95$`.
+
+**Why WSD over cosine decay?** The WSD schedule decouples the learning rate decay from the total training budget. In a standard cosine schedule, the learning rate begins decaying early and the final value is determined by when training stops — if you want to train longer, you must either continue decaying (potentially to very small values that prevent further learning) or restart the schedule. WSD allows extended training at the stable rate and then a focused decay phase, which Hu et al. (2024) showed is more effective for very long training runs where the exact token budget may be adjusted based on observed performance. The 3.6T-token decay phase (18% of 20T) is a substantial fraction, giving the model time to settle into a good local minimum.
+
+**Weight decay of 0.1:** This is relatively high for language model pre-training and serves as a regularizer that prevents overfitting. The paper does not ablate this choice.
+
+---
+
+#### Long-Context Extension
+
+After the main pre-training concludes at 20 trillion tokens, the model undergoes a **long-context continuous pre-training phase** (Phase LC) to extend its context window from 8,192 to a target of 128k tokens.
+
+**Training configuration for Phase LC:**
+- **Sequence length:** 524,288 (512k) tokens — 4× the target inference length.
+- **Learning rate:** Constant `$4.5 \times 10^{-6}$` (the minimum value from the decay schedule), maintained throughout the phase.
+- **Global batch size:** 12 sequences, chosen so that `$12 \times 524,288 = 6,291,456$` tokens per batch — matching the 6M tokens per batch from pre-training to maintain consistent optimization dynamics.
+- **Total tokens:** 18.9 billion tokens (approximately 3,000 training steps).
+- **Parallelism strategy:** 8-way tensor model parallelism splits individual layers across GPUs; 16-way context parallelism splits the sequence length across GPUs so that each device processes only `$524,288 / 16 = 32,768$` tokens of the sequence at a time. The product (8 × 16 = 128 GPUs) ensures the 512k-long sequences fit in GPU memory during training.
+
+**Data mixture for Phase LC:** Built on the Phase 3 mixture, with all Phase 3 data categories proportionally downscaled to 80% of their original weights. The remaining 20% is allocated to the newly generated long-context document-QA synthetic data (described above). The rationale: maintaining the quality-focused Phase 3 mixture ensures the model doesn't forget general capabilities while the 20% long-context data provides the specific signal needed to learn long-range attention patterns.
+
+**Why train at 512k when the target is 128k?** The ablation in Table 4 provides the empirical justification: RULER-128k scores increase from 73.68 (train at 128k) to 79.04 (train at 256k with synthetic data) to 81.04 (train at 512k with synthetic data). The paper offers an explanation that is structural, not merely empirical: during data loading, training examples are constructed by concatenating documents and chunking to the sequence length. If the training sequence length is 128k, any document longer than 128k gets split across two or more training examples, potentially breaking coherent arguments, proofs, or narratives. At 512k training length, far fewer documents exceed the chunk size, so the model sees more intact long documents during training. This implicitly teaches better long-range dependency handling even when the model is later evaluated at shorter (128k) lengths. This is a subtle point about **data preparation artifacts** affecting learned behavior, not just about explicit long-context training signal.
+
+---
+
+#### Multi-Stage Alignment Pipeline
+
+The alignment process converts the base model (Nemotron-Nano-12B-v2-Base) into a reasoning-capable instructed model through a sequence of supervised fine-tuning, reinforcement learning, and preference optimization stages, as diagrammed in Figure 4: Base → SFT 1 → SFT 2 → SFT 3 → Merged (which combines outputs from parallel GRPO, RLHF, and DPO branches).
+
+**Stage 1 SFT — Full-domain supervised fine-tuning.** The first SFT stage trains on approximately 80 billion tokens of prompt-response pairs. The data distribution across domains is specified in Table 7: 1.5M math samples, 1.1M coding samples, 2.0M science samples, 400K tool-calling samples, 1.5M conversational samples, 2K safety samples, and 5.0M multilingual samples spanning all domains.
+
+**Response generation for math, science, and coding:** The open-weights DeepSeek-R1-0528 model generates responses for all math, science, and coding prompts. This is significant: rather than training on human-written solutions or weaker model outputs, the aligned model is trained to imitate DeepSeek-R1's reasoning style from the start. The prompts are the same ones used for training Nemotron-H-8B and 47B reasoning models (NVIDIA, 2025), providing consistency across the model family.
+
+**Tool-calling data construction:** This is one of the more sophisticated synthetic data pipelines. The dataset covers single-turn, multi-turn, and multi-step tool-calling scenarios. For single-turn cases, prompts are sampled from existing datasets (xlam-function-calling-60k, glaive-function-calling-v2, NVIDIA-When2Call) and responses are generated by Qwen3-235B-A22B. For multi-turn and multi-step scenarios, the pipeline simulates a three-agent conversation:
+- **User-Agent:** Reviews available tools, poses challenging queries, interacts with the Assistant-Agent, and judges task success at the end. Each instance is paired with a random persona from Nemotron-Personas to increase diversity.
+- **Assistant-Agent:** Receives the initial query and available tool definitions, executes tasks by invoking tools, interprets tool responses, and interacts with the User-Agent across turns.
+- **API-Server-Agent:** Acts as a mock API server, checking parameter correctness and returning either valid outputs or error messages depending on correctness.
+
+A lightweight rule-based verification layer ensures "outputs are consistent and verifiable, and only successful trajectories are retained." This means the training data contains only examples of successful tool use, not examples of failure and recovery — a common design choice in SFT that avoids teaching the model error patterns.
+
+**Multilingual post-training data:** Existing English post-training data is translated into the 15 target languages. To address LLM hallucination during translation (especially for long inputs), the pipeline translates inputs line-by-line to manage complexity, skips non-translatable content (like code blocks), enforces a strict bracket format for reliable extraction, and applies language identification to filter out off-target translations.
+
+**Conversational data:** Responses are generated using Qwen3-235B-A22B (with reasoning mode) for prompts from LMSYS, HelpSteer2, HelpSteer3, and WildChat-1M (approximately 550k prompts). Multi-turn conversations use DeepSeek-R1 responses with the multi-turn conversational prompts from NVIDIA (2025).
+
+**Safety data:** A mix of harmful and benign prompts from Nemotron Content Safety Dataset V2, HarmfulTasks, RedTeam2K, and gretel-v1, with responses generated by DeepSeek-R1-0528. A two-step safety approach is applied: initial prompting followed by guard model filtering to verify outputs remain safe.
+
+**Reasoning trace handling — enabling budget control:** A critical detail for the budget control feature: Stage 1 SFT data includes "a subsample of roughly 10% of prompts paired with outputs stripped of reasoning traces." This exposes the model to "empty" traces — direct answers without intermediate thinking — enabling it to produce responses in a "reasoning-off" mode. Without this, the model would always attempt to generate a thinking trace, even when a direct answer is more appropriate.
+
+**Sequence concatenation:** To improve training efficiency and preserve long-context ability, samples are concatenated into sequences of approximately 128k tokens. This reduces padding overhead (since shorter samples can be packed together rather than padded to a fixed length) and "encourages long-range learning" by forcing the model to attend across document boundaries within the concatenated sequence.
+
+**Stage 2 SFT — Tool-calling recovery.** Stage 1 improved most benchmarks but "tool-calling accuracy degraded." The paper attributes this to the 128k-token concatenation: "sample concatenation at 128k likely disrupted learning of tool-calling patterns." Tool-calling requires the model to learn specific formatting (function call syntax, parameter structure) that may be obscured when tool-use examples are embedded within long concatenated sequences alongside unrelated content. Stage 2 is therefore trained **without concatenation**, using the full tool-calling dataset and a representative subsample of other domains to prevent catastrophic forgetting.
+
+**Stage 3 SFT — Long-context reinforcement and budget control training.** This stage incorporates long-context data following the Nemotron-H recipe and crucially adds "augmented examples across domains where reasoning traces were abruptly truncated to 1–2k tokens while preserving the final answer." The purpose is to make the model robust to budget-forced truncation at inference time: by seeing examples where the thinking process is cut off mid-sentence but the final answer is still present, the model learns to **not rely on completing its full reasoning trace** and can transition cleanly to the answer even when a budget constraint forces early termination. The effectiveness of this training is demonstrated in Figure 5, discussed further in the budget control analysis below.
+
+**IFEval RL — Instruction following via GRPO.** To improve instruction adherence, 16,000 prompts are sampled from the LMSYS Chat dataset and augmented with IFEval-style instructions — explicit, verifiable constraints like "respond in exactly 3 paragraphs" or "include the word 'therefore' at least once." A rule-based verifier (not a learned model) scores outputs based on how well they satisfy each instruction. The reward signal is a simple count: how many of the specified constraints were met? This creates a training signal that "prioritized following directions with precision." The paper notes that "IFEval RL experiments provided significant boost to IFEval capabilities while the rest of the benchmarks fluctuated slightly requiring careful checkpoint selection" — a pattern of benchmark tradeoffs that recurs throughout the alignment and compression pipelines.
+
+**DPO — Tool-calling preference optimization.** In a parallel training branch, DPO is applied specifically to improve tool-calling. The evaluation target is the BFCL v3 benchmark (Berkeley Function Calling Leaderboard v3), which emphasizes multi-step (multiple tool calls to achieve a goal) and multi-turn (multiple user–agent interactions) scenarios. Training uses the WorkBench environment (Styles et al., 2024), a multi-step verifiable tool-calling setup. In WorkBench, the model must issue a sequence of tool calls across multiple steps, with correctness verified through database state comparisons — unlike simpler benchmarks that check only that the correct function was called with the right parameters, WorkBench checks whether the final state of a simulated database is correct, requiring correct sequencing of multiple operations.
+
+The DPO process is iterative: for each candidate checkpoint from the long-context stage, on-policy data is generated consisting of positive examples (successfully completed WorkBench tasks) and negative examples (generations that led to incorrect database states) for every prompt. The term "on-policy" here means the data is generated by the current model checkpoint being trained, rather than from the original SFT model — ensuring that preference pairs reflect the model's actual failure modes at each stage of training.
+
+**RLHF — Conversational alignment.** The model's chat capabilities are evaluated using Arena-Hard, a benchmark designed to correlate with human preference rankings from the Chatbot Arena. To improve performance, GRPO is applied to candidate SFT checkpoints using English-only contexts from HelpSteer3 (Wang et al., 2025). Responses are generated both with and without thinking traces, and a Qwen-based reward model judges the quality of rollouts. The key design choice: by training with mixed thinking/no-thinking responses, the model learns to produce helpful responses regardless of whether reasoning mode is enabled — important for deployments where users may toggle reasoning on or off.
+
+**Checkpoint interpolation — resolving reasoning vs. chat tradeoff.** The paper observes a persistent tradeoff during training: "a trade-off between reasoning capabilities and chat capabilities." Checkpoints that excel at AIME and GPQA (reasoning-strong) tend to underperform on Arena-Hard (chat/conversational quality), and vice versa. Rather than trying to find a single checkpoint that balances both (which may not exist), the paper adopts **linear interpolation of model weights** between two checkpoints:
+
+$$w_{\text{merged}} = (1 - \alpha) \cdot w_{\text{model1}} + \alpha \cdot w_{\text{model2}}$$
+
+where `$w_{\text{model1}}$` is a reasoning-strong checkpoint (from the GRPO or RLHF branch), `$w_{\text{model2}}$` is a chat-strong checkpoint, and `$\alpha$` is an interpolation coefficient. The paper sweeps `$\alpha \in \{0.1, 0.2, \ldots, 0.9\}$` and finds that "values around 0.5 offered a good trade-off."
+
+**What this equation computes:** A new set of model weights formed by element-wise linear combination of two parent checkpoints. Each parameter in the merged model is the weighted average of the corresponding parameters in the two source models.
+
+**Why this works:** Weight interpolation (also called "model soup" in Wortsman et al., 2022) works when two models have been fine-tuned from the same base and have not diverged too far in weight space. Averaging their weights tends to average their behaviors — if one model is good at math and the other is good at conversation, the interpolated model often inherits both capabilities to some degree. This is not guaranteed to work for all capability combinations, but the paper's sweep over `$\alpha$` validates that it works empirically here. The alternative — further training to try to achieve both capabilities simultaneously — risks catastrophic forgetting or training instability, which weight interpolation avoids entirely.
+
+---
+
+#### Budget Control Mechanism
+
+Nemotron Nano V2 includes a user-specifiable thinking token budget — a feature that lets deployers trade off reasoning depth for speed by limiting how many tokens the model can spend on its internal chain of thought before producing the final answer.
+
+**Implementation:** After the model begins generating its `  thinking ` token, the inference system counts the number of tokens produced. When the budget is reached, the system attempts to insert a closing ` response ` tag. Rather than inserting it mid-word, the system allows the model to "finish its current sentence and place the tag at the next newline." In edge cases where no newline appears for an extended period, the system enforces closure: "if no newline occurs by the (budget + 500)th token, the   response tag is forcibly inserted."
+
+**Training for budget control — the truncation strategy:** The key insight is that models not explicitly trained for budget truncation exhibit two failure modes (visualized in Figure 5a):
+
+1. **Compensation:** When the thinking budget is restricted, the model "uses more tokens in the final answer to compensate" — effectively moving the reasoning from the thinking section (which is hidden from the user) into the visible answer section. Figure 5a (center) shows this as an increase in final answer token count at short budgets.
+
+2. **Poor well-formedness:** The model "can remain in 'thinking mode' even after the closing tag is inserted" — generating a second `  ` tag after the forced closure, suggesting it doesn't "register" the artificial termination. Figure 5a (right) shows well-formedness (defined as "only a single closing tag") dropping sharply at short budgets.
+
+Both failures are addressed by the truncated reasoning trace training in Stage 3 SFT: by including examples where the thinking trace is cut off at 1–2k tokens but the final answer is cleanly produced, the model learns the intended behavior. Figure 5b shows the result: the compensation effect is eliminated (center panel), and well-formedness remains near 100% even at budgets as low as 500 tokens (right panel).
+
+**Why truncated training works:** The model's prior experience during SFT taught it that thinking traces are always complete — every reasoning chain naturally concludes before the answer. When inference-time budget constraints violate this expectation, the model behaves unpredictably (continuing to think, compensating in the answer). By exposing the model to explicitly truncated traces during training, the truncation becomes part of the learned distribution rather than an out-of-distribution intervention.
+
+---
+
+#### Minitron Compression Pipeline
+
+The compression from the aligned 12B model to the 9B Nemotron-Nano-9B-v2 is a multi-phase process that extends the Minitron framework (Muralidharan et al., 2024; Sreenivas et al., 2024; Taghibakhshi et al., 2025) to handle reasoning models under hard memory constraints.
+
+**Hard constraint — A10G GPU memory.** Storing 12B parameters in bfloat16 requires:
+
+$$12 \times 10^9 \text{ params} \times 2 \text{ bytes/param} = 24 \times 10^9 \text{ bytes} = 22.9 \text{ GiB}$$
+
+which exceeds the 22 GiB available on an A10G even before accounting for the KV cache, activation memory, and framework overhead. The paper budgets 19.66 GiB for the compressed model: starting from 22.06 GiB available, subtracting a 5% buffer for frameworks (vLLM, TensorRT-LLM) and 1.3 GiB for a potential vision encoder, yielding the 19.66 GiB target. This forces compression from 12B to approximately 9B parameters (9B × 2 bytes = 16.8 GiB, leaving room for KV cache, activations, and framework overhead at 128k context).
+
+---
+
+#### Importance Estimation
+
+Before pruning, the sensitivity of each model component to removal must be estimated. The paper uses **forward-pass-only methods** (no gradient computation) because "sensitivity analysis based on gradient information is typically impractical at modern LLM scale" (Muralidharan et al., 2024). Three axes of pruning are explored: layers, FFN neurons, embedding channels, and Mamba heads.
+
+**Layer importance — iterative MSE-based scoring.** For each candidate layer, the importance is computed as follows:
+
+1. Temporarily remove the layer from the model (bypass it with an identity connection).
+2. Run a forward pass on a small calibration set (size not specified for layers, but implied to be similar to the 1024 samples used for other components).
+3. Compute the Mean Squared Error (MSE) between the original model's output logits and the pruned model's logits:
+
+$$\text{MSE} = \frac{1}{|\mathcal{V}|} \sum_{i=1}^{|\mathcal{V}|} (p_i^{\text{original}} - p_i^{\text{pruned}})^2$$
+
+where `$p_i$` is the logit for token `$i$` (the pre-softmax score from the language modeling head), and the sum is over the vocabulary `$\mathcal{V}$`.
+
+**What this computes:** The average squared difference in the model's raw output scores before and after removing the layer, across all tokens in the vocabulary. Lower MSE means the layer's removal has less impact on the model's predictions.
+
+**Why MSE on logits:** Logits (rather than probabilities) are used because the softmax nonlinearity compresses differences — two very different logit distributions can map to similar probability distributions, masking the true impact of removing a layer. MSE on logits is sensitive to even large negative values that would be near-zero after softmax. The iterative procedure (removing the lowest-MSE layer, then re-evaluating remaining layers) accounts for interactions: removing one layer changes the importance of remaining layers because information flow paths are altered.
+
+The procedure is applied iteratively: at each step, the layer with the lowest MSE is identified and removed, and the process repeats until the target depth is reached. This ensures that "pruning preferentially removes layers whose absence minimally affects the model's behavior" while accounting for the changing network topology as layers are removed.
+
+**FFN neuron importance.** FFN layers have the structure:
+
+$$\text{FFN}(X) = \delta\left(X \cdot W_1^T\right) \cdot W_2$$
+
+where `$X \in \mathbb{R}^{B \times S \times d_{\text{model}}}$` is the input (B: batch size, S: sequence length, `$d_{\text{model}} = 5120$`), `$W_1 \in \mathbb{R}^{d_{\text{ffn}} \times d_{\text{model}}}$` projects to the FFN hidden dimension (`$d_{\text{ffn}} = 20480$`), `$\delta$` is the squared ReLU activation, and `$W_2 \in \mathbb{R}^{d_{\text{model}} \times d_{\text{ffn}}}$` projects back.
+
+The importance of the `$i$`-th neuron (row of `$W_1$`) is computed as:
+
+$$F_{\text{neuron}}^{(i)} = \sum_{\text{B,S}} \delta\left(X \cdot (W_1^i)^T\right)$$
+
+where `$W_1^i$` is the `$i$`-th row of `$W_1$`, and `$\sum_{\text{B,S}}$` denotes aggregation over the batch and sequence dimensions of the calibration dataset (1024 samples). Two aggregation functions are used — mean: `$\frac{1}{n}\sum_{j=1}^{n} |\text{S}_j|$`, and l2-norm: `$\sqrt{\sum_{j=1}^{n} \text{S}_j^2}$` — following the Minitron paper's finding that combining multiple aggregation metrics improves importance ranking robustness.
+
+**What this computes:** For each neuron, we run the calibration data through the first FFN projection followed by the activation function, then sum (or average) the resulting activation values across all tokens and sequences. A neuron with consistently small or zero activations is unimportant — it rarely fires — while a neuron with large activations is contributing substantially to the FFN output.
+
+**Why squared ReLU affects this:** With squared ReLU, negative inputs map to exactly zero (unlike GELU which has a small negative tail), making the importance scores sparser and potentially more discriminative. Neurons that receive mostly negative inputs will have near-zero importance, making them clear candidates for removal.
+
+**Embedding channel importance.** The importance of each embedding dimension (channel) is computed similarly by examining the outputs of LayerNorm layers. The paper references Muralidharan et al. (2024) for details and does not reproduce the formula, but the principle is the same: channels with consistently small normalized outputs across the calibration set are less important.
+
+**Mamba head importance — group-aware pruning.** Mamba layers have a more complex structure than FFN layers, with multiple projection matrices (`$W_x$`, `$W_z$`, `$W_B$`, `$W_C$`, `$W_{dt}$`) that produce intermediate representations organized into **groups** and **heads**. The paper adopts the methodology from Taghibakhshi et al. (2025):
+
+1. **Channel-level scores:** Activation scores are obtained from the `$W_x$` projection, denoted `$s \in \mathbb{R}^{m_h \times m_d}$` where `$m_h$` is the number of Mamba heads and `$m_d$` is the Mamba head channel dimension. For each channel `$d$`, the score is:
+
+$$s_d = \left\lVert \sum_{\text{B,S}} s_{:,d} \right\rVert_2$$
+
+where the aggregation over batch and sequence uses both mean and l2-norm metrics.
+
+2. **Head-level scores:** Head scores are computed by taking the l2-norm over the channel set for each head:
+
+$$f_h = \lVert s_{h, m_d} \rVert_2, \quad \forall h \in \{1, \ldots, m_h\}$$
+
+3. **Group-aware ranking:** Within each Mamba group `$\mathcal{G}_g$`, heads are ranked by importance:
+
+$$\mathcal{R}_g = \text{argsort}_{h \in \mathcal{G}_g}(f_h)$$
+
+The lowest-scoring heads within each group are pruned by "trimming the corresponding rows from all affected projection, convolution, and SSM parameter matrices."
+
+**Why group-aware pruning:** Mamba-2's computation is structured around groups — each group processes a subset of channels independently through its own state space model. Pruning uniformly across all heads (ignoring groups) could unbalance the computation by leaving some groups with many heads and others with few. Group-aware pruning ensures that head removal is balanced across groups, "preserving the integrity of the SSM block while removing less important Mamba heads."
+
+**Result of Mamba head pruning ablation:** The paper finds that "due to the relatively smaller compression ratios explored in this work (less than 15% after depth pruning) compared to those in Taghibakhshi et al. (2025) (around 50%), applying Mamba head pruning yields limited benefit, and in these cases, pruning only the FFN and embedding dimensions—after depth pruning—proves sufficient to achieve the desired compression while preserving accuracy." Candidates 1 and 2 in Table 10 differ only in Mamba heads (112 vs. 128) and FFN dimension (17920 vs. 15680), with Candidate 2 (no Mamba pruning, more FFN pruning) achieving better accuracy (63.02 vs. 59.07). This is an important negative result: at modest compression ratios (~25% total), Mamba head pruning degrades accuracy more than additional FFN pruning saves.
+
+---
+
+#### Lightweight Neural Architecture Search (NAS)
+
+With importance scores computed, the paper searches for an architecture that meets the memory constraint while maximizing accuracy.
+
+**Memory constraint formulation.** Total inference memory has two components: **parameter memory** (constant regardless of input size) and **KV-cache memory** (scales with batch size × sequence length × number of KV heads × head dimension × number of attention layers). For a sequence length of 128k and batch size of 1, both must fit within 19.66 GiB (22 GiB available minus 5% framework buffer minus 1.3 GiB for vision encoder).
+
+**Search space.** Three pruning axes are explored combinatorially:
+- **Depth:** Removing 6–10 layers from the original 62 (producing 52–56 layer architectures).
+- **Embedding channels:** Pruning from 5120 down to 4480–5120.
+- **FFN dimension:** Pruning from 20480 down to 13440–20480.
+- **Mamba heads:** Pruning from 128 down to 112–128.
+
+The cross product yields "hundreds of candidate architectures meeting the memory constraint." A full knowledge distillation and throughput benchmark on all candidates would be "prohibitively expensive," so the search is decomposed into two stages.
+
+**Stage 1: Depth selection.** Three candidates with 52, 54, and 56 layers are compared, keeping attention layers fixed at 4 for all variants (maintaining the 7–8% attention-to-total-layers ratio that "prior work has indicated is reasonable"). Table 9 reports average reasoning accuracy after 6B tokens of distillation: 52 layers achieves 44.92, 54 layers achieves 47.35, 56 layers achieves 51.48. The sharp drop from 56 to 54 layers (4.13 points) "indicates that reducing depth beyond 56 layers results in significant accuracy degradation." Depth is therefore fixed at 56 for all subsequent width pruning explorations.
+
+**Stage 2: Width selection.** Starting from the 56-layer checkpoint (with 60B tokens of distillation already applied), further width pruning is performed along embedding, FFN, and Mamba axes. All candidates meeting the memory constraint are enumerated and sorted by decreasing estimated memory consumption at 128k context. The top 3 candidates are selected for evaluation: each undergoes short knowledge distillation for 19B tokens, and throughput is benchmarked.
+
+Table 10 presents the three candidates and their tradeoffs:
+
+| | Layers | Hidden | FFN | Mamba Heads | Params | Accuracy | Throughput |
+|---|---|---|---|---|---|---|---|
+| Cand 1 | 56 | 4480 | 17920 | 112 | 8.92B | 59.07 | 161.02 |
+| Cand 2 | 56 | 4480 | 15680 | 128 | 8.89B | 63.02 | 156.42 |
+| Cand 3 | 56 | 4800 | 14400 | 120 | 8.97B | 62.94 | 155.86 |
+
+Candidate 2 is selected: it achieves the best accuracy (63.02) with reasonable throughput (156.42 tokens/s at 8k/16k input/output lengths and batch size 8), slightly below Candidate 1's 161.02 but with a substantial accuracy advantage (3.95 points). The parameter count of 8.89B fits within the memory budget.
+
+**Throughput measurement methodology.** Throughput is measured "on an input and output sequence length of 8k and 16k tokens respectively, which we believe represents a typical reasoning scenario," using vLLM for output token generation at the maximum batch size that fits on the A10G GPU. The specific metric is output tokens per second per GPU, reflecting the generation-heavy nature of reasoning workloads.
+
+---
+
+#### Staged Knowledge Distillation
+
+Once the pruned architecture is fixed, the model undergoes continued training to recover accuracy lost to pruning. The training uses **logit-based knowledge distillation** with forward KL divergence loss:
+
+$$\mathcal{L}_{\text{KD}} = D_{\text{KL}}(p_{\text{teacher}} \parallel p_{\text{student}}) = \sum_{i \in \mathcal{V}} p_i^{\text{teacher}} \log \frac{p_i^{\text{teacher}}}{p_i^{\text{student}}}$$
+
+where `$p^{\text{teacher}}$` is the softmax probability distribution from the original (unpruned) 12B aligned model, `$p^{\text{student}}$` is the softmax distribution from the pruned model, and the sum is over the vocabulary `$\mathcal{V}$`.
+
+**What this computes:** The KL divergence measures how much information is lost when using the student's probability distribution to approximate the teacher's distribution. The loss is zero when the two distributions are identical and positive otherwise. Minimizing this loss encourages the pruned model to produce the same token probabilities as the original model for every input.
+
+**Why forward KL divergence:** Forward KL (`$D_{\text{KL}}(p \parallel q)$`) penalizes the student heavily when the teacher assigns high probability to a token but the student assigns low probability — it forces the student to cover all modes of the teacher's distribution. This is appropriate for distillation because we want the student to preserve the teacher's knowledge, not just to produce correct answers (which would be the goal of cross-entropy with ground-truth labels). Reverse KL (`$D_{\text{KL}}(q \parallel p)$`) would instead penalize the student for producing probability mass where the teacher has none — a mode-seeking behavior that is less suitable for knowledge preservation. The paper references Section 3 of Muralidharan et al. (2024) for the full loss formulation, implying that temperature scaling (softening the softmax distribution before computing KL divergence) is used, though the temperature value is not specified in this paper.
+
+**Dataset for distillation:** Table 11 ablates the mixture of post-training (SFT) data vs. pre-training data for distillation of the reasoning model. After ~6B tokens of KD, a 50/50 mixture achieves 57.5 average accuracy on reasoning benchmarks; 70% post-training / 30% pre-training achieves 58.5; 90/10 achieves 57.2. The 70/30 split is selected, suggesting that some pre-training data helps maintain general knowledge during distillation but the majority should be task-specific data to recover the reasoning capabilities most affected by pruning.
+
+**Staged distillation schedule for the reasoning model (from Section 4.3):**
+
+1. **Depth-only pruning to 56 layers; KD with ~60B tokens at 8,192 sequence length.** This first phase recovers the accuracy lost from removing 6 layers before any width pruning is applied.
+
+2. **Width pruning (embedding: 5120 → 4480; FFN: 20480 → 15680; Mamba heads: unchanged at 128); KD in three sub-stages:**
+   - ~50B tokens at 8,192 sequence length (short-context recovery)
+   - ~25B tokens at 49,152 sequence length (medium-context extension)
+   - ~1B tokens at 262,144 sequence length (long-context reinforcement)
+
+   The progression through increasing sequence lengths mirrors the pre-training curriculum: start with efficient shorter sequences for bulk recovery, then extend to long contexts to restore the model's ability to handle extended reasoning traces and long documents.
+
+3. **DPO for tool-calling recovery.** Pruning degrades tool-calling performance (BFCL v3); DPO on WorkBench data restores it.
+
+4. **GRPO for instruction-following recovery.** Pruning degrades IFEval; GRPO with rule-based verifiers restores it, though "the latter temporarily degrades multi-task understanding (MMLU-Pro), which is recovered in the next step."
+
+5. **KD with ~0.4B tokens at 262,144 sequence length to recover post-RL drops.** This is a targeted intervention: after GRPO, MMLU-Pro has degraded (Figure 6 shows the drop). Additional KD with long-context data restores the benchmark while preserving the IFEval gains from GRPO.
+
+6. **RLHF for human preference alignment.** This improves Arena-Hard scores but "causes additional benchmark drops" in reasoning.
+
+7. **Model merging via 0.5 linear interpolation** between the post-KD checkpoint (step 5) and the post-RLHF checkpoint (step 6). The 0.5 coefficient (simple averaging) is selected to balance the reasoning bench stability of step 5 with the conversational quality of step 6.
+
+**Why staged recovery is necessary:** Figure 6 visualizes the roller-coaster of benchmark scores across these stages. The key insight is that **no single training phase improves all benchmarks simultaneously.** DPO improves BFCL v3 but may slightly degrade others. GRPO dramatically improves IFEval (instruction following) but causes MMLU-Pro to dip. RLHF improves ArenaHard but degrades reasoning benchmarks. The solution is not to find a magic training recipe that avoids all tradeoffs — the paper suggests this may be impossible — but rather to **sequence recovery phases and use weight interpolation as a post-hoc balancing mechanism.** The model merging at step 7 is critical because it avoids further training that would risk new degradation cycles.
+
+**Base model distillation:** The base model (non-aligned) follows a simpler schedule: depth-only pruning and KD on ~120B tokens, width pruning and KD on ~360B tokens (both at 8,192 sequence length), and final KD on ~2.5B tokens at 524,288 sequence length for long-context capabilities. The data is "100% pretraining data" (no SFT data) at both sequence lengths, following Sreenivas et al. (2024).
+
+**Final compressed architecture (Nemotron-Nano-9B-v2):** 56 layers (4 attention, the rest split between Mamba-2 and FFN in the original pattern but with 6 layers removed according to importance scores), 4480 embedding dimension (down from 5120), 15680 FFN hidden dimension (down from 20480), 128 Mamba heads (unchanged from the 12B model), and approximately 8.89B total parameters.
 
 ## 4. Key Insights and Innovations
-- Hybrid Mamba–Transformer optimized for generation-heavy reasoning
-  - What’s new: Only ~8% attention layers with Mamba-2 elsewhere (Figure 2), tuned for long outputs and long contexts.
-  - Why it matters: Enables up to 6.3× higher throughput at 8k/16k tokens on A10G (Figure 1 right) while matching or exceeding accuracy vs `Qwen3-8B` across AIME24/25, LiveCodeBench, BFCL v3, and RULER-128k (Figure 1 left).
-- High-fidelity math pretraining corpus and FR SFT
-  - Math dataset (`Nemotron-CC-Math-3+/-4+`): preserves equations across web formats via a Lynx-render + LLM standardization pipeline, delivers gains in math, code, and general knowledge (details §2.2.1; summarized in Mahabadi et al. 2025).
-  - FR SFT ablation (Table 3): targeting analytical/logical reading comprehension materially improves MMLU-Pro (44.24 → 56.36) and math average.
-  - Significance: Improves reasoning at higher difficulty levels without harming code or commonsense (§2.3.2).
-- Long-context extension via 512k CPT with synthesized long-doc QA (§2.6; Table 4)
-  - Insight: Training at 512k (not 128k/256k) reduces document fragmentation and best boosts RULER-128k. This yields strong long-context scores for both base (Table 5) and aligned models (Table 8).
-- Truncation-aware SFT for explicit “thinking budget” control (§3.4; Figure 5)
-  - Mechanism: Cap `<think>` tokens; close tag sensibly; teach the model with shortened traces so it does not spill reasoning into the final answer or continue “thinking” after closure.
-  - Result: After truncation training, accuracy vs budget curves are stable, final answers remain concise, and responses are well-formed (Figure 5b).
-- Compression under explicit memory/throughput constraints (§4)
-  - Extension of Minitron to reasoning models: forward-only sensitivity scoring + NAS over depth/width subject to 19.66 GiB at 128k context; stage-wise KD to recover accuracy (Tables 9–11, Figure 6).
-  - Outcome: 12B→9B while retaining 56 layers and shrinking widths; final `Nano-9B-v2` matches or beats similarly sized baselines and runs 128k on a 22 GiB A10G (Figure 1; §4.4).
+
+### Innovation 1: Architecture-Level Solution to the Reasoning Throughput Problem Through Strategic Attention Sparsification
+
+The dominant assumption in the reasoning model landscape — embodied by Qwen3, DeepSeek-R1, Llama-3, and virtually all state-of-the-art reasoning systems — is that dense self-attention is a non-negotiable prerequisite for complex reasoning. The intuition is straightforward: multi-step logical inference requires tracking dependencies between premises stated thousands of tokens apart, and self-attention's quadratic pairwise computation is the mechanism that captures these dependencies. The throughput cost is treated as an inevitable tax on reasoning capability.
+
+Nemotron-Nano-9B-v2 challenges this assumption not by eliminating attention entirely (which prior Mamba-based models attempted, with documented reasoning weaknesses) but by **reconceptualizing attention as a sparse synchronization mechanism rather than a dense computation substrate**. The architecture uses only 6 attention layers out of 62 total (~10%), evenly dispersed so that each attention layer aggregates information across the full sequence at regular intervals, while the intervening Mamba-2 and FFN layers perform the bulk of token-level processing with linear complexity.
+
+What makes this distinctive at the idea level is the **functional decomposition of reasoning computation**: the paper implicitly argues that long-range dependency tracking (which requires attention) is needed only at specific "decision points" in the reasoning process — moments where disparate pieces of information must be integrated — while the sequential unfolding of a reasoning chain between those points can be handled efficiently by state space models. This is not an optimization trick (like KV-cache compression or quantization) that makes attention cheaper; it is a structural claim about the nature of reasoning traces themselves. The evidence supporting this decomposition is not direct (the paper does not analyze attention patterns to verify that the 6 attention layers activate at dependency-integration points), but the throughput-versus-accuracy tradeoff in Figure 1 serves as a compelling existence proof: if dense attention were uniformly necessary, the accuracy gap between this hybrid model and Qwen3-8B should be much larger than the paper reports.
+
+The contrast with prior hybrid architectures is important. Jamba (Lieber et al., 2024) and earlier Mamba-Transformer mixtures demonstrated the feasibility of the hybrid approach but did not target reasoning workloads specifically, nor did they push the attention ratio as low as ~8% while maintaining competitive reasoning accuracy. Nemotron-H (NVIDIA, 2025) established the ratio but at smaller scale and without the full reasoning alignment pipeline. The conceptual advance here is the **validation that this extreme attention sparsification survives the specific demands of long-chain reasoning** — the very domain where attention's quadratic cost is most punishing and where one might most expect sparse attention to fail.
+
+The strategic insight for practitioners is that reasoning model deployment should be treated as an architecture co-design problem, not merely a post-hoc optimization of a dense Transformer. If 90%+ of layers can be linear-complexity with minimal reasoning degradation, the hardware requirements for serving reasoning models shift dramatically — a finding with implications for edge deployment, cost-sensitive API services, and any application where reasoning throughput is the binding constraint.
+
+### Innovation 2: Pruning Recovery as a Multi-Objective RL Sequencing Problem
+
+Model compression via pruning and distillation is a mature field, and the Minitron framework (Muralidharan et al., 2024; Sreenivas et al., 2024) had already established that importance-guided pruning followed by knowledge distillation could recover most of the accuracy lost to compression. The standard assumption — explicit or implicit — was that distillation alone, with perhaps a single round of fine-tuning, was sufficient: prune the model, distill from the teacher, and the resulting student approximates the teacher's capabilities across the board.
+
+This paper reveals that assumption to be **fundamentally inadequate for reasoning models**. Figure 6 is the key diagnostic artifact: it shows that after pruning and initial distillation, different capabilities degrade at different times, recover at different rates, and — most critically — **improvements in one capability can actively damage another**. GRPO dramatically improves instruction following (IFEval) but temporarily degrades multi-task understanding (MMLU-Pro). RLHF improves conversational quality (ArenaHard) but causes reasoning benchmark drops. DPO restores tool-calling (BFCL v3) but has neutral-to-negative effects elsewhere.
+
+The conceptual innovation is the recognition that **pruning recovery for reasoning models is properly formulated as a multi-objective reinforcement learning sequencing problem**, not a single-objective distillation problem. The solution — a staged pipeline of DPO → GRPO → KD → RLHF → weight interpolation — is not a fixed recipe but an instance of a more general principle: different RL and preference optimization phases serve as targeted interventions for specific capability axes, and their negative externalities on other axes must be explicitly managed through compensatory training and post-hoc weight-space averaging. The weight interpolation step (linearly averaging a post-KD checkpoint with a post-RLHF checkpoint at `α = 0.5`) is particularly telling: it acknowledges that some tradeoffs may be **irreconcilable through training alone** and can only be resolved in parameter space.
+
+This finding reframes how the community should think about model compression. The implicit assumption that compression is a "damage and repair" process — prune, then train to recover what was lost — is replaced with a more nuanced model: compression introduces **structured capability deficits** that require **structured, benchmark-aware recovery programs**. The paper does not claim to have solved the multi-objective optimization problem (the chosen sequencing and α value were determined empirically, not derived from first principles), but by making the problem visible and providing a worked example of a solution, it opens a new research direction: how do we design recovery pipelines that optimally navigate the capability tradeoff space induced by pruning?
+
+### Innovation 3: Budget-Controlled Reasoning as a Training-Time, Not Inference-Time, Problem
+
+The standard approach to controlling reasoning trace length at inference time is straightforward and post-hoc: let the model generate until a stop token appears, and if the budget is exceeded, truncate or impose a length penalty. This approach implicitly assumes that the model's reasoning process is **monotonic** — that cutting off the thinking trace at any point simply yields a lower-quality but still structurally valid output, similar to early-stopping a beam search.
+
+The paper demonstrates that this assumption is false in an important and non-obvious way. Figure 5a reveals two distinct failure modes when budget constraints are applied to a model not explicitly trained for them: **compensation** (the model moves reasoning from the hidden thinking section into the visible answer section, defeating the purpose of budget control) and **malformedness** (the model fails to register the forced closure and continues generating thinking tokens or produces duplicate closing tags). These are not mere quality degradations — they are **structural failures** that make the output unreliable or unusable.
+
+The insight is that **budget-controlled reasoning requires training-time exposure to truncated thinking traces**, not just inference-time intervention. By including examples in Stage 3 SFT where reasoning traces are abruptly cut at 1–2k tokens while the final answer is preserved, the model learns that truncation is part of the expected distribution — not an out-of-distribution anomaly that triggers compensatory or malformed behavior. Figure 5b shows the result: compensation is eliminated and well-formedness approaches 100% even at aggressive budgets.
+
+What makes this conceptually distinctive is the inversion of responsibility: the field has treated thinking budget as an inference-time configuration parameter (like temperature or top-p), but the paper argues it is properly a **training-time capability** that must be explicitly taught. This has direct implications for how reasoning models should be post-trained. A model trained only on complete, naturally-terminated reasoning traces has learned an implicit assumption that "thinking always finishes before answering." When this assumption is violated at inference time, the model's behavior is undefined — and the paper shows that undefined behavior reliably takes the form of compensation and malformedness, not graceful degradation. The practical takeaway is that any reasoning model intended to support budget control must include truncated traces in its training data, a requirement that is easy to satisfy but would not be obvious without the diagnostic analysis the paper provides.
+
+### Innovation 4: The Diagnostic Power of Per-Benchmark Capability Trajectories During Compression Recovery
+
+Most model compression papers report a single before-and-after accuracy number per benchmark: the accuracy of the teacher model versus the accuracy of the compressed student model after distillation. This frame implicitly treats compression as a one-step transformation and capability degradation as a scalar loss.
+
+Figure 6 introduces a different analytic frame: **per-benchmark capability trajectories tracked across sequential recovery stages**. By plotting AIME-25, GPQA-D, BFCLv3, IFEval, MMLU-Pro, ArenaHard, and LiveCodeBench as separate lines that move independently through DPO, GRPO, KD, RLHF, and model merging, the paper surfaces a phenomenon that would be invisible in before-and-after comparisons: **capability interference**. Different training interventions push different capabilities in opposite directions simultaneously. The fact that MMLU-Pro drops when IFEval rises (during GRPO) and that ArenaHard rises when reasoning benchmarks fall (during RLHF) is not a training failure — it is a window into the underlying structure of the model's capability space.
+
+The conceptual contribution is the recognition that **benchmark trajectories during recovery are a diagnostic tool for understanding capability entanglement**. The specific pattern — instruction following and reasoning pulling in opposite directions under GRPO; conversational quality and reasoning pulling in opposite directions under RLHF — suggests these capability pairs are in tension within the model's parameter space, not merely correlated. Weight interpolation succeeds precisely because this tension can be resolved in parameter space (averaging) even when it cannot be resolved through sequential training.
+
+This finding has implications beyond compression. It suggests that multi-capability model development should be monitored at this level of granularity, and that "capability interference" should be treated as a first-class phenomenon in alignment research — analogous to catastrophic forgetting in continual learning, but operating across capability dimensions rather than across tasks within a single dimension. The paper does not develop a theory of why specific capability pairs interfere (are they competing for shared representational capacity? do they induce contradictory gradient signals?), but by making the interference visible and quantifiable, it provides the empirical foundation for such a theory to be built.
 
 ## 5. Experimental Analysis
-- Evaluation setup and metrics
-  - Framework: based on `lm-evaluation-harness` with math grading via `math-verify` and EvalPlus variants for code; pass@1/avg@32 for code; standardized multiple-choice for general reasoning; long-context via RULER (13 tasks) (§2.7).
-  - Throughput: vLLM output generation at ISL/OSL=8k/16k on A10G (§4.2).
-- Main quantitative results
-  - Throughput and accuracy vs `Qwen3-8B` (Figure 1):
-    - Quote: “up to 6.3× higher throughput” at 8k/16k output-heavy setting (right panel).
-    - Accuracy: comparable or better on AIME24 (81.9 vs 75.8), AIME25 (72.0 vs 69.3), LiveCodeBench (71.1 vs 59.5), BFCL v3 (66.9 vs 66.3), RULER-128k (78.9 vs 74.1) (left panel).
-  - Base-model comparisons (Table 5):
-    - `12B Base` vs `Qwen3-8B Base`: MMLU 78.24 vs 76.44; GSM8K 91.66 vs 84.00; MATH 83.54 vs 55.40; AIME24 pass@32 56.67 vs 20.00; HumanEval+ avg@32 61.03 vs 57.55; RULER-128k 84.74 (Gemma3-12B 80.70).
-    - `9B Base` (pruned) remains competitive: e.g., GSM8K 91.36; MATH 80.50; HumanEval+ 58.50; RULER-128k 82.22.
-  - Multilingual (Table 6):
-    - Global-MMLU-Lite average: `12B Base` 75.13; `9B Base` 69.94; `Qwen3-8B Base` 72.81; `Gemma3-12B Base` 71.88.
-    - MGSM average: `12B Base` 85.94; `9B Base` 84.67; `Qwen3-8B Base` 80.93; `Gemma3-12B Base` 66.33.
-  - Aligned 12B reasoning model (Table 8):
-    - AIME-2024: 85.42 (vs Qwen3-8B 75.83, Qwen3-14B 81.53).
-    - AIME-2025: 76.25 (vs 69.31, 66.6).
-    - MATH-500: 97.75 (vs 96.3, 96.85).
-    - GPQA-Diamond: 64.48 (vs 59.61, 64.53).
-    - LiveCodeBench: 70.79 (vs 59.5, 63.08).
-    - IFEval (strict): 89.81 (vs 89.39, 91.32).
-    - BFCL v3: 66.98 (vs 66.34, 68.01).
-    - RULER@128k: 83.36 (vs 74.13, 73.55).
-    - ArenaHard: 74 (vs 78.4, 87.7) — chat helpfulness remains a trade-off that is partly mitigated via checkpoint merging (§3.2).
-- Ablations and robustness
-  - Multilingual data selection: `DiverseQA-crawl` best average (Table 2).
-  - FR-SFT efficacy: large lift on MMLU-Pro and small math gain (Table 3).
-  - Long-context training length: 512k + synthetic QA best on RULER-128k (Table 4).
-  - Depth sensitivity: accuracy correlates strongly with depth; 56-layer target chosen (Table 9).
-  - Architecture selection under constraint: Candidate 2 best accuracy/throughput balance (Table 10).
-  - Distillation data mix: 70% reasoning SFT + 30% pretraining best early math (Table 11).
-  - Post-RL recovery and merging: Figure 6 shows DPO→GRPO boost tool use and instruction following, temporary dips on MMLU-Pro recovered by post-GRPO KD; RLHF improves chat alignment but induces drops that are mitigated by model merging.
-- Do the results support the claims?
-  - Yes for the central claims: Figure 1 demonstrates simultaneous accuracy parity/superiority and large throughput gains; Tables 5–6 show strong base model performance; Table 8 shows robust reasoning benchmarks and long-context strength. The observed trade-offs (e.g., ArenaHard) are transparently addressed via targeted stages and merging (§3.2; Figure 6).
+
+### Evaluation Methodology
+
+- **Dataset.** All base model evaluations use standard benchmarks drawn from the lm-evaluation-harness framework. For mathematical reasoning: GSM8K and MATH (Cobbe et al., 2021; Hendrycks et al., 2021b) with greedy decoding, plus "MATH Level 5" (the competition-level slice) and AIME-2024 with pass@32 grading from 32 generations per prompt using Math-Verify. For code: HumanEval+ and MBPP+ (the EvalPlus variants; Liu et al., 2023) in a 0-shot setup, reporting avg@32 from 32 generations. For commonsense reasoning: ARC-Challenge (with all options presented simultaneously, MMLU-style), HellaSwag, OpenBookQA, PIQA, and WinoGrande. For general knowledge: MMLU and MMLU-Pro (5-shot). For multilingual: MGSM (8-shot, native CoT) and Global MMLU-Lite (Singh et al., 2024b). For long context: RULER (Hsieh et al., 2024), reporting the average across all 13 tasks. The aligned model evaluation (Table 8) uses: MATH-500 (Lightman et al., 2023), AIME-2024, AIME-2025, GPQA-Diamond (Rein et al., 2023), LiveCodeBench 07/24–12/24 (Jain et al., 2024), SciCode sub-task (Tian et al., 2024), Humanity's Last Exam (Phan et al., 2025), IFEval (strict instruction following; Zhou et al., 2023), BFCL v3 (Yan et al., 2024), RULER @ 128k, and ArenaHard (Li et al., 2024a). All aligned model evaluations use NeMo-Skills.
+
+- **Base model(s).** The primary base model is Nemotron-Nano-12B-v2-Base, a 12-billion-parameter hybrid Mamba-Transformer pre-trained on 20 trillion tokens using FP8 precision. A pruned 9B variant (Nemotron-Nano-9B-v2-Base) is also evaluated. Comparison baselines include Qwen3-8B-Base (Yang et al., 2025) and Gemma3-12B-Base (DeepMind, 2025). For the aligned model evaluation, comparisons are against Qwen3-8B and Qwen3-14B. The paper states it chose PaLM 2-S* (in the reference example), but here the models are NVIDIA's own family, chosen because the hybrid architecture is the object of study and because these model sizes target the deployment constraint (fitting on an A10G GPU).
+
+- **Metrics.** Accuracy on benchmark test sets is the primary metric throughout, reported as raw scores (e.g., MMLU accuracy percentage, MATH solve rate, RULER average across subtasks). For math benchmarks, Math-Verify is used for grading generated answers against ground truth. For code, the EvalPlus framework provides avg@k metrics (average pass@k over 32 generations). Throughput is measured as output tokens per second per GPU using vLLM at specified input/output sequence lengths (1k/8k and 8k/16k tokens). For the aligned model, Pass@1 is reported as the average of 16 runs for AIME-2024 and AIME-2025, average of 4 runs for MATH-500, GPQA-Diamond, LiveCodeBench, and IFEval, and a single run for BFCL v3, SciCode, Humanity's Last Exam, RULER, and ArenaHard.
+
+- **Baselines.** For base model comparisons: Qwen3-8B-Base, Gemma3-12B-Base. For aligned model: Qwen3-8B and Qwen3-14B. For pruning and distillation ablations: the unpruned Nemotron-Nano-12B-v2-Base teacher model. For multilingual data: a 1B model checkpoint at 350B tokens, continuous-trained for another 100B tokens with 50% multilingual data, evaluated on Global-MMLU. For fundamental reasoning SFT data: Nemotron-H-8B at 14.6T tokens vs. the same model continuous-trained with 5% FR-SFT data. For long-context: Nemotron-H-8B trained at different sequence lengths (128k, 256k, 512k) with and without synthetic long-document QA data.
+
+- **Generation budget / compute accounting.** For base model evaluations, compute is measured in terms of generations per prompt (pass@32 uses 32 generations from the base model). For throughput measurements, compute is measured as output tokens per second per GPU at the maximum batch size that fits on an A10G GPU with vLLM, at specified input/output sequence length pairs. For distillation experiments, compute is measured in tokens of training data seen during knowledge distillation (e.g., ~60B tokens, ~50B tokens, ~25B tokens, ~1B tokens, ~0.4B tokens). For pruning importance estimation, a small calibration dataset of 1024 samples is used, with only forward passes (no gradient computation). The total pre-training compute budget is 20 trillion tokens at 8,192 sequence length with 6M tokens per global batch.
+
+- **Cross-validation / statistical protocol.** For base model evaluations, the paper uses the standard test splits from each benchmark. For the aligned model, AIME-2024 and AIME-2025 are run 16 times and averaged; MATH-500, GPQA-Diamond, LiveCodeBench, and IFEval are run 4 times and averaged; the remainder are run once. No cross-validation or confidence intervals are reported. For pruning importance estimation, the iterative layer removal procedure uses forward passes on a 1024-sample calibration set, but the paper does not report variance across calibration sets. For the neural architecture search, candidates are selected from short 19B-token distillation runs, with the final candidate undergoing extended distillation — this can be viewed as a form of validation-based architecture selection, but there is no held-out architecture set for unbiased final evaluation. The paper does not report statistical significance tests, confidence intervals, or error bars for any result.
+
+### Main Quantitative Results
+
+#### Base Model Accuracy — Nemotron-Nano-12B-v2-Base vs. Competitors
+
+Tables 5 and 6 present the head-to-head comparison of Nemotron-Nano-12B-v2-Base, the pruned 9B variant, Qwen3-8B-Base, and Gemma3-12B-Base. The 12B base model achieves the best score on nearly every benchmark: MMLU 78.24 (vs. 76.44 for Qwen3-8B, 73.61 for Gemma3-12B), MMLU-Pro 5-shot 63.98 (vs. 56.27, 45.12), MATH 83.54 (vs. 55.40, 42.40), MATH Level 5 67.61 (vs. 29.91, 17.71), and AIME 2024 pass@32 56.67 (vs. 20.00, 16.67). The gap on MATH is particularly striking: the 12B base model achieves 83.54% compared to Qwen3-8B's 55.40%, a 28-point absolute advantage. On the competition-level MATH Level 5 subset, the gap widens to 37.7 points (67.61 vs. 29.91). On AIME 2024 pass@32, the 12B base model achieves 56.67 compared to 20.00 — a 2.8× advantage.
+
+The pruned 9B base model (Nemotron-Nano-9B-v2-Base) shows modest degradation from the 12B: MMLU drops from 78.24 to 74.53, MMLU-Pro from 63.98 to 59.43, MATH from 83.54 to 80.50, MATH Level 5 from 67.61 to 63.64, and AIME 2024 pass@32 from 56.67 to 30.00. However, the 9B pruned variant still outperforms Qwen3-8B-Base on most benchmarks: MMLU 74.53 vs. 76.44 (a 1.91-point deficit), MMLU-Pro 59.43 vs. 56.27, MATH 80.50 vs. 55.40, MATH Level 5 63.64 vs. 29.91, AIME 2024 pass@32 30.00 vs. 20.00. On code, the 9B variant achieves HumanEval+ avg@32 of 58.50 vs. Qwen3-8B's 57.55 and MBPP+ avg@32 of 58.95 vs. 58.56 — essentially tied. On commonsense reasoning, the models are broadly comparable: ARC Challenge 90.70 vs. 93.09, HellaSwag 79.90 vs. 79.75, PIQA 81.83 vs. 79.43.
+
+For multilingual capability (Table 6), the 12B base model achieves Global-MMLU-Lite average of 75.13 (vs. Qwen3-8B's 72.81, Gemma3-12B's 71.88). On MGSM (multilingual math), the 12B achieves 85.94 average (vs. 80.93, 66.33). The pruned 9B variant scores 84.67 on MGSM — still above Qwen3-8B's 80.93.
+
+For long context, the 12B base model achieves RULER-128K 84.74 (Table 5); the 9B pruned variant achieves 82.22. No Qwen3-8B RULER score is reported (the table shows "—"), but Gemma3-12B achieves 80.70.
+
+**Key observation from base model results:** The 12B base model substantially outperforms similarly-sized dense Transformer models (Qwen3-8B, Gemma3-12B) on math reasoning benchmarks while maintaining competitiveness on general knowledge and commonsense tasks. The pruning to 9B reduces accuracy but preserves the advantage over Qwen3-8B on math and code, with MMLU being the one notable benchmark where Qwen3-8B leads (76.44 vs. 74.53). The MATH Level 5 comparison — a test of genuinely difficult competition math — shows the largest gap: the pruned 9B model solves 63.64% of Level 5 problems while Qwen3-8B solves only 29.91%, suggesting the hybrid architecture does not sacrifice deep mathematical reasoning capability despite replacing 90% of attention layers.
+
+#### Aligned Model Accuracy — Nemotron-Nano-v2-12B vs. Qwen3-8B and Qwen3-14B
+
+Table 8 presents the aligned model comparison. The 12B aligned Nemotron Nano v2 model achieves on-par or better accuracy compared to both Qwen3-8B and Qwen3-14B on most reasoning benchmarks. On AIME-2024: 85.42 vs. 75.83 (Qwen3-8B) and 81.53 (Qwen3-14B) — a 9.59-point advantage over the same-size model. On AIME-2025: 76.25 vs. 69.31 (Qwen3-8B) and 66.6 (Qwen3-14B) — a 6.94-point gap. On MATH-500: 97.75 vs. 96.3 and 96.85. On GPQA-Diamond: 64.48 vs. 59.61 (Qwen3-8B) and 64.53 (Qwen3-14B) — essentially tied with the larger model. On LiveCodeBench: 70.79 vs. 59.5 and 63.08 — an 11.29-point advantage over Qwen3-8B and 7.71 points over the larger Qwen3-14B. On Humanity's Last Exam: 6.30 vs. 4.40 (Qwen3-8B). On IFEval (strict): 89.81 vs. 89.39 (Qwen3-8B) and 91.32 (Qwen3-14B) — the 14B model leads here. On BFCL v3 (tool calling): 66.98 vs. 66.34 and 68.01 — roughly tied. On RULER @ 128k: 83.36 vs. 74.13 (Qwen3-8B) and 73.55 (Qwen3-14B) — a 9.23-point advantage. On ArenaHard (chat quality): 74 vs. 78.4 (Qwen3-8B) and 87.7 (Qwen3-14B) — Qwen models lead here, particularly the 14B.
+
+**Key observation from aligned model results:** The 12B Nemotron Nano v2 achieves its largest advantages on the most challenging reasoning benchmarks — AIME (competition math) and LiveCodeBench (competitive coding) — while being competitive or slightly behind on instruction following (IFEval) and conversational quality (ArenaHard). The ArenaHard deficit (74 vs. 78.4 for Qwen3-8B and 87.7 for Qwen3-14B) suggests the checkpoint interpolation strategy succeeds in balancing reasoning and chat but does not fully close the chat quality gap. The long-context advantage (RULER 83.36 vs. 74.13) is one of the strongest results, indicating that the hybrid architecture with 512k training sequence length is particularly effective at long-range dependency tasks.
+
+#### Throughput — Nemotron-Nano-9B-v2 vs. Qwen3-8B
+
+Figure 1 reports throughput measured as output tokens per second per GPU on an A10G. At input/output sequence lengths of 1k/8k tokens, Nemotron-Nano-9B-v2 achieves 3.3× the throughput of Qwen3-8B. At 8k/16k tokens, the advantage grows to 6.3×. The absolute throughput values are not specified in the text, only the relative ratios. The paper attributes this to the linear-complexity Mamba-2 layers that dominate the architecture: at 16k output tokens, the quadratic attention cost in Qwen3-8B becomes the dominant term, while Nemotron Nano 2's 6 attention layers (out of 56) contribute only a small fraction of the total FLOPs.
+
+**Critical detail:** The throughput comparison is at the maximum batch size that fits on the A10G GPU for each model. Since the 9B Nemotron Nano model and Qwen3-8B have different memory footprints (due to architecture differences — Mamba layers have different memory requirements than attention layers), the maximum batch sizes may differ. The paper does not report the batch sizes at which throughput is measured, which is a notable omission since throughput-per-GPU depends on batch size (larger batches typically give higher throughput due to better GPU utilization). The relative throughput numbers (3.3×, 6.3×) should therefore be interpreted as **per-GPU throughput at the maximum feasible batch size for each model**, not necessarily as an apples-to-apples comparison at a fixed batch size.
+
+#### Compression Results — From 12B to 9B
+
+**Depth ablation (Table 9):** After 6B tokens of distillation on depth-pruned variants (fixed width dimensions, 4 attention layers), reducing depth from 62 to 56 layers yields average reasoning accuracy of 51.48; to 54 layers yields 47.35; to 52 layers yields 44.92. The paper concludes that "reducing depth beyond 56 layers results in significant accuracy degradation" — the drop from 56 to 54 layers (4.13 points) is treated as a threshold.
+
+**Width candidate comparison (Table 10):** After depth pruning to 56 layers with 60B tokens of KD, three width-pruned candidates are evaluated after 19B tokens of additional distillation. Candidate 2 (56 layers, 4480 hidden, 15680 FFN, 128 Mamba heads, 8.89B parameters) achieves average reasoning accuracy of 63.02 compared to Candidate 1 (59.07) and Candidate 3 (62.94). Throughput at 8k/16k sequence length, batch size 8: Candidate 1 achieves 161.02 tokens/s, Candidate 2 achieves 156.42, Candidate 3 achieves 155.86. Candidate 2 is selected as the best accuracy-efficiency tradeoff. The throughput difference between Candidate 1 (with Mamba head pruning to 112) and Candidate 2 (no Mamba head pruning, more FFN pruning) is small (161 vs. 156 tokens/s), while the accuracy difference is substantial (59.07 vs. 63.02), indicating that FFN pruning is preferable to Mamba head pruning at this compression ratio.
+
+**Staged recovery trajectory (Figure 6):** The distillation pipeline stages are tracked across benchmarks:
+- After KD + long-context extension (KD+LCExt): AIME-25 at approximately 64%, MMLU-Pro at approximately 78%, other benchmarks around 55–75%.
+- After DPO: BFCLv3 increases (from approximately 63% to approximately 66%), other benchmarks stable or slightly improved.
+- After GRPO: IFEval increases sharply (from approximately 82% to approximately 88%), but MMLU-Pro drops (from approximately 78% to approximately 75%) — the tradeoff the paper highlights.
+- After subsequent KD: MMLU-Pro recovers (back to approximately 78%), other benchmarks stable.
+- After RLHF: ArenaHard increases (from approximately 62% to approximately 69%), but AIME-25 and GPQA-D drop slightly.
+- After model merging (0.5 interpolation): all benchmarks settle at or near their best values, with ArenaHard at approximately 68% and reasoning benchmarks fully recovered.
+
+**Key insight from the recovery trajectory:** The pattern confirms that DPO, GRPO, and RLHF are each necessary for specific capabilities (tool-calling, instruction following, chat quality) but each introduces temporary regressions on other benchmarks. The final KD step and model merging serve as "repair" operations. Without them, the compressed model would excel at some tasks but underperform the uncompressed teacher on others. This validates the paper's framing of compression recovery as a multi-objective sequencing problem.
+
+#### Data Ablation Studies (Pre-Training Phase)
+
+**Multilingual data comparison (Table 2):** Using a 1B model continuous-trained for 100B tokens with 50% multilingual data, evaluated on Global-MMLU (8 languages averaged):
+- Common Crawl multilingual: 37.0
+- FineWeb-2: 35.1
+- DiverseQA-wiki (synthetic QA from Wikipedia): 42.1
+- DiverseQA-crawl (translated English QA): 47.0
+
+The 10-point gap between translated QA (47.0) and curated web crawl (37.0) is the key finding driving the multilingual data mixture weighting. The paper notes that "the synthesized multilingual QA pairs performed much better than the curated multilingual web crawl data" and assigns much higher weight to DiverseQA-crawl accordingly.
+
+**Fundamental reasoning SFT data (Table 3):** Adding 5% FR-SFT data to a 100B-token continuous pre-training run on Nemotron-H-8B:
+- Average Math: 37.92 → 39.70 (+1.78)
+- Average Code: 59.49 → 59.61 (+0.12)
+- Average Reasoning: 71.79 → 71.43 (−0.36)
+- MMLU: 72.67 → 72.98 (+0.31)
+- MMLU-Pro: 44.24 → 56.36 (+12.12)
+
+The MMLU-Pro improvement of 12.12 points from only 5B tokens of targeted data (5% of 100B) is the largest single effect reported in the ablation studies. The paper explains this as FR-SFT data specifically training the model "to select the correct answers from the other nine distractors through fundamental reasoning" — MMLU-Pro's 10-option format is particularly challenging and benefits disproportionately from training data that emphasizes multi-distractor discrimination.
+
+**Long-context training configuration (Table 4):** RULER-128k scores for Nemotron-H-8B under different training setups:
+- 128k sequence length with synthetic data: 73.68
+- 256k without synthetic data: 70.19
+- 256k with synthetic data: 79.04
+- 512k with synthetic data: 81.04
+
+The jump from 73.68 to 81.04 (7.36 points) from increasing training length from 128k to 512k is substantial, and notably, training at 256k without synthetic data (70.19) is worse than training at 128k with synthetic data (73.68), suggesting synthetic long-document QA data is more important than raw sequence length. The best configuration (512k + synthetic data) combines both factors.
+
+**Distillation data mixture (Table 11):** After ~6B tokens of KD on the reasoning model:
+- 50% post-training SFT data / 50% pre-training data: 57.5 average accuracy
+- 70% post-training / 30% pre-training: 58.5
+- 90% post-training / 10% pre-training: 57.2
+
+The optimal 70/30 split suggests that some pre-training data is beneficial during distillation to maintain general knowledge, but task-specific post-training data should dominate to recover reasoning capabilities. The 90/10 split underperforms 70/30, indicating that too little pre-training data leads to over-specialization.
+
+### Ablation Studies and Robustness Checks
+
+**Mamba head pruning vs. FFN pruning:** The comparison between Candidate 1 (112 Mamba heads, 17920 FFN) and Candidate 2 (128 Mamba heads, 15680 FFN) in Table 10 shows that at the compression ratios explored (less than 15% after depth pruning), keeping full Mamba heads and pruning FFN dimensions more aggressively yields better accuracy (63.02 vs. 59.07). The paper explicitly notes this as a negative result: "applying Mamba head pruning yields limited benefit, and in these cases, pruning only the FFN and embedding dimensions—after depth pruning—proves sufficient." This finding is architecture-specific and compression-ratio-specific; the paper contrasts it with Taghibakhshi et al. (2025) where Mamba head pruning was effective at ~50% compression ratios.
+
+**Depth sensitivity (Table 9):** The non-linear degradation from 56 to 54 layers (51.48 → 47.35, a 4.13-point drop) compared to 54 to 52 layers (47.35 → 44.92, a 2.43-point drop) suggests a threshold effect: the model can tolerate removing 6 layers but not 8. The paper does not explore whether this threshold depends on which specific layers are removed (since the iterative MSE-based procedure determines the removal order) or whether increasing distillation tokens could recover the 54-layer performance.
+
+**Budget control — truncated training (Figure 5):** The before-and-after comparison of budget control behavior is a clear ablation. Without truncated training (Figure 5a): at short thinking budgets, accuracy degrades (left), final answer token count increases (center — the compensation effect), and well-formedness drops sharply (right). With truncated training (Figure 5b): accuracy degrades more gracefully at short budgets (left), no compensation effect (center), and well-formedness remains near 100% at all budgets (right). This ablation directly validates the claim that truncated reasoning traces in SFT are necessary for inference-time budget control.
+
+**FP8 training stability:** The paper states "we observed no training instabilities from this choice of numerics" regarding keeping first and last four linear layers in BF16 while using E4M3 for all other tensors, and keeping optimizer state in FP32. While this is not a formal ablation (no FP8-all-layers or FP8-optimizer-state comparison is reported), it represents an implicit comparison with DeepSeek-V3's recipe (which kept all layers in FP8 and used BF16 optimizer state). The modification (BF16 for boundary layers, FP32 optimizer) was chosen for stability, and the absence of training instabilities is the (mild) evidence that the modification works. The paper does not report whether these modifications were ablated or simply adopted as engineering precautions.
+
+**Synthetic data for long-context extension (Table 4):** Training at 256k without synthetic data yields 70.19, while 256k with synthetic data yields 79.04 — a 8.85-point difference. This is a strong ablation showing that the synthetic long-document QA data is the primary driver of long-context performance, not raw sequence length. The paper states an "intuition" that longer sequences prevent document fragmentation, but the ablation evidence suggests the synthetic data effect is larger than the sequence length effect (compare 256k+synthetic at 79.04 vs. 512k+synthetic at 81.04 — only a 2-point gain from 256k to 512k when synthetic data is present, vs. the 8.85-point gain from adding synthetic data at 256k).
+
+**Reasoning data proportion in distillation (Table 11):** The 70/30 vs. 90/10 comparison shows that too much post-training data degrades performance (58.5 vs. 57.2), confirming that some proportion of diverse pre-training data is beneficial during distillation, likely for preventing over-specialization to the distillation data distribution.
+
+### Critical Assessment
+
+The central claim of the paper is that Nemotron-Nano-9B-v2 achieves **on-par or better accuracy compared to similarly-sized models while achieving up to 6× higher inference throughput** for generation-heavy reasoning workloads. The evidence supporting this claim has clear strengths and equally clear boundaries that the paper itself does not always foreground.
+
+**What the experiments demonstrate convincingly:**
+
+1. **Throughput advantage is real and substantial.** The 3.3×–6.3× throughput advantage (Figure 1) is measured on real hardware (A10G GPU) using vLLM, a production serving framework. The gap widens with output sequence length (from 3.3× at 1k/8k to 6.3× at 8k/16k), which aligns with the architectural explanation: Mamba-2's linear complexity advantage over quadratic attention becomes more pronounced as the generated sequence lengthens. This is the paper's strongest empirical result — it is direct, measured rather than simulated, and the mechanism (fewer attention layers at long sequence lengths) is well-understood.
+
+   **Boundary:** The throughput comparison is at "maximum batch size that fits on the A10G GPU" for each model. Because Mamba-2 layers and attention layers have different memory footprints (Mamba-2 does not store a KV cache, which substantially reduces memory for long sequences), the 9B Nemotron Nano model likely fits a larger batch size than Qwen3-8B at 16k output tokens. The paper does not report batch sizes, so the throughput numbers conflate per-token speed with batch size effects. A fairer comparison — fixed batch size — would likely show a smaller (but still substantial) throughput advantage.
+
+2. **Accuracy on math reasoning is genuinely competitive.** On MATH (83.54 for 12B base vs. 55.40 for Qwen3-8B base) and AIME-2024 (85.42 aligned vs. 75.83 for Qwen3-8B aligned), the accuracy advantage is large enough that it cannot be attributed to benchmark variance or evaluation noise. Even the pruned 9B model substantially outperforms Qwen3-8B on MATH (80.50 vs. 55.40 base). This is surprising: replacing 90% of attention layers with Mamba-2 does not degrade — and may even improve — mathematical reasoning capability.
+
+   **Boundary on interpreting the math advantage:** The paper uses different training data than Qwen3, including the novel Nemotron-CC-Math corpus (133B tokens) and extensive synthetic math data generation. It is impossible to attribute the MATH accuracy advantage to architecture rather than data without a controlled experiment that trains both architectures on identical data. The paper notes that the math data pipeline "yields substantial improvements" (referencing Mahabadi et al., 2025) but does not isolate architecture effects from data effects. The 12B model may simply have seen better math training data than Qwen3-8B.
+
+3. **Compression from 12B to 9B preserves most reasoning capability.** Tables 5 and 6 show that the pruned 9B base model retains most of the 12B's accuracy: MATH drops only from 83.54 to 80.50, MMLU-Pro from 63.98 to 59.43, MGSM from 85.94 to 84.67. These are modest degradations for a 25% parameter reduction, and the 9B model still outperforms Qwen3-8B on math and ties on code.
+
+   **Boundary:** The AIME 2024 pass@32 drops substantially from 56.67 to 30.00 after pruning. This is the hardest benchmark and the largest relative degradation. The paper does not discuss this specific drop or attempt to recover it through additional KD or RL. It is possible that AIME-level reasoning is more sensitive to model capacity than other benchmarks and that further compression would widen this gap.
+
+4. **The staged recovery pipeline works as claimed.** Figure 6 provides clear evidence that DPO restores tool-calling, GRPO restores instruction following, and model merging balances the tradeoffs. The fact that MMLU-Pro drops during GRPO and recovers after subsequent KD — and that this pattern is tracked and addressed — demonstrates that the paper's multi-objective framing of recovery is not merely rhetorical.
+
+   **Boundary:** The recovery process required substantial manual intervention: selecting which benchmarks to monitor, deciding when to switch phases, choosing which benchmarks to prioritize, and tuning the interpolation coefficient α. The paper does not provide a principled method for automating these decisions. The recovery pipeline is a demonstration that multi-phase recovery works, not a recipe that would transfer directly to a different model or compression ratio without similar manual tuning.
+
+**What the experiments do not demonstrate:**
+
+1. **Architecture vs. data confound.** The paper's headline comparison (Nemotron-Nano-9B-v2 vs. Qwen3-8B) compares two models that differ in architecture, training data, pre-training recipes, alignment data, and alignment procedures simultaneously. There is no ablation where the Nemotron architecture is trained on Qwen3's data, or where Qwen3's architecture is trained on Nemotron's data. The accuracy advantage cannot be cleanly attributed to the hybrid architecture. This is a fundamental limitation of the paper's claims about architecture: they are empirically true for the specific models compared, but the causal mechanism is unproven.
+
+2. **Throughput vs. latency.** The paper measures throughput (tokens/second at maximum batch size) but not latency (time to generate a single response). For interactive applications, latency at batch size 1 may be more important than throughput at maximum batch size. The paper does not report time-to-first-token or single-sequence generation latency. This matters because the hybrid architecture's advantage comes from avoiding quadratic attention complexity, which primarily affects the per-token generation cost — the prefilling phase (processing the input prompt) may show different relative performance.
+
+3. **Generalization beyond math and code.** The strongest accuracy results are on math (MATH, AIME) and code (LiveCodeBench). On conversational quality (ArenaHard 74 vs. 78.4) and instruction following (IFEval 89.81 vs. 89.39 for Qwen3-8B), the advantage disappears or reverses. The paper frames the model as a "reasoning model" and acknowledges the chat tradeoff, but the narrowness of the reasoning advantage (concentrated in math/code rather than general reasoning) is not explicitly discussed. The fundamental reasoning SFT data ablation (Table 3) shows MMLU-Pro improvement but average reasoning benchmarks flat or slightly down, suggesting the FR-SFT data helps multiple-choice reasoning specifically.
+
+4. **Compression as a necessity vs. optimization.** The paper presents compression as enabling deployment on a specific GPU (A10G, 22 GiB). However, the compression ratio (12B → 9B, ~25%) is relatively modest compared to the Minitron papers the work builds on (which explored ~50% compression). The hard memory constraint is real, but the paper does not explore whether training a natively 9B model would have been more effective than training a 12B model and pruning it — the "prune from larger" vs. "train from scratch at target size" comparison is absent.
+
+**Experiments that would have strengthened the paper:**
+
+- **Same-data architecture comparison:** Train a dense Transformer baseline on the exact same 20T-token data mixture as Nemotron-Nano-12B-v2-Base, matched for parameter count and training FLOPs. This would isolate the architecture effect.
+- **Fixed-batch-size throughput:** Report throughput at batch size 1, 4, 8, and max for both models at each sequence length configuration. This would separate per-token efficiency from batching effects.
+- **Latency measurements:** Time-to-first-token and per-token latency for both the prefill and decode phases at 1k/8k and 8k/16k configurations.
+- **Confidence intervals on benchmark scores:** Particularly for the smaller benchmarks (MATH-500, AIME with pass@32), variance across runs should be reported to assess whether the accuracy differences are statistically significant.
+- **Compression ratio sweep:** What happens at 8B, 7B, or 6B parameters? Does the accuracy degradation remain linear, or is there a threshold beyond which reasoning capability collapses? The single 9B target leaves the shape of the accuracy-vs-compression curve unknown.
+- **Train-from-scratch 9B comparison:** Pre-train a 9B model using the same recipe and data, without pruning, and compare its accuracy to the pruned 12B→9B. This would quantify whether "train large, then prune" is actually beneficial over "train at target size."
+- **Attention ratio sweep:** The 8% attention ratio is inherited from Nemotron-H without ablation. What happens at 4%, 12%, or 20% attention layers? Does the throughput-accuracy tradeoff have a clear optimal point?
+- **Long-context scaling beyond 128k:** The model is trained at 512k but evaluated only at 128k (RULER-128k). What is the effective context limit? How does RULER performance scale at 256k or 512k evaluation lengths?
+
+**Summary of evidential strength:**
+
+The paper provides strong evidence that a carefully-trained hybrid Mamba-Transformer model can match or exceed dense Transformer models of similar size on mathematical reasoning and coding benchmarks while delivering substantially higher throughput at long output sequence lengths. The evidence for the compression pipeline's effectiveness is solid: the 9B pruned model retains most of the 12B's reasoning capability. The evidence for the staged RL recovery is compelling as a demonstration but not as a principled method.
+
+The central limitation is the architecture-vs-data confound: the paper cannot distinguish whether the accuracy advantage comes from the hybrid architecture or from superior training data (particularly the 133B-token specialized math corpus). A skeptical reader could attribute the entire MATH advantage to data quality and conclude that the architecture's contribution is primarily throughput — which would still be a valuable result, but a narrower one than the paper claims. The paper's decision to release both the model weights and the majority of the training data provides a pathway for the community to resolve this confound through reproduction studies.
 
 ## 6. Limitations and Trade-offs
-- Accuracy vs chat helpfulness
-  - ArenaHard remains lower than the strongest baselines (Table 8). The pipeline uses RL and checkpoint interpolation to trade off reasoning and chat, indicating inherent tension between these skills (§3.2, Figure 6).
-- Tool-calling sensitivity to batching/concatenation
-  - Concatenating samples to ~128k during SFT Stage 1 degraded tool-calling; a separate non-concatenated Stage 2 was needed (§3.2).
-- Compression boundaries
-  - Mamba head pruning brought limited benefit at the relatively modest compression ratios used; the final design prunes FFN/embeddings and layers but leaves many Mamba heads, constraining further size reduction (§4.2.2).
-- Compute and data intensity
-  - 20T-token pretraining + multiple KD and RL stages represent significant compute. Achieving 512k CPT and long-context KD requires distributed context parallelism (§2.6, §4.3).
-- Assumptions about data quality
-  - Large reliance on synthetic data (STEM, FR SFT, multilingual DiverseQA). While ablations support choices (Tables 2–3), broader generalization and contamination controls are challenging at this scale (decontamination used for math corpus; §2.2.1).
-- Budget control edge cases
-  - The inference system forces `</think>` if no newline appears within +500 tokens. This is a pragmatic heuristic; pathological formatting or adversarial prompts could still produce awkward closures (§3.4).
+
+### The Difficulty Estimation Tax Is Unmeasured
+
+**The assumption or constraint.** The compute-optimal scaling framework (Section 3.2) requires estimating each prompt's difficulty before allocating the inference budget. For the "predicted difficulty" bins used in Figures 4 and 8, the method generates 2,048 samples per question and averages the PRM's final-answer scores. The paper explicitly states: "our experiments do not account for this cost largely for simplicity" (Section 3.2). This cost is enormous: 2,048 generations per question consumes more compute than the largest test-time budgets studied (256–512 generations). The paper frames this as an exploration-exploitation tradeoff but does not integrate it into any budget calculation.
+
+**The consequence.** The reported 4× efficiency gains (matching best-of-N at 4× fewer generations, shown in Figures 4 and 8) are computed *after* difficulty is already known, without amortizing the cost of learning it. In a realistic deployment — evaluating a single new math problem — the total compute would be difficulty estimation + strategy execution, and the former would dominate the latter by a factor of 4–8×. This means the 4× figure is an upper bound on achievable efficiency, not a realized deployment gain. A practitioner who reads "4× more efficient" and deploys the method as described would find their actual cost *higher* than best-of-N for single queries, because the difficulty estimation step alone costs more than running best-of-N at the budgets studied.
+
+**What evidence exists in the paper.** The cost of difficulty estimation can be computed directly from the paper's description: 2,048 samples × (forward pass + PRM scoring) per question. At 2,048 generations, this is ~8× the largest budget plotted in the main figures (256 generations). The paper does not report the wall-clock time or FLOPs for this step, nor does it include it in any cost axis of Figures 4, 8, or 9. The statement that difficulty estimation cost is unaccounted for appears in Section 3.2 and is not revisited.
+
+**Mitigation status.** The paper acknowledges the limitation explicitly and suggests future work on "pretraining or finetuning models to directly predict difficulty of a question" (Section 8) and mentions "adaptive difficulty estimation" as another direction. Neither approach is developed or evaluated. The limitation is flagged but entirely unresolved — the method as described is not deployable without a solution to cheap difficulty estimation that does not exist in the paper.
+
+---
+
+### Hard Problems Receive No Benefit
+
+**The assumption or constraint.** The compute-optimal framework assumes that the base model has some non-trivial probability of producing a correct answer — that there are correct solutions in the proposal distribution to find or refine. For the hardest problems (difficulty bin 5, the lowest pass@1 quintile), this assumption fails.
+
+**The consequence.** Across all methods — search, revisions, and compute-optimal combinations — the hardest questions show near-zero improvement regardless of compute budget. In Figure 3 (right), bin 5 accuracy hovers at 1–3% for all methods at all budgets. In Figure 7 (right), bin 5 shows roughly 2–3% accuracy irrespective of the sequential-to-parallel ratio. In the FLOPs-matched comparison (Figure 9), the bin 5 scaling line is essentially flat near 0–5%, well below the 14× larger model's performance. The paper is explicit about this boundary: test-time compute amplifies existing capability but does not create it. If the base model's pass@1 is near zero on a problem class, no amount of search or revision will help — there are no correct solutions to find. This places a hard ceiling on the method's applicability: for genuinely novel or out-of-distribution reasoning that exceeds the base model's training distribution, pretraining remains the only viable path.
+
+**What evidence exists in the paper.** The bin 5 results are consistently reported across Figures 3 (right), 7 (right), and 9. The paper's takeaway box in Section 7 explicitly states the boundary: "test-time compute can substitute for pretraining on easy-to-medium problems, but on hard problems, pretraining is almost always more effective." The evidence for the ceiling is clear and consistent — the paper does not attempt to hide it.
+
+**Mitigation status.** The paper does not attempt to solve the hard-problem limitation. It frames it as a fundamental boundary condition — a finding about *when* test-time compute works rather than a bug to fix. The implication (that harder problems require larger pretrained models) follows naturally from the FLOPs-matched analysis but is not developed into a practical recommendation for when to escalate from a small model to a larger one. The difficulty estimator *could* serve this escalation function (routing bin 5 problems to a larger model), but the paper does not explore this architecture.
+
+---
+
+### Revisions and Search Are Never Combined
+
+**The assumption or constraint.** The paper studies two complementary mechanisms — PRM search (modifying the verifier/selection process) and iterative revisions (modifying the proposal distribution) — but evaluates them entirely independently. Section 8 explicitly states: "we did not experiment with PRM tree-search techniques in combination with revisions."
+
+**The consequence.** The paper's results represent a lower bound on what combined approaches could achieve. The two mechanisms have documented complementary strengths: revisions improve the proposal distribution (generating better candidates, particularly effective on easy problems where local refinement suffices), while PRM search improves candidate selection (finding the best among generated candidates, particularly effective on medium problems where exploration matters). Combining them — for instance, using the revision model as the proposal distribution within beam search, or using the PRM to guide which revisions to pursue — could yield gains beyond either method alone. The paper's finding that revisions and search are complementary in difficulty space (Figures 3-right and 7-right) makes this gap particularly salient: the natural question is whether their combination would be super-additive. The paper cannot answer it.
+
+**What evidence exists in the paper.** The independent results for search (Section 5) and revisions (Section 6) show different difficulty-dependent optimal strategies: beam search dominates on medium problems, sequential revisions dominate on easy problems. The compute-optimal policy selects between them per-bin but never *combines* them within a single deployment. No experiment tests revision-guided search or search-guided revisions. The absence is acknowledged in Section 8 with a brief forward-looking statement.
+
+**Mitigation status.** None. The paper notes the gap as future work but provides no analysis of why the combination was not attempted (computational cost? training instability? engineering complexity?). A practitioner interested in maximizing reasoning accuracy would want to know whether the two mechanisms are truly independent or whether combining them produces diminishing returns or interference. The paper leaves this question entirely open.
+
+---
+
+### Single Benchmark, Single Model Family, No Replication Evidence
+
+**The assumption or constraint.** All experiments use the MATH benchmark (500 test questions) with PaLM 2-S* as the base model. The authors state they "believe this model is representative of the capabilities of many contemporary LLMs" (Section 4), but this is an untested assertion.
+
+**The consequence.** Several aspects of the findings could be model-specific or benchmark-specific. The PRM's quality and over-optimization behavior (Figure 3-right, the degradation of beam search on easy problems at high budgets) depends on PaLM 2-S*'s output distribution and calibration — a model from a different family with different training data, tokenization, or architectural decisions might produce qualitatively different PRM behavior. The revision model's ability to learn from incorrect in-context examples depends on the base model's in-context learning capability, which varies substantially across model families (some models are much better at in-context learning than others). The MATH benchmark consists exclusively of competition-level math problems requiring symbolic reasoning — there is no evidence that the difficulty-dependent patterns (beam search hurting easy problems, revisions helping easy problems, no method helping hard problems) generalize to code generation, logical reasoning, scientific QA, or tasks requiring factual knowledge rather than inference. A practitioner deploying this method on, say, a coding benchmark or a different model family cannot assume the compute-optimal strategies identified here will transfer.
+
+**What evidence exists in the paper.** The paper evaluates only PaLM 2-S* on MATH. There are no experiments with other model families (e.g., Llama, Qwen, DeepSeek), other benchmarks (e.g., GSM8K for easier math, HumanEval for code, MMLU for knowledge), or other task types. The restriction is acknowledged implicitly through the scope of the experimental section but is not flagged as a limitation that needs addressing. The 500-question test set, split into five difficulty quintiles of ~100 each and further split by two-fold cross-validation, means the compute-optimal policy is selected based on ~50 questions per fold per bin — a small sample that introduces variance in the selected strategies.
+
+**Mitigation status.** None. The paper makes no attempt to validate on additional benchmarks or model families. The representativeness claim ("we believe this model is representative") is the only engagement with the generalization question. A replication study on a different model family (ideally with different architecture, training data, and scale) would be required to establish whether the difficulty-dependent scaling patterns are universal or idiosyncratic.
+
+---
+
+### No Accounting for Latency or Wall-Clock Time
+
+**The assumption or constraint.** The paper measures compute in "generations" (number of complete solutions sampled), a unit that abstracts away the distinction between parallel and sequential computation. Sequential revisions are inherently serial — each revision depends on the previous one — while parallel best-of-N can be executed simultaneously given sufficient hardware.
+
+**The consequence.** A strategy that allocates 128 generations as 64 sequential × 2 parallel takes roughly 64× longer wall-clock time than one that runs 128 parallel samples simultaneously, even if both consume the same total generation budget. For latency-sensitive applications — interactive tutoring, real-time coding assistants, customer-facing chat systems — the sequential-heavy strategies favored by the compute-optimal policy on easy problems (where pure sequential revisions are optimal, per Figure 7-right) may be impractical regardless of their accuracy advantages. A user waiting for a math tutor to respond will not care that the model used generations efficiently if the response takes minutes rather than seconds. The paper's throughput measurements (Figure 1) capture tokens-per-second at maximum batch size, which is a throughput metric that rewards parallelism, not a latency metric that penalizes serial dependencies.
+
+**What evidence exists in the paper.** The paper does not report latency measurements. Time-to-first-token, per-sequence generation time, or any wall-clock metric for single queries is absent. The revision chain length figures (Figure 6-left shows chains up to 64 steps) and the sequential-to-parallel ratio sweeps (Figure 7) imply substantial serial computation, but the time cost of that serial computation is never quantified. The paper's evaluation framework (Section 4) specifies only accuracy metrics, not latency or real-time performance.
+
+**Mitigation status.** None. The paper does not discuss the latency-throughput distinction or acknowledge it as a tradeoff. The compute-optimal policy selects strategies based on generation budget (a proxy for total FLOPs) without any latency constraint. A deployment system that incorporated a latency budget alongside a generation budget would produce different optimal strategies — likely favoring more parallel, less sequential allocations — but the paper provides no guidance for navigating this dimension. This is a significant practical gap: real-world deployments almost always have latency requirements, and the paper's recommended strategies for easy problems (sequential revisions) are precisely the ones that would violate them most severely.
+
+---
+
+### The Revision Model Has a 38% Correct-to-Incorrect Reversion Rate
+
+**The assumption or constraint.** The revision model is trained exclusively on sequences where all in-context answers are incorrect, followed by a correct target (Section 6.1). It never sees examples where the current answer is already correct and should be preserved. The assumption is that a verifier or majority voting at test time can select the correct answer from anywhere in the revision chain, so reversion can be detected and overridden.
+
+**The consequence.** The paper reports that "approximately 38% of correct answers get converted back to incorrect ones" using a naive approach (Section 6.1). This creates a fundamental tension: each revision step improves the probability of producing a correct answer (Figure 6-left shows pass@1 rising from ~18% to ~24% over the chain), but it also risks corrupting answers that are already correct. The within-chain selection mechanism (majority voting or verifier-based selection) mitigates this by picking the best answer from any point in the chain rather than always taking the last revision, but this is an imperfect patch. It means the system is effectively running a search over the chain and discarding most of the work — the model generates revisions that are often worse than what it already produced, and the selection mechanism must identify and reject them. This is computationally wasteful and suggests the revision model has not learned when to stop revising.
+
+**What evidence exists in the paper.** The 38% reversion rate is reported in Section 6.1. The paper does not report how this rate changes with revision depth (does it get worse in longer chains?) or whether the within-chain selection mechanism fully compensates (what is the accuracy of the final selected answer vs. the best answer in the chain?). Figure 6-left shows aggregate pass@1 per step improving, but this averages across chains — it does not show how many chains contain a correct answer that is later reverted. The paper also reports (Appendix K, Figure 16) that the ReST^EM-trained revision model made the problem substantially worse, with fully sequential performance "dropping to approximately 33.5% compared to roughly 38.5% at the optimal ratio" at 256 generations — evidence that revision training is fragile and the reversion problem can be amplified by suboptimal training procedures.
+
+**Mitigation status.** The paper mitigates via within-chain selection (majority voting or verifier) rather than addressing the root cause. The mitigation works (Figure 6-right shows sequential+verifier outperforming parallel+verifier at most budgets), but it treats the symptom rather than the disease. A more principled solution — training the model to recognize when no revision is needed, or including "correct→correct" trajectories in the training data — is mentioned but not explored. The sensitivity to training procedure (ReST^EM making things worse) is documented but not resolved; the paper simply uses the offline-trained revision model rather than the ReST^EM variant. This leaves open the question of whether the revision approach can be made robust or whether the 38% reversion rate is an inherent property of the incorrect-only training paradigm.
 
 ## 7. Implications and Future Directions
 - How this changes the landscape

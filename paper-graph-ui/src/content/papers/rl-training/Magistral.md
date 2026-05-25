@@ -9,189 +9,651 @@ Magistral unveils Mistral’s first reasoning-centric LLMs and a fully scalable 
 ---
 
 ## 1. Executive Summary
-Magistral introduces Mistral’s first “reasoning” LLMs and a scalable reinforcement-learning-from-verifiable-rewards (RLVR) stack that trains them without distilling chain-of-thought from earlier reasoning models. Using only online RL on verifiable math and coding tasks, the approach lifts the base `Mistral Medium 3` checkpoint to strong reasoning performance and yields an open‑sourced `Magistral Small (24B)` model.
+
+This paper introduces Magistral, Mistral's first reasoning model, built through a ground-up **reinforcement learning from verifiable rewards (RLVR)** pipeline that relies solely on Mistral's own models and infrastructure without distillation from pre-existing reasoning models. Training on Mistral Medium 3 with pure RL alone—no cold-start reasoning traces—yields a nearly 50% boost in AIME-24 pass@1 (from 26.8% to 73.6%), while the open-source Magistral Small (24B, Apache 2.0) further demonstrates that RL on top of a distilled SFT checkpoint outperforms either approach alone. The paper establishes that text-only RL preserves and even improves multimodal reasoning, instruction following, and function calling capabilities, but finds that the benefits of test-time compute through longer chains-of-thought are bounded—applying logarithmically with output length and plateauing on the hardest problems where the base model's capability is fundamentally insufficient.
 
 ## 2. Context and Motivation
-- Problem addressed
-  - How to train large language models to perform long, effective chains-of-thought on complex tasks (math, coding, STEM) without relying on distillation from prior reasoning models or expensive critic networks.
-  - The work targets training stability, scale, and multilingual usability during long-form reasoning.
 
-- Why this matters
-  - Reasoning-centric models increasingly solve tasks that require multi-step derivations (e.g., competition math, competitive programming). A method that can push reasoning by pure RL reduces dependence on proprietary teachers and can generalize across modalities and languages.
-  - Real-world impact includes better assistants for STEM education, software engineering, and scientific workflows; theoretical significance includes insights into RL algorithms (e.g., GRPO) for sequence models.
+### The Core Problem: Building Robust Reasoning Models Without Leaning on Prior Reasoning Models
 
-- Prior approaches and gaps
-  - Previous systems (e.g., DeepSeek-R1) popularized RLVR with distillation cold-starts and KL-regularized PPO-like training. Challenges remain in:
-    - Reliance on teacher traces.
-    - Expensive critic models or KL computation.
-    - Training instability and entropy collapse.
-    - On-policy vs. throughput trade-offs at scale.
-  - This work positions itself as a ground-up RL stack (Section 1) that:
-    - Removes teacher traces for the main model (`Magistral Medium`).
-    - Eliminates the KL penalty and critic.
-    - Runs a fully asynchronous, GPU-to-GPU pipeline (Section 3, Figure 3).
-    - Enforces reasoning language to match user language via reward shaping (Section 2.2.4, Figure 2).
+The fundamental challenge this paper tackles is deceptively practical: **how do you build a language model that reasons well—producing long, deliberate chains-of-thought—without bootstrapping from someone else's reasoning model?** By the time this paper was written, the field had converged on a powerful recipe: start with a strong base model, fine-tune it on reasoning traces (long chain-of-thought examples) distilled from a capable reasoning model like DeepSeek-R1 or OpenAI's o1, and then optionally apply reinforcement learning on top. This distillation-first approach appeared so effective that DeepSeek-AI et al. [2025] concluded that for smaller models, pure RL without distillation might be fundamentally limited—that small models simply couldn't bootstrap reasoning from scratch.
+
+This paper challenges that assumption head-on. The authors ask a cleaner, harder question: **given only your own base models and infrastructure, no access to external reasoning traces, can you build a reasoning model through RL alone?** And if so, what are the engineering and algorithmic prerequisites for making this work at scale?
+
+This matters for several reasons the paper makes clear both explicitly and implicitly:
+
+- **Scientific independence:** If every reasoning model requires distillation from a prior, more capable reasoning model, the field is locked into a dependency chain that concentrates capability in a few organizations. Demonstrating that pure RL works—that a model can teach itself to reason through verifiable trial-and-error—breaks this dependency. It means any organization with a strong base model and the right RL infrastructure can produce reasoning models independently.
+
+- **Understanding the RL dynamics:** The paper provides a detailed window into what actually happens during reasoning RL training—how weights move, how length grows, where performance plateaus, and what fails. For a field that was still largely reliant on heuristics and borrowed pipelines (many RLVR implementations simply adapted PPO code from RLHF frameworks), this empirical mapping of the design space is valuable infrastructure for future work.
+
+- **Capability boundaries of test-time compute:** The paper's finding that pure RL yields a 50% boost on AIME-24 but cannot help on problems the base model can never solve (the hardest MATH problems, the hardest subset of training data) provides evidence for an important theoretical claim: **RL amplifies existing capability but does not create capability from nothing.** This mirrors findings from the prior summary's paper on test-time compute scaling, but arrives at the conclusion through a completely different mechanism—RL training rather than inference-time search.
+
+- **Preserving general capabilities:** A constant anxiety in the RLHF and RLVR literature is that optimizing for a narrow reward (math and code correctness, in this case) will erode a model's general capabilities. The paper directly tests this, showing that text-only RL maintains or improves multimodal reasoning, instruction following, and tool calling. This is a non-obvious result with immediate practical implications: if RL on text preserves visual understanding, then one can train reasoning first and handle multimodality as a property of the base model rather than needing multimodal reasoning traces.
+
+### What Prior Approaches Existed, and Where They Fall Short
+
+The paper positions itself relative to a small set of highly influential prior works, focusing on specific limitations in each.
+
+**The DeepSeek-R1 recipe (DeepSeek-AI et al., 2025) established the dominant paradigm but left key questions open.** DeepSeek-R1 demonstrated that RL from verifiable rewards could produce strong reasoning models. Their training pipeline produced two models: DeepSeek-R1-Zero, trained with pure RL from a base model (DeepSeek-v3), and DeepSeek-R1, which first underwent SFT on cold-start reasoning traces before RL. The paper reported that DeepSeek-R1-Zero exhibited issues with language mixing and poor readability, motivating the cold-start approach. More critically, they observed that for smaller models, distillation from a larger reasoning model significantly outperformed RL alone, leading to the conclusion that "smaller models relying solely on RL may not be able to achieve performance comparable to those distilled from larger reasoning models."
+
+The Magistral paper identifies several gaps this left:
+
+- **Is pure RL truly ineffective for smaller models, or is it an artifact of the specific RL implementation?** DeepSeek's claim that RL-only underperforms distillation for small models could reflect limitations in their RL stack (algorithm choice, hyperparameters, reward design, infrastructure) rather than a fundamental truth about model scale. The Magistral authors explicitly test this, training a 24B model (Mistral Small 3) with pure RL and finding it matches or exceeds the distilled version on several benchmarks (Figure 5).
+
+- **Does the cold-start SFT before RL provide capability or just readability?** DeepSeek-R1-Zero's language mixing problems were addressed by starting with a small set of clean reasoning traces. But this conflates two distinct goals: teaching the model *how* to reason (capability) and teaching it to reason *in a readable format* (style). The Magistral paper disentangles these by showing that format enforcement through reward shaping (Section 2.2.1) and a language consistency reward (Section 2.2.4) can achieve readable, mono-lingual reasoning without any cold-start traces. This suggests the cold-start in DeepSeek-R1 may have been more about formatting than capability—an important clarification.
+
+- **How far can pure RL actually go on a strong base model?** DeepSeek reported R1-Zero achieving 71.0% on AIME-24, compared to R1's 79.8%. Magistral Medium achieves 73.6% with pure RL—comparable to R1-Zero and closing much of the gap. This provides an independent replication of the pure-RL approach with a different model family, strengthening the evidence that RL alone is viable.
+
+**Open-source RLHF and RLVR frameworks (OpenRLHF, HybridFlow, etc.) provided infrastructure but not a complete recipe.** By early 2025, several open-source implementations of PPO and GRPO for language model training existed. These frameworks handled the distributed training mechanics—coordinating trainers, generators, and verifiers—but they left practitioners to figure out the dozens of design choices that make or break reasoning RL: reward shaping, KL penalty tuning or removal, advantage normalization, batch size interactions with asynchrony, entropy management, and data curricula. The Magistral paper fills this gap with a detailed, opinionated account of what worked and what didn't.
+
+**Prior GRPO adaptations (DAPO, Open-Reasoner-Zero, Dr. GRPO) explored parts of the design space but in isolation.** The paper builds on contemporaneous work that each contributed specific modifications to GRPO for reasoning:
+
+- **Yu et al. (2025) (DAPO)** introduced Clip-Higher (allowing the upper clipping bound to be larger than the lower bound to encourage exploration of low-probability tokens), soft length penalties, and removing the KL penalty. The Magistral paper adopts and confirms these findings but also extends them—showing, for instance, that ε-high tuning is sensitive to the data distribution and requires manual adjustment during training rather than a single fixed value.
+
+- **Liu et al. (2025) (Dr. GRPO)** analyzed advantage normalization schemes and identified that group-level normalization can bias training toward easy or hard questions. The Magistral paper replicates the comparison of normalization methods (Section 6.4) but finds that the choice doesn't significantly affect outcomes in their setup—a useful data point for practitioners who might otherwise over-invest in tuning this parameter.
+
+- **Hu et al. (2025) (Open-Reasoner-Zero)** demonstrated an open-source pure-RL training run. The Magistral paper extends this by showing results at larger scale (the Medium model) and by adding the multilingual reasoning capability, which no prior pure-RL work had demonstrated.
+
+**Prior work on multimodal reasoning assumed multimodal training data.** The observation that text-only RL on a multimodal base model preserves and improves vision-language reasoning is genuinely novel. Prior work on multimodal reasoning models (e.g., LLaVA variants, Qwen-VL) typically involved fine-tuning on multimodal reasoning traces. The Magistral paper's finding that visual reasoning transfers "for free" from the base model while the language backbone improves suggests a training strategy the field hadn't seriously considered: train reasoning on cheap text-only data, and inherit multimodal capability from the pretrained model.
+
+### How This Paper Positions Itself
+
+The Magistral paper positions itself not as proposing a fundamentally new algorithm, but as providing **a complete, carefully-engineered recipe for reasoning RL that works at scale with only your own models.** The contribution is the synthesis of algorithmic choices, infrastructure design, and empirical lessons into a reproducible pipeline, plus the release of an open-weight model that validates the approach.
+
+The paper's self-positioning is captured in its stated goals (Section 1):
+
+> "We present in detail how we trained Magistral Medium with RL alone, with no distillation from pre-existing reasoning models, yielding a nearly 50% boost in AIME-24 (pass@1)."
+
+This is a claim about demonstrating what's possible, not about inventing something new. The "nearly 50% boost" figure serves as a quantitative benchmark for other teams attempting pure-RL reasoning training.
+
+> "We discuss in depth the infrastructure and design choices that enable large-scale online RL."
+
+This positions the paper as an engineering contribution—the asynchronous training system, the batch size analysis, the length management strategy—that lowers the barrier for other organizations to implement similar systems.
+
+> "We present a simple yet effective strategy to make the model multilingual, where both the chain-of-thought and the final response are written in the user's language."
+
+The multilingual reasoning capability is a differentiator. Prior reasoning models (including R1-Zero) often defaulted to English-language reasoning chains regardless of input language, creating a poor user experience. The paper's solution—translating 10% of training problems plus a language classifier in the reward—is remarkably simple and effective, demonstrating that format and language constraints can be injected through the reward without modifying the base algorithm.
+
+> "We contribute insights that add to, or contradict, existing RLVR literature, for example on whether RL can improve upon the distillation SFT baseline for small models."
+
+This is the paper's most direct engagement with the prior consensus. By showing that RL on top of a distilled checkpoint yields an additional 5+ points on AIME-24 (Table 3, SFT + RL vs. SFT alone), the paper argues that RL and distillation are complementary, not alternatives—and that claims about RL being unnecessary for small models were premature.
+
+The paper also positions itself through its negative results (Section 7.4), which serve as guardrails for the community:
+
+- **Partial rewards for code (Section 7.4.1):** The finding that proportional rewards (fraction of tests passed) underperforms binary pass/fail rewards by ~2% on LiveCodeBench contradicts the intuition that denser rewards help RL. This is a genuinely useful negative result that may prevent other teams from pursuing this seemingly obvious improvement.
+
+- **Entropy bonuses (Section 7.4.2):** The instability of entropy bonuses—causing entropy to drop on math-only data but explode on math+code data with the same coefficient—explains why many RL implementations struggle with stability. The paper's alternative (manual ε-high tuning) is pragmatic rather than theoretically elegant, but it works.
+
+- **KL penalty removal (Section 2.1):** The explicit choice to remove the KL penalty, contra standard PPO practice, is justified by the observation that "the policy diverges substantially regardless" during reasoning RL. This is a practical insight: reasoning training changes the model's output distribution so fundamentally that constraining it to remain close to the base model is counterproductive.
+
+These negative results collectively position the paper as honest about the messy reality of RL training, building credibility for its positive claims. The paper is saying, in effect: "We tried the obvious things—some worked, some didn't. Here's the complete map so you don't have to rediscover it."
+
+Finally, the paper positions its approach within a broader vision of RL as a general post-training paradigm (Section 9), looking ahead to "tool-use, integrated multimodality, and agents." This frames the current work on math and code reasoning as a stepping stone toward a more general RL-based capability improvement methodology, not an end in itself. The preservation of general capabilities (multimodal understanding, function calling, instruction following) is recast not as a happy accident but as evidence that "RL on text data alone maintains most of the initial checkpoint's capabilities"—a property that would be essential for scaling this approach to more diverse tasks.
 
 ## 3. Technical Approach
-This section decomposes the system into four parts: RL algorithm, reward shaping, infrastructure, and data pipeline.
 
-- RL algorithm: GRPO with stability-focused modifications (Section 2.1)
-  - GRPO (Group Relative Policy Optimization) uses several generations `G` per prompt to compute a baseline from the group’s average reward. The model maximizes a clipped policy-gradient objective over token log-probability ratios, like PPO but without a critic.
-  - Key modifications and why they matter:
-    - Remove KL penalty:
-      - Standard PPO often penalizes divergence from a reference policy via `DKL`. Here, the KL term is dropped to reduce compute and because GRPO diverges substantially in practice even with KL; keeping a reference adds overhead with little stability gain (Section 2.1 “Eliminating KL divergence”).
-    - Length-normalized loss:
-      - Sum token-wise losses across all generations and divide by the total number of tokens `∑|o_i|` (Section 2.1 “Loss normalization”). This prevents bias toward short or long generations within a group.
-    - Advantage computation and normalization:
-      - Per-sample advantage `Â_i = r_i − μ` where `μ` is the group’s mean reward; then normalize within each minibatch to zero mean and unit variance (Section 2.1 “Advantage normalization”). This follows large-scale RL practice to stabilize updates under reward-scale drift.
-    - Clip-Higher to prevent entropy collapse:
-      - Replace symmetric PPO clipping `[1−ε, 1+ε]` with a higher upper bound `ε_high` (e.g., 0.26–0.28 for Medium, 0.3 for Small; Section 2.1 “Relaxing the trust region’s upper bound”). This gives low-probability “insight tokens” more room to gain probability, encouraging exploration during long derivations.
-    - Filter zero-advantage groups:
-      - If all `G` generations for a prompt are equally correct or incorrect (zero variance in reward), the group contributes no gradient. Such groups are dropped to keep gradients informative (Section 2.1 “Eliminating non-diverse groups”).
-  - Resulting loss (end of Section 2.1):
-    - The final objective keeps minibatch-normalized advantages, length normalization, asymmetric clipping, and the constraint “use only groups with at least two different rewards.”
+### 3.1 Reader Orientation
 
-- Reward shaping (Section 2.2)
-  - Goal: make outputs verifiable, long enough, and in the user’s language.
-  - Four axes of evaluation during training:
-    1) Formatting (Section 2.2.1)
-       - Enforce one `<think> ... </think>` tag pair at the start; for math, require `\boxed{}` around the final answer; for code, require a fenced code block with language (triple backticks).
-       - If formatting fails, assign reward `0` and stop; if it passes, assign `+0.1` and proceed.
-    2) Correctness (Section 2.2.2)
-       - Math: extract the last `\boxed{}` and compare to reference via symbolic normalization with multiple parsers and SymPy. Reward `+0.9` if correct (total 1.0 with formatting).
-       - Code: extract the first fenced code block, compile C++20 with a 10s timeout (precompile `<bits/stdc++.h>` for speed), run 20 sampled tests (4s per test, 300MB). Reward `+0.9` if all pass.
-    3) Length penalty (Section 2.2.3, Equation (1))
-       - Encourage long thinking but discourage hitting hard cutoffs. With two lengths `l_max` and `l_cache`, add a penalty that linearly ramps from 0 to −0.1 as the sequence approaches `l_max`, and caps at −0.1 beyond `l_max`.
-    4) Language consistency (Section 2.2.4)
-       - Objective: the chain-of-thought and final answer should be in the user’s language.
-       - Translate 10% of English problems into French, Spanish, Italian, German, Chinese, Russian.
-       - Strip LaTeX/code and run fastText language ID on the problem, thoughts, and answer; if all match, add `+0.1`.
-       - The system prompt (Figure 2) explicitly instructs to think and answer in the user’s language and be “as casual and as long as you want,” which was empirically found to raise entropy and exploration during RL.
+The Magistral system is a distributed training pipeline that teaches a language model to reason step-by-step through trial and error, using reinforcement learning where the only training signal is whether the model's final answer is correct (and whether it followed formatting and language rules). It solves the problem of building a reasoning model from a base language model without access to reasoning traces from other reasoning models — the model must discover for itself, through thousands of attempts, what kind of thinking process leads to correct answers for math problems and code problems with verifiable solutions.
 
-- Asynchronous infrastructure (Section 3; Figure 3)
-  - Roles:
-    - `Generators`: produce many rollouts (completions and token log-probs) under the latest policy.
-    - `Verifiers`: compute rewards by running the formatting, correctness, length, and language checks.
-    - `Trainers`: perform gradient updates.
-  - Why asynchronous:
-    - Completion lengths are heavy‑tailed and change over training; synchronous batching leaves many GPUs idle. The system streams completions continuously to verifiers and trainers, and trainers broadcast updated weights back to generators via NCCL (GPU-to-GPU) without waiting for long generations to finish.
-    - Mid-generation weight updates:
-      - In‑flight sequences continue with a “slightly outdated” KV cache; the newest tokens are generated on newer weights. Empirically recomputing the cache is unnecessary, likely because clipped policy gradients compensate for mild off-policy effects (Section 3).
-  - Batching and load balancing:
-    - A batch is a fixed number of sequences (not tokens). Within each minibatch, sequences are split into token-budgeted microbatches with a greedy collation heuristic that reduces padding by 19% (Section 3 “Trainer optimization”).
-    - If trainers bottleneck early (short generations), a bounded queue limits the degree of off-policy drift before updates.
+### 3.2 Big-Picture Architecture (Diagram in Words)
 
-- Data pipeline (Section 4)
-  - Math (Section 4.1):
-    - Start with ~700k problems; format-filter to 501k; two-phase difficulty filtering down to 38k (Table 1).
-      - Phase 1: sample 16 solutions per problem using `Mistral Large 2`; drop problems that are never solved or trivially solved.
-      - Phase 2: regrade the entire pool with a stronger, RL-trained 24B model; sample 16 solutions per problem and again drop the too-easy and the still-unsolved. If most generated answers agree but disagree with the reference, mark the reference as likely wrong and remove.
-      - Multiple-choice problems are reformulated to open-ended answer statements; proofs/multi-part questions are removed for verifiability.
-  - Code (Section 4.2):
-    - Aggregate competitive-programming problems with tests; prune items without trustworthy tests; run all known solutions to filter tests, fix inconsistent tests by majority output, and generate extra tests when needed. Duplicate prompts to require Python or C++ solutions. Final: 35k problems.
+The system has five major components that operate together in a continuous loop:
 
-- Training schedule for `Magistral Medium` (Section 5.2; Figure 4)
-  - Keep three invariants across stages:
-    1) Data difficulty increases as the model improves (drop solved problems and include harder ones).
-    2) Non-penalized completion budget `l_max − l_cache` grows (16k → 24k → 32k) to avoid length stagnation.
-    3) Keep KV-cache memory manageable by reducing batch/minibatch sizes (8k → 4k → 2k).
+1. **Base Language Model** — either Mistral Medium 3 (for Magistral Medium) or Mistral Small 3 (for Magistral Small). This is the starting checkpoint that will be trained into a reasoning model. It begins as a standard instruction-tuned model that does *not* produce long chains-of-thought by default.
+
+2. **Prompt Dataset** — a curated collection of math and code problems with verifiable ground-truth answers. Math problems have numerical or symbolic answers checkable by a rule-based verifier. Code problems have test suites that can be executed. The dataset undergoes extensive filtering (Section 4) to select problems at a specific "goldilocks" difficulty: not so easy the model already solves them reliably, not so hard it never solves them.
+
+3. **Distributed RL Infrastructure (Trainers, Generators, Verifiers)** — three pools of GPU workers that run asynchronously. **Generators** sample responses from the current policy model for batches of prompts. **Verifiers** check those responses against ground-truth answers and format rules, producing scalar rewards. **Trainers** collect batches of (prompt, response, reward) tuples, compute the GRPO loss, and update the model weights — then broadcast the new weights back to the Generators via NCCL without waiting for in-flight generations to complete.
+
+4. **GRPO Algorithm with Custom Modifications** — the core learning algorithm. It takes groups of responses to the same prompt, computes a relative advantage for each response by comparing its reward to the group mean, and updates the policy to increase the probability of responses that scored above average while decreasing the probability of those that scored below average. The paper makes five specific modifications to standard GRPO: removing the KL penalty, normalizing the loss by total token count across the group, switching to minibatch-level advantage normalization, relaxing the upper clipping bound (Clip-Higher), and filtering out groups where all responses have the same reward.
+
+5. **Reward Function** — a composite scoring function that evaluates each generated response along four axes: formatting (must use correct tags), correctness (final answer matches ground truth for math, or passes all test cases for code), length (a soft penalty when the response approaches the maximum allowed length), and language consistency (a bonus when the chain-of-thought uses the same language as the user's prompt). The total reward determines the advantage used to update the policy.
+
+Information flows in a continuous loop: prompts are sampled from the dataset → Generators produce responses using the current model weights → Verifiers score those responses → Trainers compute the GRPO loss and perform gradient updates → updated weights are broadcast back to Generators via NCCL → the cycle repeats, with Generators receiving new weights mid-generation for in-flight sequences.
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First**, the GRPO algorithm and its five modifications, since this is the core learning mechanism — understanding what the model is optimizing and why certain standard components (KL penalty, group-level advantage normalization) were removed is prerequisite to everything else.
+- **Second**, the reward function in full detail, because reward design determines *what* the model learns — format, correctness, length, and language each contribute to the signal, and getting these weights and thresholds right turns out to be critical.
+- **Third**, the distributed infrastructure, since the asynchronous design creates subtle interactions between batch size, minibatch size, and on-policy versus off-policy data that affect training stability and final performance.
+- **Fourth**, the data curation pipeline, which explains how the training set is constructed to provide problems at exactly the right difficulty level for productive learning.
+- **Fifth**, the training stages and curricula for Magistral Medium (pure RL) and Magistral Small (SFT then RL), showing how hyperparameters are adjusted dynamically as the model improves.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily an **engineering and empirical analysis paper** whose core contribution is a complete, carefully-tuned recipe for training reasoning models through reinforcement learning without distillation — and the evidence that this recipe works at scale. The conceptual insight is that reasoning capability can be elicited from a strong base model through trial-and-error optimization against verifiable rewards, provided the RL algorithm, reward design, infrastructure, and data curriculum are all configured correctly.
+
+---
+
+#### The GRPO Algorithm with Custom Modifications
+
+The paper uses Group Relative Policy Optimization (GRPO) as its reinforcement learning algorithm, building on Shao et al. (2024). GRPO is a variant of Proximal Policy Optimization (PPO) that eliminates the need for a separate "critic" model (a value function estimator) by computing advantages within groups of responses to the same prompt. This is particularly important for reasoning training because it avoids the engineering complexity of training and synchronizing a critic model at scale.
+
+**The base GRPO objective.** Before explaining the modifications, the paper presents the standard GRPO objective that serves as the starting point:
+
+$$J_{GRPO}(\theta) = \mathbb{E}_{q \sim P(Q), \{o_i\}_{i=1}^G \sim \pi_{\theta_{old}}(\cdot|q)} \left[ \frac{1}{G} \sum_{i=1}^G \frac{1}{|o_i|} \sum_{t=1}^{|o_i|} \min\left( \frac{\pi_\theta(o_{i,t}|q, o_{i,<t})}{\pi_{\theta_{old}}(o_{i,t}|q, o_{i,<t})} \hat{A}_{i,t}, \text{clip}\left(\frac{\pi_\theta(o_{i,t}|q, o_{i,<t})}{\pi_{\theta_{old}}(o_{i,t}|q, o_{i,<t})}, 1 - \varepsilon, 1 + \varepsilon\right) \hat{A}_{i,t} \right) - \beta D_{KL}[\pi_\theta(\cdot|q) \| \pi_{ref}(\cdot|q)] \right]$$
+
+where `$q$` is a query drawn from the prompt distribution `$P(Q)$`, `$G$` is the number of responses per prompt (the group size, set to 16 in the paper's experiments), `$\{o_i\}_{i=1}^G$` are the `$G$` responses generated by the old policy `$\pi_{\theta_{old}}$` for prompt `$q$`, `$|o_i|$` is the length of the `$i$`-th response in tokens, `$t$` indexes tokens within a response, `$o_{i,t}$` is the `$t$`-th token of response `$i$`, `$o_{i,<t}$` are all tokens before position `$t$`, `$\pi_\theta(o_{i,t}|q, o_{i,<t})$` is the probability the current policy assigns to token `$o_{i,t}$` given the prompt and previous tokens, `$\pi_{\theta_{old}}(o_{i,t}|q, o_{i,<t})$` is the probability the old policy (the one that generated the responses) assigned to the same token, `$\hat{A}_{i,t}$` is the estimated advantage for token `$t$` of response `$i$`, `$\varepsilon$` is the PPO clipping threshold, `$\beta$` is the KL penalty coefficient, and `$D_{KL}$` is the Kullback-Leibler divergence between the current policy and a reference policy `$\pi_{ref}$`.
+
+**What it computes:** For each token in each response, the objective computes a ratio `$r = \pi_\theta / \pi_{\theta_{old}}$` — the factor by which the new policy increases or decreases the probability of that token compared to the policy that generated the response. It then multiplies this ratio by the estimated advantage `$\hat{A}_{i,t}$` (positive for better-than-average responses, negative for worse-than-average). The `$\min$` and `$\text{clip}$` operations implement a trust region: if the ratio would move too far from 1 (beyond `$1 \pm \varepsilon$`), the gradient is clipped so the policy doesn't change too aggressively from a single batch. The term `$-\beta D_{KL}$` penalizes the policy for deviating from a frozen reference policy, preventing catastrophic forgetting of general capabilities. The objective is maximized — increasing probability for tokens from high-advantage responses while decreasing for low-advantage responses.
+
+**Why this form:** the trust region (clipping) is the key innovation of PPO over earlier policy gradient methods. Without it, a single batch where the policy got lucky could cause it to overfit to that batch's specific token choices, destroying the diversity needed for exploration. The KL penalty provides a second, complementary constraint — even if the advantage ratio suggests a large update, the regularization toward the reference policy prevents the model from forgetting how to produce fluent text. The group-based advantage computation `$\hat{A}_{i,t}$` is computed within responses to the same prompt (not across prompts), which means advantages reflect relative quality *for that specific problem* rather than being confounded by prompt difficulty.
+
+**The GRPO Advantage.** In standard GRPO, the advantage for each token in a response is the same scalar:
+
+$$\hat{A}_i = \frac{r_i - \mu}{\sigma}$$
+
+where `$r_i$` is the scalar reward for response `$i$`, and `$\mu$` and `$\sigma$` are the mean and standard deviation of rewards computed across the `$G$` responses within the same group (same prompt).
+
+**What it computes:** For each response to a prompt, subtract the group's average reward from that response's reward, then divide by the group's reward standard deviation. A response that scored exactly average gets advantage zero; a response that scored above average gets positive advantage; below average gets negative advantage. The division by `$\sigma$` normalizes the scale so that updates don't explode when rewards become very spread out or vanish when they're very concentrated.
+
+**Why this form:** computing advantages within a group for the same prompt removes the influence of prompt difficulty. A hard prompt where all responses score 0 would otherwise look like "bad" data compared to an easy prompt where all responses score 1 — but in reality, on both prompts the model should learn to distinguish the slightly-better from the slightly-worse responses. Group normalization ensures that even when *no* response solves a hard problem, the model can still learn from which attempts came closer to a solution (if the reward has any granularity) or at minimum doesn't receive a confusing negative signal. However, `$\sigma$`-normalization has a known issue Liu et al. (2025) identified: groups where all rewards are identical (all correct or all incorrect) have `$\sigma = 0$`, producing undefined advantages. The paper handles this separately (see Modification 5 below).
+
+**Modification 1: Eliminating KL Divergence.** The paper removes the `$-\beta D_{KL}$` term entirely from the objective. Their stated rationale: "in GRPO, the policy diverges substantially regardless, and maintaining a copy of the reference model for KL computation incurs a compute cost we find unjustified." This is a practical claim: the reference model copy consumes GPU memory that could instead be used for larger batch sizes or longer sequences, and empirically, the KL constraint doesn't prevent divergence during reasoning RL because the model's output distribution changes fundamentally — it learns to produce long chains-of-thought where previously it produced short direct answers. Constraining it to stay close to the base model's distribution would work against the very capability being trained.
+
+**What changes in the loss:** the `$-\beta D_{KL}[\pi_\theta(\cdot|q) \| \pi_{ref}(\cdot|q)]$` term is simply deleted. No reference model weights are stored. The practical consequence is that all the gradient signal comes from the advantage-weighted probability ratio, with only the clip providing a trust region. This makes the optimization more aggressive — it can push the policy to entirely new regions of output space — and the paper argues this aggression is *necessary* for reasoning training.
+
+**Modification 2: Loss Normalization by Total Group Length.** Standard GRPO averages the loss per-token within each response, then averages across responses. The paper instead normalizes the loss for the entire group by the sum of token counts across all responses in the group:
+
+Instead of computing the mean of per-response average losses, the paper computes:
+
+$$\frac{1}{\sum_{i=1}^G |o_i|} \sum_{i=1}^G \sum_{t=1}^{|o_i|} \text{loss}(o_{i,t})$$
+
+where `$G$` is the group size (responses per prompt) and `$|o_i|$` is the length of response `$i$` in tokens.
+
+**What it computes:** The total loss is the sum of per-token losses across all responses in the group, divided by the total number of tokens across all responses. This means a 2000-token response contributes 2000 terms to both the numerator and denominator, while a 200-token response contributes only 200 terms.
+
+**Why this form:** without this normalization, each *response* gets equal weight regardless of length, which means the model receives disproportionately strong signal from short responses on a per-token basis. Since reasoning training deliberately causes response length to grow over time, this bias would systematically underweight the long, detailed reasoning chains that the training is trying to incentivize. By normalizing by total tokens, every token contributes equally to the gradient, regardless of which response it came from. This is stated as designed to "avoid introducing length biases between generations in one group."
+
+**Modification 3: Advantage Normalization.** The paper makes two changes to advantage computation. First, they drop the `$\sigma$`-division from the group-level advantage, computing simply:
+
+$$\hat{A}_i = r_i - \mu$$
+
+where `$\mu$` is the mean reward within the group, and `$r_i$` is the reward for response `$i$`.
+
+**Why drop `$\sigma$`:** the paper doesn't explicitly justify dropping `$\sigma$`-division, but it relates to Modifications 4 and 5 — the `$\sigma$`-normalized advantage is exactly zero when all group members have the same reward, and these groups are filtered out anyway. With non-diverse groups removed, the `$\sigma$`-division serves only to rescale advantages, which the subsequent minibatch-level normalization handles.
+
+Second, following Andrychowicz et al. (2020), they apply a second normalization across the minibatch:
+
+$$\hat{A}_{i,t}^{norm} = \frac{\hat{A}_i - \hat{A}_{mean}}{\hat{A}_{std}}$$
+
+where `$\hat{A}_i = r_i - \mu$` is the group-normalized advantage for response `$i$` (all tokens in response `$i$` share this value), `$\hat{A}_{mean}$` is the mean of these `$\hat{A}_i$` values across all responses in the current minibatch, and `$\hat{A}_{std}$` is their standard deviation.
+
+**What it computes:** after the group-level centering (subtracting the group mean), this second step centers and scales all advantages across the minibatch so they have mean 0 and standard deviation 1. A response that was slightly above its group average but came from a prompt where the group had very high variance might end up with a normalized advantage near zero, while a response that was far above its group average from a low-variance group would get a large positive normalized advantage.
+
+**Why this form:** the paper's stated motivation is to handle different advantage scales across prompts and to maintain consistent gradient magnitudes throughout training. Minibatch normalization ensures that the optimizer always sees advantages of approximately unit scale regardless of how reward distributions evolve. The paper's ablation in Section 6.4 found that the choice of normalization method (minibatch vs. group vs. none) didn't significantly affect outcomes, so they chose minibatch normalization as the default.
+
+**Modification 4: Relaxing the Trust Region's Upper Bound (Clip-Higher).** In standard PPO/GRPO, the clipping threshold `$\varepsilon$` is symmetric: the probability ratio is clipped to `$[1-\varepsilon, 1+\varepsilon]$`. The paper adopts the Clip-Higher strategy from Yu et al. (2025) where the upper bound `$\varepsilon_{high}$` is set larger than the lower bound `$\varepsilon_{low}$`. The paper reports tuning `$\varepsilon_{high}$` between 0.26 and 0.28 during training, with `$\varepsilon_{low}$` presumably at the standard 0.2 (though the exact value is not explicitly restated).
+
+The clipping becomes:
+
+$$\text{clip}\left(\frac{\pi_\theta(o_{i,t}|q, o_{i,<t})}{\pi_{\theta_{old}}(o_{i,t}|q, o_{i,<t})}, 1 - \varepsilon_{low}, 1 + \varepsilon_{high}\right)$$
+
+**What it computes:** when the new policy wants to *increase* the probability of a token that had low probability under the old policy (ratio `$>> 1$`), the clip ceiling is higher (`$1 + \varepsilon_{high}$` rather than `$1 + \varepsilon$`), allowing a larger update. When it wants to *decrease* the probability of a token (ratio `$<< 1$`), the clip floor remains the standard `$1 - \varepsilon_{low}$`.
+
+**Why this form:** the asymmetry addresses a specific problem in reasoning RL called "entropy collapse." During training, the model tends to become more deterministic, repeatedly sampling the same high-probability reasoning patterns. This reduces exploration — if the model never tries alternative reasoning paths, it can't discover better ones. The higher upper clip bound allows the model to reinforce *rare but successful* reasoning tokens: if a particular reasoning step appeared with probability 0.01 under the old policy but led to a correct answer, the new policy can increase that probability more aggressively (up to a factor of `$1 + \varepsilon_{high} \approx 1.27$` rather than `$1.2$`) before being clipped. This selectively preserves diversity in the reasoning paths that show promise. The paper explicitly states that "careful tuning of `$\varepsilon_{high}$` is crucial to maintaining stability in the RL run," and they "adjusted it between 0.26 and 0.28 during the training to keep the group entropy stable."
+
+**Modification 5: Eliminating Non-Diverse Groups.** Groups where all `$G$` responses receive exactly the same reward have `$\hat{A}_i = 0$` for all `$i$` (since each reward equals the group mean). These groups contribute zero to the loss gradient — they produce no learning signal — but they still consume compute and, more importantly, they dilute the gradient from groups that *do* have signal by increasing the effective batch size with zero-contribution samples. The paper filters out any group where all rewards are identical:
+
+$$s.t. \quad \exists 1 \leq m < n \leq G, \quad r_m \neq r_n$$
+
+**What it computes:** a boolean filter applied when forming training batches. For each prompt, the `$G$` responses are checked: if at least two responses have different rewards, the entire group of `$G$` responses is included in the batch; otherwise, the entire group is discarded.
+
+**Why this form:** this filter is only possible because of the other modifications. In standard GRPO with `$\sigma$`-division, groups with identical rewards would have undefined advantages (division by zero). By switching to simple centering `$r_i - \mu$`, the advantage is well-defined (zero) but useless. The filter removes these useless groups entirely, increasing the signal-to-noise ratio in each gradient step. A key practical consideration: as the model improves and solves more problems, the fraction of "all correct" groups increases. Without this filter, more and more of the training compute would be wasted on groups that provide no gradient. The filter ensures that compute is spent only on prompts where the model can actually learn — where some responses succeeded and others failed.
+
+**The Final GRPO Loss.** Combining all modifications, the paper's final objective is:
+
+$$J_{GRPO}(\theta) = \mathbb{E}_{q \sim P(Q), \{o_i\}_{i=1}^G \sim \pi_{\theta_{old}}(\cdot|q)} \left[ \frac{1}{\sum_{i=1}^G |o_i|} \sum_{i=1}^G \sum_{t=1}^{|o_i|} \min\left( \frac{\pi_\theta(o_{i,t}|q, o_{i,<t})}{\pi_{\theta_{old}}(o_{i,t}|q, o_{i,<t})} \hat{A}_{i,t}^{norm}, \text{clip}\left(\frac{\pi_\theta(o_{i,t}|q, o_{i,<t})}{\pi_{\theta_{old}}(o_{i,t}|q, o_{i,<t})}, 1 - \varepsilon_{low}, 1 + \varepsilon_{high}\right) \hat{A}_{i,t}^{norm} \right) \right]$$
+
+subject to the constraint that within each group, not all rewards are equal. The KL term is absent. The loss is normalized by the total token count across the group. The advantage uses minibatch-level normalization on top of group-level centering.
+
+**What it computes:** For each minibatch of (prompt, response-group) pairs where groups have diverse rewards, the algorithm (1) computes group-centered advantages `$\hat{A}_i = r_i - \mu_{group}$`, (2) normalizes these to `$\hat{A}_{i,t}^{norm}$` across the minibatch, (3) computes the probability ratio for each token, (4) clips the ratio asymmetrically, (5) multiplies the (possibly clipped) ratio by the normalized advantage, (6) sums the `$\min$` over all tokens, (7) divides by the total token count across the group, and (8) averages across prompts in the minibatch. The result is a scalar loss that is minimized by gradient descent (the loss is negative when advantages are positive, so minimizing the negative loss maximizes the advantage-weighted probability).
+
+**Why this specific combination:** each modification addresses a failure mode observed in prior GRPO implementations. Removing KL prevents the optimization from fighting itself when the policy needs to change substantially. Token-level normalization prevents length bias. Clip-Higher prevents entropy collapse without the instability of entropy bonuses (Section 7.4.2). Non-diverse group filtering prevents gradient dilution. Minibatch advantage normalization provides consistent gradient scales. Together, these modifications allow stable training runs of thousands of steps without the crashes or plateaus that simpler GRPO implementations encountered.
+
+---
+
+#### The Reward Function
+
+The reward function maps each model response to a scalar reward that the GRPO algorithm uses to compute advantages. It evaluates responses along four independent axes, with specific numerical values for each component.
+
+**Formatting reward.** The model must produce responses with a specific structure enforced by the system prompt (Figure 2): a ` thinking` section containing the chain-of-thought, followed by a ` response` section containing the final answer. The format checker verifies three conditions:
+
+1. The response begins with a ` thinking` tag.
+2. There is exactly one ` response` tag (and therefore exactly one set of the pair).
+3. For math: the answer section contains a final answer in `\boxed{}`. For code: the answer section contains at least one markdown code block with triple backticks and a language specification.
+
+If any condition fails, the response receives a **reward of 0** and no further evaluation occurs. If all conditions pass, the response receives a **reward of 0.1** and proceeds to correctness evaluation.
+
+**Why 0.1 as the base format reward:** this is a small positive signal that separates "valid format" from "correct answer." Without it, the model would receive identical reward (0) for correctly formatted wrong answers and format-violating responses, providing no incentive to learn the format. The 0.1 base reward, combined with the 0.9 correctness bonus (total 1.0), creates a clear hierarchy: format-matching wrong answers (0.1) get some reward, which enables group-level advantage computation to distinguish them from format-violating responses (0.0), even on hard problems where no response is fully correct.
+
+**Correctness reward — math.** The final answer is extracted from the last `\boxed{}` expression in the solution. The paper uses a combination of parsers and SymPy (a Python symbolic mathematics library) to normalize both the generated answer and the ground-truth answer before comparison. This normalization handles equivalent representations: for instance, "`1/2`", "`0.5`", and "`\frac{1}{2}`" all normalize to the same canonical form. If the normalized generated answer matches the normalized ground-truth answer, the model receives an **additional reward of 0.9**, bringing the total to **1.0**. If not, the reward stays at 0.1.
+
+**Why 0.9 + 0.1 = 1.0 as the maximum:** this is a convention rather than a requirement — what matters for GRPO is the *relative* differences between rewards in a group, not the absolute scale. However, setting the maximum to 1.0 and the format-only baseline to 0.1 provides an intuitive interpretation: the model gets 10% credit for following instructions and 90% for getting the right answer. The 0.9/0.1 split means that even on problems where no response is correct, groups can still have variance (some responses get 0.1 for format, others get 0.0 for format violations), which prevents the non-diverse group filter from discarding all training data on very hard problems.
+
+**Correctness reward — code.** Code is extracted from the first markdown code block in the answer section. The paper applies two language-specific treatments:
+
+- **C++:** the extracted code is compiled with a 10-second timeout using the C++20 standard. To speed up compilation, the paper pre-compiles the `bits/stdc++.h` standard library header, which is commonly used in competitive programming and would otherwise add significant compilation overhead per problem.
+
+- **Python:** no compilation step is needed (Python is interpreted), so execution begins directly.
+
+For both languages, the paper randomly selects **20 test cases** from the available tests for that problem, ensuring that the same 20 tests are used for all responses in a given group (so that comparisons within the group are fair). The code is executed against each test with a **4-second timeout per test** and a **300 MB memory limit**. If the code passes all 20 tests, the model receives the **additional 0.9 correctness reward** (total 1.0). If any test fails, times out, or exceeds memory, the reward stays at 0.1.
+
+**Why 20 random tests rather than all available tests:** the paper doesn't explicitly justify this number, but the likely reasoning is computational efficiency. Running all tests for every generated response during training would multiply verification cost, and 20 tests provides sufficient statistical power to distinguish correct from incorrect solutions while keeping verification tractable. The key design choice is that the same 20 tests are used within a group — this ensures that if the random selection happens to include a faulty test, all responses in the group are affected equally, maintaining fair within-group comparison.
+
+**Why binary rather than proportional code rewards:** Section 7.4.1 reports an ablation where the code reward was proportional to the fraction of tests passed (e.g., passing 15/20 tests gives 0.9 × 15/20 = 0.675 additional reward). This produced faster training in terms of data utilization (fewer groups discarded) but **2% lower final LiveCodeBench performance**. The paper hypothesizes that proportional rewards "could also provide false signal to incorrect solutions and be more sensitive to minor inconsistencies between implementations." Binary pass/fail forces the model to produce fully correct code, not code that happens to pass more tests while being fundamentally wrong.
+
+**Length penalty.** The paper uses a soft length penalty to discourage the model from hitting the hard maximum token limit during generation without abruptly cutting off responses. The penalty function is defined in Equation 1:
+
+$$R_{length}(y) = \begin{cases} 0, & |y| \leq l_{max} - l_{cache} \\ -0.1 \cdot \frac{|y| - l_{max} + l_{cache}}{l_{cache}}, & l_{max} - l_{cache} < |y| \leq l_{max} \\ -0.1, & l_{max} < |y| \end{cases}$$
+
+where `$|y|$` is the response length in tokens, `$l_{max}$` is the maximum allowed completion length, and `$l_{cache}$` is a buffer zone before the hard cutoff.
+
+**What it computes:** for responses shorter than `$l_{max} - l_{cache}$`, the penalty is zero. For responses in the buffer zone between `$l_{max} - l_{cache}$` and `$l_{max}$`, the penalty increases linearly from 0 to -0.1 as the response length approaches the maximum. For responses exceeding `$l_{max}$`, the penalty is fixed at -0.1. This penalty is subtracted from the total reward.
+
+**Why this form:** during RL training, the model has a natural tendency to increase response length (Section 7.1 shows this directly via PCA analysis). Without a length penalty, the model would simply produce maximally long responses for every problem, hitting the hard generation limit where the sequence is truncated — producing incomplete answers that are useless for learning. A hard cutoff at `$l_{max}$` would create a discontinuous reward landscape that's hard to optimize. The soft penalty in the buffer zone provides a gradient: the model learns that continuing beyond a certain length yields diminishing (and eventually negative) returns, encouraging it to complete its reasoning within the allowed budget. The paper increased `$l_{max} - l_{cache}$` twice during Magistral Medium training: from 16k to 24k tokens, then from 24k to 32k tokens, as the model learned to produce longer, more effective chains-of-thought.
+
+**Language consistency reward.** The paper introduces a novel reward component to prevent language mixing — a common problem in pure-RL reasoning training where models produce chains-of-thought that mix English, Chinese, Russian, and other languages. The mechanism works as follows:
+
+1. 10% of the original English training problems are machine-translated into six languages: French, Spanish, Italian, German, Chinese, and Russian.
+2. For each generated response, the system extracts three components: the problem text, the thinking section, and the answer section.
+3. LaTeX content and code blocks are stripped from each component (these are language-agnostic).
+4. A fastText language classifier (Joulin et al., 2016) is applied to each stripped component.
+5. If the classifier indicates that all three components use the same language, the model receives an **additional reward of 0.1**.
+
+**What it computes:** a binary language-match bonus. If the problem is in French, the thinking is in French, and the answer is in French, the bonus is awarded. If any component is classified as a different language, no bonus.
+
+**Why 0.1:** this is the same magnitude as the format reward, making language consistency equally important as format compliance. The bonus is small relative to the correctness reward (0.9), ensuring the model prioritizes getting the right answer over language purity — but large enough that across many training steps, the model learns to reason in the user's language.
+
+**Why this works:** the paper doesn't provide a mechanistic explanation, but the likely dynamic is as follows. During pure RL on math/code, the model discovers that certain reasoning patterns lead to correct answers more often. If the training data is predominantly English, those patterns will be in English. The language consistency reward creates a counter-pressure: on non-English prompts, the model must discover reasoning patterns in the target language that are also effective. The fact that only 10% of problems are translated means the model still sees mostly English, preventing it from forgetting English reasoning capability while incentivizing language transfer to the other languages. The paper reports that "although we only translated the original English problems into a few languages, we observed that the model could successfully generate chains of thought in arbitrary languages" — suggesting the model learns a generalizable "reason in the user's language" skill rather than memorizing per-language patterns.
+
+**System prompt.** The paper specifies all format and language requirements in a system prompt (Figure 2) that is prepended to every training example. The prompt includes:
+
+- Instructions to draft thinking in an "inner monologue" format and then produce a self-contained summary.
+- The requirement to use Markdown and LaTeX formatting.
+- The requirement to write both thoughts and summary "in the same language as the task posed by the user."
+- A specific template: ` thinking ...  response ...`.
+- A specification to "Be as casual and as long as you want until you are confident to generate a correct answer" — which the paper notes "increases the entropy of the model and therefore improves the exploration."
+
+The system prompt is the primary mechanism for communicating the desired output format to the model before the RL reward signal reinforces it. The paper notes that "RL training is quite sensitive to the system prompt we use," implying that small changes to the prompt can affect training dynamics significantly — likely because the prompt determines the initial output distribution that the model explores before rewards shape it.
+
+---
+
+#### Distributed RL Infrastructure
+
+The paper describes an asynchronous, three-role distributed training system that coordinates Trainers, Generators, and Verifiers across a large GPU cluster. The design prioritizes throughput and on-policy-ness simultaneously, dealing with the fundamental tension that long sequences take more time to generate but the model weights are being updated continuously.
+
+**Three worker roles.**
+
+- **Trainers** maintain the authoritative copy of the model weights and perform gradient updates. They receive completed (prompt, response, reward) tuples from the Verifiers, accumulate them into batches, compute the GRPO loss, and perform optimizer steps. After each weight update, they broadcast the new weights to the Generator workers via NCCL (NVIDIA Collective Communications Library), a GPU-to-GPU communication protocol that enables weight transfer in under 5 seconds even for large models.
+
+- **Generators** perform inference (rollouts) using the latest available model weights. They receive prompts from the dataset, generate responses token-by-token using the current policy, record the log-probabilities of each generated token under that policy (needed for the GRPO importance sampling ratio), and send the completed (prompt, response, log-probabilities) tuples to the Verifiers. They operate continuously at maximum throughput without waiting for Trainers to finish updates.
+
+- **Verifiers** evaluate the completions from Generators. They parse the format, extract the answer, run the correctness checks (math verification via SymPy, code execution against test cases), compute the composite reward, and forward (prompt, response, reward) tuples to the Trainers.
+
+**Asynchronous weight updates and stale key-value caches.** This is the most technically distinctive aspect of the infrastructure. In a synchronous system, training would proceed in lock-step: all Generators start a batch, all finish, all rewards are computed, Trainers update weights, new weights are distributed, and the cycle repeats. This would leave Generators idle while waiting for the slowest sequence in each batch.
+
+The paper's asynchronous alternative works as follows:
+
+1. Generators operate continuously, starting new prompt responses as soon as they finish previous ones.
+2. Trainers periodically broadcast updated weights to Generators via NCCL, without waiting for in-flight generations to complete.
+3. When a Generator receives new weights, it begins using them immediately for the *next token* of any in-flight generation. The key-value (KV) cache — which stores the hidden states computed from previous tokens for attention computation — was computed using the *old* weights and is not recomputed. The paper states: "we do not refresh the cache."
+4. A single response may therefore be generated under multiple different policies: early tokens were produced by policy version `$\pi_{old}$`, middle tokens by `$\pi_{new}$`, later tokens by `$\pi_{newer}$`. The log-probabilities recorded are those under the policy that actually generated each token.
+5. The completed response, with its mixed-policy log-probabilities, is eventually sent to the Trainers as part of a training batch.
+
+**What this means for on-policy-ness:** the importance sampling ratio in the GRPO loss `$\pi_\theta(o_{i,t}|q, o_{i,<t}) / \pi_{\theta_{old}}(o_{i,t}|q, o_{i,<t})$` compares the current training policy `$\pi_\theta$` to the policy `$\pi_{\theta_{old}}$` that *generated* the token. In the asynchronous setting, `$\pi_{\theta_{old}}$` is not a single policy but varies across tokens — the ratio is computed separately for each token using the log-probability recorded at generation time. The paper argues this is acceptable because "the latest tokens are always generated on-policy" and "off-policy corrections inherent to the loss function" (the clipping mechanism) handle the staleness. Empirically, "recomputing the key-value cache is not necessary."
+
+**Training batch formation.** A batch is defined as a fixed number of completed responses (not a fixed number of tokens). Each completed response is sent to a specific Trainer rank according to a pre-set permutation (a deterministic mapping that ensures load balancing). A gradient update is triggered when every data-parallel Trainer rank has accumulated enough responses to form a full batch.
+
+The paper describes a "blocking queue with a fixed size limit" that acts as a buffer: if Trainers are the bottleneck (common in early training when responses are short and Generators produce them quickly), incoming responses accumulate in the queue. If the queue reaches its size limit, Generators are blocked — this "controls off-policy degree" by preventing an arbitrarily large backlog of responses generated under very old policies from being trained on.
+
+**Microbatch collation.** A batch `$n_{batch}$` may be split into `$n_{batch} / n_{minibatch}$` minibatches for multiple optimizer steps. Each minibatch contains a fixed number of responses but a variable number of tokens (since responses have different lengths). Minibatches are further divided into microbatches of a fixed token count. The paper implements a **greedy collation algorithm** to minimize padding:
+
+1. Sort all sequences in the minibatch by descending length.
+2. For each sequence, attempt to place it into an existing microbatch if the microbatch's total token count plus this sequence's length is within the fixed token budget.
+3. If no microbatch has room, start a new microbatch for this sequence.
+
+The paper reports this "reduces padding by 19%" compared to uniform microbatch assignment — meaning 19% fewer wasted computations on padding tokens, directly translating to faster training.
+
+**Impact of asynchrony on batch size.** Section 6.3 reports a detailed ablation on the interaction between `$n_{batch}$` (responses per batch), `$n_{minibatch}$` (responses per minibatch), and `$n_{async}$` (concurrently generated sequences). The key finding:
+
+- When `$n_{batch} = n_{minibatch}$` and `$n_{batch}$` is sufficiently large (≥2048), performance is stable and similar across batch sizes when evaluated per processed prompt.
+- When `$n_{batch}$` is kept large (8192) but `$n_{minibatch}$` is reduced (creating multiple minibatch updates per batch), performance degrades. The paper explains: if `$n_{async} \gg n_{batch}$`, a typical sequence was generated under `$n_{async} / n_{batch}$` different policies, making it severely off-policy. Multiple minibatch updates per batch exacerbate this because each update changes the policy further before the next minibatch's data was even generated under it.
+- The paper consequently enforces `$n_{async} / n_{batch} \leq 2$` and `$n_{batch} = n_{minibatch}$` for all final training runs.
+
+**Trainer optimization details.** The paper uses the Adam optimizer (implied by standard practice, though exact optimizer configuration is not specified beyond the GRPO objective). Each minibatch is further divided into microbatches for gradient accumulation, with the sum of microbatches' gradients applied in a single optimizer step per minibatch. Since gradient accumulation is order-invariant, the greedy collation doesn't affect the final gradient — it only improves GPU utilization by reducing padding.
+
+---
+
+#### Data Curation
+
+The paper's data pipeline is designed to produce a training set of problems that provide a productive learning signal: not so easy that all responses are correct (zero advantage groups, filtered out), not so hard that no responses are correct (zero advantage groups, filtered out), and with reliable ground-truth verification.
+
+**Math data — format filtering.** The initial math dataset contains approximately 700,000 problems from various sources. The first filtering stage removes:
+
+- **Proof-based problems:** these require open-ended reasoning where correctness can't be automatically verified by comparing final answers.
+- **Multi-part problems:** problems with multiple sub-questions where partial credit would be ambiguous for a binary reward.
+- **Multiple-choice problems:** these are reformulated into statement-based problems (the answer becomes the selected statement rather than a letter choice) for more robust verification and increased difficulty.
+- **Problems with unverifiable answers:** problems where the answer format is ambiguous, incomplete, or can't be parsed by the rule-based verifier.
+
+After format filtering, the dataset shrinks from 699k to 501k problems.
+
+**Math data — difficulty filtering (two-stage).** The paper implements an iterative difficulty filtering process:
+
+**Stage 1 (weaker model):** Mistral Large 2 is used to sample 16 solutions per problem. Problems where the model *never* solves them (0/16 correct) or *always* solves them (16/16 correct, or above some high threshold — the exact threshold isn't specified) are removed. This creates an initial curated set of problems at moderate difficulty relative to Mistral Large 2's capabilities.
+
+**Stage 2 (stronger model):** The curated set from Stage 1 is used to train a 24B model via the online RL pipeline, producing a small but capable RL-trained checkpoint. This stronger model is then used to re-grade the entire original 700k dataset. Again, 16 samples are generated per problem, and problems are removed if:
+
+- The model never solves them (still too hard).
+- The model always solves them (now too easy).
+- A majority of the model's samples agree on a different answer than the ground-truth, suggesting the ground-truth answer itself is incorrect (a common issue in web-scraped math datasets).
+
+This two-stage methodology is justified by the claim that "a single pass with the initial, weaker Mistral Large 2 model would have been insufficient. Its reasoning capabilities would likely have caused it to discard many genuinely difficult problems by incorrectly classifying them as unsolvable." The stronger RL-trained model can more accurately distinguish "the model can't solve this" from "this problem is unsolvable in principle" (or has a wrong ground-truth answer).
+
+After both filtering stages, the math dataset contains **38,000 problems**.
+
+**Why only 38k problems from an initial 700k:** this represents a 95% reduction. The paper's philosophy is that for pure RL training, data quality (problems at exactly the right difficulty) matters far more than data quantity. Every training batch must contain groups with diverse rewards, and if the data is too easy or too hard, most groups will be homogeneous and filtered out, wasting compute. This is consistent with the paper's overall approach: aggressive filtering to create a clean signal for RL.
+
+**Code data — test suite curation.** The paper gathers competitive programming problems from various sources. Each problem includes a statement, solutions (from human competitors or existing datasets), and associated tests. The curation process:
+
+1. Remove problems without any provided solutions.
+2. Remove problems with insufficient test cases.
+3. Execute each provided solution against all tests.
+4. For each test, check agreement among solutions: if multiple solutions produce different outputs on the same test, that test is discarded as unreliable.
+5. If all solutions agree on a different output than the test's expected output, assume the test is incorrect and update the expected output to the consensus.
+6. For problems lacking tests, generate additional tests and subject them to the same agreement evaluation.
+
+Where applicable, problem statements are duplicated to explicitly ask for code in Python or C++, two commonly used languages in competitive programming. This produces a final code dataset of **35,000 problems**.
+
+**Total training data.** The combined math (38k) and code (35k) datasets provide approximately 73,000 unique training problems. During training, these problems are sampled repeatedly across many epochs — the paper doesn't specify the number of epochs, but training runs for thousands of steps with batch sizes of thousands of responses.
+
+---
+
+#### Training Stages and Curriculum for Magistral Medium (Pure RL)
+
+The Magistral Medium training process is designed to manage three dynamic quantities that evolve as the model improves: problem difficulty, response length, and memory consumption. The paper structures training into multiple stages with distinct hyperparameters, guided by three criteria:
+
+**Criterion 1: Dataset difficulty must increase as model performance improves.** In early stages, the model can only solve relatively easy problems, so the training data includes problems at a difficulty where some but not all responses are correct. As training progresses and the model's accuracy on these problems increases, the same problems become "too easy" — most groups would be all-correct and filtered out. The paper responds by constructing harder data splits: including problems that were filtered out in earlier stages (because they were too hard for the weaker model), or removing problems the model now solves reliably.
+
+**Criterion 2: Generation length must not stop growing.** The paper observes (Section 7.1) that increasing completion length is the primary mechanism by which RL improves reasoning performance — reward scales logarithmically with output length. If the length penalty is too constraining early on, the model will learn to produce short responses and never discover that longer chains-of-thought yield better answers. The paper increases `$l_{max} - l_{cache}$` (the length not penalized) twice during training: from 16k to 24k tokens, then from 24k to 32k tokens. These increases are timed to occur when the model's typical response length approaches the current non-penalized limit, ensuring the model always has "room to grow."
+
+**Criterion 3: KV-cache memory burden must be managed.** As generation lengths increase, the key-value cache — which stores the attention keys and values for all previous tokens to enable efficient autoregressive generation — grows linearly with sequence length. For a model the size of Mistral Medium 3 with sequences of 32k tokens, the KV-cache memory dominates the total GPU memory consumption during generation. The paper addresses this by scaling down three parameters that control concurrency:
+
+- `$n_{async}$`: the number of sequences being generated in parallel (reduced to keep total KV-cache memory within GPU limits).
+- `$n_{batch}$`: the batch size in responses (reduced twice: 8k → 4k, then 4k → 2k).
+- `$n_{minibatch}$`: the minibatch size (scaled down proportionally with the batch size, since they're kept equal).
+
+These reductions trade off training throughput (fewer concurrent generations, smaller batches) for the ability to handle longer sequences. The paper doesn't specify the exact values of `$n_{async}$` after scaling, but the constraint `$n_{async} / n_{batch} \leq 2$` from Section 6.3 would be maintained throughout.
+
+---
+
+#### Training Stages and Curriculum for Magistral Small (SFT + RL)
+
+Magistral Small follows a different trajectory: first supervised fine-tuning on reasoning traces from Magistral Medium (the "cold start"), then RL on top of the SFT checkpoint.
+
+**SFT data collection.** The paper collects reasoning traces (prompt → chain-of-thought → correct answer) from two sources:
+
+1. **Magistral Medium RL training runs:** during the Medium's RL training, responses with correct answers are extracted. Traces from early training steps (with short, unsophisticated chains-of-thought) are excluded. To prevent the collected traces from being biased toward easier problems (which the model solves more often, generating more correct traces), the paper limits the number of traces per problem and upsamples problems with lower pass rates.
+
+2. **Diverse prompts from open-source datasets:** Magistral Medium is used to generate responses on prompts sourced from OpenThoughts (Guha et al., 2025) and the code subset of OpenR1 (Hugging Face, 2025; Penedo et al., 2025). The paper performs additional filtering on these prompts, keeping only a subset. This provides diversity in both problem topics and reasoning styles.
+
+The combined SFT dataset includes reasoning traces at mixed difficulty levels. To preserve non-reasoning capabilities, the paper includes 10% of datapoints for general instruction tuning (standard chat interactions without chain-of-thought).
+
+**SFT training.** Mistral Small 3 Instruct (24B parameters) is fine-tuned on this dataset for 4 epochs using standard supervised learning (next-token prediction on the correct answer tokens). The best checkpoint is selected based on AIME-24 pass@1 performance (an evaluation set the model is not trained on directly, though AIME-style problems may be in the training distribution). This checkpoint becomes the initial model for RL training.
+
+**RL on top of SFT.** The SFT checkpoint is then trained with the same GRPO algorithm as Magistral Medium, but with different hyperparameters reflecting that the model already produces reasoning chains:
+
+- **Batch size:** 2048 sequences (smaller than the Medium's initial 8k, presumably because the model is smaller).
+- **Maximum non-penalized completion length `$l_{max} - l_{cache}$`:** 32k tokens (the maximum reached by Medium's final stage, used from the start since the model already produces long chains).
+- **Sampling temperature:** 1.0. The paper states this "provided the best balance between avoiding the lack of diversity seen at lower temperatures and the incoherent outputs generated at higher temperatures." The cold-started model produces more deterministic outputs than the base model, so a higher temperature is needed to maintain exploration diversity.
+- **`$\varepsilon_{high}$`:** 0.3. Higher than the Medium's 0.26–0.28 because "the cold-started model yielded responses with far lower entropy" — less natural diversity requires more aggressive encouragement of rare token choices to prevent entropy collapse.
+
+**Why SFT before RL matters, and why RL still helps.** The SFT stage teaches the model the *format* of reasoning (thinking → response, using `\boxed{}` for answers) and provides examples of successful reasoning chains. This "cold start" means the RL stage begins with a model that already produces correctly-formatted reasoning chains with non-trivial accuracy, rather than starting from a model that doesn't know it should produce chains-of-thought at all. The paper shows (Table 3) that SFT alone reaches 65.4% on AIME-24, RL alone reaches 65.8%, but SFT + RL reaches 70.7% — a 5.3 point improvement over either approach alone. This demonstrates that RL and distillation are complementary: distillation provides a strong initialization, and RL refines it by discovering reasoning strategies the teacher model didn't demonstrate.
 
 ## 4. Key Insights and Innovations
-- Pure RL without teacher traces can strongly raise reasoning skill (fundamental)
-  - `Magistral Medium` trains only with RL on verifiable math/code—no SFT on reasoning traces—and lifts AIME’24 pass@1 from 26.8% to 73.6% (Table 2), a near-50 point gain. This challenges the belief that small or medium models must be bootstrapped with teacher CoTs.
 
-- A simple, scalable GRPO variant works in practice (methodological)
-  - The combination “no KL penalty + minibatch advantage normalization + Clip-Higher + zero-variance group filtering + length-normalized loss” yields stable, entropy-preserving RL on long outputs (Section 2.1). This differs from many PPO/GRPO recipes that rely on KL regularization or explicit entropy bonuses.
+### Innovation 1: Pure RL Yields State-of-the-Art Reasoning Capability Without Distillation — Contradicting the Prior Consensus That Small Models Need It
 
-- Language-of-thought control via reward and prompting (practical capability)
-  - Enforcing `<think>...</think>` and language-consistency rewards makes the model reason and answer in the user’s language (Section 2.2.4; Figure 2), with modest performance drop when evaluating translated benchmarks (Table 4).
+The most consequential intellectual contribution of this paper is its demonstration that pure reinforcement learning from verifiable rewards, applied to a strong base model with careful engineering, can match or exceed the performance of models bootstrapped from existing reasoning traces — **even for smaller models**. This directly contradicts the finding from DeepSeek-AI et al. (2025) that "smaller models relying solely on RL may not be able to achieve performance comparable to those distilled from larger reasoning models," and it reframes the relationship between distillation and RL from sequential (distillation first, then optional RL) to genuinely complementary.
 
-- Asynchronous, on-GPU pipeline for online RL (systems)
-  - Generators never idle for trainers; weights are broadcast mid-generation (Section 3; Figure 3). This design balances throughput with “on-policyness,” avoiding frequent stalls while keeping the latest tokens aligned with the latest policy.
+What makes this finding conceptually significant — beyond the raw benchmark numbers — is that it establishes a different **capability acquisition model**. In the distillation-first paradigm, reasoning ability is transferred from a teacher: the student learns *what reasoning looks like* by imitating examples of successful chains-of-thought. The implicit assumption is that reasoning is a skill that must be demonstrated before it can be learned — that the model needs to see the format and structure of good reasoning before it can produce its own. Pure RL challenges this assumption. The base model (Mistral Medium 3) has never seen a long chain-of-thought reasoning trace during its training. It must **discover reasoning from scratch** through trial and error, guided only by whether its final answer matches the ground truth. The fact that this works — yielding a nearly 50% improvement on AIME-24 (Table 2, from 26.8% to 73.6%) — implies that the base model already possesses the latent capability to reason, and RL serves as a mechanism for **eliciting** that capability rather than **installing** it.
 
-- RL on text preserves or improves multimodal and tool-use capabilities (unexpected generalization)
-  - Despite training on text-only data, vision reasoning benchmarks improve (e.g., MMMU-Pro Vision +12 points to 52.1%; Figure 10), and function-calling/instruction-following remain steady or slightly better (Table 6).
+This reframing has practical and scientific implications. Practically, it means organizations can build reasoning models without dependency on external reasoning traces — a form of capability independence that matters for both commercial competition and scientific reproducibility. Scientifically, it shifts the research question from "how do we transfer reasoning from a teacher?" to "what are the conditions under which a base model can discover reasoning autonomously?" The paper's detailed account of the engineering prerequisites — the GRPO modifications, the reward shaping, the data curriculum, the asynchronous infrastructure — constitutes a partial answer: pure RL works when the base model is strong enough, the reward signal is clean, the optimization is stable, and the problem difficulty is calibrated to provide productive learning gradients. The negative result that Section 4's data filtering discarded 95% of math problems (699k → 38k) reinforces this: most training data is *counterproductive* for pure RL because it's either too easy (no learning signal) or too hard (no learning signal). The "goldilocks" difficulty band is narrow, and finding it requires the two-stage filtering pipeline the paper describes.
+
+The paper's claim that RL on top of distillation yields further gains over either alone (Table 3, SFT + RL at 70.7% vs. SFT at 65.4% on AIME-24) adds a second layer to this insight. It shows that distillation and RL improve different aspects of reasoning: distillation provides the format and baseline strategies, while RL discovers novel reasoning paths the teacher never demonstrated. This is not a "distillation vs. RL" debate — it's evidence that they are complementary optimization mechanisms operating on different parts of the capability distribution.
+
+### Innovation 2: The "Multimodal Free Lunch" — Text-Only RL Improves Vision-Language Reasoning Without Any Multimodal Training Data
+
+The finding that RL training on text-only math and code problems preserves and **enhances** multimodal reasoning capabilities (Section 7.2, Figure 10) is genuinely surprising and, to the best of the paper's framing, previously unreported. The default assumption in the multimodal AI literature is that cross-modal capabilities must be explicitly trained: vision-language models are fine-tuned on image-text pairs, multimodal reasoning models are trained on multimodal reasoning traces, and any training that excludes a modality risks catastrophic forgetting of that modality's capabilities.
+
+The Magistral paper demonstrates the opposite: after extensive text-only RL training, the model *gains* 5% on MMMU, 4.4% on MMMU-Pro-Standard, and 12% on MMMU-Pro-Vision. The paper hypothesizes that "the most significant improvements are seen in scientific questions that require textual reasoning," and that "the model transfers its extended thinking process across all types of questions." The mechanism is a form of *capability cross-pollination*: the language backbone learns to reason more effectively (longer chains-of-thought, better verification of intermediate steps, more systematic problem decomposition), and when this strengthened backbone processes visual inputs through the frozen vision encoder, it applies these same improved reasoning patterns to the combined visual-textual representation.
+
+This finding is significant at three levels:
+
+**At the theoretical level**, it suggests that reasoning capability is primarily a property of the language model's processing depth and systematicity, not of modality-specific training. The vision encoder provides representations; the language model provides reasoning. Improving the reasoner improves multimodal performance even if the vision representations are unchanged. This implies a cleaner separation of concerns than the multimodal training literature typically assumes.
+
+**At the practical level**, it suggests a training strategy the field hadn't seriously considered: train reasoning on cheap, abundant text-only data with verifiable rewards, and inherit multimodal capability from the pretrained base model. This is substantially cheaper and simpler than constructing multimodal reasoning traces with verified ground-truth answers across vision, language, and other modalities. The paper's evidence that function calling and instruction following also survive text-only RL (Table 6, with Mistral Medium 3 and Magistral Medium showing 87.2% vs. 87.4% on function calling and 86.8% vs. 87.4% on IFEval) generalizes this finding beyond multimodality to tool-use and format-following capabilities more broadly.
+
+**At the research-agenda level**, it opens the question of *which* capabilities transfer "for free" through RL on a subset of tasks, and which require explicit training. The paper suggests a general property — that RL on text maintains or improves "most of the initial checkpoint's capabilities" (Section 1) — but the boundary conditions are unexplored. Would RL on math alone transfer to creative writing? To summarization? To dialogue? The Magistral paper provides a existence proof for multimodal transfer and general capability preservation, but does not characterize the limits.
+
+### Innovation 3: Reward Design as the Primary Interface for Controlling Reasoning Models — Format, Language, and Length Are Enforceable Without Architectural Changes
+
+The paper demonstrates that complex behavioral desiderata — producing well-formatted chains-of-thought, reasoning in the user's language, avoiding language mixing, and managing response length — can be achieved through reward shaping alone, without any cold-start SFT, without architectural modifications, and without constraining the model's generation procedure. This is a conceptual contribution about **what the reward interface can encode**.
+
+The contrast with the dominant paradigm is stark. DeepSeek-R1 required a cold-start phase with thousands of human-curated reasoning traces specifically to address the "readability" and "language mixing" problems that plagued DeepSeek-R1-Zero. The implicit assumption was that these format-level behaviors were beyond the reach of pure RL — that the model needed to be *shown* what good formatting looks like before it could be *rewarded* for producing it. The Magistral paper shows this assumption is false. The formatting reward (0.1 for correct tag structure, 0.0 otherwise), combined with the language consistency reward (0.1 for matching the user's language across problem, thinking, and answer), and the length penalty (Equation 1), collectively shape the model's behavior without any demonstration data.
+
+What makes this intellectually distinctive is the **compositionality** of the reward design. Each reward component addresses an independent behavioral dimension, and their additive combination produces coherent behavior at the intersection. The format reward doesn't care about answer correctness; the correctness reward doesn't care about formatting; the language reward doesn't care about either — yet their sum produces a model that produces correctly formatted, language-consistent, correct answers. This is a demonstration that RL reward functions can serve as a declarative specification language for model behavior: specify *what* you want (not *how* to achieve it), and the optimization discovers the how.
+
+The language consistency reward deserves particular attention as a novel contribution. Prior pure-RL reasoning models exhibited language mixing as a default failure mode. The paper's solution — translating 10% of problems and applying a fastText classifier to reward language consistency — is remarkably lightweight. It doesn't require multilingual training data at scale, multilingual reasoning traces, or any change to the optimization algorithm. It simply adds a small bonus for language-match and lets the RL process discover how to achieve it. The observation that this generalizes to languages not in the training set ("we observed that the model could successfully generate chains of thought in arbitrary languages") suggests the model learns a general *policy* of "reason in the user's language" rather than memorizing per-language reasoning patterns. This is a powerful demonstration that simple reward signals can induce sophisticated, generalizable behaviors when the underlying model has sufficient capacity.
+
+The paper's negative results on entropy management (Section 7.4.2) reinforce this theme from the opposite direction. The standard RL approach to preventing entropy collapse — an entropy bonus term in the loss — proved unstable, causing entropy to drop on math-only data but explode on math+code data with the same coefficient. The paper's alternative — manual tuning of ε-high in the Clip-Higher mechanism — is less elegant but empirically effective. This tradeoff (declarative reward specification vs. manual hyperparameter tuning) is characteristic of the paper's pragmatic philosophy: use reward design where it works cleanly (format, language, length), and use careful hyperparameter management where reward design fails (entropy, exploration).
+
+### Innovation 4: Reasoning Improvement Through RL Is Fundamentally a Length-Scaling Phenomenon — and It Hits Diminishing Returns
+
+The paper's PCA-based analysis of weight-space trajectories during RL training (Section 7.1, Figures 8 and 9) provides the cleanest mechanistic evidence to date that the primary mechanism by which RL improves reasoning is simply **increasing the model's output length**. The finding is both empirically robust and conceptually clarifying: as the model moves through weight space along the dominant principal component, both mean reward and mean output length increase together, up to the point where the length penalty and maximum completion length constrain further growth. The relationship is not linear — Figure 9 shows that raw reward (without length penalty) scales **logarithmically** with output length, with the regression performed on checkpoints with mean output lengths between 1500 and 8000 tokens.
+
+This is significant because it provides a mechanistic explanation for *why* RL improves reasoning, and simultaneously explains *where* it stops working. The model learns to allocate more tokens to thinking, and longer chains-of-thought yield more correct answers — but with logarithmic returns. Each doubling of output length yields a constant *additive* improvement in reward, meaning the marginal benefit of additional length shrinks as length grows. Combined with the length penalty (which makes very long responses actively counterproductive once they exceed the buffer zone), this creates a natural equilibrium: the model converges to a length where the marginal reasoning benefit of another token equals the marginal penalty. The paper's training curriculum — manually increasing `l_max - l_cache` from 16k to 24k to 32k — can be understood as deliberately shifting this equilibrium to allow the model to discover reasoning strategies that require longer chains-of-thought.
+
+This length-scaling finding connects directly to the prior summary's paper on test-time compute scaling, which found that inference-time computation (through longer generation or more samples) exhibits diminishing returns and cannot compensate for fundamental capability gaps in the base model. The Magistral paper arrives at a structurally similar conclusion through a completely different mechanism: RL training, rather than inference-time search. In both cases, the core dynamic is that additional computation (whether at training time through RL-discovered longer chains-of-thought, or at inference time through search and revision) amplifies existing capability but hits logarithmic returns, and cannot create capability from nothing. The Magistral paper's data filtering results — removing 95% of problems as either trivially easy or impossibly hard — reinforce this: on problems the base model literally cannot solve at any length, RL provides no benefit because there are no successful trajectories to reinforce.
+
+The intellectual contribution here is not the logarithmic scaling curve per se (which is a empirical measurement, not a theoretical derivation), but rather the **reframing of reasoning RL as a length-scaling phenomenon**. Before this paper, the dominant narrative was that RL teaches the model *qualitatively new reasoning strategies* — better problem decomposition, more systematic verification, avoidance of common errors. The PCA analysis suggests a simpler, more unified story: RL primarily teaches the model to *spend more tokens thinking*, and the improved strategies emerge as a consequence of having more computational budget per problem. This has direct implications for research prioritization: if reasoning improvement is fundamentally about length, then efforts to increase the model's effective context utilization (better attention mechanisms, more efficient KV-cache management, better length-penalty scheduling) may be more impactful than efforts to design better reward functions or more sophisticated RL algorithms. It also explains why the paper's training stages are organized around length management (Criterion 2: "Generation length must not stop growing") as a primary training objective rather than a side effect.
 
 ## 5. Experimental Analysis
-- Evaluation setup (Section 5.1)
-  - Benchmarks:
-    - Math: AIME’24/’25, MATH-500.
-    - Coding: LiveCodeBench v5/v6, Aider Polyglot.
-    - STEM QA: GPQA.
-    - General knowledge: text-only subset of Humanity’s Last Exam.
-    - Multimodal: MathVista, MMMU, MMMU-Pro (Section 7.2; Figure 10).
-  - Decoding:
-    - Temperature 0.7 and top‑p 1.0 for math/GPQA; temperature 0.7 and top‑p 0.95 for coding.
-    - Max tokens 40k for AIME and LiveCodeBench; 32k otherwise.
-  - Statistical rigor:
-    - AIME: average over 64 runs (report pass@1 and maj@64).
-    - LiveCodeBench: average over 16 runs.
-  - Baselines:
-    - Base checkpoints (`Mistral Small 3`, `Mistral Medium 3`) and DeepSeek results (Table 2).
 
-- Main quantitative results
-  - RL-only on `Mistral Medium 3` → `Magistral Medium` (Table 2)
-    - AIME’24: 26.8% → 73.6% pass@1; 43.4% → 90.0% maj@64.
-    - AIME’25: 21.2% → 64.9% pass@1; 30.0% → 83.3% maj@64.
-    - LiveCodeBench v5: 29.1% → 59.4%.
-    - MATH-500: 91.0% → 94.3%.
-    - GPQA: 59.6% → 70.8%.
-    - Humanity’s Last Exam (text only): 4.4% → 9.0%.
-    - Compared with DeepSeek results reported in the paper: performance lands between R1-Zero and R1, with competitive code/math outcomes, despite no reasoning SFT (Table 2; Figure 1 notes 90% maj@64 on AIME-24).
-  - Distillation + RL for `Magistral Small (24B)` (Table 3)
-    - Three variants (same 24B backbone):
-      - SFT on `Magistral Medium` traces only.
-      - RL-only from base.
-      - SFT + RL (final `Magistral Small`).
-    - Highlights:
-      - AIME’24 pass@1: 65.4 (SFT) vs 65.8 (RL-only) vs 70.7 (SFT+RL).
-      - AIME’25 pass@1: 55.6 vs 51.9 vs 62.8.
-      - LCB v5: 52.2 vs 46.4 vs 55.8; LCB v6: 44.6 vs 42.4 vs 47.4.
-      - GPQA: 63.4 vs 68.8 vs 68.2.
-    - Takeaway: RL meaningfully improves over SFT alone even for 24B; combining SFT + RL is best overall.
-  - Multilingual AIME’24 pass@1 (Table 4)
-    - English 73.6%; others 63.7–69.3%. Drop is 4.3–9.9 points. All reasoning and answers are in the input language by design.
-  - Cross-domain generalization (Table 5)
-    - Train on math-only → LCB v5 improves from 22.7 (base) to 38.3; train on code-only → AIME’24 improves from 32.2 to 49.7. RL signals transfer across domains.
-  - Capability preservation (Table 6)
-    - Function calling internal benchmark: 87.2 → 87.4.
-    - Instruction following (internal IFEval): 86.8 → 87.4.
-  - Open-source-traces experiment (Figure 13)
-    - First SFT on OpenThoughts + OpenR1 code traces, then RL on hardest data: RL adds >12% on AIME’25 and ~5% on LiveCodeBench over SFT, but slightly reduces GPQA Diamond (72.9% → 71.0%).
+### Evaluation Methodology
 
-- Ablations and diagnostics
-  - Batch/minibatch size (Section 6.3; Figure 6)
-    - With fixed concurrent generation `n_async`, performance is stable when `n_batch = n_minibatch` and degrades when using multiple minibatches per batch (off-policy drift increases). Final training keeps `n_async / n_batch ≤ 2` and `n_batch = n_minibatch`.
-  - Advantage normalization (Section 6.4; Figure 7)
-    - Minibatch, group, or none: little difference on eval or length growth. The system standardizes on minibatch normalization.
-  - Partial rewards for code (Section 7.4.1; Figure 11)
-    - Fraction-of-tests-passed rewards speed up training (fewer discarded samples) but yield slightly worse final code performance (−2% on LiveCodeBench) and slower length growth. The system uses binary pass/fail for stronger signals.
-  - Entropy targeting (Section 7.4.2; Figure 12)
-    - Explicit entropy bonuses behave inconsistently by dataset and can destabilize training; raising `ε_high` is a more reliable way to maintain exploration.
-  - Weight-space analysis (Section 7.1; Figures 8–9)
-    - PCA around the final checkpoint shows a dominant direction where both mean reward and output length increase until the length penalty kicks in. Raw reward scales roughly logarithmically with mean output length (Figure 9), reinforcing the finding that “more thinking” is the main driver—up to a point.
+- **Dataset.** All experiments use the MATH benchmark (Hendrycks et al., 2021), consisting of high-school competition-level math problems. The authors use the specific split from Lightman et al. (2022): 12,000 training questions and 500 test questions. The choice of MATH is deliberate (Section 4): test-time compute is expected to help most when the model already possesses the necessary knowledge and the challenge is drawing complex inferences — mathematical reasoning fits this profile because it requires multi-step logical deduction rather than novel factual recall.
 
-- Do the experiments support the claims?
-  - Yes, convincingly for the core claims:
-    - Pure RL can achieve large gains on medium-scale models (Table 2).
-    - SFT + RL is best for smaller 24B models (Table 3).
-    - Language control, tool use, and multimodal generalization are evidenced by multilingual AIME (Table 4), capability tables (Table 6), and multimodal benchmarks (Figure 10).
-  - Cautions:
-    - Results rely on verifiable tasks (math/code), potentially limiting generalization to open-ended reasoning beyond those domains.
+- **Base model(s).** All experiments use PaLM 2-S* (Codey) (Anil et al., 2023). The authors argue this model is “representative of the capabilities of many contemporary LLMs” and sits in a useful regime: non-trivial performance on MATH (roughly 10–19% pass@1 depending on the prompt and sampling configuration) but far from saturation, leaving room for test-time compute to make a difference. For the FLOPs-matched comparison, a second model with approximately 14× more parameters is used as the pretraining-scaled baseline.
+
+- **Metrics.** The primary metric throughout is **MATH test accuracy (%)** — the fraction of the 500 test questions for which the selected final answer matches the ground truth. Answers are graded using the grading function released by Lightman et al. (2022) (Appendix G). When analyzing difficulty-dependent behavior, the paper reports accuracy within each of the five difficulty quintiles separately.
+
+- **Baselines.** The paper uses several baselines: **Majority voting** (select the most common final answer among N sampled solutions, no learned verifier); **ORM best-of-N weighted** (score N solutions with an outcome reward model and apply best-of-N weighted selection); **PRM best-of-N weighted** (score N solutions with the process reward model and apply best-of-N weighted selection); and **Parallel sampling** for revisions (generate N independent solutions from the revision model and select the best via verifier or majority).
+
+- **Generation budget.** One “generation” equals one complete sampled answer from the base LLM. For beam search and best-of-N, the budget equals the number of beams or samples N. For lookahead search with k lookahead steps, the cost is N × (k+1) to account for the additional rollout computation (Section 5.3). Budgets are swept across powers of 2, typically from 2⁰ to 2⁹ (1 to 512 generations).
+
+- **Cross-validation protocol.** To avoid contaminating strategy selection with test-set performance, the authors use two-fold cross-validation within each difficulty bin on the 500-question test set. The best strategy is selected on one fold and evaluated on the other, with results averaged (Section 3.2).
+
+### Main Quantitative Results
+
+#### Search Against PRM Verifiers (Section 5)
+
+The paper’s central finding on search is that **beam search outperforms best-of-N at low budgets but degrades at high budgets due to verifier over-optimization**, and the optimal strategy depends on question difficulty (Figure 3).
+
+**Aggregate comparison (Figure 3, left).** Across all 500 test questions with a maximum budget of 256 generations: at low budgets (2–8 generations), beam search with M = 4 significantly outperforms best-of-N weighted. For example, at 4 generations beam search (M = 4) achieves roughly 27% accuracy versus roughly 16% for best-of-N weighted. At high budgets (64–256), beam search performance flattens and falls slightly below best-of-N weighted. Best-of-N weighted reaches approximately 38% at 512 generations; beam search (M = 4) plateaus around 34%. Lookahead search (both k = 1 and k = 3) generally underperforms at the same generation budget due to its higher per-step cost. Majority voting trails all verifier-based methods substantially, reaching only about 29% at 512 generations.
+
+**Difficulty-bin analysis (Figure 3, right).** The per-difficulty breakdown for beam search (M = 4) vs. best-of-N weighted reveals the core pattern the paper builds its compute-optimal strategy on:
+
+- **Bin 1 (easiest):** Beam search accuracy *decreases* from roughly 78% to 77% as budget goes from 4 to 256, while best-of-N weighted increases from 68% to 88%. This is the clearest evidence of PRM over-optimization.
+- **Bin 2:** Beam search improves modestly (roughly 14% → 32%) but best-of-N weighted improves faster (roughly 14% → 60%), maintaining a clear advantage at high budgets.
+- **Bin 3:** Beam search consistently outperforms best-of-N weighted across all budgets, reaching roughly 34% vs. 23% at 256 generations.
+- **Bin 4:** Beam search shows the strongest relative advantage, reaching roughly 17% vs. 10% for best-of-N at 256 generations.
+- **Bin 5 (hardest):** Both methods hover near 1–3% regardless of budget. No method makes meaningful progress.
+
+**Compute-optimal search (Figure 4).** By selecting the best search strategy per difficulty bin at each budget level: at 16 generations, compute-optimal (oracle bins) achieves approximately 27% accuracy, roughly matching PRM best-of-N weighted at 64 generations — a 4× compute reduction. At 256 generations, compute-optimal oracle reaches approximately 39.5%, surpassing PRM best-of-N weighted at the same budget (roughly 37%). Compute-optimal with predicted difficulty bins tracks the oracle version closely, with curves “largely overlapping” (Figure 4), and the predicted version reaching approximately 37% at 256 generations. Both compute-optimal variants consistently outperform ORM best-of-N weighted (peak ~34% at 512 generations) and majority voting (~29%).
+
+**PRM vs. ORM (Figure 14, Appendix F).** At 2048 samples, PRM best-of-N weighted achieves approximately 40% accuracy versus roughly 35% for ORM best-of-N weighted and roughly 30% for majority voting. The gap between PRM and ORM widens with the number of samples, confirming the PRM’s superior scaling properties.
+
+#### Revision Model Results (Section 6)
+
+The central finding on revisions is that **sequential revisions outperform parallel sampling, and the optimal sequential-to-parallel ratio depends on question difficulty** (Figures 6–8).
+
+**Revision model pass@1 trajectory (Figure 6, left).** Starting from approximately 18.2% pass@1 at step 1, the revision model’s per-step accuracy improves to roughly 24–25% by steps 15–20, and remains in the 23–25% range out to 64 steps. The model generalizes beyond its 4-step training horizon.
+
+**Sequential vs. parallel (Figure 6, right).** At 64 generations: sequential + best-of-N weighted reaches approximately 41.5%; parallel + best-of-N weighted reaches approximately 39%; sequential + majority reaches approximately 38%; parallel + majority reaches approximately 35%. Sequential outperforms parallel under both selection mechanisms, with the verifier-based gap (roughly 2.5 percentage points) slightly narrower than the majority-based gap (roughly 3 points).
+
+**Sequential-to-parallel ratio sweep (Figure 7, left).** For a fixed generation budget, varying the ratio reveals: at 256 generations, the optimal ratio is around 2¹ to 2³ (2:1 to 8:1 sequential-to-parallel), achieving approximately 43–44% accuracy. Fully parallel (leftmost point) yields approximately 40%. Fully sequential (rightmost point) yields approximately 42%. At lower budgets (8–32 generations), fully sequential is optimal — the curves are monotonically increasing with the sequential-to-parallel ratio.
+
+**Difficulty-dependent ratio (Figure 7, right).** At a fixed budget of 128 generations: Bin 1 shows performance essentially flat across all ratios, around 90–92%. Bin 2 shows slight advantage for higher sequential ratios, approximately 63% at fully sequential vs. 58% at fully parallel. Bin 3 shows a clear optimal ratio at moderate sequential-to-parallel values (around 2¹ to 2³), reaching approximately 42% vs. 35% at the extremes. Bin 4 follows a similar pattern, with the peak at moderate ratio achieving roughly 18% vs. 14% at fully parallel. Bin 5 shows all ratios produce roughly 2–3% accuracy — no allocation strategy helps.
+
+**Compute-optimal revisions (Figure 8).** Selecting the optimal sequential-to-parallel ratio per difficulty bin: at 64 generations, compute-optimal oracle achieves approximately 40%, matching parallel best-of-N weighted at 256 generations — a 4× improvement. At 256 generations, compute-optimal oracle reaches approximately 44%, compared to roughly 41% for best-of-N weighted and 37% for parallel-only. Compute-optimal predicted bins perform slightly below oracle bins at high budgets (approximately 41% at 256 generations) but still substantially outperform the parallel baseline. Notably, the parallel baseline appears to **plateau** around 36–37% at high budgets, while compute-optimal scaling continues to improve.
+
+#### FLOPs-Matched Comparison: Test-Time vs. Pretraining Compute (Section 7)
+
+The central finding is that **test-time compute with a smaller model can outperform a ~14× larger model on easy-to-medium problems when the inference-to-pretraining token ratio R is low, but fails on hard problems across all regimes** (Figure 9, Figure 1 bar charts).
+
+**Revisions (Figure 9, left; Figure 1, top-right bar chart).** Comparing PaLM 2-S* with compute-optimal revisions against the ~14× larger model across difficulty groupings and three values of R:
+
+| Difficulty | R ≪ 1 (0.16) | R ≈ 1 (0.79) | R ≫ 1 (22) |
+|---|---|---|---|
+| Easy (bin 1) | +11.8% | +3.5% | −11.9% |
+| Medium (bin 2–3) | +27.8% | +16.7% | +5.4% |
+| Hard (bins 4–5) | +21.6% | negative (implied) | −37.2% |
+
+At R ≪ 1, test-time compute outperforms the larger model across **all** difficulty levels. At R ≫ 1, it only remains preferable on easy questions, with hard questions showing a −37.2% relative disadvantage. (Numbers from the bar chart in Figure 1, top-right; the “easy/medium/hard” groupings in the bar chart aggregate the five difficulty bins for readability.)
+
+**PRM search (Figure 9, right; Figure 1, bottom-right bar chart).** The pattern is starker:
+
+| Difficulty | R ≪ 1 (0.16) | R ≈ 1 (0.79) | R ≫ 1 (22) |
+|---|---|---|---|
+| Easy | +19.1% | +2.2% | +2.0% |
+| Medium | 0.0% | −35.3% | −30.8% |
+| Hard | −3.6% | −35.3% | −52.9% |
+
+PRM search shows weaker benefits than revisions for the FLOPs-matched comparison, with substantial disadvantages on medium and hard questions even at moderate R values. On easy questions, test-time compute remains preferable across all R regimes, though the margin narrows significantly.
+
+**Figure 9 detail.** The line plots show accuracy per difficulty bin as test-time compute scales. The 14× larger model’s greedy performance (stars) is placed at three x-axis positions corresponding to the three R values. Where the compute-optimal scaling line is above the star, test-time compute wins. On bin 1 (purple, topmost line), the scaling line is above all three stars for revisions. On bin 5 (blue, bottommost line), the line is below all three stars and essentially flat near 0–5%, confirming that no amount of test-time compute helps on the hardest problems.
+
+### Ablation Studies and Robustness Checks
+
+- **PRM aggregation strategy (Appendix E, Figure 13):** Comparing “min,” “prod,” and “last” step-wise aggregation, “last” achieves roughly 37% at 256 samples, “min” achieves roughly 35%, “prod” achieves roughly 27%, and ORM achieves roughly 34%. The “last” aggregation’s superiority is notable because it effectively reduces the PRM to ORM-like behavior at aggregation time, yet the PRM still outperforms a separately trained ORM — evidence that step-level PRM training provides beneficial representation learning.
+
+- **PRM vs. ORM (Appendix F, Figure 14):** The PRM consistently outperforms the ORM, with the gap widening at higher sample counts. At 2048 samples, PRM best-of-N weighted reaches approximately 40% vs. ORM’s 35%.
+
+- **Revision model verifier choice (Appendix J, Figure 15a):** The base-LM PRM underperforms the revision-specific ORM when scoring revision model outputs, with sequential + base-LM PRM achieving roughly 40% at 64 generations vs. sequential + revision ORM at roughly 42%. This confirms distribution shift as a practical concern — verifiers trained on base model outputs don’t transfer perfectly to revision model outputs.
+
+- **Revision history in verifier context (Appendix J, Figure 15b):** Including previous revisions in the ORM’s context provides a small improvement over the no-history ablation (approximately 1–2 percentage points at 64 generations), but both variants outperform the parallel baseline, confirming the sequential sampling benefit is not solely attributable to the verifier seeing more context.
+
+- **Oracle vs. predicted difficulty bins (Figures 4, 8, and Appendix C, Figures 11–12):** Both oracle and predicted bins yield qualitatively similar trends across difficulty levels. Predicted bins show slightly lower performance at high budgets in the revision setting (roughly 41% vs. 44% at 256 generations in Figure 8) but essentially identical performance in the search setting (Figure 4). This is the critical robustness check: the compute-optimal strategy works without ground-truth labels, though with some degradation at very high revision budgets.
+
+- **Majority voting for revisions (Appendix B, Figure 10):** The sequential-to-parallel ratio trends observed with verifier-based selection are replicated with majority voting: easy questions are insensitive to ratio, hard questions show an optimal intermediate ratio, and fully sequential marginally outperforms fully parallel in aggregate.
+
+- **ReST^EM revision model (Appendix K, Figure 16):** An attempt to further optimize the revision model using ReST^EM (Singh et al., 2024) backfires: additional sequential revisions **substantially hurt** performance with this model. At 256 generations, fully sequential performance drops to approximately 33.5% compared to roughly 38.5% at the optimal ratio. The authors hypothesize that the on-policy data collection exacerbates spurious correlations in revision data, causing the model to fail to learn the revision task properly. This is a notable negative result highlighting the sensitivity of revision training to data generation procedure.
+
+### Critical Assessment
+
+**Claim 1: Compute-optimal scaling improves efficiency by more than 4× over best-of-N.** The paper provides consistent evidence for this claim in the moderate-budget regime. For search (Figure 4), 16 generations of compute-optimal strategy matches PRM best-of-N weighted at 64 generations. For revisions (Figure 8), 64 generations of compute-optimal matches parallel best-of-N weighted at 256 generations. However, several caveats apply:
+
+First, the 4× figure refers to achieving equivalent accuracy with 4× fewer generations *after* difficulty is already known. The cost of difficulty estimation — 2048 samples per question plus PRM scoring — is not amortized into this calculation (the paper acknowledges this explicitly in Section 3.2). In a deployment scenario where difficulty must be estimated for each new question, the total cost (estimation + strategy execution) would be dominated by estimation for all but the highest-budget problems, potentially eliminating or even reversing the efficiency gain. The fact that predicted difficulty bins work nearly as well as oracle bins (Figures 4 and 8) addresses the ground-truth-dependency concern but not the computational cost concern, since the predicted approach still requires generating 2048 samples.
+
+Second, the 4× figure is most reliable at lower-to-moderate budgets (16–64 generations). At the highest budgets (256–512), the gap between compute-optimal and best-of-N narrows, particularly with predicted difficulty bins (Figure 8: predicted bins reach ~41% vs. best-of-N at ~41% at 256 generations — no gap). This suggests the efficiency gain may be smaller or nonexistent in the very-high-budget regime where practitioners might most want to apply it.
+
+Third, the compute-optimal policy was selected via two-fold cross-validation on the 500-question test set, with each quintile containing ~100 questions and each validation fold ~50 questions. Strategy selection on 50 questions per bin is a small sample, and the selected strategies may not be robust. The paper does not report confidence intervals on the compute-optimal scaling curves, so the statistical reliability of the 4× figure cannot be assessed from the reported data.
+
+**Claim 2: Test-time compute with a smaller model can outperform a ~14× larger model.** This claim is supported but with sharp boundary conditions that the paper is admirably transparent about. The claim holds convincingly for easy-to-medium problems at low inference-to-pretraining ratios (R ≪ 1): the smaller model with compute-optimal test-time compute shows relative improvements of +11.8% to +27.8% over the larger model with greedy decoding (Figure 1, Figure 9). At R ≈ 1, the advantage shrinks substantially but remains positive for easy problems with both search and revisions. At R ≫ 1, the advantage reverses for medium and hard problems across both methods, and holds only for easy problems.
+
+The key weakness in this comparison is the strength of the pretraining baseline. The 14× larger model uses greedy decoding only — no majority voting, no best-of-N, no test-time compute augmentation of any kind. This is a deliberately weak baseline that makes the comparison favorable to test-time compute. The paper acknowledges that the larger model was trained by scaling parameters only (not parameters and data jointly, as Chinchilla-optimal scaling would prescribe), which likely makes it weaker than a compute-optimally trained model of equivalent FLOPs. A fairer comparison would give both the small and large models some test-time compute budget, or would ensure the large model was trained under compute-optimal scaling laws.
+
+Additionally, the comparison is on a single model family (PaLM 2) and a single benchmark (MATH). The 14× parameter scaling factor is specific to this comparison and may not generalize — the relationship between model size, test-time compute, and problem difficulty likely depends on the base model’s architecture, pretraining data, and inherent reasoning capabilities. A model family with different scaling properties might show different crossover points.
+
+**Claim 3: Efficacy depends critically on prompt difficulty.** This is the most robust and well-supported claim in the paper. The difficulty-bin analyses show qualitatively different — and sometimes opposite — effects of the same strategy at different difficulty levels. Beam search *hurts* easy problems (Figure 3, right, bin 1 accuracy decreases with budget) while *helping* medium problems (bins 3–4). Sequential revisions dominate on easy problems while balanced ratios dominate on hard problems (Figure 7, right). These non-monotonic patterns are replicated across search methods (Figure 3), revision strategies (Figure 7), and selection mechanisms (majority voting in Appendix B, Figure 10). The computed-optimal gains over uniform strategies are substantial (4× efficiency at moderate budgets) and consistent across oracle and predicted difficulty estimation.
+
+The strength of this finding is somewhat tempered by the coarse difficulty discretization. Five quintiles is a reasonable choice for analysis but within-bin heterogeneity may mask more fine-grained difficulty-dependent effects. A question at the top of bin 3 and one at the bottom of bin 3 receive the identical strategy under the current policy, even though the optimal strategy likely varies continuously with difficulty. The paper does not explore sensitivity to the number of bins or continuous difficulty-conditioned policies, so the 4× figure should be understood as a lower bound on what a more finely-tuned allocation could achieve — or an upper bound on what the coarse binning can capture.
+
+**Missing experiments that would strengthen the paper:**
+
+- **Difficulty estimation cost amortization:** An experiment showing how the 4× efficiency gain degrades when difficulty estimation cost is included would directly address the largest practical concern about the approach. Even a simple analysis — “if we spend X generations estimating difficulty and Y generations on the strategy, the crossover point where compute-optimal beats best-of-N occurs at budget Z” — would significantly strengthen the practical case.
+
+- **Larger model with test-time compute:** The FLOPs-matched comparison gives the smaller model test-time compute but not the larger model. Comparing compute-optimal small model vs. best-of-N large model (even at a modest budget like best-of-8) would test whether the advantage persists when both sides use test-time compute.
+
+- **Cross-model replication:** All results are on PaLM 2-S*. Replicating key findings (difficulty-dependent beam search degradation, optimal sequential-to-parallel ratios) on at least one other model family would address the concern that these patterns are specific to PaLM 2’s output distribution or calibration properties.
+
+- **Confidence intervals on compute-optimal curves:** The paper reports point estimates for accuracy but no measure of variance. With ~50 questions per validation fold per bin, the uncertainty around the compute-optimal policy selection could be substantial. Reporting bootstrapped confidence intervals would allow readers to assess whether the observed differences are statistically meaningful.
+
+- **Ablation on number of difficulty bins:** Testing with 3, 5, 7, and 10 bins would reveal whether the 5-quintile discretization is near-optimal or whether finer binning yields further gains — at the cost of more data requirements for policy selection. This directly addresses the “difficulty estimation cost vs. allocation precision” tradeoff the paper identifies as a key open problem.
+
+**What the experiments demonstrate versus what they do not.** The experiments convincingly demonstrate that difficulty-conditioned strategy selection outperforms uniform allocation under the specific conditions tested: PaLM 2-S* on MATH, with difficulty estimated offline, strategy selected via cross-validation on the test set. They do *not* demonstrate that this approach works in a deployment setting where difficulty must be estimated online for novel questions, where the total budget must include estimation cost, or where the question distribution differs from MATH. They do *not* demonstrate that the specific difficulty-dependent patterns (beam search over-optimization on easy problems, optimal revision ratios per bin) generalize to other model families or reasoning domains. And they do *not* demonstrate that the approach scales to harder problems — bin 5 remains stubbornly near 0–5% accuracy across all methods and budgets, which is both a finding and a limitation: the paper provides no path forward for problems genuinely outside the base model’s capability.
 
 ## 6. Limitations and Trade-offs
-- Scope of rewards and data
-  - RL uses verifiable tasks with rule-based or test-based graders (Section 2.2). This excludes proofs, multi-part reasoning, and many real-world tasks lacking programmatic verification. The approach may not directly optimize skills needed for open-ended dialogue or creativity.
-- Entropy/exploration control without KL
-  - Removing the KL penalty simplifies and speeds training, but increases the risk of distribution drift. The system counters this with Clip-Higher and careful `ε_high` tuning (Section 2.1). Still, the absence of an explicit reference constraint can lead to harder-to-predict behavior on out-of-domain tasks.
-- Asynchrony and off-policy drift
-  - Mid-generation weight updates create slight off-policy mixtures. The system reports good behavior empirically (Section 3), but robustness depends on batching ratios (`n_async / n_batch`) and clip settings (Section 6.3).
-- Memory vs. length vs. batch size
-  - Longer contexts increase KV‑cache memory, forcing smaller batches later in training (Section 5.2). This trades statistical efficiency for length growth and may limit scaling on smaller clusters.
-- Multilingual breadth
-  - Language consistency rewards cover six non-English languages, applied to 10% of problems (Section 2.2.4). Performance in languages outside this set is not quantitatively evaluated.
-- Mixed outcomes in supplemental experiments
-  - While RL after SFT on open-source traces improves math/code, it slightly reduces GPQA Diamond (Figure 13), suggesting possible trade-offs in knowledge-intensive QA.
+
+### The "Goldilocks" Difficulty Constraint: Pure RL Requires Problems the Model Sometimes Solves, Sometimes Fails
+
+The paper's entire pure-RL training paradigm operates within a narrow difficulty band: problems must be hard enough that not all responses are correct (otherwise groups have zero advantage and get filtered out by Modification 5), but easy enough that at least some responses are correct (otherwise all groups are all-incorrect, also zero advantage, also filtered out). The consequence of this constraint emerges starkly in the data filtering pipeline (Section 4.1): of an initial 699,000 math problems, **only 38,000 survive** — a 95% rejection rate. The paper is transparent about this:
+
+> "We implemented a two-stage filtering pipeline to curate a dataset of problems at a 'goldilocks' difficulty level, neither too easy nor too hard for the model to learn from."
+
+The practical consequence is that pure-RL training cannot improve the model on the hardest problems it faces. If a problem is genuinely outside the base model's reach — if pass@1 is essentially zero — then no group will ever contain a correct response, every group will be filtered out, and the model receives zero learning signal on that problem. The paper demonstrates this directly in its evaluation results: the hardest AIME problems (difficulty bin 5 in the prior summary's analogous analysis) show minimal improvement, and the paper's own data filtering explicitly removes "unsolved problems" that the RL-trained grading model cannot solve after 16 attempts. This means pure RL **cannot create capability from nothing** — it can only amplify existing capability. On problems where the base model has zero probability of success, RL provides zero benefit.
+
+The paper provides direct evidence for this limitation through its filtering methodology. The two-stage difficulty filtering (Section 4.1) removes problems that are "either never solved or solved with a high success rate" by a 16-sample pass from Mistral Large 2 (Stage 1) and again by the RL-trained 24B grader (Stage 2). This is not just a data curation choice — it is a **necessary condition for the training to work at all**. Without filtering, groups on impossibly-hard problems would be uniformly incorrect, producing no gradient signal. The paper does not present an ablation showing what happens when impossibly-hard problems are included (likely training would be dramatically slower or unstable, as most groups would be filtered and the effective batch size would be much smaller than nominal), but the logic follows directly from the non-diverse group filtering constraint described in Section 2.1.
+
+The paper partially acknowledges this limitation through its discussion of training stages (Section 5.2): "As the model performance increases, we increase the difficulty of the data. Harder data splits are constructed by including more complicated data (which were filtered out in earlier stages)." This curriculum approach means the model can progressively tackle harder problems as it improves, but it fundamentally cannot exceed the ceiling set by the base model's initial capability on any given problem class. For problems where even the final Magistral Medium model has near-zero pass@1, no amount of RL will help. The paper does not characterize what fraction of real-world reasoning tasks fall into this "impossibly hard" category relative to current base models.
+
+### Asynchronous Infrastructure Introduces an Unbounded Off-Policy Gap With No Theoretical Guarantees
+
+The paper's distributed training architecture (Section 3) makes a deliberate tradeoff: it prioritizes throughput and GPU utilization over strict on-policy-ness, and relies on empirical stability rather than theoretical correctness to justify this choice. The key mechanism is that Generators receive updated weights mid-generation without discarding their key-value caches:
+
+> "In the generators, weights are replaced mid-generation, which means that in-flight generations continue with a slightly outdated key-value cache, as we do not refresh the cache."
+
+The consequence is that a single response may be generated under multiple different policies: early tokens under policy `π_old`, middle tokens under `π_new`, later tokens under `π_newer`. The importance sampling ratio in the GRPO loss — which compares the current training policy to the *generating* policy — is computed token-by-token against whichever policy version generated that token. But the paper's justification for this is purely empirical:
+
+> "For performance, we find that recomputing the key-value cache is not necessary, potentially due to off-policy corrections inherent to the loss function."
+
+The word "potentially" here is doing significant work. The PPO clipping mechanism provides *some* robustness to off-policy data, but it was designed for a setting where the generating policy is a single snapshot (`π_old`), not a heterogeneous mix of policies across tokens within the same sequence. There is no theoretical guarantee that GRPO with mixed-policy sequences and stale KV-caches converges to the same optimum as synchronous, fully-on-policy training. The paper's ablation on batch size, minibatch size, and asynchrony (Section 6.3) provides empirical evidence that training remains stable and effective when `n_async / n_batch ≤ 2` and `n_batch = n_minibatch`, but this is a narrow empirical validation, not a proof of correctness. The finding that performance degrades when `n_minibatch` is reduced relative to `n_batch` (Figure 6b) is consistent with off-policy degradation but doesn't establish the mechanism.
+
+The practical risk is that the asynchronous infrastructure works for the specific model scales, hardware configurations, and hyperparameter regimes tested in the paper, but may fail silently in different settings — producing apparently stable training that converges to a worse optimum than synchronous training would reach. The paper provides no comparison between its asynchronous system and an equivalent synchronous baseline (which would be prohibitively expensive at this scale, but would establish the cost of asynchrony in terms of final model quality). The blocking queue mechanism described in Section 3 provides some control over off-policy degree, but it's a heuristic: the queue size limit "controls off-policy degree" without specifying what degree is acceptable or how to set the limit for new configurations.
+
+The paper does not attempt to mitigate this limitation through theoretical analysis or through ablations that systematically vary the degree of asynchrony. The batch size ablation in Section 6.3 is the closest the paper comes to characterizing the off-policy effect, but it only varies `n_batch` and `n_minibatch` at fixed `n_async`, rather than directly measuring the impact of staleness (e.g., by tracking the average number of weight updates between when a token is generated and when it's used for training). For practitioners replicating this system, there is no principled way to determine whether their configuration will suffer from off-policy degradation beyond testing empirically — which is expensive at this scale.
+
+### The "Multimodal Free Lunch" Is Demonstrated on Only Three Benchmarks and the Mechanism Is Unexplored
+
+The paper's claim that text-only RL preserves and improves multimodal reasoning (Section 7.2) is among its most surprising and potentially impactful findings, but the evidence supporting it is thin relative to the strength of the claim. The evaluation covers only three benchmarks: MathVista, MMMU, and MMMU-Pro. The observed gains are substantial (+12% on MMMU-Pro-Vision, +5% on MMMU, +4.4% on MMMU-Pro-Standard), and the paper provides qualitative examples (Figures 14, 15, 16) showing that the model does indeed produce longer, more structured chains-of-thought on multimodal problems. However, the paper does not establish:
+
+- **Whether the improvement is uniform across visual reasoning types.** The paper notes that "the most significant improvements are seen in scientific questions that require textual reasoning" but doesn't quantify this. If the gains are concentrated in problems where the visual input is minimally informative (e.g., a diagram that simply illustrates text content), and absent in problems requiring genuine visual-spatial reasoning, the claim of "multimodal reasoning improvement" would be overstated.
+
+- **Whether the improvement is sustained or partially illusory.** The paper evaluates zero-shot on the benchmarks. It's possible that the model has learned to produce longer, more confident-sounding chains-of-thought that don't actually improve visual understanding — a form of reward hacking where extended textual reasoning creates the appearance of improved multimodal reasoning without genuine visual grounding. The paper provides no controlled experiment (e.g., comparing performance when the visual input is removed vs. retained) to check whether the chain-of-thought is actually using the visual information.
+
+- **Whether the improvement would persist with further RL training.** The paper evaluates a single checkpoint after the full RL training run. It's possible that multimodal capability initially improves (as the language backbone strengthens) but would eventually degrade (as the model overfits to text-only patterns) if training continued. The paper provides no learning curves showing multimodal performance throughout training, only a before/after comparison.
+
+The paper acknowledges the limitation implicitly through its qualitative analysis: "while the most significant improvements are seen in scientific questions that require textual reasoning, we observe that the model transfers its extended thinking process across all types of questions." This is a carefully hedged claim — it doesn't assert that visual reasoning per se improves, only that the "extended thinking process" transfers. But the section title ("Eating the multimodal free lunch") and the broader framing suggest a stronger claim that the paper's evidence doesn't fully substantiate.
+
+The mitigation is essentially nonexistent — this is presented as a discovered phenomenon, not an engineered capability. The paper doesn't propose mechanisms, doesn't test boundary conditions, and doesn't discuss what kinds of multimodal tasks might *not* benefit. The robustness checks that would strengthen this finding (learning curves, visual-input ablation, per-category performance breakdowns) are absent. For practitioners considering whether to adopt text-only RL for multimodal applications, the paper provides suggestive evidence but not a reliable characterization of the risks.
+
+### Language Consistency Reward Is Tested on Only Six Languages and the Multilingual Evaluation Covers Only AIME
+
+The paper's language consistency mechanism (Section 2.2.4) — translating 10% of training problems into six languages and applying a fastText classifier — is elegantly simple and demonstrably effective at preventing the language mixing that plagued DeepSeek-R1-Zero. However, the evaluation of its effectiveness is narrow relative to the generality of the claim that "the model could successfully generate chains of thought in arbitrary languages" (Section 2.2.4, emphasis added).
+
+The multilingual evaluation (Section 5.4, Table 4) tests only AIME 2024 translated into French, Spanish, German, Italian, Russian, and Chinese. This establishes that the model can reason in these specific languages on AIME problems, but it doesn't test:
+
+- **Languages outside the set of six that received translated training data.** The paper claims generalization to "arbitrary languages" but provides no evidence for languages that were not in the 10% translated subset. A fastText classifier can recognize hundreds of languages — does the model successfully produce coherent chains-of-thought in, say, Japanese, Arabic, or Hindi, which have different scripts and grammatical structures than the six Indo-European + Chinese training languages?
+
+- **Code problems in non-English languages.** The language consistency reward applies to both math and code, but the multilingual evaluation is math-only. Do non-English code prompts produce chains-of-thought in the user's language while still generating correct code (which is inherently language-agnostic, being in Python or C++)? This is a potentially tricky integration — the thinking should be in the user's language, but the code block is language-neutral, and the fastText classifier strips code blocks before classification (Section 2.2.4), so the reward might not distinguish between "thinking in French, code in C++" and "thinking in English, code in C++" if the code block is the only part that would be classified as English.
+
+- **The performance gap between English and non-English reasoning.** Table 4 shows Magistral Medium's AIME-24 pass@1 drops from 73.6% (English) to 63.7–69.3% across the six target languages, a decline of 4.3–9.9 percentage points. The paper notes this "corresponds to 1–3 questions on the actual AIME test" and speculates it's "possibly because we constrained the language of reasoning." But this is a significant relative degradation (up to 13.5% relative reduction from English to Chinese), and the paper doesn't investigate whether this gap narrows with further training, whether it's due to the model having less effective reasoning patterns in those languages, or whether it reflects a fundamental tradeoff between language consistency and reasoning quality.
+
+The paper partially acknowledges this limitation: "This degradation is roughly similar to that of the base model." But this comparison doesn't indicate whether RL *improved* the gap or maintained it — the base model's multilingual AIME performance isn't reported in Table 4, so the reader can't verify the claim. If the base model had a 5-point gap and the Magistral model has a 9-point gap, RL has widened the multilingual disparity even as it improved absolute performance in all languages. The paper doesn't provide this comparison, making it impossible to assess whether the language consistency reward comes at a cost to multilingual reasoning quality beyond what the base model already exhibits.
+
+### Hard Problems Remain Fundamentally Unsolved — and This Is a Feature of the Method, Not a Bug to Be Fixed
+
+The paper's data filtering and training methodology explicitly excludes problems that are too hard for the current model to solve any significant fraction of the time. This is not an oversight — it's a direct consequence of the GRPO algorithm's reliance on within-group reward diversity to produce a learning signal (Modification 5, Section 2.1). The paper is transparent about this through its difficulty filtering criteria: problems are removed if the grading model scores them as "never solved" (Section 4.1). But the implication for the final model's capability profile is that Magistral Medium and Magistral Small are trained on a distribution that systematically excludes the hardest problems in any given domain.
+
+The consequence is visible in the evaluation results. While the paper doesn't report per-difficulty breakdowns on evaluation benchmarks (unlike the prior summary's paper, which provided quintile-by-quintile analysis), the overall pattern is suggestive: **the biggest absolute improvements from RL come on problems the base model could already sometimes solve, not on problems it consistently failed**. AIME-24 improves from 26.8% to 73.6% (Table 2) — but the base model's 26.8% means it was already capable of solving roughly 1 in 4 AIME problems. The improvement is dramatic, but it's on problems within the base model's latent capability range. The paper doesn't report how Magistral Medium performs on problems that Mistral Medium 3 never solved, because those problems were never included in RL training.
+
+This creates a fundamental **capability ceiling** that is inherent to pure-RL training: the model can only learn to solve problems it sometimes solves by chance. If the model's base capability on a problem class is zero (pass@1 = 0%), RL never produces a correct trajectory to reinforce, and the model never improves on that class. This is not a bug in the implementation — it's a mathematical consequence of the training objective. The paper doesn't present this as a limitation to be overcome but rather as a design principle (the "goldilocks" filtering), but it has direct practical implications: Magistral models will exhibit the strongest performance on problems of moderate difficulty relative to the base model, and may perform no better than the base model on the hardest problems.
+
+The paper's discussion of future work (Section 9) gestures toward addressing this: "how much gain can be unlocked by bootstrapping a model on its own reasoning traces." This suggests an iterative approach where a model trained on moderate-difficulty problems can then be used to generate reasoning traces for harder problems, which can then be used for SFT or further RL — essentially, using the RL-improved model as a teacher for problems it couldn't originally solve. But this is presented as future work, not as an existing capability. The current Magistral models, trained with the described pipeline, are bounded by the difficulty of the training data distribution, and the data distribution is bounded by the base model's initial capability to solve problems at least occasionally.
+
+The paper does not provide an upper-bound analysis: what fraction of MATH problems, or AIME problems, or LiveCodeBench problems are *fundamentally* out of reach for a given base model? What would the maximum achievable accuracy be if all problems within the base model's latent capability were learned perfectly? Without such an analysis, practitioners cannot assess whether the 73.6% AIME-24 achieved by Magistral Medium is near the ceiling for this approach or whether further compute would yield additional gains. The paper's emphasis on "nearly 50% boost" in headline metrics implicitly frames the improvement as dramatic but unbounded — the reality is that there is a hard ceiling determined by the base model's initial pass@1 distribution, and the paper doesn't characterize where that ceiling lies.
 
 ## 7. Implications and Future Directions
 - Field impact

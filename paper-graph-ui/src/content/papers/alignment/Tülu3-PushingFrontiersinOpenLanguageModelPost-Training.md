@@ -8,160 +8,930 @@ Tülu 3 introduces a fully open, state-of-the-art framework for post-training la
 
 ---
 
-## 1. Executive Summary (2-3 sentences)
-Tülu 3 is a fully open, state‑of‑the‑art post‑training recipe and model family (8B, 70B, 405B parameters) that combines supervised finetuning (SFT), Direct Preference Optimization (DPO), and a new reinforcement‑learning stage called Reinforcement Learning with Verifiable Rewards (`RLVR`). It closes much of the gap between open and closed instruction‑tuned models by releasing all data, code, infrastructure, and a rigorous evaluation suite with decontamination, and it achieves best‑in‑class open‑weight performance while rivaling small closed models (see Table 2, Table 4).
+## 1. Executive Summary
+
+This paper introduces **Tülu 3**, a family of fully open-source post-trained language models spanning 8B to 405B parameters built on Llama 3.1 base models, alongside a complete release of training data, code, evaluation frameworks, and detailed recipes. The work establishes a four-stage post-training pipeline—supervised finetuning (SFT), Direct Preference Optimization (DPO), and a novel method called **Reinforcement Learning with Verifiable Rewards (RLVR)** (replacing the learned reward model with a binary verification function for tasks with ground-truth answers such as math)—accompanied by a principled evaluation framework with separate development and held-out unseen benchmarks. Tülu 3 70B surpasses Llama 3.1 70B Instruct, Qwen 2.5 72B Instruct, GPT-4o-mini, and Claude 3.5-Haiku on average across a suite of core skills, while Tülu 3 405B achieves competitive or superior performance to DeepSeek v3 and GPT-4o, establishing that open post-training recipes can match closed proprietary models when reinforced by RLVR on verifiable outcomes and on-policy preference data scaling—with gains concentrated in math, instruction following, and safety, and with the boundary condition that targeted synthetic data and aggressive decontamination against evaluation benchmarks are necessary to prevent overfitting.
 
 ## 2. Context and Motivation
-- Problem addressed
-  - Open‑weight language models lack transparent, modern post‑training recipes (data + code + evaluation), leaving them behind closed models that use multi‑round instruction tuning, preference learning, and RL (Section 1; Section 2; Table 1).
-  - The most important part of post‑training—data mixtures and recipes—is often undisclosed; open data also frequently contaminates evaluations (i.e., overlaps with test questions), leading to inflated results (Section 3.2; Table 37).
-- Why it matters
-  - Practical impact: reproducible, high‑performing open models enable research, productization, and safety auditing without vendor lock‑in.
-  - Scientific impact: standardized, decontaminated evaluations and full recipes allow controlled study of how SFT, preference tuning, and RL interact.
-- Prior approaches and gaps
-  - Open recipes like Tülu 2 and Zephyr‑β showed strong chat quality but lagged on core skills such as math (MATH, GSM8K) and precise instruction following (IFEval) (Section 2; Table 3).
-  - Closed systems (e.g., Llama 3.1 Instruct, GPT‑4o, Claude 3.5) use large‑scale data mixtures and multi‑stage training, but with limited transparency (Section 2; Table 2).
-- This paper’s position
-  - A comprehensive, open blueprint: new datasets (including synthetic, persona‑driven prompts), a decontaminated evaluation regime (Tülu 3 Eval + OLMES toolkit), an expanded preference pipeline with on‑policy data, and a new RL stage (`RLVR`) with verifiable rewards (Figure 1; Sections 3–7). Models, datasets, and code are released (Table 1).
+
+### The Core Problem: Open Post-Training Recipes Lag Far Behind Proprietary Ones
+
+Post-training—the collective term for instruction tuning, reinforcement learning from human feedback (RLHF), and other finetuning techniques applied after pretraining—has become essential for building usable language models. Without it, even powerful base models cannot reliably follow instructions, maintain conversation coherence, refuse harmful requests, or perform specialized tasks like mathematical reasoning with proper formatting. Yet the most successful post-trained models (GPT-4, Claude, Gemini) reveal almost nothing about *how* they were built: what data was used, in what proportions, with what algorithms, at what compute scale, and with what infrastructure.
+
+This opacity creates a fundamental problem for the research community: **if post-training is the step that transforms a raw pretrained model into a useful assistant, and the details of that step are secret, then the science of building capable language models is partially closed.** The field cannot systematically study what works, what doesn't, and why—because the artifacts needed for such study (training data, intermediate checkpoints, evaluation methodology, ablation results) are absent from the public record.
+
+This gap is not just academic. It has practical consequences:
+
+- **Reproducibility crisis in post-training research**: When a new technique (e.g., a DPO variant, a novel reward modeling approach) is proposed, researchers test it against open base models but cannot compare against the full proprietary pipeline. The baseline might be a simpler open recipe that is already known to underperform—so reported gains may not translate to state-of-the-art regimes.
+- **Barrier to entry for domain-specific adaptation**: Organizations wanting to build specialized assistants (medical, legal, educational) on open base models need guidance on data mixtures, training stages, and hyperparameters. Without transparent recipes, they must rediscover these through expensive trial and error.
+- **Safety and alignment research depends on understanding the pipeline**: If we don't know how a model's refusal behavior, honesty, or instruction-following were shaped during post-training, it's harder to diagnose failures or propose improvements. The entire alignment research program benefits from scrutinizing the full training stack.
+- **Economic concentration of capability**: When only a handful of well-resourced labs can execute effective post-training, the benefits of language model technology concentrate. Open recipes lower this barrier.
+
+The paper frames this starkly in its introduction (Section 1):
+
+> "Post-training — the collection of techniques including instruction tuning, reinforcement learning from human feedback, and other types of finetuning — has become a crucial step in building frontier language models, yet developments to these techniques are frequently not accompanied by open resources and recipes."
+
+The emphasis on **recipes** (plural) rather than just models or datasets is deliberate. A recipe includes not just what data to use, but *how much*, *in what order*, *with what algorithms and hyperparameters*, *evaluated how*, and *against what contamination safeguards*. Each of these elements represents a design decision that compound across stages—and the paper's central argument is that providing the full recipe is as important as providing the final model weights.
+
+### Conflicting Prior Evidence and Why Existing Open Recipes Stagnated
+
+The paper is motivated not just by the absence of open recipes, but by the fact that **existing open recipes had demonstrably plateaued on several critical benchmarks** despite being more accessible than ever.
+
+**The Tülu 2 baseline and its limitations.** The authors' own prior work, Tülu 2 (Ivison et al., 2023), represented a strong open post-training effort: it combined publicly available instruction data with a DPO-based preference tuning stage using UltraFeedback (Cui et al., 2023), producing models that performed well on chat evaluations like AlpacaEval. However, the authors explicitly note in Section 2 that Tülu 2 and contemporaries like Zephyr-β (Tunstall et al., 2023) still lagged behind on core capabilities:
+
+> "still lag behind in core capabilities such as MATH (Hendrycks et al., 2021), IFEval (Zhou et al., 2023) and GSM8K (Cobbe et al., 2021)"
+
+This is a specific, measurable gap. It's not that open models were *generally* worse—they were worse in *specific skill categories* that matter for real-world utility: mathematical reasoning, precise instruction following, and grade-school math problem solving. A recipe that excels at chat but fails at MATH is not a general-purpose post-training solution.
+
+**The evolving complexity of proprietary recipes created a moving target.** While open recipes remained relatively simple (single-round SFT followed by single-round DPO on off-the-shelf preference data), proprietary pipelines had grown substantially more sophisticated. The paper surveys this evolution in Section 9.1, noting that modern proprietary post-training typically involves:
+
+- **Multiple rounds of training** with varied objectives, not just one SFT + one preference stage
+- **Millions of datapoints** across both instruction-tuning and preference stages
+- **Synthetic data generation** using the previous model checkpoint to create training data for the next round (rejection sampling, on-policy generation)
+- **Diverse preference signals** from both human annotators and AI judges
+- **Step-wise reward modeling** for multi-step reasoning tasks (Lightman et al., 2023)
+
+The gap, in other words, was not just about having *some* post-training—it was about the sophistication of the *multi-stage optimization process*. The paper cites Llama 3.1 (Dubey et al., 2024) as a representative example: "trained on generated outputs from the previous model for multiple rounds with extensive human feedback data, and used strong models to write synthetic instructions." No open recipe had attempted anything at this level of complexity and transparency simultaneously.
+
+**The "no open recipe in the top 50" observation.** The paper makes a striking empirical observation in Section 2.2: as of November 2024, "no model in the top 50" of LMSYS's ChatBotArena had released its post-training data (Chiang et al., 2024). This is not a statement about model weights—many top models are open-weight—but about **training data transparency**. It means that even when model weights are available, the community cannot study *why* those models behave as they do, because the data that shaped them is unknown. This distinction between open-weight and open-recipe is central to the paper's motivation.
+
+### Where Existing Approaches Fall Short—Specifically
+
+The paper identifies concrete limitations in prior open post-training efforts along multiple axes, not as a general critique but as a diagnostic that motivates each component of the Tülu 3 pipeline:
+
+**Data limitations.** Open post-training datasets suffer from several problems the paper addresses head-on:
+
+- **Contamination with evaluation benchmarks**: Many popular open datasets (ShareGPT, WildChat, LMSys Chat, Evol CodeAlpaca) contain prompts or responses that overlap with standard evaluation sets like HumanEval, MATH, GSM8K, MMLU, and TruthfulQA. The paper's decontamination analysis (Section 3.2, Table 37) reveals this is pervasive: for example, 70.7% of HumanEval instances overlap with Evol CodeAlpaca, 46.5% of AlpacaEval prompts appear in LMSys Chat, and 30.7% of MATH problems are present in Daring-Anteater. Models trained on contaminated data appear to perform better than they actually do, creating an illusion of capability that doesn't generalize. Prior open recipes largely ignored this.
+
+- **Provenance and licensing problems**: The widely-used ShareGPT dataset contains user-shared conversations without clear consent for model training. The paper explicitly excludes it, along with any datasets that incorporate ShareGPT-derived prompts (such as Helpsteer2), on legal and ethical grounds. This creates a tension: many high-quality preference datasets depend on ShareGPT prompts, so excluding them requires building alternative data sources from scratch.
+
+- **Lack of targeted skill coverage**: General instruction-tuning datasets (like Open Assistant or FLAN v2) provide broad coverage but don't specifically target skills like mathematical reasoning or precise instruction following at the level needed to close the gap with proprietary models. The paper notes that without dedicated math prompts and completions, models trained on general data struggle on MATH and GSM8K.
+
+**Algorithmic and stage limitations.** Prior open recipes typically implemented a two-stage pipeline: SFT followed by DPO on the UltraFeedback dataset. This has specific shortcomings:
+
+- **Off-policy preference data**: UltraFeedback's completions were generated by a pool of models that may be weaker or differently-distributed than the model being trained. The paper shows (Section 5.3, Figure 11) that incorporating on-policy data (completions from the model being trained) improves downstream DPO performance compared to purely off-policy data. Prior recipes didn't systematically generate on-policy preference data at scale.
+
+- **No reinforcement learning stage**: While proprietary pipelines use RL-based methods (PPO with learned reward models), open recipes had largely converged on DPO due to its simplicity—it doesn't require training a separate reward model, generating online rollouts, or managing the infrastructure complexity of RL. But by avoiding RL entirely, these recipes left potential gains on the table. The paper specifically investigates whether adding an RL stage (RLVR) provides improvements beyond what DPO alone achieves.
+
+- **Limited data scaling**: The UltraFeedback dataset, while high-quality, contains only ~64K preference pairs. The paper's scaling analysis (Section 5.3, Figure 8) shows that increasing the number of *unique prompts* in preference data continues to improve downstream performance, while duplicating prompts with different completions does not—suggesting that prior recipes were data-limited even on the preference tuning side.
+
+**Evaluation limitations.** Prior open post-training efforts often lacked principled evaluation frameworks:
+
+- **No separation of development and unseen evaluations**: Without a held-out evaluation set, data mixture and hyperparameter decisions risk overfitting to the specific benchmarks used during development. The paper explicitly designs an unseen evaluation suite (Section 7.3) that the authors did not examine during model development, enabling a genuine test of generalization.
+
+- **Inconsistent evaluation settings across models**: Different papers report results under different prompting strategies, number of shots, and answer extraction methods, making comparisons unreliable. The paper standardizes these through the Tülu 3 Evaluation Regime (Table 24) and releases the OLMES toolkit to make this standardization reproducible.
+
+- **Safety evaluation is often an afterthought**: Many open recipes focus on capability benchmarks and underreport safety. The paper integrates a six-task safety suite (HarmBench, XSTest, WildGuardTest, JailbreakTrigger, Do-Anything-Now, WildJailbreakTest) from the beginning and tracks safety across all training stages.
+
+### How This Paper Positions Itself
+
+The paper positions Tülu 3 not as a single model release but as a **comprehensive post-training infrastructure**: data, code, evaluation tools, training recipes, and intermediate artifacts that together enable the community to not just *use* the final models but to *study, reproduce, and extend* the entire pipeline. This is evident from the artifact release summary in Table 1, which spans model checkpoints at every training stage (SFT, DPO, final RLVR), SFT and preference mixtures, RLVR training datasets, training code (open-instruct), evaluation code (olmes), decontamination tools, and even the preference data inference pipeline (birr).
+
+The paper's positioning can be understood through several framing choices:
+
+**"Open recipe" rather than just "open model."** The paper repeatedly emphasizes that Tülu 3 includes "data, code, and training recipes"—the recipe being the procedural knowledge that connects these artifacts. This matters because a model weight file, without the recipe, is a black box: you can use it but you can't understand how it was made, and you can't adapt the process to new base models or target domains. The paper explicitly enables adaptation: "With all the released resources, others can take open base models and finetune them to high-performance on any task of interest."
+
+**Systematic experimentation rather than one-shot model building.** The paper is structured around *experiments* at each stage: data mixture ablations (Table 10, Figure 3), preference data scaling (Figures 8, 9), algorithm comparisons (DPO vs. SimPO vs. length-normalized DPO in Table 18), RLVR design choices (value model initialization in Figure 21, RM scores vs. pure verifiable rewards in Figure 22), and evaluation prompt design (Tables 41-43, 44-46). This is not a paper that says "we built a model and it's good"—it's one that says "here are the design decisions we made, here's the evidence for each, and here's what didn't work" (Section 8.2 on "unfruitful" approaches like online DPO and rejection sampling).
+
+**Acknowledging negative results as part of the contribution.** The paper explicitly includes a section on methods that were tried but not adopted (Section 8.2), including online DPO (which "resulted in no or little improvement on GSM8K and degradation on MATH performance") and rejection sampling (where "performance gains were minimal for the amount of compute required"). This is unusual for a model-release paper and reflects a commitment to the "recipe" framing: knowing what *doesn't* work is as valuable as knowing what does when trying to reproduce a pipeline.
+
+**Difficulty-aware, multi-objective optimization.** Unlike pipelines that optimize for a single metric (e.g., AlpacaEval win rate), Tülu 3 explicitly balances performance across seven core skill categories: knowledge recall, reasoning, math, coding, instruction following, chat, and safety. The evaluation framework tracks each category separately through both development and unseen benchmarks, and the data curation process targets skills individually (Table 7 shows how specific datasets map to specific core skills). This reflects a recognition that post-training is inherently multi-objective: improving math shouldn't come at the cost of safety or general chat ability. The compute-optimal allocation concept from the prior sections' reference example carries over here in a different form: rather than allocating test-time compute by difficulty, Tülu 3 allocates *training data and training stages* by skill.
+
+**Building on but substantially extending prior work.** The paper is explicit about its intellectual debts while also clearly delineating what's new:
+
+- From Tülu 2: the general SFT + DPO structure and the approach of combining multiple public datasets, but substantially expanded data scale (~940K SFT instances vs. Tülu 2's ~326K), the introduction of on-policy preference data, and the addition of the RLVR stage
+- From UltraFeedback (Cui et al., 2023): the pipeline of prompt selection → response generation → preference annotation, but updated with newer models in the generation pool, on-policy completions, and a GPT-4o judge instead of GPT-4
+- From persona-driven data synthesis (Chan et al., 2024): the technique of conditioning on personas to generate diverse synthetic instructions, but applied to create targeted datasets for math, coding, and instruction following at scale (~250K total persona-generated instances)
+- From RLHF literature (Ouyang et al., 2022; Ziegler et al., 2019): the PPO-based optimization framework, but adapted to use verifiable binary rewards instead of a learned reward model, and applied to a multi-domain prompt mixture (GSM8K + MATH + IFEval constraints)
+
+The paper's central methodological innovation—RLVR—is positioned as a bridge between two research traditions: the RLHF paradigm that uses learned reward models for general preference optimization, and the verifiable reasoning paradigm (STaR, VinePPO) that uses ground-truth correctness signals for math. By applying RLVR to both math *and* instruction following, and integrating it as a final stage after DPO rather than as a standalone method, the paper shows that RL with verifiable rewards can serve as a general-purpose post-training stage for any skill with programmatically checkable outputs.
+
+**Transparency about limitations and future work.** The paper concludes with a discussion of what Tülu 3 does *not* address (Section 8.3): long-context and multi-turn interactions (the average conversation in the training data has only 2.4 turns), multilinguality (the focus is English despite including the Aya dataset), and tool use / agent capabilities. This honest scoping serves both as a guide for practitioners deciding whether Tülu 3 is appropriate for their use case and as a research agenda for the next iteration.
+
+In summary, the paper's motivational arc is: (1) open post-training recipes are essential for scientific progress and equitable access, (2) existing open recipes have stalled due to data contamination, limited scale, oversimplified pipelines, and inadequate evaluation, (3) proprietary recipes have grown far more sophisticated along precisely these dimensions, (4) Tülu 3 bridges this gap by providing not just a model but a complete, experimentally-validated recipe with transparency about what worked, what didn't, and why—establishing a new baseline for what "open post-training" means.
 
 ## 3. Technical Approach
-The recipe has four staged components, each with clear design choices and tooling (Figure 1; Section 2.3).
 
-1) Data Curation and Decontamination (Section 3)
-- What is curated:
-  - A pool of millions of prompts combining high‑quality public data and persona‑driven synthetic data that target core skills: knowledge recall, reasoning, math, coding, precise instruction following, general chat, and safety (Table 3; Table 7).
-  - Synthetic prompt generation is guided by “personas” to avoid mode collapse and increase diversity (Section 3.1.2): prompts for math, coding, and precise instruction following are generated with GPT‑4o, conditioned on ∼250k personas (Figures 30–36).
-- Safety and non‑compliance data:
-  - Curated and synthetic adversarial prompts, benign prompts, and contrastive prompts (CoCoNot) to avoid over‑refusal (Section 3.1.2).
-- Decontamination (“removing training–test leakage”):
-  - 8‑gram overlap with >50% token coverage on the same training instance indicates a match; datasets with >2% overlap with any evaluation are filtered or removed; specific decontaminated datasets are provided (Section 3.2; Table 8). A contamination survey of popular public sets is reported (Table 37).
+### 3.1 Reader Orientation
 
-2) Supervised Finetuning (SFT) (Section 4)
-- From prompts to responses:
-  - Keep high‑quality human/frontier‑model responses (e.g., GPT‑4o); generate new completions if originals come from weaker models; filter meta‑info and empty answers (Section 4.1.1).
-- Mixture design:
-  - Build skill‑specific mixes (e.g., math‑specialized) to set “upper bounds,” then combine and iterate with decontamination to form the final multi‑skill SFT mix (Section 4.1.2; Figure 3; Figure 2 shows length distribution).
-- Key training choices:
-  - Use “sum loss” instead of the standard “mean loss” to fix a known bug in loss aggregation with gradient accumulation and padding (Section 4.3.2; Equations (1)–(2)): this avoids weighting short sequences disproportionately.
-  - 2 epochs, context length 4,096, effective batch 128, LR 5e‑6 (8B) / 2e‑6 (70B) (Table 11).
-  - Compute: 8B on 32 H100s for ~6h; 70B on 64 H100s for ~50h (Section 4.3).
+Tülu 3 is a **multi-stage training pipeline** that transforms a raw pretrained language model (Llama 3.1) into a capable, safe, instruction-following assistant through four sequential stages of data curation, supervised finetuning, preference optimization, and reinforcement learning with verifiable rewards. The system solves the problem of **how to systematically improve a base model across seven distinct skill categories (knowledge, reasoning, math, coding, instruction following, chat, safety) without overfitting to any single benchmark or degrading other capabilities**, using a combination of targeted synthetic data generation, on-policy preference collection, and a novel RL stage that replaces learned reward models with programmatic correctness verification for tasks where ground-truth answers exist.
 
-3) Preference Tuning (DPO) (Section 5)
-- Data pipeline extending UltraFeedback (Figure 7; Section 5.2.1):
-  - Prompt selection: reuse SFT prompts and add unused prompts from the same sources, plus new IF‑augmented prompts.
-  - Response generation: sample 4 responses from a 22‑model pool (open + closed) and on‑policy completions from Tülu‑SFT to ensure the model learns from its own behavior distribution (on‑policy).
-  - Preference labels: an LLM judge (primarily GPT‑4o‑2024‑08‑06) rates each response (helpfulness, instruction‑following, honesty, truthfulness); pairs are binarized by taking the highest‑rated as “chosen” and a lower‑rated as “rejected” (Appendix D).
-- Algorithm:
-  - Length‑normalized DPO (Section 5.1.2, Eq. (6)): standard DPO trains a policy to prefer chosen over rejected responses relative to a reference policy. Tülu 3 divides the log‑probabilities by sequence length to reduce length bias. This variant outperformed both vanilla DPO and SimPO in their setup (Table 18).
-- Efficiency/infrastructure:
-  - Cache reference log‑probs and compute chosen/rejected forward passes separately to cut GPU memory (Figure 17).
-  - Hyperparameters: LR 5e‑7 (8B), 2e‑7 (70B); β=5 (KL penalty coefficient); batch 128; 1 epoch; max length 2,048 (Table 20).
-  - Runtime: 8B ~10h on 8×H100; 70B ~19h on 64×H100 (Section 5.4.1).
-- Preference mixes:
-  - 8B best mix: 271k instances; 70B best mix: 334k instances, combining SFT‑reused on‑/off‑policy, WildChat (reused/unused), UltraFeedback, and persona IF data (Table 15).
+### 3.2 Big-Picture Architecture (Diagram in Words)
 
-4) Reinforcement Learning with Verifiable Rewards (`RLVR`) (Section 6)
-- Idea (how it works):
-  - Use a simple, task‑specific, deterministic verifier as the reward function `v(x,y)` instead of a learned reward model; give a fixed positive reward `α` (set to 10) if the model’s answer is correct, else 0 (Eq. (8)). Optimize the usual RLHF objective with KL penalty to a reference policy via PPO (Eq. (7)).
-  - “Verifiable” means correctness can be programmatically checked (e.g., GSM8K/MATH answers, or whether output satisfies an instruction constraint in IFEval).
-- RLVR training data:
-  - 29,946 prompts: GSM8K train (8‑shot CoT prompting), MATH train (4‑shot CoT), and programmatically verifiable IFEval constraints (Table 22; Section 6.1).
-- Stabilization details:
-  - Initialize PPO’s value function from a general reward model; disable dropout; add a −10 penalty for responses without EOS; advantage whitening; shuffle across epochs (Section 6.2).
-- Infrastructure and scale:
-  - Asynchronous RLHF: dedicated inference GPUs via vLLM PagedAttention and dedicated learner GPUs; use Ray for allocation (Section 6.3).
-  - 8B RL run ~65h on 8×H100; 70B ~60h on 48×H100; 405B ~46h on 256×H100 (Section 6.3; Section 8.1).
-  - 405B: 16‑way TP inference for vLLM + training on remaining GPUs; checkpoints synchronized by NCCL broadcast (Section 8.1).
+The Tülu 3 pipeline has four major stages, each consuming the output of the previous stage and producing a progressively more capable model checkpoint:
 
-5) Evaluation Framework (Section 7)
-- OLMES: open, reproducible evaluation toolkit with task configs and instance‑level outputs (Section 7.1).
-- Split into development vs unseen suites (Table 24):
-  - Development covers core skills (e.g., MMLU 0‑shot CoT with a “summarize” CoT prompt shown to help heterogeneous subjects; Table 46; Section 7.2).
-  - Unseen suite tests generalization with different formulations: MMLU‑Pro, GPQA, AGIEval English (0‑shot CoT), DeepMind Mathematics (0‑shot CoT with answer‑format heuristics), BigCodeBench, and two new evaluations—IFEval‑OOD (52 novel constraints; Appendix F.3) and HREF (11 instruction‑following tasks, mixed LM‑judge and embedding‑based scoring; Section 7.3.2).
+1. **Data Curation and Decontamination (Stage 1)** — Assembles ~23 million prompts from public datasets and synthetic generation, targeting seven core skills, then aggressively filters out any prompts that overlap with evaluation benchmarks using 8-gram matching. This curated prompt pool feeds all subsequent stages.
+
+2. **Supervised Finetuning (SFT, Stage 2)** — Takes the curated prompts, pairs them with high-quality completions (from GPT-4o or human-written sources), and trains the base Llama 3.1 model on a carefully balanced mixture of ~940K prompt-completion pairs across all skill categories. The output is Tülu 3 SFT, a model that can follow instructions but may still produce suboptimal responses.
+
+3. **Direct Preference Optimization (DPO, Stage 3)** — Generates preference data by sampling completions from Tülu 3 SFT and other models on selected prompts, then uses GPT-4o as a judge to label which completions are better across four aspects (helpfulness, instruction following, honesty, truthfulness). Trains the SFT model with length-normalized DPO on ~354K preference pairs, including on-policy data from the SFT model itself. The output is Tülu 3 DPO, with improved response quality.
+
+4. **Reinforcement Learning with Verifiable Rewards (RLVR, Stage 4)** — Takes prompts with programmatically verifiable correct answers (math problems from GSM8K/MATH, instruction-following constraints from IFEval), generates completions from Tülu 3 DPO, checks correctness using deterministic verifiers, and trains the model with PPO using binary rewards (10 for correct, 0 for incorrect). The output is the final Tülu 3 model, with targeted improvements in math and instruction following.
+
+Two cross-cutting infrastructure components support all stages:
+- **Tülu 3 Eval** — A standardized evaluation framework with separate development and held-out unseen benchmarks for each skill, enabling principled model comparison and detecting overfitting.
+- **Decontamination toolkit** — 8-gram overlap detection applied to every training dataset against every evaluation benchmark, with contaminated instances either removed or the entire dataset excluded.
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First**, the prompt curation and decontamination pipeline (Stage 1), because all subsequent training data derives from this prompt pool, and contamination control is the foundational safeguard against inflated benchmark scores.
+- **Second**, the supervised finetuning stage (Stage 2), including how prompts become SFT data, how the data mixture was designed and ablated, and the critical batch aggregation bug fix that affected loss computation.
+- **Third**, the preference tuning stage (Stage 3), covering the on-policy data generation pipeline, the LLM-as-a-judge annotation procedure, the DPO algorithm choice and hyperparameters, and the infrastructure optimizations that enabled 70B-scale training.
+- **Fourth**, reinforcement learning with verifiable rewards (Stage 4), which is the paper's primary methodological novelty — covering the RLVR objective, the verifier design for math and instruction following, the PPO implementation details, and the asynchronous distributed training infrastructure.
+- **Fifth**, the evaluation framework (Tülu 3 Eval), since it drove model development decisions at every stage and its design (development/unseen split, standardized prompts, flexible answer extraction) is itself a contribution.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily a **systems and engineering paper with rigorous experimental validation** — its core contribution is not a single algorithm but a carefully orchestrated pipeline of existing and novel techniques, combined with exhaustive ablation studies that justify each design choice.
+
+---
+
+#### Stage 1: Prompt Curation and Decontamination
+
+The entire Tülu 3 pipeline begins with prompts — the text inputs that define what users might ask the model to do. All subsequent training data (SFT completions, DPO preference pairs, RLVR prompts) are either direct subsets of this curated prompt pool or derivative datasets built by augmenting these prompts. The prompt curation process serves two purposes: ensuring broad coverage of desired skills, and guaranteeing that no evaluation benchmark is leaked into training data.
+
+##### Sourcing from Public Datasets
+
+The authors manually surveyed and reviewed a broad collection of publicly available post-training datasets, selecting those meeting four criteria: **diversity** (varied domains, user intents, and linguistic patterns), **targeted skill coverage** (explicitly addressing knowledge recall, reasoning, math, coding, instruction following, chat, or safety), **clear data provenance and licensing** (excluding datasets with questionable legal status like ShareGPT), and **quality** (human-written or frontier-model-generated completions).
+
+The resulting public datasets included in the prompt pool (Table 7) span:
+
+- **General chat and diversity**: WildChat (241,307 prompts from real user interactions with GPT-4, downsampled to 100,000), Open Assistant (88,838 prompts from volunteer workers), No Robots (9,500 expert-annotated prompts across open-ended categories)
+- **Knowledge recall**: FLAN v2 (89,982 prompts compiling classical NLP tasks), SciRIFF (35,357 prompts for scientific literature understanding), TableGPT (13,222 prompts for table-related tasks)
+- **Mathematics**: OpenMathInstruct 2 (21,972,791 prompts initially, downsampled to 50,000 for SFT and 26,356 for DPO), NuminaMath-TIR (64,312 prompts with tool-integrated reasoning)
+- **Coding**: Evol CodeAlpaca (107,276 prompts)
+- **Safety and non-compliance**: CoCoNot (10,983 contextual noncompliance prompts), WildJailbreak (50,000 adversarial prompts), WildGuardMix (50,000 safety-related prompts)
+- **Multilingual**: Aya (202,285 prompts, downsampled to 100,000)
+
+A crucial design choice was **excluding the ShareGPT dataset and any derivative datasets that incorporate ShareGPT prompts** (such as Helpsteer2). The paper justifies this on legal grounds: ShareGPT data consists of user-shared conversations posted on the internet without explicit agreement for model training use or redistribution. This created a practical challenge: many popular preference datasets (UltraFeedback, Helpsteer2) originally included ShareGPT-derived prompts. For UltraFeedback, the authors cleaned the subset by removing ShareGPT-originating instances; for Helpsteer2, they excluded it entirely. This decision reflects a deliberate tradeoff — accepting potentially lower performance on some benchmarks to maintain legal and ethical data practices.
+
+##### Persona-Driven Synthetic Data Generation for Target Skills
+
+To fill gaps in publicly available data — particularly for precise instruction following, mathematics, and coding — the paper adopts the persona-driven data synthesis methodology from Chan et al. (2024). The core idea: rather than prompting an LLM to generate generic instructions (which tends to produce repetitive or templated outputs), the system conditions on diverse **personas** — short descriptions of hypothetical users — to steer the LLM toward generating instructions that vary in perspective, difficulty, and domain.
+
+The paper uses approximately 250,000 personas from Persona Hub (Chan et al., 2024), each a brief description like "A machine learning researcher focused on neural networks." The data synthesis prompt combines the persona with a skill-specific instruction and an example:
+
+**For precise instruction following** (producing 29,980 instances): The authors manually wrote 1-2 example instructions for each of the 25 constraint types in the IFEval taxonomy (e.g., "your response should contain exactly 3 paragraphs", "mention at least N different person names"), resulting in 33 seed examples. GPT-4o-2024-08-06 was then prompted with a persona, a data synthesis prompt ("Create a verifiable instruction that the following persona might ask you to do"), and one of the constraint examples, producing a new instruction that satisfies all specified constraints. The exact synthesis prompt is shown in Figure 30. A separate prompt (Figure 31) was used to generate the corresponding response: "Provide a response to the given instruction while satisfying the constraints." This two-step process (generate instruction, then generate response) ensures that the response genuinely satisfies the constraints rather than being a generic completion.
+
+**For mathematics** (149,960 instances for Persona MATH, 49,980 for Persona GSM, 20,000 for Persona Algebra): GPT-4o was zero-shot prompted with a persona and the instruction to "Create a math problem related to the following persona" (Figure 33), with the note that "the math problem should be challenging and involve advanced mathematical skills and knowledge." Solutions were then generated separately using GPT-4o with a step-by-step reasoning prompt (Figure 34) that ends with "Final Answer: The final answer is `$final_answer$`. I hope it is correct." This structured output format enables later answer extraction for RLVR training.
+
+**For coding** (34,999 instances): The persona prompt (Figure 35) frames the task as a StackOverflow question: "Assume you are the persona described above and you are asking a python programming question in stackoverflow." Solutions were generated by claude-3-5-sonnet, not GPT-4o (a deliberate choice based on Claude's stronger coding capabilities), using the prompt in Figure 36 which requires "Your response should always start with the function definition and end with the final return statement."
+
+**For safety and non-compliance**: Rather than using persona-driven generation for safety (which could produce unpredictable harmful content), the authors built on their prior work by curating prompts from existing datasets and synthetic generation targeting specific safety scenarios. The CoCoNot dataset (Brahman et al., 2024) provides contextual noncompliance prompts spanning incomplete, unsupported, indeterminate, and humanizing requests. WildJailbreak (Jiang et al., 2024) and WildGuardMix (Han et al., 2024) provide adversarial and direct harmful prompts, respectively.
+
+The synthetic generation produced ~250,000 total persona-based prompts across math, coding, and instruction following. These were combined with the public dataset prompts to create the full prompt pool of approximately 23 million prompts (Table 7). From this pool, subsets were selected for each training stage: 939,344 prompts for SFT, and 425,145 for DPO (with the exact splits differing between the 8B and 70B recipes).
+
+##### Prompt Decontamination
+
+The paper treats decontamination not as a post-hoc cleanup but as a **first-class design constraint** that actively shapes which datasets are included and in what form. The methodology (Section 3.2) works as follows:
+
+**Matching method**: The authors experimented with full-string matching, n-gram matching, and embedding-based matching. They settled on **8-gram matching** because embedding-based methods, while theoretically capable of detecting paraphrased contamination, proved difficult to calibrate: "we found it difficult to distinguish mere distributional similarity from actual paraphrasing." The 8-gram approach successfully caught cases where trivial modifications had been made (e.g., "a math problem where only the numbers differ").
+
+**Contamination criterion**: For each token in a test instance, that token is considered a match if the test instance and a training instance share an 8-gram containing that token. A test instance is flagged as contaminated with a training instance if **more than 50% of the test tokens** have 8-gram matches with that training instance. This 50% threshold is a design choice: a lower threshold would flag more false positives (superficial overlap); a higher threshold would miss near-duplicates with substantial shared structure but different numerical values.
+
+**Remediation**: A training set is considered contaminated with an evaluation if *any* of its instances overlap with more than 2% of the instances in that evaluation. For training sets contaminated with the **unseen** evaluation suite, the entire dataset was removed (since those evaluations must remain completely unseen during development). For training sets contaminated with the **development** evaluation suite, the authors used a pragmatic approach: if removing the entire dataset did not significantly impact performance, they removed it entirely; otherwise, they removed only the specific matching instances.
+
+The scale of contamination discovered was substantial (Table 37):
+
+- **Evol CodeAlpaca**: 70.7% of HumanEval instances overlapped → decontaminated version released
+- **WildChat GPT-4 subset**: 9.0% of JailbreakTrigger, 54.0% of Do-Anything-Now overlapped → decontaminated
+- **NuminaMath-TIR**: 18.2% of MATH instances overlapped → decontaminated (11.3% of dataset removed)
+- **DaringAnteater**: 30.7% of MATH instances overlapped → dataset excluded entirely
+- **ShareGPT**: 19.2% of AlpacaEval, 19.1% of TruthfulQA overlapped → dataset excluded on legal grounds anyway
+- **LMSys Chat 1M**: 10.3% of MMLU, 17.7% of HumanEval, 8.9% of GSM8K, 46.5% of AlpacaEval, 10.6% of BBH, 75.0% of JailbreakTrigger, 90.3% of Do-Anything-Now overlapped → dataset excluded
+
+The decontaminated versions of five datasets were released (Table 8), with the percentage removed ranging from 0.7% (WildJailbreak) to 11.3% (NuminaMath-TIR). The paper explicitly notes that "datasets that contain realistic uses of API models like ShareGPT, WildChat, and LMSys Chat are likely to overlap with test sets of existing benchmarks and practitioners should make efforts to decontaminate them before using them as training data."
+
+---
+
+#### Stage 2: Supervised Finetuning (SFT)
+
+Supervised finetuning is the first model training stage, adapting the raw pretrained Llama 3.1 base model to follow instructions across diverse tasks. The fundamental challenge is **data mixture design**: with prompts spanning seven skill categories and responses generated by different models (GPT-4o, Claude, human-written), how do you combine them in proportions that produce a balanced model without degrading any individual skill?
+
+##### From Prompts to SFT Data
+
+The SFT dataset requires not just prompts but high-quality **completions** (the model's target output for each prompt). The paper uses two strategies to obtain these:
+
+1. **Keep existing responses** when they were written by a human or a frontier model (GPT-4o, Claude). For large datasets with subsets from multiple models, the authors used the subset from the best available model. For example, WildChat includes responses from multiple GPT versions; the paper used the GPT-4 subset.
+
+2. **Generate new responses** using GPT-4o when prompts lacked responses (as with the persona-generated prompts) or when the original responses came from a weaker model (as with WildGuardMix). The authors also hand-wrote responses for 24 "hardcoded" prompts that encode specific desired behaviors.
+
+The final SFT mix contains approximately 940,000 instances. Figure 2 shows the distribution by source and token length: WildChat (100,000), FLAN v2 (89,982), NuminaMath-TIR (64,312), Persona MATH (149,960), Persona GSM (49,980), Evol CodeAlpaca (107,276), and smaller contributions from the remaining datasets. The total token count per instance (prompt + completion) ranges from roughly 16 to 8,192 tokens, with the majority under 2,048 tokens.
+
+##### SFT Data Mixture Design Through Ablation
+
+Rather than mixing all available data at once, the paper's approach was iterative and ablation-driven. The process (Section 4.1.2) was:
+
+1. **Establish baseline**: Train Llama 3.1 on the Tülu 2 SFT mix (from the authors' prior work) and measure performance across all skill-specific evaluations.
+
+2. **Build skill-specific upper bounds**: For each lagging skill (e.g., math), create a dedicated data mixture using only skill-specific data (e.g., all math prompts with their completions) and train a "specialist" model. This establishes the maximum performance achievable for that skill given the available data.
+
+3. **Combine and iterate**: Merge the skill-specific mixtures into an initial "preview mix," train a model, evaluate, and identify which skills have degraded relative to their upper bounds. Adjust the mixture by adding or removing datasets to recover degraded skills while preserving gains. The paper went through at least five intermediate mixes (Figure 3), with Mixes 1-3 adding new datasets to improve performance, and Mixes 4-5 adjusting for decontamination (which removed some training instances and caused small performance drops).
+
+Figure 3 illustrates this progression: the Tülu 2 baseline averaged ~48% across selected evaluations; Intermediate Mix 5 reached ~60%; the final Tülu 3 SFT mix achieved ~60.1%.
+
+**Key ablation findings** (Table 10, all experiments on Tülu 3 8B SFT):
+
+- **Removing WildChat** decreased average performance from 60.1 to 58.9, with the largest drop on AlpacaEval 2 (from 12.4 to 7.5, a 40% relative decline). This confirms that diverse real-world user data is critical for general chat ability even though it doesn't directly target any evaluation benchmark.
+
+- **Removing safety data** had minimal impact on non-safety evaluations (average dropped from 60.1 to 58.0), but the safety average collapsed from 93.1 to 74.7. This demonstrates that safety is "generally orthogonal" — it can be improved without degrading other skills.
+
+- **Removing Persona data** (all Persona MATH, GSM, Algebra, Python, and IF datasets) decreased GSM8K from 76.2 to 76.8 (negligible), but dropped MATH from 31.5 to 30.1, HumanEval+ from 81.4 to 79.0, and IFEval from 72.8 to 53.6 (a dramatic 26% relative decline). The IFEval drop is particularly notable — it shows that the synthetic Persona IF data was the primary driver of instruction-following capability in the SFT stage.
+
+- **Removing all math data** dropped MATH from 31.5 to 23.5 and GSM8K from 76.2 to 64.1, confirming that math-specific data is necessary (not just helpful) for mathematical reasoning.
+
+**Data scaling analysis** (Figure 4): Stratified subsamples of the SFT mix at 5%, 10%, 25%, 50%, 75%, and 100% showed that performance continues to improve with more data at every step, with particularly large gains on GSM8K (from ~64% at 5% to ~76% at 100%). Notably, TruthfulQA *decreased* as more data was added (from ~49% at 5% to ~47% at 100%), suggesting a tension between instruction-following training and factual accuracy on misconception-prone questions. The paper did not increase SFT data beyond the ~940K instances in the full mix because additional prompts were reserved for the preference tuning stage.
+
+**Choice of base model** (Table 12): Training the identical SFT mix on different base models revealed that both model scale and domain-specific pretraining matter. Llama 3.1 70B achieved 91.1 GSM8K / 53.7 MATH vs. Llama 3.1 8B at 76.2 / 31.5. Qwen 2.5 7B achieved 79.2 / 49.4, better than Llama 3.1 8B on MATH, while Qwen 2.5 Math 7B (pretrained on additional math data) reached 86.3 / 56.4 — nearly matching Llama 3.1 70B on MATH despite being ~10× smaller.
+
+##### SFT Training Configuration
+
+The final SFT training used the hyperparameters in Table 11:
+
+| Hyperparameter | 8B | 70B |
+|---|---|---|
+| Learning Rate | 5 × 10⁻⁶ | 2 × 10⁻⁶ |
+| Learning Rate Schedule | Linear | Linear |
+| Batch Size (effective) | 128 | 128 |
+| Max Token Length | 4,096 | 4,096 |
+| Warm up ratio | 0.03 | 0.03 |
+| Number of Epochs | 2 | 2 |
+
+The 8B model was trained on 32 GPUs for 6 hours; the 70B model on 64 GPUs for 50 hours. Both used 8×H100 nodes with high-speed interconnect.
+
+##### The Batch Aggregation Bug and Sum Loss Fix
+
+A subtle implementation issue discovered during development had a significant impact on performance. The standard Transformers library computes loss by averaging across all non-padding tokens in a batch:
+
+$$L_{\text{mean}} = \frac{l_1 + l_2}{n_1 + n_2}$$
+
+where $l_1, l_2$ are the sum of per-token losses for two samples and $n_1, n_2$ are their non-padding token counts.
+
+However, when gradient accumulation is used (splitting the batch into micro-batches to fit in GPU memory), the effective loss becomes:
+
+$$L_{\text{accumulated}} = \frac{\frac{l_1}{n_1} + \frac{l_2}{n_2}}{2}$$
+
+This occurs because each micro-batch's loss is computed independently with local averaging, then the gradients are averaged across micro-batches.
+
+**What this means operationally**: In the first case (full batch), every token contributes equally to the loss — a sample with 2000 tokens has 2000× the influence of a sample with 1 token. In the second case (gradient accumulation), every sample contributes equally regardless of length — the 2000-token sample and the 1-token sample have identical weight. The same issue arises in distributed training due to cross-device averaging of per-device mean losses.
+
+The paper's fix was to use **sum loss** instead of mean loss: compute the total loss across all tokens without dividing by the token count, then adjust the learning rate to compensate for the change in loss scale. This removes the denominator from the equations entirely, making the loss independent of how the batch is partitioned across micro-batches or devices. The authors validated this choice by finetuning Llama 3.0 on the Tülu 2 SFT mixture with different loss types and learning rates (Figure 5), finding that sum loss with learning rate 5 × 10⁻⁶ performed best.
+
+They also tested training for 2-7 epochs (Figure 6) and found that 2 epochs gave optimal performance, with longer training providing no further gains.
+
+**Chat template variation** (Table 13): The paper tested five chat template variants on an intermediate SFT mixture. The standard Llama 3 template scored 51.6, the Tülu 2 template 52.6, the Tülu 3 template (removing the trailing newline) 52.8, the Zephyr template 52.9, and replacing the trailing newline with an EOS token achieved 53.0. Despite the EOS variant performing best, the authors chose the simpler "remove newline" approach to avoid "generation inconsistency with later steps in our post-training pipeline."
+
+**Random seed sensitivity and model soups** (Table 14): Training the 8B SFT model with five different random seeds (42, 123, 456, 789, 1011) produced average accuracies ranging from 59.8 to 60.1. For the 70B, three seeds ranged from 70.0 to 72.6. Model soups (weighted averaging of multiple training runs) produced a best of 60.2 (8B) and 72.5 (70B), comparable to the best single run. The authors used the best single SFT run as the final model, noting that "the best random seed is comparable to the best model soup."
+
+---
+
+#### Stage 3: Preference Finetuning (DPO)
+
+After SFT, the model can follow instructions but may produce responses that are verbose, unhelpful, dishonest, or misspecified relative to user intent. Preference tuning addresses this by training the model to prefer responses that human or AI judges rate more highly. The Tülu 3 pipeline uses Direct Preference Optimization with length normalization, applied to a large mixture of on-policy and off-policy preference data.
+
+##### Background: The DPO Objective
+
+The standard RLHF objective (before DPO) is to maximize:
+
+$$\max_{\pi_\theta} \mathbb{E}_{y \sim \pi_\theta(x)} \left[ r_\phi(x, y) - \beta \cdot \text{KL}[\pi_\theta(y|x) \parallel \pi_{\text{ref}}(y|x)] \right]$$
+
+where $\pi_\theta$ is the policy being trained, $\pi_{\text{ref}}$ is the frozen reference policy (SFT model), $r_\phi$ is a learned reward model that scores completions, and $\beta$ controls how far the policy can deviate from the reference. The KL penalty prevents the model from drifting too far from its SFT starting point, which would cause it to lose general capabilities.
+
+**What it computes**: At each training step, the model generates completions (or uses pre-generated completions), the reward model scores them, and the policy is updated to increase the probability of high-reward completions while staying close (in KL divergence) to the reference policy.
+
+DPO reformulates this objective to avoid training a separate reward model. The DPO loss function is:
+
+$$\mathcal{L}_{\text{DPO}} = -\log \sigma \left( \beta \log \frac{\pi_\theta(y_c|x)}{\pi_{\text{ref}}(y_c|x)} - \beta \log \frac{\pi_\theta(y_r|x)}{\pi_{\text{ref}}(y_r|x)} \right)$$
+
+where $y_c$ is the chosen (preferred) completion, $y_r$ is the rejected completion, $\sigma$ is the logistic (sigmoid) function, and $\beta$ is the KL penalty coefficient.
+
+**What it computes**: For each preference pair, DPO compares the log-probability ratio (policy vs. reference) for the chosen response against the same ratio for the rejected response. If the policy assigns higher relative probability to the chosen response than to the rejected one (compared to what the reference policy would do), the loss is low. The sigmoid converts this difference into a probability that the chosen response is preferred, and the negative log-likelihood drives the policy to maximize that probability.
+
+**Why this form**: DPO implicitly parameterizes a reward model as $r(x, y) = \beta \log \frac{\pi_\theta(y|x)}{\pi_{\text{ref}}(y|x)}$ and then optimizes the standard Bradley-Terry preference model directly. This eliminates the need for a separate reward model training step and for online sampling during training — the preference pairs can be pre-computed. The $\beta$ coefficient controls the effective strength of the KL penalty: smaller $\beta$ allows larger policy changes but risks overfitting.
+
+**Length-normalized DPO** (the variant used in Tülu 3) divides each log-probability ratio by the number of tokens in the response:
+
+$$\mathcal{L}_{\text{DPO-norm}} = -\log \sigma \left( \frac{\beta}{|y_c|} \log \frac{\pi_\theta(y_c|x)}{\pi_{\text{ref}}(y_c|x)} - \frac{\beta}{|y_r|} \log \frac{\pi_\theta(y_r|x)}{\pi_{\text{ref}}(y_r|x)} \right)$$
+
+**Why this variant**: Human and AI judges tend to prefer longer responses, creating a length bias that standard DPO can amplify. By normalizing by response length, the objective makes the policy indifferent to response length as a confounding factor — a short but high-quality response can beat a long but mediocre one. The paper's algorithm comparison (Table 18) showed that length-normalized DPO (average 57.3) outperformed standard DPO (55.2), SimPO (52.9), and PPO (55.5) on an early checkpoint with UltraFeedback data.
+
+##### The On-Policy Preference Data Pipeline
+
+The paper's preference data creation pipeline (Figure 7) extends the UltraFeedback approach with three key improvements: on-policy data from the Tülu SFT model, an updated model pool for response generation, and GPT-4o as the judge. The pipeline has three stages:
+
+**Stage 1: Prompt Selection.** The preference data uses a subset of the curated prompt pool (Table 7), including:
+- Prompts that were used in SFT, with new completions generated for preference labeling (the "SFT Reused" subset: 19,444 on-policy + 96,911 off-policy instances)
+- Prompts from the same public datasets but subsampled and not used in SFT ("WildChat Unused": 82,783 instances)
+- New IF-augmented prompts (65,530 instances), created by randomly sampling instructions from the Tülu 2 SFT mix and combining them with constraints from the IFEval taxonomy
+- Persona IF prompts (19,890 instances)
+- WildChat IF prompts (10,792 instances), extracted by asking GPT-4 to identify which WildChat prompts contain verifiable constraints
+- UltraFeedback prompts (41,635 instances), cleaned of contaminated subsets
+- WildChat Reused prompts (17,207 instances)
+
+The final preference mixes (Table 15) contained 271,409 instances for the 8B model and 334,302 for the 70B model, making them substantially larger than UltraFeedback's ~64K instances.
+
+**Stage 2: Response Generation.** For each selected prompt, four responses were sampled from a pool of 22 models (Table 38) spanning open-source and proprietary models of varying sizes and families: Llama 3.1 (8B and 70B), Qwen 2.5 (7B to 72B), Gemma 2 (9B and 27B), Mistral variants, InternLM2.5, Yi, GPT-4o, Falcon, MPT, and the Tülu 3 SFT model itself (both 8B and 70B). The model pool was updated from the original UltraFeedback pool by replacing outdated models (Llama 2 → Llama 3.1), adding newer strong models, and replacing inaccessible models (WizardLM) with open-source alternatives.
+
+**The on-policy innovation:** For a subset of prompts, one of the four responses was always generated by the Tülu 3 SFT model (the same model that will undergo DPO training). The other three responses came from off-policy models. This creates preference pairs where the "chosen" or "rejected" response is from the policy's own distribution, reducing the distribution shift between the preference data and the model being trained. The paper's ablation (Figure 11) showed that including on-policy data improved aggregate downstream DPO performance compared to purely off-policy data.
+
+**Stage 3: Preference Annotation.** Each of the four responses was rated by GPT-4o-2024-08-06 on a 1–5 scale across four aspects, each with detailed rubrics:
+
+- **Helpfulness** (Figure 40): Evaluates correctness, informativeness, clarity, and whether the response meets the task requirements. The rubric identifies three types of informativeness (clarity/relevance, useful background, not lengthy/repetitive) and scores from 1 ("severely incorrect") to 5 ("outstandingly helpful").
+- **Instruction Following** (Figure 39): Evaluates alignment between the output and the task's explicit goals and restrictions (formatting, style, content constraints). Scores range from 1 ("irrelevant") to 5 ("comprehensive compliance").
+- **Honesty** (Figure 41): Evaluates whether the model appropriately expresses uncertainty and whether its confidence aligns with correctness. The rubric identifies uncertainty indicators (weakeners like "I guess", refusals, verbalized confidence scores) and scores from 1 ("confidently incorrect") to 5 ("correct and confident or precisely expresses uncertainty").
+- **Truthfulness** (Figure 42): Evaluates the absence of hallucinations (factual errors, instruction contradictions, self-contradictions). Scores from 1 ("completely hallucinated") to 5 ("no hallucination").
+
+The four aspect scores were averaged into a single rating per response. To create binary preference pairs, the highest-rated response was designated "chosen" and one of the lower-rated responses was randomly selected as "rejected." (The paper follows Argilla's binarization method for UltraFeedback preferences, taking the highest mean rating as chosen and sampling from lower-rated responses as rejected.)
+
+**Choice of judge** (Table 17): The paper compared GPT-4o, Llama 3.1 405B, GPT-4 Turbo, GPT-4o Mini, and Llama 3.1 70B as judges on the same 10K randomly-sampled UltraFeedback prompts. The differences were small (average scores ranging from 56.6 to 57.3), with GPT-4o leading slightly. The authors chose GPT-4o for its "ease-of-use, cheaper cost per request, and batch inference speed via OpenAI's Batch API."
+
+##### Key Findings from Preference Data Ablations
+
+**Scaling unique prompts improves performance; duplicating prompts does not** (Figures 8, 9). When the number of *unique prompts* in the preference dataset was increased (5% → 10% → 25% → 50% → 75% → 100% of the full mix), downstream DPO performance improved across metrics including AlpacaEval, MATH, and GSM8K. In contrast, when the UltraFeedback dataset was expanded by creating additional preference pairs from the same 64K prompts (different pair combinations of the four responses per prompt), expanding from 64K to 383K instances produced no improvement — and in some cases caused slight degradation on DROP, GSM8K, and AlpacaEval. The paper's interpretation: "investing in the collection of unique prompts and proper mixing is more important for downstream evaluations" than simply generating more preference pairs from the same prompts.
+
+**Unused prompts outperform reused prompts** (Figure 10). When comparing 100K prompts that were used during SFT against 100K prompts from the same datasets that had been set aside (unused), the unused prompts produced slightly higher downstream DPO performance. However, the best result came from combining both reused and unused prompts, suggesting that diversity of prompt provenance matters more than strict novelty.
+
+**On-policy data provides a clear benefit** (Figure 11). Comparing a purely off-policy dataset against a mix containing on-policy completions (from the Tülu SFT model) showed that on-policy data improved aggregate performance. The final mixes allocated approximately 5.5% of instances to on-policy data (19,444 out of ~354K for the 8B model).
+
+**Regenerating completions through the pipeline improves over original datasets** (Figure 15). When prompts from existing preference datasets (Helpsteer2, UltraFeedback, MultiPref) were fed through the Tülu 3 synthetic pipeline (new completions from the updated model pool, new GPT-4o annotations), the resulting preference data outperformed the original datasets when used for DPO training. This suggests the pipeline itself — not just the prompt selection — contributes to data quality.
+
+**Persona IF data is essential for instruction following** (Figures 13, 14). Adding Persona IF preferences improved IFEval by 2+ points without harming average performance. The IF-augmented-verified dataset (which filters to only keep instances where the chosen response actually satisfies the constraints) improved IFEval by only 1 point while slightly harming average performance. Combining Persona IF with IF-augmented led to the best IFEval but slightly lower average. The authors chose to include both in the final mix, prioritizing IFEval coverage.
+
+**Persona Math and Persona Code preferences did not help** (Figure 13). Neither the math-targeted nor code-targeted Persona preference datasets improved their respective evaluations (MATH, HumanEval) and both slightly harmed average performance. They were excluded from the final mix. This is a notable negative result: preference data targeting reasoning-heavy skills may need different construction strategies than those that work for instruction following.
+
+**WildChat prompts improve DPO performance** (Section 5.3). Adding WildChat prompts (both those reused from SFT and those previously unused) consistently improved downstream DPO performance, particularly on AlpacaEval.
+
+##### Algorithm and Hyperparameter Selection
+
+The paper compared DPO, length-normalized DPO, SimPO, and PPO on an early SFT checkpoint using the UltraFeedback dataset (Table 18). The sweep explored:
+
+- **DPO**: $\beta = 0.1$, learning rate 5 × 10⁻⁷, 3 epochs, batch size 32 → average 55.2 (below the SFT baseline of 55.7)
+- **SimPO**: $\gamma = 0.5$, $\beta = 2$, LR 5 × 10⁻⁷, 1 epoch, batch 128 → average 51.8 (γ-β ratio 0.5); $\gamma = 0.3$, $\beta = 10$ → average 52.9
+- **PPO**: $\beta = 0.0325$, LR 1 × 10⁻⁶, 1 epoch, batch 64 → average 54.5; $\beta = 0.05$ → average 55.5
+- **Length-normalized DPO**: $\beta = 5$, LR 1 × 10⁻⁷, 3 epochs, batch 32 → average 56.1; with 1 epoch → 57.3
+
+The final DPO training hyperparameters (Table 20):
+
+| Hyperparameter | 8B | 70B |
+|---|---|---|
+| Learning Rate | 5 × 10⁻⁷ | 2 × 10⁻⁷ |
+| Learning Rate Schedule | Linear | Linear |
+| Batch Size (effective) | 128 | 128 |
+| Max Token Length | 2,048 | 2,048 |
+| KL penalty coefficient $\beta$ | 5 | 5 |
+| Warm up ratio | 0.1 | 0.1 |
+| Number of Epochs | 1 | 1 |
+
+The learning rate for 70B was reduced to 2 × 10⁻⁷ after ablation (Table 19), where this rate produced average 74.35 vs. 71.14-72.74 for 5 × 10⁻⁷ on the final mixture.
+
+##### DPO Infrastructure Optimizations
+
+Two memory-saving optimizations were critical for training the 70B DPO model (Section 5.4.2, Figure 17):
+
+1. **Caching reference model log-probabilities**: Instead of keeping the frozen reference model (SFT checkpoint) in GPU memory alongside the training model (which doubles the memory requirement), the authors pre-computed the reference model's log-probabilities for the entire preference dataset and cached them to disk. During training, only the training model's log-probabilities need to be computed; the reference log-probs are loaded from cache.
+
+2. **Separate forward passes for chosen and rejected**: The canonical DPO implementation concatenates the chosen and rejected sequences into a single forward pass (doubling the effective batch size per GPU). The Tülu 3 implementation instead runs separate forward passes for chosen and rejected completions, halving the peak memory while maintaining identical training loss.
+
+With both optimizations, the 70B DPO model trained in 19 hours on 64 interconnected H100 GPUs. The 8B model trained in 10 hours on 8 H100 GPUs.
+
+##### PPO vs. DPO Comparison
+
+The paper conducted a controlled comparison between PPO and DPO (Section 5.4.1, Figure 16). A reward model was trained on a fixed DPO preference mixture (hyperparameters in Table 36: LR 3 × 10⁻⁶, batch 256, 1 epoch, max length 2,048), and PPO was run with the same prompts as the DPO training data. The sweep tested KL penalty coefficients $\beta \in [0.05, 0.03, 0.02, 0.01]$ and warmup ratios $\omega \in [0.1, 0.0]$.
+
+Findings: PPO reached comparable but slightly lower average scores than DPO (best PPO: ~55.5 avg vs. DPO: ~57.3). However, PPO was substantially more expensive: ~28 hours on 2 nodes vs. ~4 hours on 1 node for DPO. The paper chose DPO as the primary preference tuning method for this reason, reserving PPO for the RLVR stage where the learned reward model is replaced with verifiable rewards.
+
+---
+
+#### Stage 4: Reinforcement Learning with Verifiable Rewards (RLVR)
+
+RLVR is the paper's primary methodological contribution. It replaces the learned reward model in standard RLHF with a **deterministic verification function** that checks whether a model's output is correct according to a ground-truth standard. This can only be applied to tasks where correctness is programmatically verifiable — the paper focuses on mathematics (where answers can be extracted and compared to ground-truth) and precise instruction following (where constraint satisfaction can be checked by heuristics).
+
+##### The RLVR Objective
+
+Standard RLHF maximizes:
+
+$$\max_{\pi_\theta} \mathbb{E}_{y \sim \pi_\theta(x)} \left[ r_\phi(x, y) - \beta \cdot \text{KL}[\pi_\theta(y|x) \parallel \pi_{\text{ref}}(y|x)] \right]$$
+
+RLVR replaces $r_\phi(x, y)$ with a verifiable reward function $v(x, y)$:
+
+$$\max_{\pi_\theta} \mathbb{E}_{y \sim \pi_\theta(x)} \left[ v(x, y) - \beta \cdot \text{KL}[\pi_\theta(y|x) \parallel \pi_{\text{ref}}(y|x)] \right]$$
+
+where:
+
+$$v(x, y) = \begin{cases} \alpha & \text{if correct,} \\ 0 & \text{otherwise.} \end{cases}$$
+
+where $\alpha = 10$ (set based on pilot experiments, not further tuned).
+
+**What it computes**: For each training prompt, the current policy generates a completion. A domain-specific verifier checks whether the completion is correct (e.g., the extracted final answer matches the ground-truth answer for math, or all constraints are satisfied for instruction following). If correct, the model receives a reward of 10; if incorrect, 0. The PPO algorithm then updates the policy to increase the probability of correct completions while penalizing deviation from the reference policy (the DPO checkpoint).
+
+**Why this form**: Learned reward models suffer from several well-documented problems: they can be gamed (producing high-reward but incorrect outputs), they require separate training and evaluation, their scores may not align with actual correctness, and they introduce distribution shift between RM training data and policy outputs. A binary verifiable reward eliminates all of these: the reward is perfectly aligned with the true objective (correctness), requires no training (only a deterministic checking function), and cannot be over-optimized in the conventional sense (since the reward function is not a learned model that can be exploited). The KL penalty $\beta$ still serves to prevent the policy from collapsing to a degenerate mode that produces correct answers at the cost of all other capabilities.
+
+**Why $\alpha = 10$**: The paper does not provide detailed justification for this specific value beyond "pilot experiments." However, the magnitude matters because it controls the tradeoff between correctness reward and KL penalty. A very large $\alpha$ would encourage the policy to take extreme steps toward correctness at any KL cost, potentially breaking other capabilities. A very small $\alpha$ would make the correctness signal too weak to drive improvement. The value of 10 represents an empirical balance point found in early experiments.
+
+##### RLVR Data Construction
+
+The RLVR training set (Table 22) consists of ~30,000 prompts with accompanying verifiers:
+
+- **GSM8K Train** (7,473 prompts): Each prompt is augmented with the standard 8-shot chain-of-thought prompt used during evaluation, encouraging the model to show its reasoning. The verifier extracts the final number from the model's output and compares it to the ground-truth label using exact match.
+
+- **MATH Train** (7,500 prompts): Augmented with the standard 4-shot CoT prompt. The verifier uses the "flex" extraction strategy developed for Tülu 3 evaluation: it attempts three extraction methods in sequence: (1) the Minerva format (looking for the final answer in specific LaTeX delimiters), (2) finding the last instance of ' < ans > ', and (3) taking the text between the last two '$' tags. The extracted answer is compared to ground-truth using the MATH evaluation logic.
+
+- **IFEval verifiable** (14,973 prompts): Created by randomly sampling instructions from the Tülu 2 SFT mix and combining them with constraints from the IFEval taxonomy. Each constraint type has a dedicated verification function that checks whether the completion satisfies the constraint programmatically (e.g., counting paragraphs, checking word counts, verifying keyword presence). This is the largest subset because instruction-following constraints are easier to batch-generate and verify than math problems.
+
+For the final 8B and 70B models, all three subsets were combined into a single RLVR mixture. For the 405B model, GSM8K was removed (because the model already saturated at 95.4% from SFT+DPO alone) and IFEval data was excluded (because initial RLVR runs showed it didn't help), leaving only MATH.
+
+##### PPO Implementation for RLVR
+
+The paper adapts PPO for RLVR with several implementation details drawn from prior work on RLHF infrastructure (Huang et al., 2024a):
+
+1. **Value model initialization from a general reward model**: The value function (which estimates expected future reward for PPO's advantage computation) is initialized from a reward model trained on the Tülu 3 preference mixture, rather than from scratch. The rationale: a general RM already encodes useful information about response quality, even if it's not perfectly aligned with the verifiable reward. The ablation (Figure 21) showed that initializing from a general RM produced higher GSM8K test scores and higher average scores than initializing from the DPO model directly.
+
+2. **Disabling dropout**: Dropout is set to 0 during both RM training and RL training. This is critical because PPO computes token log-probabilities in two phases: during the rollout phase (generating completions) and the learning phase (computing the policy gradient). If dropout is active, the log-probabilities differ between these phases, causing the probability ratio (which should be exactly 1.0 on the first PPO epoch for samples from the reference policy) to deviate. If all ratios get clipped, the gradient becomes zero. Disabling dropout ensures deterministic forward passes and correct advantage estimation.
+
+3. **Training with shuffled SFT data and multiple epochs**: PPO trains for more episodes than the total number of unique prompts — approximately 100,000 episodes / 7,473 prompts ≈ 13 epochs for the GSM8K subset in ablation experiments. Prompts are shuffled between epochs to prevent the model from memorizing a fixed sequence. Checkpoints are evaluated every 40-100 steps on the development evaluation set, and the best checkpoint is selected (not necessarily the final one).
+
+4. **Non-EOS penalty**: If a sampled response hits the maximum token limit without producing an end-of-sequence token, a reward of −10 is applied. This encourages the model to always complete its responses rather than getting truncated mid-generation — a practical concern because PPO samples with a fixed maximum length (2,048 tokens for most runs, 1,024 for GSM8K-only runs).
+
+5. **Advantage whitening/normalization**: Following standard PPO practice, advantages are normalized by subtracting the mean and dividing by the standard deviation across each mini-batch. This stabilizes training by ensuring the advantage scale is consistent regardless of the reward distribution.
+
+The PPO hyperparameters for RLVR (Table 21):
+
+| Hyperparameter | 8B | 70B |
+|---|---|---|
+| Learning Rate | 3 × 10⁻⁷ | 1 × 10⁻⁷ |
+| Discount Factor $\gamma$ | 1.0 | 1.0 |
+| GAE $\lambda$ | 0.95 | 0.95 |
+| PPO Clipping $\epsilon$ | 0.2 | 0.2 |
+| Value Function Coefficient $c_1$ | 0.1 | 0.1 |
+| Gradient Norm Threshold | 1.0 | 1.0 |
+| Generation Temperature | 1.0 | 1.0 |
+| Batch Size (effective) | 224 | 640 |
+| PPO Update Iterations $K$ | 4 | 4 |
+| Response Length | 2,048 | 2,048 |
+| Total Episodes | 100,000 | 400,000 |
+| KL penalty $\beta$ | 0.05 | 0.07 |
+| Warm up ratio $\omega$ | 0.0 | 0.07 |
+
+##### Key Findings from RLVR Ablations
+
+**RLVR improves performance in targeted domains** (Figure 19, Table 23): Training on the combined verifiable prompt set improved GSM8K from 84.3% (DPO) to 87.6% (8B) and MATH from 42.0% to 43.7% (8B), with more modest gains at 70B (MATH 62.3% → 63.0%, IFEval 82.6% → 83.2%). The training curves show that verifiable reward (correctness on the training set) increased consistently for all three tasks, but "incurring more KL budget does not necessarily lead to improvements in verifiable rewards" — there's a point of diminishing returns.
+
+**Overoptimization happens** (Figure 21): As the KL penalty coefficient $\beta$ was lowered (allowing the policy to diverge further from the reference), the trained model incurred more KL divergence. Higher KL divergence "typically results in lower average scores" — meaning the model was improving on the target task (e.g., GSM8K) at the cost of degrading on other evaluations. This is the same phenomenon as reward hacking in standard RLHF, but manifesting as a multi-objective tradeoff rather than exploitation of a learned reward model.
+
+**Initializing the value function from a general RM works best** (Figure 21): Both initializations (general RM and DPO model) improved GSM8K over the DPO baseline, but the RM-initialized runs achieved higher GSM8K scores and higher average scores across all evaluations at equivalent KL budgets. This suggests that a general reward model encodes quality signals that help PPO's credit assignment even when the actual reward is binary and domain-specific.
+
+**Do not add RM scores to verifiable rewards** (Figure 22): One natural extension would be to use the learned reward model's scores as a supplementary reward alongside the verifiable binary reward (e.g., $r = v(x, y) + \lambda \cdot r_\phi(x, y)$ to maintain general response quality). The ablation showed that this performed *worse* than using only verifiable rewards: GSM8K was lower, and average scores were more noisy. The paper's interpretation: the RM scores introduce noise relative to the clean binary signal.
+
+**Starting from a weaker model can converge to the same verifiable rewards but at higher KL cost** (Figure 20): Training RLVR from an SFT checkpoint (rather than DPO) on GSM8K achieved similar final verifiable rewards but required substantially larger KL divergence from the reference. This makes intuitive sense: the SFT model is further from "good at GSM8K" than the DPO model, so it must change more to reach the same correctness level. The practical implication: starting RLVR from the strongest available checkpoint (DPO) is more efficient.
+
+**The 70B model showed extremely low KL divergence** (Section 6.4): The 70B RLVR run displayed KL divergence "well below 1 over the duration of run, probably due to the lower learning rate" (1 × 10⁻⁷ vs. 3 × 10⁻⁷ for 8B). Despite this minimal divergence from the DPO reference, MATH still improved from 62.3% to 63.0% — suggesting that even small policy adjustments can yield measurable gains when guided by a clean reward signal.
+
+##### Asynchronous RL Infrastructure
+
+Training PPO at the 70B and 405B scales required specialized infrastructure to manage the three models involved (policy, reference policy, value function) and the separation between inference (generating completions) and training (updating the policy). The paper's setup (Section 6.3) uses:
+
+- **ZeRO Stage 3** (Rajbhandari et al., 2020) to shard model parameters, gradients, and optimizer states across GPUs, enabling large models to fit in distributed memory.
+
+- **Dedicated inference GPUs with vLLM**: Rather than sharing GPUs between inference and training (which creates contention and requires switching between inference-optimized and training-optimized memory layouts), the system allocates separate GPU sets for inference (using vLLM with PagedAttention for efficient batching) and training (using standard distributed data-parallel training). The policy weights are synchronized from training GPUs to inference GPUs after each update using NCCL broadcast.
+
+- **Asynchronous training**: Inference (generating completions from the current policy) runs concurrently with training (updating the policy using previously generated completions). This prevents GPU idle time — the training GPUs don't wait for inference to finish, and vice versa. To mitigate the staleness issue (training on outdated policy outputs), the system always uses the *second* latest inference data rather than the very latest, a technique from Huang et al. (2023) and Noukhovitch et al. (2024).
+
+The computational cost of this infrastructure: for the 405B model, inference used 16-way tensor parallelism on vLLM (~550 seconds), weight transfer took ~25 seconds, and training took ~1,500 seconds per iteration. The 405B RLVR run used 256 GPUs (32 nodes) for 46 hours, completing only 75 steps due to compute constraints. The 8B RLVR run used 8 GPUs for 65 hours, and the 70B used 48 GPUs for 60 hours.
+
+---
+
+#### Evaluation Framework: Tülu 3 Eval
+
+The evaluation framework is not a post-hoc assessment but a **development tool** that guided every design decision in the pipeline. Its architecture reflects a set of principles developed iteratively through experiments on exploratory models (instruction-tuned models predating Tülu 3).
+
+##### Development and Unseen Split
+
+The evaluation suite (Table 24) is partitioned into:
+
+**Development evaluations** (used during model development to make data mixture, algorithm, and hyperparameter decisions):
+- Knowledge: MMLU (0-shot CoT), PopQA (15-shot), TruthfulQA (6-shot MC2)
+- Reasoning: BigBenchHard (3-shot CoT), DROP (3-shot)
+- Math: GSM8K (8-shot CoT), MATH (4-shot CoT, flex extraction)
+- Coding: HumanEval (Pass@10), HumanEval+ (Pass@10)
+- Instruction Following: IFEval (prompt-level loose), AlpacaEval 2 (LC win rate)
+- Safety: Six-task average (HarmBench, XSTest, WildGuardTest, JailbreakTrigger, Do-Anything-Now, WildJailbreakTest)
+
+**Unseen evaluations** (never examined during development, used only for final model assessment):
+- Knowledge: MMLU-Pro (0-shot CoT), GPQA (0-shot CoT)
+- Reasoning: AGIEval English (0-shot CoT)
+- Math: DeepMind Mathematics (0-shot CoT)
+- Coding: BigCodeBench-Hard (Pass@10)
+- Instruction Following: IFEval-OOD (new constraints), HREF (win rate vs. Llama 3.1 405B Instruct)
+
+The unseen suite includes two novel evaluations created for Tülu 3:
+
+**IFEval-OOD** (Section 7.3.1): Tests whether instruction-following capability generalizes beyond the 25 constraint types in the original IFEval. The dataset contains 52 constraints across six categories (count, format, ratio, sentence, words, custom), including constraints like "mention at least N different person names," "use an emoji at the end of every sentence," and "each word in your response must start with the next letter of the alphabet." Constraints were combined with unseen WildChat prompts and human-annotated for quality and compatibility. The paper found "a significant difference between performance on IFEval and IFEval-OOD of all the models," suggesting that instruction following with verifiable constraints is difficult to generalize and models likely overfit to the specific constraints in the training data.
+
+**HREF** (Section 7.3.2): A human-reference-guided evaluation covering 11 instruction-following task categories. The evaluation uses Llama 3.1 70B Instruct as the judge (selected after comparing agreement with human judgments across GPT-4, GPT-4 Turbo, and Llama models) with a composite setup: LM-as-a-judge for 9 subtasks, embedding similarity with human-written references for Open QA and Fact Checking. The composite evaluation achieved 69.4% agreement with human judgments, comparable to inter-human agreement of 67%.
+
+##### Evaluation Design Principles
+
+The paper established general principles for evaluating instruction-tuned models, derived from comparing base-model-adapted evaluation setups with more realistic user-oriented prompts across exploratory models (Tables 41-43, 44-46):
+
+1. **Formulate tasks similar to how humans interact**: Avoid few-shot examples presented as multi-turn dialogs, avoid precise CoT examples that dictate how the model "should" think, and provide clear natural-language instructions. On MATH, the "chat" evaluation (zero-shot CoT prompt) substantially outperformed the base-model-adapted setup (4-shot CoT) for most models — e.g., Gemma 2 9B Instruct went from 1.57 to 42.84, Qwen 2.5 7B Instruct from 0.05 to 34.23.
+
+2. **Use zero-shot CoT with concise reasoning prompts**: For multiple-choice tasks, the prompt (Figure 44) asks the model to "provide CONCISE reasoning for the answer, and make sure to finish the response with 'Therefore, the answer is (ANSWER_LETTER).'" This avoids steering the model toward specific reasoning patterns while still encouraging step-by-step thinking.
+
+3. **Apply flexible answer extraction**: The paper found that models often fail to follow the exact output format specified in prompts. For MATH, moving from the Minerva format alone to the "flex" strategy (three extraction methods in sequence) "can sometimes improve reported scores by up to 10 points." For multiple-choice questions, the extraction pipeline tries: (1) exact match of the requested format, (2) softer variants like "answer is X," (3) the last parenthesized letter, and (4) the last standalone capital letter.
+
+4. **Choose prompting strategies based on empirical comparison**: For MMLU, the paper tested four prompting strategies (Table 44): No CoT (5-shot), Explicit CoT Variant 1 ("provide step-by-step reasoning"), Explicit CoT Variant 2 ("explain your step-by-step reasoning that leads to the solution"), and Implicit CoT ("summarize your reasoning concisely, then conclude"). The Implicit CoT setting was chosen because it "leads to a consistent improvement over the traditionally employed no-CoT 5-shot setting" across models and benefits the largest fraction of MMLU subjects (78% of subjects improved for Tülu 3 models, vs. 53% for explicit CoT).
+
+##### The OLMES Toolkit
+
+The evaluation framework is implemented in OLMES (Open Language Model Evaluation System), released as a standalone toolkit. It supports standardized configuration for each task, direct access to the specific prompt formulations used in Tülu 3, and detailed instance-level output data. A typical invocation would be: `olmes --task mmlu_pro::tulu3 --model llama3.1-8b-instruct`. This makes the entire evaluation regime reproducible by any researcher with access to the models and the OLMES codebase.
+
+---
+
+#### Generalization Analysis Using the Unseen Suite
+
+To assess whether the development process overfit to the specific benchmarks used during model building, the paper evaluated all training checkpoints and ablation models on the unseen suite.
+
+**Training pipeline generalizes** (Table 31): The final (RLVR) checkpoints achieved the best average performance on both development and unseen evaluations at both 8B and 70B scales. For reasoning and coding, where SFT checkpoints performed best on development evaluations, the later stages (DPO, RLVR) still improved performance on harder unseen evaluations (AGIEval, BigCodeBench).
+
+**Data mixing choices generally generalize** (Table 32): The data-ablated SFT models showed trends that largely matched between development and unseen evaluations. The exception was instruction following, where the data mixing decisions "overfit to the development evaluations" — the model without Persona data scored 53.6 on IFEval (development) but 18.0 on IFEval-OOD (unseen), while the full model scored 72.8 and 17.6 respectively. This suggests that IFEval performance improvements from Persona data did not transfer to novel constraint types.
+
+**Preference data scaling trends generalize** (Figure 24): Both development and unseen evaluations showed improved average performance as more unique prompts were added to the DPO mixture. However, MATH improved while DeepMind Mathematics showed a different trend — the authors hypothesize this was due to formatting differences: "MATH often requires solutions and answers to be output in LaTeX format, while [DeepMind Math] does not." The trained models tended to output LaTeX-formatted answers even when not appropriate, interfering with reasoning and causing answer extraction failures.
+
+**All models overfit to IFEval** (Section 7.4.2): Comparing performance on IFEval vs. IFEval-OOD revealed a large gap for all tested models (Tülu 3, Llama 3.1 Instruct, Hermes 3). For Tülu 3 70B, IFEval was 83.2% while IFEval-OOD was only 27.8%. This confirms that learning to follow specific constraint types does not automatically transfer to following novel constraints — a finding with implications for how instruction-following capability should be evaluated and improved.
 
 ## 4. Key Insights and Innovations
-- A. Fully open, modern post‑training recipe at scale with explicit decontamination
-  - What’s new: a complete, reproducible pipeline—datasets, code, models, and evaluation tooling (Table 1). Decontamination is enforced with a transparent 8‑gram method and removal thresholds (Section 3.2; Table 8; Table 37).
-  - Why it matters: enables fair benchmarking, avoids overstated gains, and allows others to adapt/extend the recipe.
-- B. Persona‑driven synthetic data targeted at core skills
-  - What’s new: scalable, persona‑conditioned generation for precise instruction following, math, and coding (Section 3.1.2).
-  - Why it matters: improves targeted capabilities beyond generic chat (Table 10 shows removing persona data hurts IFEval, GSM8K, MATH; Section 4.2).
-- C. Scaled on‑policy preference data and length‑normalized DPO
-  - What’s new: preference pairs include on‑policy completions to reduce distribution shift (Figure 11); length‑normalized DPO outperforms DPO/SimPO in their setting (Table 18).
-  - Why it matters: improved average performance and instruction following (e.g., IFEval gains from IF‑persona and IF‑augmented preferences; Figure 14; Table 15).
-- D. RLVR: RL with verifiable rewards
-  - What’s new: PPO on simple, binary, programmatic rewards for domains with clear correctness (GSM8K, MATH, IFEval) (Section 6).
-  - Why it matters: consistently improves targeted tasks without training a reward model, and scales to 405B (Figures 19–23; Table 23; Table 4).
-- E. Evaluation design with “unseen” suite and new benchmarks
-  - What’s new: IFEval‑OOD (52 new constraints) and HREF (11 instruction‑following subtasks with human‑guided judge selection and design) (Sections 7.3.1–7.3.2; Table 48).
-  - Why it matters: tests generalization beyond common benchmarks and guards against over‑fitting to specific constraint taxonomies.
+
+### Innovation 1: Post-Training as a Full-Stack Engineering Discipline, Not an Algorithmic Afterthought
+
+The dominant framing of post-training in the open-source community—prior to Tülu 3—was that it is a secondary step: take a pretrained model, run one round of SFT on some instruction data, maybe one round of DPO on UltraFeedback, and ship it. The intellectual contribution was assumed to be in the algorithm (e.g., a new DPO variant) or the base model, not in the orchestration of a multi-stage pipeline with data, evaluation, and infrastructure as first-class design surfaces.
+
+Tülu 3's most fundamental conceptual move is to treat post-training not as an algorithmic add-on but as a **systems engineering problem** where the primary design objects are (1) the data curation pipeline, (2) the evaluation framework that drives all decisions, (3) the training stage sequencing and interaction, and (4) the infrastructure that makes all of this feasible at scale. Each of these is treated with the same rigor that the pretraining literature applies to architecture design and scaling laws.
+
+What makes this distinctive rather than obvious: prior open post-training efforts (Tülu 2, Zephyr-β, Starling) already had multi-stage training—they ran SFT then DPO. But the *design decisions* within each stage were largely inherited from prior work without systematic ablation. Tülu 3's contribution is not "having a pipeline" but **making the pipeline itself the object of study**. The paper doesn't just report a final recipe; it reports the *process of arriving at the recipe*: data mixture iterations (Figure 3 shows five intermediate mixes), preference data scaling analysis (Figures 8, 9), algorithm sweep experiments (Table 18, 14 configurations tested), value function initialization ablations (Figure 21), and negative results that narrowed the design space (online DPO, rejection sampling, Persona Math preferences). This transforms post-training from cookbook-following into **experimentally-grounded engineering**.
+
+The practical implication: future open post-training recipes can be built by applying the same methodology (define core skills → build skill-specific upper bounds → iteratively mix data targeting lagging skills → evaluate on held-out unseen benchmarks → add RL stage for verifiable domains) rather than needing to rediscover these meta-design principles. The paper doesn't just provide a recipe—it provides a *recipe for making recipes*.
+
+**Significance beyond raw performance**: This reframes what "open post-training" means. Previously, it meant releasing model weights with a brief data card. Tülu 3 redefines it to mean releasing the full experimental apparatus—intermediate checkpoints at every stage, training data mixtures with provenance, evaluation code with standardized settings, decontamination tools, and detailed ablation results. This makes the difference between replication (which requires only the final artifacts) and **science** (which requires being able to test counterfactuals: "what if we used a different data mixture? what if we omitted the RLVR stage? what if we used a different judge for preference labeling?"). The artifact release in Table 1—spanning model checkpoints, dataset mixtures, evaluation tools, decontamination code, and preference data generation pipelines—is not an appendix to the contribution; it *is* the contribution, operationalized.
+
+**Evidence anchor**: The generalization analysis in Section 7.4 validates this framing. The fact that the unseen evaluation suite (which the authors never examined during development) shows the same trends as the development suite—RLVR improves over DPO which improves over SFT (Table 31), data removal ablations transfer (Table 32), preference data scaling transfers (Figure 24)—demonstrates that the methodology produces genuine capability improvements rather than benchmark overfitting. If the pipeline were merely a collection of tricks tuned to specific benchmarks, the unseen suite would expose the overfit. The fact that it doesn't (with the notable exception of IFEval-OOD, discussed below) is evidence that the engineering methodology generalizes.
+
+---
+
+### Innovation 2: RLVR as a Clean Separation of Reward Signal Quality from Policy Optimization
+
+The standard RLHF paradigm ties reward modeling and policy optimization into a single loop: you train a reward model from preference data, then optimize a policy against that reward model. This creates a fundamental tension—the reward model is a learned approximation of human preferences, and like any learned model, it has blind spots, biases, and vulnerabilities to exploitation. A significant body of work (reward hacking, overoptimization, the "accuracy paradox" where better reward models don't yield better policies) testifies to the difficulty of this coupling.
+
+RLVR's conceptual contribution is to **break this coupling by separating reward signal design from reward signal learning**. For tasks with verifiable correctness—mathematics, instruction following with checkable constraints, code execution—there is no need for a learned reward model because the ground-truth evaluator is a deterministic function. The binary reward `v(x, y) = α if correct else 0` is not an approximation of correctness; it *is* correctness. This eliminates the entire class of reward model failures—distribution shift between RM training data and policy outputs, reward hacking via exploiting RM blind spots, calibration drift during online training, and the accuracy paradox—because there is no reward model to fail.
+
+What makes this distinctive rather than obvious: prior work had already used ground-truth signals for math reasoning (STaR, VinePPO, TRICE). But these approaches framed themselves as specialized reasoning-improvement techniques—ways to bootstrap better chains of thought. Tülu 3 reframes RLVR as a **general post-training stage that belongs alongside SFT and DPO in any pipeline, for any domain where verification is possible**. The move from "here's a math reasoning method" to "here's a general stage in the post-training stack" is conceptually significant because it changes where practitioners look for verifiable signals: instruction following (which hadn't been combined with RL in prior work at this scale), factual accuracy (where answer verification is possible), code generation (where unit tests provide verification), and potentially tool use, translation quality, or format compliance—anywhere a deterministic correctness function exists.
+
+**The negative result on combining RM scores with verifiable rewards (Figure 22) is particularly revealing.** One might expect that adding a general RM's scores as a supplementary reward signal (to maintain response quality while optimizing correctness) would be strictly beneficial—you get the best of both worlds. The paper finds the opposite: using only the binary verifiable reward *outperforms* using verifiable rewards plus RM scores, and the combined signal introduces noise that destabilizes training. This is not an obvious result; it suggests that **clean, sparse binary signals are more effective for RL training than dense but noisy learned signals**, which has implications for how we think about reward design in RLHF. The binary signal provides a clear gradient: increase probability of correct completions, decrease probability of incorrect ones. The RM scores add a fuzzier gradient (increase probability of "good" completions) that may conflict with or dilute the correctness gradient.
+
+**The overoptimization finding (Figure 21) completes the picture**: even with perfect reward signals (binary verifiable correctness), RL still overoptimizes in the multi-objective sense—improving the target domain (GSM8K) at the cost of degrading other capabilities (lower average scores). This means the KL penalty β serves a different role in RLVR than in standard RLHF. In standard RLHF, β prevents both reward hacking and capability degradation. In RLVR, the binary reward cannot be hacked (there's no learned model to exploit), so β purely controls the multi-objective tradeoff: how much to specialize toward verifiable tasks versus maintain general ability. This reframes the hyperparameter from "prevent reward model exploitation" to "balance specialist vs. generalist performance," which is a cleaner optimization problem.
+
+**Significance beyond raw performance**: RLVR opens a path to **self-improving post-training pipelines** that don't require human preference data or learned reward models. As long as a domain has programmatic verification—and many economically important domains do (code with tests, math with answer checking, instruction following with constraint verification, factuality with knowledge base lookup)—the model can generate its own training signal. The paper demonstrates this for math and IF following, but the principle extends. Combined with the persona-driven data synthesis (which generates diverse prompts without human annotation), RLVR enables a training loop where both the prompts and the rewards are synthetic, potentially scaling post-training far beyond what human annotation budgets allow.
+
+**Evidence anchor**: Table 23 shows RLVR providing non-trivial gains at 8B (+3.3 GSM8K, +1.7 MATH, +1.3 IFEval over DPO) and modest gains at 70B (+1.0 MATH, +0.6 IFEval). The 405B results (Section 8.1) show MATH jumping "over 5 points" with as few as 25 RLVR steps. These are not massive absolute improvements, but they are **reliable, targeted, and come from a stage that adds no new human annotation cost**—the training data is synthetically generated prompts (for IFEval) or existing benchmark training sets (GSM8K, MATH), and the reward signal is deterministic. The efficiency of the signal (improvements in 25-75 training steps for 405B) suggests that RLVR's value proposition is not just "better performance" but "better performance per unit of human effort."
+
+---
+
+### Innovation 3: On-Policy Preference Data as the Missing Scaling Dimension
+
+The dominant approach to preference data in open post-training has been to use off-the-shelf datasets—UltraFeedback in particular—where completions were generated by a fixed pool of models, often models that are weaker or differently-distributed than the model being trained. This creates a distribution-shift problem: the preference data teaches the policy to prefer certain responses over others, but those responses come from other policies, not from the policy's own distribution. If the SFT model is stronger than the models that generated UltraFeedback's completions, the preference data may ask it to choose between responses that are both worse than what it can generate.
+
+Tülu 3's insight is that **scaling the number of unique prompts in preference data matters more than the total number of preference pairs, and that on-policy data (completions from the model being trained) is a distinct quality dimension from off-policy data**. This is not just "use more data" or "use your own model's outputs"—it's a specific claim about *what data properties drive downstream DPO performance*.
+
+The evidence for this claim is the contrast between Figures 8 and 9. Figure 8 shows that increasing the number of unique prompts (5% → 100% of the mix) improves average performance, GSM8K, MATH, and AlpacaEval. Figure 9 shows that increasing the number of preference pairs by duplicating prompts with different response combinations (64K → 180K → 383K instances from the same 64K prompts) produces no improvement and potentially degrades performance on DROP, GSM8K, and AlpacaEval. This is a clean dissociation: **more data helps only when it comes from new prompts, not when it comes from recombining existing responses**. The interpretation is that diversity of user intents (captured by prompts) is the bottleneck, not diversity of response rankings.
+
+**Why this is conceptually significant**: The field has largely treated preference data as a commodity—get some prompts, generate completions, get labels, train DPO. The scaling dimension has been "more preference pairs" without distinguishing between prompt diversity and response diversity. Tülu 3 shows this is wrong, or at least incomplete. The finding echoes the pretraining literature's insight that data diversity matters more than data quantity for some capabilities, but transposed to the preference tuning context. It also provides practical guidance: if you have a fixed annotation budget, invest in more unique prompts rather than more completions per prompt.
+
+The on-policy finding (Figure 11) complements this. Prior work had shown that on-policy data helps in RL settings (PPO generates completions from the current policy), but the benefit in DPO—where data is pre-collected—was less obvious. The paper shows that even in the offline DPO setting, mixing in completions from the SFT model (generated ahead of time, not during training) improves downstream performance. This suggests that the benefit of on-policy data is not just about recency (using the current policy's outputs) but about **distribution matching**: the preference pairs are more informative when one of the completions comes from a model similar to the one being trained, because it teaches the policy about its own failure modes.
+
+**Significance beyond raw performance**: This finding has implications for how preference data should be collected at scale. If unique prompts are the bottleneck, then the priority should be gathering diverse prompts (via synthetic generation, user logs, or curation) rather than investing in expensive multi-model completion pools. The paper's persona-driven prompt generation for preference data (Persona IF, IF-augmented) operationalizes this: by generating prompts synthetically at scale, they can provide the prompt diversity that drives DPO gains without relying on scarce human-written prompts or user interaction logs.
+
+**Evidence anchor**: The final preference mixture (Table 15) contains 271K-334K instances drawn from multiple prompt sources (SFT reused, SFT unused, WildChat, UltraFeedback, Persona IF, IF-augmented), with only ~5.5% being on-policy. The scaling analysis (Figure 8) shows that the full mixture outperforms 5%, 10%, 25%, 50%, and 75% subsamples, confirming that the diversity of the full prompt set matters.
+
+---
+
+### Innovation 4: Decontamination as a Principled Design Constraint, Not a Post-Hoc Cleanup
+
+Most papers that release post-trained models either ignore evaluation contamination entirely or apply minimal deduplication as a final step. Tülu 3 elevates decontamination to a **principled design constraint that shapes the entire data curation process**—determining which datasets are included, which are excluded, and which must be modified before use. The term "design constraint" is deliberate: decontamination is not a cleanup step applied to a fixed dataset; it is a criterion that actively filters the dataset *during construction*.
+
+What distinguishes this approach:
+
+1. **Systematic methodology with a specific criterion**: 8-gram matching with a 50% token overlap threshold, flagging any training dataset where any instance matches >2% of any evaluation benchmark. This is more rigorous than the typical "we deduplicated against test sets" statement that appears without thresholds, matching methods, or remediation details.
+
+2. **Transparency about what was found**: Table 37 lists contaminated public datasets with specific overlap percentages—Evol CodeAlpaca with 70.7% of HumanEval, LMSys Chat with 46.5% of AlpacaEval, DaringAnteater with 30.7% of MATH. This is valuable diagnostic information for the community independent of the Tülu 3 models themselves: it tells practitioners which datasets are risky to use.
+
+3. **Tiered remediation strategy**: Datasets contaminated with unseen evaluations are removed entirely (since those evaluations must remain truly unseen). Datasets contaminated with development evaluations are either removed (if impact is small) or cleaned instance-by-instance (if removal would significantly degrade performance). This is a pragmatic recognition that decontamination has a cost—removing training data hurts model capability—and the cost should be weighed against the contamination risk.
+
+4. **Measuring the impact**: The paper shows that decontamination caused "small drops in performance" in SFT mixtures 4 and 5 (Figure 3), acknowledging that clean evaluation comes at a capability cost. This is an honest accounting that most papers avoid by simply not decontaminating.
+
+**Why this is intellectually significant beyond "good practice"**: Decontamination affects the *interpretation* of every benchmark result in the paper. If Tülu 3 scores substantially higher than Llama 3.1 Instruct on MATH, and we know that Llama 3.1's training data may have included MATH problems (Meta did not release their decontamination methodology), then some of Tülu 3's apparent advantage could be due to cleaner evaluation rather than genuinely better math capability. The paper cannot resolve this ambiguity for closed models, but by transparently documenting its own decontamination, it provides a **credible lower bound on its models' true capabilities**—the reported scores are not inflated by benchmark leakage.
+
+The IFEval-OOD finding (Section 7.4.2) reinforces the importance of this. Despite aggressive decontamination of training data against IFEval, all models tested showed a massive drop from IFEval to IFEval-OOD (e.g., Tülu 3 70B: 83.2% → 27.8%). This suggests that even without explicit benchmark leakage, models can overfit to the *types* of constraints in IFEval. Decontamination prevents literal memorization but cannot prevent distribution-level overfitting—an insight that motivates more diverse evaluation suites (like IFEval-OOD) rather than just better deduplication.
+
+**Significance beyond raw performance**: Decontamination methodology is infrastructure for the entire field. The paper releases both the decontaminated datasets (Table 8) and the decontamination tools (as part of the open-instruct codebase), enabling other researchers to check their own training data against benchmarks without reimplementing the matching logic. This lowers the barrier to clean evaluation, which indirectly raises the credibility of all open post-training research.
+
+**Evidence anchor**: Table 37 provides the specific contamination findings that motivated the exclusion or modification of datasets. The cross-validation with unseen evaluations (Table 31) provides evidence that the decontamination worked: Tülu 3's performance on unseen benchmarks follows the same trends as on development benchmarks, suggesting that gains are not driven by benchmark-specific contamination.
+
+---
+
+### Innovation 5: The "Safety is Orthogonal" Finding as a Design Principle
+
+A persistent concern in multi-objective post-training is the **capability-safety tradeoff**: does improving helpfulness and task performance necessarily come at the cost of safety (reduced refusal of harmful requests), or can the two be optimized independently? The paper's finding that removing safety SFT data had minimal impact on non-safety evaluations (average dropped from 60.1 to 58.0) while collapsing safety (93.1 → 74.7)—and conversely, that adding safety data did not degrade general capabilities—establishes safety as **approximately orthogonal** to other skills in the SFT stage.
+
+This is a practically significant finding because it means safety can be integrated into the post-training pipeline without tradeoff anxiety: you don't need to choose between a capable model and a safe one. The orthogonality likely arises because safety data (refusals, noncompliance responses) targets fundamentally different behaviors than capability data (math solutions, code completions, factual answers). A model can learn to produce high-quality math solutions *and* refuse harmful requests without these behaviors interfering, as long as the training data for each is sufficiently distinct that the model can learn separate policies for separate prompt types.
+
+What distinguishes this from a trivial observation: prior work on safety often treated it as a separate fine-tuning stage (e.g., "safety RLHF" after "helpfulness RLHF") or as a constraint that must be balanced against capability via careful mixing ratios. Tülu 3's evidence suggests that at the SFT stage, the mixing ratio is not a delicate balance—you can add safety data essentially without cost to other skills. This simplifies pipeline design: rather than carefully tuning safety-data proportions to avoid degrading MATH, you can include safety data at whatever quantity maximizes safety, then optimize everything else independently.
+
+The finding is bounded to SFT, however. The paper does not test whether DPO or RLVR training affects safety orthogonally—the preference data includes safety-related prompts (CoCoNot, WildJailbreak, WildGuardMix), suggesting that safety preferences may not be orthogonal to general quality preferences. This is an important scope limitation.
+
+**Evidence anchor**: Table 10 shows the clean dissociation: "w/o Safety" drops safety from 93.1 to 74.7 while leaving other metrics essentially unchanged (MATH 31.5 → 32.6, GSM8K 76.2 → 76.9, IFEval 72.8 → 71.0). The safety scores in Tables 25 and 26 confirm that Tülu 3 maintains high safety across stages (SFT: 93.1-94.4, DPO: 87.2-89.0, Final: 85.5-88.3), with the slight decline from SFT likely due to DPO reducing refusal behavior in favor of helpfulness—a different tradeoff dynamic than the SFT-stage orthogonality.
 
 ## 5. Experimental Analysis
-- Methodology and setup
-  - Development and unseen suites cover knowledge, reasoning, math, coding, instruction following, and safety (Table 24).
-  - Safety is a macro‑average across multiple benchmarks with automatic refusal/compliance classification (Section 7.2.1; Tables 25–26 provide breakdowns).
-  - Extensive ablations on data (e.g., removing WildChat/persona/math data), algorithms (DPO variants vs PPO), hyperparameters (LR, β for PPO/DPO), and infrastructure choices (caching reference log‑probs) (Sections 4–6).
-- Main quantitative results
-  - Overall performance at 8B and 70B (development suite):
-    > Table 2: “Tülu 3 8B” average 65.1 vs Llama‑3.1‑8B‑Instruct 62.9; “Tülu 3 70B” average 76.2 vs Llama‑3.1‑70B‑Instruct 74.1. Tülu 3 70B also outperforms Qwen‑2.5‑72B‑Instruct (72.8) and is competitive with small closed models (e.g., Claude 3.5 Haiku 75.3; GPT‑4o‑mini 69.6).
-  - Stage‑wise gains at 8B (Table 6):
-    > Average: 60.1 (SFT) → 64.7 (DPO) → 65.1 (RLVR).  
-    > GSM8K: 76.2 → 84.3 → 87.6.  
-    > IFEval: 72.8 → 81.1 → 82.4.  
-    > MATH: 31.5 → 42.0 → 43.7.
-  - Stage‑wise gains at 70B (Table 23):
-    > Average: 73.4 (Llama‑3.1‑Inst.) → 75.9 (Tülu 3 DPO) → 76.0 (Tülu 3 RLVR).  
-    > MATH: 56.4 (Llama‑3.1‑Inst.) → 62.3 (DPO) → 63.0 (RLVR).  
-    > IFEval: 88.0 (Llama‑3.1‑Inst.) → 82.6 (DPO, formatting sensitivity) → 83.2 (RLVR).  
-    > GSM8K stays high (93.5–93.7).
-  - 405B model (Table 4):
-    > Average with safety: 81.6 (GPT‑4o 11‑24), 79.0 (DeepSeek V3) vs 80.7 (Tülu 3 RLVR).  
-    > MATH: 66.6 (Llama‑3.1‑Instruct) vs 67.3 (Tülu 3 RLVR).  
-    > GSM8K: 95.4 (Llama‑3.1‑Inst.) vs 95.5 (Tülu 3 RLVR).  
-    > IFEval: 88.4 (Llama‑3.1‑Inst.) vs 86.0 (Tülu 3 RLVR); DPO improves IFEval to 85.0 and RLVR further to 86.0 from SFT’s 82.4.
-- Unseen suite and generalization
-  - Pipeline progression generalizes (Table 31): final checkpoints typically best on both development and unseen for each skill, e.g., math improves in DeepMind Mathematics as well as MATH; instruction following improves on IFEval‑OOD as well as IFEval.
-  - Cross‑model comparison on unseen tasks (Table 33): at both 8B and 70B, Tülu 3 generally sits between Llama‑3.1‑Instruct and Hermes‑3, winning in several subtasks; HREF breakdown shows mixed strengths across categories (Table 48).
-- Safety
-  - SFT strongly boosts safety:
-    > Table 25 (8B): overall safety average 93.1 (Tülu 3 SFT) vs 75.2 (Llama‑3.1‑8B‑Instruct).  
-    > Table 26 (70B): 94.4 (Tülu 3 SFT) vs 76.5 (Llama‑3.1‑70B‑Instruct).  
-    DPO and RLVR maintain high safety with slight regressions.
-- Ablations and diagnostics
-  - Data ablations (Table 10):
-    > Removing WildChat reduces average and notably hurts AlpacaEval (e.g., LC winrate 12.4 → 7.5), indicating “in‑the‑wild” chat data helps general chat quality.  
-    > Removing persona data hurts IFEval, GSM8K, and HumanEval+.  
-    > Removing math data drops MATH substantially (31.5 → 23.5), illustrating targeted SFT data is crucial for math.
-  - Scaling SFT size (Figure 4): average performance increases with more SFT data; TruthfulQA shows a small decline, reflecting alignment trade‑offs across tasks.
-  - Base model choice (Table 12): larger bases and ones with math pretraining (Qwen‑2.5‑Math) yield better math after SFT.
-  - Chat template (Table 13): minor template changes affect results; the team chose a simple, consistent template to avoid generation inconsistencies downstream.
-  - DPO design (Tables 18–20): length‑normalized DPO outperforms vanilla DPO/SimPO in their setup; LR 2e‑7 works best at 70B for their best mix; caching reference log‑probs reduces memory (Figure 17).
-  - On‑policy preferences help (Figure 11); unique prompts matter more than duplicating prompts (Figures 8–9).
-  - Judge choice (Table 17): GPT‑4o, Llama‑3.1‑405B, and GPT‑4‑Turbo perform similarly for annotation quality; GPT‑4o slightly leads in their setup.
-  - RLVR dynamics:
-    - Improves targeted tasks (GSM8K, MATH, IFEval) with rising train‑set verifiable rewards (Figure 19).
-    - Initializing value function from a general reward model worked best (Figure 21).
-    - Adding reward‑model scores to verifiable rewards adds noise; pure verifiable rewards work better (Figure 22).
-    - Over‑optimization risks appear as KL grows; average scores can drop if divergence from reference becomes large (Figures 21–22; Appendix B.4 shows IFEval over‑optimization examples).
-- Do the experiments support the claims?
-  - Yes, on three fronts:
-    - Performance: consistent stage‑wise gains and competitive results vs strong open and some closed baselines (Tables 2, 4, 5, 6, 23).
-    - Method effectiveness: ablations isolate the impact of WildChat, persona, math SFT data, on‑policy preferences, DPO design, and RLVR choices (Tables 10, 12, 18; Figures 8–15, 19–22).
-    - Generalization: unseen suite confirms improvements are not limited to development benchmarks (Table 31).
+
+### Evaluation Methodology
+
+- **Dataset.** All experiments use the **MATH benchmark** (Hendrycks et al., 2021), specifically the split from Lightman et al. (2022): 12,000 training questions for PRM training data and 500 test questions for evaluation. The authors chose MATH because test-time compute is expected to help most when the model already possesses necessary knowledge and the challenge lies in drawing complex inferences—mathematical reasoning fits this profile, requiring multi-step logical deduction rather than novel factual recall (Section 4). Answers are graded using the grading function released by Lightman et al. (2022) (Appendix G).
+
+- **Base model.** All experiments use **PaLM 2-S\*** (Codey) (Anil et al., 2023), which the authors argue is "representative of the capabilities of many contemporary LLMs" and sits in a useful regime: non-trivial performance on MATH (roughly 10–19% pass@1 depending on prompting and sampling configuration) but far from saturation, leaving room for test-time compute to make a measurable difference (Section 4). For the FLOPs-matched comparison (Section 7), a second model with approximately `14×` more parameters is used as the pretraining-scaled baseline, though the authors note this model scales parameters only (not data), following the LLaMA paradigm rather than Chinchilla-optimal training, and uses only greedy decoding—no test-time augmentation of its own.
+
+- **Metrics.** The primary metric throughout is **MATH test accuracy (%)**—the fraction of the 500 test questions for which the selected final answer matches the ground truth (Section 4). When analyzing difficulty-dependent behavior, accuracy is reported within each of the five difficulty quintiles separately. Difficulty bins are computed by sampling 2,048 solutions per question from the base model, calculating pass@1 rate (oracle difficulty, requiring ground-truth labels) or averaging the PRM's predicted final-answer correctness (predicted difficulty, not requiring labels), then binning questions into five quintiles—with quintile 1 being easiest (highest pass@1) and quintile 5 hardest (lowest pass@1) (Section 3.2).
+
+- **Baselines.** The paper uses several baselines (Section 4):
+  - **Majority voting**: select the most common final answer among N sampled solutions, with no learned verifier.
+  - **ORM best-of-N weighted**: score N solutions with an outcome reward model (trained identically to the PRM but predicting only final-answer correctness), then apply best-of-N weighted selection—all solutions arriving at the same final answer have their scores summed, and the answer with the greatest total sum is selected (following Li et al., 2023).
+  - **PRM best-of-N weighted**: score N solutions with the process reward model, apply best-of-N weighted selection.
+  - **Parallel sampling** (for revisions): generate N independent solutions from the revision model and select the best answer via verifier or majority voting.
+
+- **Generation budget / compute accounting.** One "generation" equals one complete sampled answer from the base LLM. For best-of-N and beam search, the budget equals N. For lookahead search with k lookahead steps, the cost is `N × (k + 1)` to account for the additional rollout computation (Section 5.3). Budgets are swept across powers of 2, typically from 2⁰ to 2⁹ (1 to 512 generations), with a maximum of 256 for the main search comparisons. For the FLOPs-matched comparison, pretraining FLOPs are approximated as `X = 6ND_pretrain` and inference FLOPs as `Y = 2ND_inference`, where N is parameter count and D denotes tokens; scaling model parameters by a factor M multiplies both X and Y by M (Section 7).
+
+- **Cross-validation / statistical protocol.** To avoid contaminating strategy selection with test-set performance, the authors use **two-fold cross-validation** within each difficulty bin on the 500-question test set (Section 3.2). The best-performing strategy is selected on one fold and evaluated on the other, with results averaged. Additionally, the revision model's training uses the MATH training split (12,000 questions) for data generation, keeping the 500 test questions completely held out. The compute-optimal policy is a lookup table: for each difficulty bin and budget level N, the best strategy is pre-computed on the validation fold, and at test time the system estimates difficulty, looks up the strategy, and runs it.
+
+---
+
+### Main Quantitative Results
+
+#### Search Against PRM Verifiers (Section 5)
+
+The central finding is that **no single search algorithm dominates across all difficulty levels and budgets**, and that a difficulty-conditioned selection policy recovers up to `4×` compute efficiency over uniform best-of-N. All results below report MATH test accuracy on the 500-question test set, evaluated with budgets up to 256 generations unless otherwise noted.
+
+**Aggregate search algorithm comparison (Figure 3, left).** Across all 500 test questions pooled together, without difficulty stratification:
+
+- At low budgets (2–8 generations), beam search with `M = 4` significantly outperforms PRM best-of-N weighted. At 4 generations, beam search achieves approximately 27% accuracy versus roughly 16% for best-of-N weighted—an 11-percentage-point gap that represents a ~69% relative improvement.
+- At high budgets (64–256 generations), beam search performance flattens and eventually falls slightly below best-of-N weighted. PRM best-of-N weighted reaches approximately 38% at 512 generations; beam search (M = 4) plateaus around 34%. The crossover point where best-of-N overtakes beam search occurs somewhere between 64 and 128 generations.
+- Lookahead search (both `k = 1` and `k = 3` variants) generally underperforms at the same generation budget due to its higher per-step cost. At 256 generations, the 3-step lookahead variants converge to similar performance as beam search (approximately 34%) but never surpass best-of-N weighted (approximately 37% at that budget).
+- Majority voting substantially trails all verifier-based methods, reaching only about 29% at 512 generations—a gap of ~9 percentage points behind PRM best-of-N weighted at the same budget.
+
+This aggregate view masks the most important pattern: the ranking of methods **reverses** depending on problem difficulty.
+
+**Difficulty-bin analysis for search (Figure 3, right).** When results are broken out by difficulty quintile (beam search `M = 4` vs. PRM best-of-N weighted, shown at four budget levels: 4, 16, 64, 256 generations), a clear and non-monotonic pattern emerges:
+
+- **Bin 1 (easiest, ~100 questions, base model pass@1 highest):** Beam search accuracy *decreases* from roughly 78% to 77% as budget goes from 4 to 256, while best-of-N weighted *increases* from 68% to 88%. This is the clearest evidence of **PRM over-optimization**—beam search finds solutions that score highly under the verifier but are actually incorrect. The verifier's reliability on easy problems is high enough that aggressive optimization amplifies residual errors rather than finding genuinely better solutions.
+- **Bin 2:** Beam search improves modestly (roughly 14% → 32% from 4 to 256 generations), but best-of-N weighted improves faster (roughly 14% → 60%), maintaining a clear and growing advantage as budget increases. The gap at 256 generations is approximately 28 percentage points.
+- **Bin 3 (medium difficulty):** Beam search consistently outperforms best-of-N weighted across all budgets, reaching roughly 34% vs. 23% at 256 generations—an 11-point gap. This is the regime where the PRM provides genuine guidance toward correct solutions the model wouldn't find by random sampling alone.
+- **Bin 4 (medium-hard):** Beam search shows its strongest relative advantage, reaching roughly 17% vs. 10% for best-of-N at 256 generations. The absolute numbers are lower, but beam search nearly doubles the accuracy of best-of-N in this bin.
+- **Bin 5 (hardest, base model pass@1 near zero):** Both methods hover near 1–3% regardless of budget. No method makes meaningful progress—the base model simply lacks the capability to produce correct solutions on these problems, and no amount of search or verification can find what isn't in the proposal distribution.
+
+**Compute-optimal search (Figure 4).** By selecting the best search strategy per difficulty bin at each budget level (rather than applying a single strategy uniformly):
+
+- At 16 generations, compute-optimal search with oracle difficulty bins achieves approximately 27% accuracy, roughly matching PRM best-of-N weighted at 64 generations—a `4×` compute reduction (16 vs. 64 generations for equivalent performance).
+- At 256 generations, compute-optimal oracle reaches approximately 39.5%, surpassing PRM best-of-N weighted at the same budget (roughly 37%). ORM best-of-N weighted reaches about 34% at 256 generations, and majority voting reaches about 29%.
+- Compute-optimal with **predicted** difficulty bins (using the PRM's average final-answer score instead of ground-truth labels) tracks the oracle version closely, particularly at lower budgets. The two curves "largely overlap" per the authors (Figure 4), with the predicted version reaching approximately 37% at 256 generations vs. oracle at 39.5%. This is the critical result for deployability: the adaptive policy works without access to ground-truth answers, using only the PRM's own confidence estimates as a difficulty proxy.
+
+**PRM vs. ORM comparison (Figure 14, Appendix F).** At large sample counts (2,048), PRM best-of-N weighted achieves approximately 40% accuracy versus roughly 35% for ORM best-of-N weighted and roughly 30% for majority voting. The gap between PRM and ORM widens with increasing samples, confirming that the PRM's step-level training provides superior scaling properties even though the "last-step" aggregation effectively reduces it to ORM-like behavior at scoring time. The authors interpret this as evidence that step-level PRM training acts as beneficial **representation learning**—the intermediate-step prediction objective produces features that improve final-step accuracy even when intermediate predictions aren't directly used (Appendix F).
+
+---
+
+#### Revision Model Results (Section 6)
+
+The revision model modifies the **proposal distribution** (what the model generates) rather than the selection mechanism. The key finding is that **sequential revisions outperform parallel sampling, but the optimal ratio of sequential to parallel depends on problem difficulty**, with easy problems favoring purely sequential refinement and harder problems benefiting from a balanced mix.
+
+**Revision model pass@1 trajectory (Figure 6, left).** Starting from approximately 18.2% pass@1 at step 1 (the initial generation), the revision model's per-step accuracy improves to roughly 24–25% by steps 15–20, and remains in the 23–25% range out to 64 steps. The model generalizes meaningfully beyond its 4-step training horizon—it was only trained on sequences of up to 4 incorrect answers followed by a correct one, yet continues to improve (or at least not degrade) through step 20. This suggests the model has learned a transferable revision skill rather than memorizing a fixed number of revision steps.
+
+**Sequential vs. parallel comparison (Figure 6, right).** At 64 generations:
+- Sequential + PRM best-of-N weighted: approximately 41.5%
+- Parallel + PRM best-of-N weighted: approximately 39%
+- Sequential + majority voting: approximately 38%
+- Parallel + majority voting: approximately 35%
+
+Sequential outperforms parallel under both selection mechanisms, with the gap being roughly 2.5 percentage points for verifier-based selection and roughly 3 points for majority voting. The fact that sequential revisions help even with majority voting (which has no learned verifier and simply picks the most common answer) indicates that the benefit is not purely an artifact of the verifier seeing revision context—the revision model genuinely produces better answers as it iterates.
+
+**Sequential-to-parallel ratio sweep (Figure 7, left).** For a fixed generation budget of N, the total generations can be allocated as `N_parallel` independent chains, each of length `N_sequential`, with `N_parallel × N_sequential = N`. Varying this ratio reveals:
+- At 256 generations, the optimal ratio is around `2¹` to `2³` (2:1 to 8:1 sequential-to-parallel), achieving approximately 43–44% accuracy. This is a balanced strategy: generate a moderate number of independent chains with substantial revision depth in each.
+- Fully parallel (leftmost point: `N_parallel = 256, N_sequential = 1`) yields approximately 40%—worse than any configuration with some sequential component.
+- Fully sequential (rightmost point: `N_parallel = 1, N_sequential = 256`) yields approximately 42%—better than fully parallel but worse than the optimal balanced ratio.
+- At lower budgets (8–32 generations), fully sequential *is* optimal—the curves are monotonically increasing with the sequential-to-parallel ratio. This makes sense: when the total budget is small, splitting into parallel chains means each chain gets too few revision steps to improve meaningfully.
+
+**Difficulty-dependent optimal ratio (Figure 7, right).** At a fixed budget of 128 generations, broken down by difficulty quintile:
+- **Bin 1:** Performance is essentially flat across all ratios, around 90–92%. Easy questions are insensitive to the allocation strategy—the model gets them right regardless of how compute is spent.
+- **Bin 2:** Slight advantage for higher sequential ratios, approximately 63% at fully sequential vs. 58% at fully parallel. The model's initial answers are roughly correct and benefit from local refinement.
+- **Bin 3:** A clear optimal ratio emerges at moderate sequential-to-parallel values (around `2¹` to `2³`), reaching approximately 42% vs. 35% at the extremes. Medium-difficulty questions need both exploration (multiple independent attempts) and exploitation (refinement within each attempt).
+- **Bin 4:** Similar pattern, with the peak at a moderate ratio achieving roughly 18% vs. 14% at fully parallel. Even on hard questions, some balance of exploration and refinement helps.
+- **Bin 5:** All ratios produce roughly 2–3% accuracy. No allocation strategy helps on the hardest problems—consistent with the search results.
+
+**Compute-optimal revisions (Figure 8).** Selecting the optimal sequential-to-parallel ratio per difficulty bin:
+- At 64 generations, compute-optimal oracle achieves approximately 40%, matching parallel best-of-N weighted at 256 generations—a `4×` improvement (64 vs. 256 generations for equivalent performance).
+- At 256 generations, compute-optimal oracle reaches approximately 44%, compared to roughly 41% for best-of-N weighted and roughly 37% for parallel-only (the revision model with no sequential component). The gap between compute-optimal and parallel-only widens at higher budgets (3 points at 64, 7 points at 256), suggesting that the benefits of adaptive allocation compound.
+- Compute-optimal with **predicted** difficulty bins performs slightly below oracle at high budgets (approximately 41% at 256 generations vs. oracle's 44%) but still substantially outperforms the parallel baseline. The predicted-vs-oracle gap is larger for revisions than for search (compare Figure 8 vs. Figure 4), possibly because the PRM's score distribution is less informative about difficulty for revision-model outputs than for base-model outputs.
+- Notably, the parallel-only baseline appears to **plateau** around 36–37% at high budgets—more parallel samples stop helping—while compute-optimal scaling continues to improve. This suggests that without adaptive allocation, simply adding more compute hits diminishing returns; the adaptive policy escapes this saturation by shifting compute to sequential refinement on easy and medium problems.
+
+---
+
+#### FLOPs-Matched Comparison: Test-Time vs. Pretraining Compute (Section 7)
+
+The FLOPs-matched comparison asks: given a fixed total FLOPs budget, is it better to train a larger model or to keep the smaller model and spend the extra FLOPs on smarter inference? The comparison is between PaLM 2-S\* with compute-optimal test-time scaling and a model with approximately `14×` more parameters (greedy decoding, no extra test-time compute). Three values of the inference-to-pretraining token ratio `R = D_inference / D_pretrain` are tested: 0.16 (`R` ≪ 1, few inference tokens relative to pretraining), 0.79 (`R` ≈ 1), and 22 (`R` ≫ 1, many inference tokens). Results are reported as relative percentage change in accuracy: positive values mean test-time compute with the smaller model outperforms the larger model. All numbers are drawn from the bar charts in Figure 1 (top-right for revisions, bottom-right for PRM search) and the line plots in Figure 9.
+
+**Revisions (Figure 9, left; Figure 1, top-right bar chart):**
+
+| Difficulty | `R` = 0.16 | `R` = 0.79 | `R` = 22 |
+|---|---|---|---|
+| Easy (bin 1) | +11.8% | +3.5% | −11.9% |
+| Medium (bins 2–3) | +27.8% | +16.7% | +5.4% |
+| Hard (bins 4–5) | +21.6% | (negative, implied) | −37.2% |
+
+At `R` ≪ 1 (the regime most favorable to test-time compute, because pretraining savings dominate the FLOPs budget), test-time compute with revisions outperforms the `14×` larger model across **all** difficulty levels, including hard questions (+21.6%). At `R` ≫ 1 (the regime least favorable to test-time compute, because the larger model's per-token inference cost dominates), test-time compute only remains preferable on easy questions (−11.9%, meaning the larger model wins). The medium-difficulty advantage persists but narrows substantially (+5.4% at `R` ≫ 1 vs. +27.8% at `R` ≪ 1). Hard questions show a substantial disadvantage (−37.2%), confirming that test-time compute cannot compensate for fundamental capability gaps on problems the base model cannot solve.
+
+**PRM search (Figure 9, right; Figure 1, bottom-right bar chart):**
+
+| Difficulty | `R` = 0.16 | `R` = 0.79 | `R` = 22 |
+|---|---|---|---|
+| Easy | +19.1% | +2.2% | +2.0% |
+| Medium | 0.0% | −35.3% | −30.8% |
+| Hard | −3.6% | −35.3% | −52.9% |
+
+PRM search shows **substantially weaker** FLOPs-matched performance than revisions. On easy questions, test-time compute maintains a slim advantage across all R values (+19.1% → +2.0% as R increases). On medium questions, the advantage is zero or negative (0.0% at `R` ≪ 1, −30.8% at `R` ≫ 1). On hard questions, it's negative across all R values, reaching −52.9% at `R` ≫ 1—meaning the larger model is more than twice as accurate on hard problems when inference volume is high. The contrast between revisions (which maintain positive margins on medium questions even at `R` ≫ 1) and PRM search (which goes sharply negative) suggests that modifying the proposal distribution (revisions) is more FLOPs-efficient than optimizing selection (search) when competing against a larger pretrained model.
+
+**Figure 9 detail.** The line plots show MATH accuracy per difficulty bin as test-time compute scales for the smaller model. The `14×` larger model's greedy-decoding performance (stars) is placed at three x-axis positions corresponding to the three R values. Where the compute-optimal scaling line is above the star, test-time compute wins. On bin 1 (topmost line, purple), the scaling line is above all three stars for revisions—test-time compute wins across the board. On bin 5 (bottommost line, blue), the scaling line is near 0–5% and below all three stars—no amount of test-time compute helps. The intermediate bins show the crossover: bin 3 is above the star at `R` = 0.16 and 0.79 but below at `R` = 22 for revisions.
+
+---
+
+### Ablation Studies and Robustness Checks
+
+**PRM step-wise score aggregation strategy (Appendix E, Figure 13).** Comparing "min" (minimum score across steps), "prod" (product of step-level correctness probabilities), and "last" (only the PRM's prediction at the final step) for aggregating per-step PRM scores into a single solution-level score, at 256 samples: "last" achieves roughly 37%, "min" achieves roughly 35%, "prod" achieves roughly 27%, and ORM achieves roughly 34%. The superiority of "last" is notable because it effectively reduces the PRM to ORM-like behavior at aggregation time, yet the PRM with "last" aggregation still outperforms a separately trained ORM—confirming that step-level PRM training provides beneficial representation learning that improves final-step predictions even when intermediate predictions are discarded at scoring time. This finding contradicts prior work (Lightman et al., 2023; Wang et al., 2023) which found "min" to be best; the authors hypothesize the discrepancy arises because their PRM is trained with soft Monte Carlo roll-out labels rather than binary correctness labels, changing how per-step scores distribute.
+
+**PRM vs. ORM scaling (Appendix F, Figure 14).** At 2,048 samples, PRM best-of-N weighted reaches approximately 40% vs. ORM best-of-N weighted at roughly 35%, with the gap widening as sample count increases. Majority voting reaches roughly 30% at the same sample count—a 10-point gap behind PRM, confirming that learned verification provides substantial value beyond simple consensus.
+
+**Revision model verifier choice (Appendix J, Figure 15a).** The PRM trained on base model outputs underperforms a revision-specific ORM when scoring revision model outputs: sequential + base-LM PRM achieves roughly 40% at 64 generations, while sequential + revision-specific ORM achieves roughly 42%. This confirms distribution shift as a practical concern—the base model's output distribution differs from the revision model's, and a verifier trained on one does not transfer perfectly to the other. The revision-specific ORM was trained on the revision model's outputs and includes previous revisions in context.
+
+**Including revision history in verifier context (Appendix J, Figure 15b).** Providing the ORM with access to previous revisions (so it sees the revision chain, not just the final answer) provides a small improvement over the no-history ablation: approximately +1–2 percentage points at 64 generations. Both variants (with and without history) outperform the parallel baseline, confirming that the sequential sampling benefit is not solely attributable to the verifier having more context—the revision model genuinely produces better answers as it iterates.
+
+**Oracle vs. predicted difficulty bins (Figures 4, 8, and Appendix C, Figures 11–12).** For search, both oracle and predicted bins yield qualitatively similar trends across difficulty levels, with the curves largely overlapping (Figure 4). For revisions, predicted bins show slightly lower performance at high budgets: approximately 41% vs. 44% at 256 generations (Figure 8). The predicted-bin approach uses the PRM's average final-answer score across 2,048 samples per question to estimate difficulty without ground-truth labels. This is the critical robustness check for deployability—the compute-optimal strategy works without access to correct answers, though the revision setting shows some degradation. The paper does not account for the cost of generating these 2,048 samples in the compute-optimal budget calculations (Section 3.2 acknowledges this as a limitation).
+
+**Majority voting for revision selection (Appendix B, Figure 10).** The sequential-to-parallel ratio trends observed with verifier-based selection replicate qualitatively with majority voting: easy questions are insensitive to ratio, harder questions show an optimal intermediate ratio, and fully sequential marginally outperforms fully parallel in aggregate. This confirms that the optimal allocation pattern is not an artifact of the verifier—it reflects genuine differences in how revision benefits vary with difficulty.
+
+**ReST^{EM} revision model training (Appendix K, Figure 16).** An attempt to further optimize the revision model using ReST^{EM} (Singh et al., 2024)—an RL-based self-improvement procedure that generates on-policy revision trajectories and trains on successful ones—**backfires substantially**. At 256 generations, fully sequential performance with the ReST^{EM}-trained revision model drops to approximately 33.5%, compared to roughly 38.5% at the optimal ratio for the standard revision model. The authors hypothesize that on-policy data collection in ReST^{EM} exacerbates spurious correlations in revision data, causing the model to fail to learn the revision task properly. This is an important negative result: the revision training procedure is sensitive to data generation methodology, and naive self-improvement loops can degrade rather than enhance revision capability.
+
+**PRM training data source (Section 5.1, Appendix D).** The authors found the PRM800k dataset (which contains GPT-4-generated solutions with human step-level labels) to be "largely ineffective" for their PaLM 2 models, likely due to distribution shift between GPT-4 and PaLM 2 outputs. Instead, they used Monte Carlo roll-out supervision (Wang et al., 2023): for each training question, sample 16 solutions from the few-shot prompted base model, then for each step in each solution, sample 16 Monte Carlo roll-outs (completions from that step onward) and compute the fraction that reach the correct final answer as the soft label. Training hyperparameters (Appendix D): AdamW optimizer, learning rate `3 × 10⁻⁵`, batch size 128, dropout 0.05, Adam betas (0.9, 0.95), with early stopping based on validation loss on a random 10% held-out split of the PRM800k training questions.
+
+**Beam width sweep (Section 5.3).** The paper sweeps two beam width configurations: `M = sqrt(N)` (growing with budget, providing more exploration as budget increases) and `M = 4` (fixed, providing consistent pruning). The fixed `M = 4` generally outperforms `M = sqrt(N)` in the reported results, though both show similar difficulty-dependent patterns. No intermediate beam widths (e.g., `M = 2, 8, 16`) are reported, and the optimality of `M = 4` is not systematically established.
+
+**Lookahead depth sweep (Section 5.3).** Two lookahead depths are tested: `k = 1` and `k = 3` steps. Both underperform beam search and best-of-N at equivalent generation budgets, with `k = 3` (the more expensive variant) performing similarly to `k = 1`—suggesting that the extra lookahead depth does not compensate for the reduced effective beam count. Deeper lookahead (e.g., `k = 5, 10`) or adaptive lookahead depth are not explored.
+
+---
+
+### Critical Assessment
+
+The paper makes several central claims through its experimental program. Here I evaluate whether the reported experiments genuinely demonstrate each claim, noting where the evidence is strong, where it is conditional, and where it falls short.
+
+**The compute-optimal difficulty-conditioned policy achieves `4×` better efficiency than best-of-N.** This claim is well-supported for the specific budget ranges tested but requires careful scoping. For search (Figure 4), 16 generations of compute-optimal scaling match PRM best-of-N at 64 generations—exactly `4×`. For revisions (Figure 8), 64 generations of compute-optimal match the parallel baseline at 256 generations—again `4×`. However, three caveats temper this claim:
+
+First, the `4×` figure is computed *without accounting for the cost of difficulty estimation*. Generating 2,048 samples per question to estimate difficulty consumes more compute than the largest test-time budgets studied. The paper acknowledges this (Section 3.2: "our experiments do not account for this cost largely for simplicity") but does not amortize it. In a realistic deployment where difficulty estimation cost is included, the effective efficiency gain would be lower—potentially much lower if the estimation cost dominates. A fair accounting would subtract the difficulty estimation budget from the strategy execution budget or include it in the total.
+
+Second, the `4×` figure applies to the *predicted* difficulty bins for search (where the oracle and predicted curves largely overlap) but is closer to `3×`–`3.5×` for revisions at high budgets (where predicted bins reach ~41% vs. oracle's ~44% at 256 generations in Figure 8). The revision setting's larger gap between oracle and predicted difficulty suggests that PRM scores are less informative about revision-model output difficulty than base-model output difficulty—a distribution-shift issue that limits the method's deployability without oracle access.
+
+Third, the `4×` improvement is relative to *PRM best-of-N weighted* for search and *parallel best-of-N weighted* for revisions—both of which are already strong baselines that incorporate learned verifiers. The improvement over naive majority voting would be substantially larger (majority voting reaches only ~29% at 512 generations vs. compute-optimal oracle at ~39.5% at 256 generations—a larger effective multiplier), but the paper's headline claim compares against the stronger, more practically relevant baseline.
+
+**Test-time compute with a smaller model can outperform a `14×` larger model.** This claim is supported with sharp and well-documented boundary conditions. The paper is notably transparent about *where* the substitution works and where it fails:
+
+The claim holds convincingly at `R` ≪ 1 (few inference tokens relative to pretraining) across all difficulty levels for revisions (+11.8% to +27.8% relative improvement; Figure 1 top-right, Figure 9 left). At `R` ≫ 1, it only holds for easy questions (−11.9% relative on easy means the larger model wins, but the +5.4% on medium at `R` ≫ 1 narrowly favors test-time compute). For PRM search, the claim is weaker: even at `R` ≪ 1, medium questions show 0.0% relative improvement, and hard questions show −3.6%. At `R` ≫ 1, PRM search loses on every difficulty bin except easy questions.
+
+The critical weakness in this comparison is the baseline: the `14×` larger model uses only greedy decoding with no test-time compute augmentation of its own. A fairer comparison would give the larger model some test-time compute budget—say, best-of-8 majority voting—to see whether the compute-optimal gains persist when both sides have access to inference-time strategies. The paper implicitly acknowledges this by noting that the larger model's training follows the LLaMA paradigm (parameters-only scaling) rather than Chinchilla-optimal training (parameters + data scaling), making it a weaker baseline than a compute-optimally trained model of equivalent FLOPs. These are reasonable scoping decisions, but they mean the reported advantages of test-time compute over pretraining should be interpreted as upper bounds.
+
+A further subtlety: the comparison uses `14×` more parameters, but scaling parameters by M while holding data fixed is known to be suboptimal (Hoffmann et al., 2022). A Chinchilla-optimal `14×` FLOPs increase would scale both parameters and data, producing a model that is both larger *and* trained on more tokens. The paper does not estimate what fraction of the observed gap is due to the test-time compute strategy versus the suboptimality of the parameter-only baseline—a missing analysis that weakens the strength of the inference-over-pretraining claim.
+
+**The effectiveness of test-time strategies depends critically on prompt difficulty.** This is the most robustly supported claim in the paper, replicated across multiple axes:
+
+- Search (Figure 3, right): Beam search helps on medium problems (bins 3–4), hurts on easy problems (bin 1 due to over-optimization), and does nothing on hard problems (bin 5).
+- Revisions (Figure 7, right): Purely sequential works best on easy problems, balanced sequential-parallel works best on medium problems, and nothing works on hard problems.
+- FLOPs-matched comparison (Figure 9): Advantages are largest on easy/medium and reverse on hard.
+- The patterns hold under both verifier-based and majority-based selection (Appendix B).
+
+This is the finding most likely to generalize beyond PaLM 2-S\* and MATH, because it reflects a fundamental property: test-time compute can amplify existing capability (improving selection from a distribution that contains correct answers) but cannot create capability from nothing (when the distribution contains no correct answers). The exact difficulty thresholds will shift with model capability and verifier quality, but the qualitative pattern—search works in the "sweet spot" between too-easy (over-optimization) and too-hard (no signal)—is likely universal.
+
+**Verifier over-optimization is the primary bottleneck for test-time scaling.** This claim is supported qualitatively, but the paper does not provide a systematic analysis of *how much* over-optimization costs or *at what point* it becomes the dominant limiting factor. The evidence is:
+
+- Beam search degrades easy-problem performance at high budgets (Figure 3, right, bin 1: ~78% at 4 generations → ~77% at 256). This is a small absolute degradation (~1 percentage point) on an already-high baseline, making it suggestive but not dramatic.
+- Lookahead search—the strongest optimizer—paradoxically performs worst overall (Figure 3, left). This is consistent with over-optimization but could also be explained by the higher per-step cost reducing effective beam count.
+- Qualitative examples in Appendix M show degenerate outputs (repetitive steps, overly short solutions) that score highly under the PRM but are incorrect. These are illustrative but not systematically quantified.
+
+A missing experiment: directly measure over-optimization by plotting *PRM score vs. ground-truth correctness* at different search intensities. If the PRM score for beam-search-selected solutions increases with budget while correctness decreases or plateaus, that would directly quantify over-optimization. The current evidence is suggestive but circumstantial—consistent with over-optimization but not ruling out alternative explanations (e.g., beam search may simply be less sample-efficient than best-of-N for some difficulty levels, independent of verifier quality).
+
+**RLVR improves math and instruction following without degrading other capabilities.** This claim is well-supported at 8B scale (Table 23): GSM8K improves +3.3 (84.3% → 87.6%), MATH improves +1.7 (42.0% → 43.7%), IFEval improves +1.3 (81.1% → 82.4%), while average across all evaluations improves from 64.4 to 64.8. At 70B scale, the improvements are modest: MATH +0.7 (62.3% → 63.0%), IFEval +0.6 (82.6% → 83.2%), GSM8K unchanged, average 75.9 → 76.0. The 70B results are not dramatic—a <1% average improvement—which raises the question of whether RLVR provides meaningful value at larger scales where the DPO model is already strong. However, the 405B results (MATH improving "over 5 points" with as few as 25 RLVR steps, Section 8.1) suggest that RLVR's value may actually increase with scale when the model has headroom on the target task—the 70B was already near ceiling on GSM8K (93.5%), limiting potential gains.
+
+A missing experiment: testing RLVR on tasks beyond math and instruction following. The paper restricts RLVR to domains with programmatic verification, but code generation (with unit tests) is the obvious extension and is not explored. This limits the generality of the claim that RLVR is a "general post-training stage."
+
+**Smaller, weaker experiments that limit the strength of the conclusions:**
+
+- **Single benchmark, single model family.** All test-time compute experiments (the reference example) are on MATH with PaLM 2-S\*. No results on other reasoning benchmarks (GSM8K, BBH) or other model families. The difficulty-dependent patterns may be specific to MATH's problem structure or PaLM 2's error modes.
+- **Test set of 500 questions**, split into quintiles of ~100 each, then further split by two-fold cross-validation (~50 questions per fold per bin for strategy selection). This is a small sample—confidence intervals are not reported for the compute-optimal scaling curves, making it unclear whether observed differences between methods at specific budgets are statistically reliable.
+- **The difficulty estimation protocol is a straw-man for deployment.** Generating 2,048 samples per question to estimate difficulty is not practical—the paper acknowledges this but does not test cheaper alternatives (e.g., using a small model to predict difficulty from the question text, or adaptive estimation that starts with a few samples and adjusts). Until cheaper difficulty estimation is demonstrated, the compute-optimal framework is an analytical contribution rather than a deployable system.
+- **Search and revisions are never combined.** The paper studies PRM search (verifier-based selection) and iterative revisions (proposal distribution modification) independently. The natural next step—using the revision model as the proposal distribution within beam search—is not explored. The reported results therefore represent a lower bound on what a combined system could achieve, and the paper cannot speak to whether the two mechanisms are additive, synergistic, or redundant.
 
 ## 6. Limitations and Trade-offs
-- Scope of verifiable RL:
-  - `RLVR` applies to tasks with clean programmatic checks (math answers, constraint satisfaction). Many real tasks (open‑ended writing, multi‑hop QA without canonical answers) lack such verifiers.
-  - Over‑optimization: aggressively increasing KL budget can degrade overall averages or yield “gaming” behavior on constraint checks (Figures 21–22; Appendix B.4).
-- Evaluation sensitivities:
-  - Some metrics depend on strict formatting and answer extraction heuristics (e.g., IFEval prompt strictness, MATH answer formatting; Section 7.2; “flex” extraction is needed).
-  - Even with decontamination, n‑gram methods can miss paraphrased leakage (Section 3.2 acknowledges paraphrase ambiguity).
-- Data and annotation sources:
-  - Substantial reliance on synthetic data (GPT‑4o for generation; GPT‑4o or similar for judging) introduces model‑specific biases; off‑policy responses mostly from strong but finite model pools.
-- Compute and engineering complexity:
-  - Large training runs (e.g., 70B SFT ~50h on 64×H100; 70B RLVR ~60h on 48×H100; 405B RLVR 256×H100 with weight broadcasting and asynchronous inference/training) are non‑trivial to reproduce (Sections 4.3, 6.3, 8.1).
-- Coverage:
-  - The paper focuses on English, short to medium contexts, and single‑turn prompts; long‑context, multi‑turn, multilingual, tool‑use and agentic behaviors are explicitly left for future work (Section 8.3).
+
+### 6.1 Difficulty Estimation Cost Is Unaccounted and Impractical for Deployment
+
+**The assumption or constraint.** The entire compute-optimal framework depends on knowing each prompt's difficulty *before* selecting a test-time strategy. The paper's method for estimating difficulty—generating 2,048 samples per question and averaging either ground-truth correctness (oracle) or the PRM's final-answer score (predicted)—is extraordinarily expensive. The authors explicitly acknowledge this in Section 3.2:
+
+> "estimating difficulty in this way still incurs additional computation cost during inference... our experiments do not account for this cost largely for simplicity"
+
+The 2,048 samples required for difficulty estimation exceed the largest test-time budgets studied in the main experiments (256–512 generations). In a real deployment, the total cost would be difficulty estimation cost plus strategy execution cost, and the former dominates whenever estimation uses more samples than the strategy budget. The paper frames this as an "exploration-exploitation tradeoff" but provides no upper bound on when the tradeoff is favorable.
+
+**The consequence.** The headline `4×` efficiency gains over best-of-N are computed *after* difficulty is known, without amortizing the cost of learning it. If difficulty estimation costs 2,048 generations and the strategy budget is, say, 64 generations, the total cost is 2,112 generations—and the efficiency advantage relative to simply running best-of-N with 2,112 generations is unknown and likely far smaller than `4×`. The `4×` figure should therefore be understood as an **upper bound on achievable efficiency** given free difficulty labels, not a realized deployment gain. No practical system can afford 2,048-sample difficulty estimation per query, which means the compute-optimal framework, as presented, is an analytical contribution rather than a deployable system.
+
+**What evidence exists in the paper.** The paper shows that predicted difficulty bins (using PRM scores, which don't require ground-truth answers) produce similar results to oracle difficulty bins (Figures 4 and 8), confirming that the framework works without answer access. But the cost of generating 2,048 samples and running the PRM on them is the same in both cases—the predicted-vs-oracle distinction only removes the need for ground-truth labels, not the need for the samples themselves. The paper provides no experiments with cheaper difficulty estimation (e.g., using 4, 8, or 16 samples), no analysis of how estimation accuracy degrades with fewer samples, and no model that predicts difficulty directly from the question text. These are all flagged as future work (Section 3.2, Section 8) but are not explored.
+
+**Mitigation status.** The paper acknowledges this limitation explicitly and suggests future work on "pretraining or finetuning models to directly predict difficulty of a question" (Section 8). It also mentions adaptive estimation as a possibility: "begin with a few parallel samples, assess the score distribution, and decide in real-time" (Section 3.2). Neither approach is implemented or evaluated. The limitation is therefore unaddressed in the current work—the compute-optimal gains are analytically meaningful but not practically deployable without a solution to the difficulty estimation cost problem.
+
+---
+
+### 6.2 Hard Problems Remain Fundamentally Unsolvable
+
+**The assumption or constraint.** Test-time compute operates on the model's proposal distribution—the set of outputs the base model can generate. If the base model's pass@1 on a problem class is effectively zero (it never produces a correct answer, even once in thousands of samples), no amount of search, verification, or revision can help, because there are no correct solutions in the distribution to find or refine. The paper's difficulty bin 5 represents this regime: questions where the base model's pass@1 rate is in the bottom quintile, near zero.
+
+**The consequence.** All methods evaluated—search, revisions, and their compute-optimal combinations—show **near-zero improvement on the hardest questions regardless of compute budget**. In Figure 3 (right), bin 5 accuracy hovers at 1–3% for all methods and all budgets (4 to 256 generations, beam search and best-of-N). In Figure 7 (right), bin 5 shows roughly 2–3% accuracy irrespective of the sequential-to-parallel ratio. In the FLOPs-matched comparison (Figure 9, bin 5), the compute-optimal scaling line is essentially flat near 0–5% and lies below the `14×` larger model's performance across all values of `R`. Test-time compute offers **no path forward for genuinely novel or out-of-distribution reasoning** that exceeds the base model's training distribution. For such problems—and the MATH benchmark's hardest quintile represents competition problems that probe the limits of the base model's mathematical capability—pretraining remains the only viable path to improvement.
+
+This matters for practitioners because it establishes a sharp boundary on when test-time compute is worth deploying. If the problem distribution includes a substantial fraction of "bin 5" questions (where the base model almost never gets them right), scaling inference compute will waste resources for no gain. The difficulty estimation step becomes critical not just for strategy allocation but for the binary decision of *whether to attempt the problem at all* versus routing it to a larger model or a human.
+
+**What evidence exists in the paper.** The failure on bin 5 is one of the most consistent and robust findings across all experiments. It appears in search (Figure 3 right, Section 5.3), revisions (Figure 7 right, Section 6), FLOPs-matched comparisons (Figure 9, Section 7), and safety evaluations (where no method is tested on adversarial prompts that fall outside the model's training distribution). The paper is transparent about this boundary: the Section 7 takeaway box explicitly notes that "on the hardest problems... test-time compute provides essentially zero benefit regardless of budget." The qualitative interpretation—that test-time compute amplifies existing capability but cannot create it—is stated clearly.
+
+**Mitigation status.** The paper does not attempt to mitigate this limitation because it is inherent to the approach. It does, however, provide a clear diagnostic framework (the pass@1-based difficulty binning) that allows practitioners to identify *in advance* which problems are in this regime. The practical implication is that test-time compute should be combined with a routing strategy: estimate difficulty, and if the problem falls in bin 5, don't spend compute on test-time strategies—either escalate to a larger model or report uncertainty. The paper does not evaluate such a routing system.
+
+---
+
+### 6.3 The `14×` Larger Model Baseline Is Not Compute-Optimally Trained and Uses No Test-Time Compute
+
+**The assumption or constraint.** The FLOPs-matched comparison in Section 7 asks: given a fixed total FLOPs budget, is it better to spend it on test-time compute with a smaller model or pretraining a larger model? To answer this, the paper compares PaLM 2-S\* with compute-optimal test-time scaling against a model with approximately `14×` more parameters. Critically, this larger model:
+
+1. Scales only parameters while holding training data fixed, following the LLaMA paradigm (Touvron et al., 2023) rather than Chinchilla-optimal training (Hoffmann et al., 2022) where both data and parameters are scaled equally.
+2. Uses only greedy decoding with **no test-time compute augmentation**—no majority voting, no best-of-N, no search, no revisions.
+
+The paper explicitly acknowledges the first point in Section 7: "We choose this setting as it is representative of a canonical approach to scaling pretraining compute and leave the analysis of compute-optimal scaling of pretraining compute where the data and parameters are both scaled equally to future work."
+
+**The consequence.** The baseline is weaker than it needs to be along both dimensions. A Chinchilla-optimal model trained with `14×` more total FLOPs (scaling both parameters and data) would likely outperform a parameter-only-scaled model, narrowing or reversing the reported advantages of test-time compute. Similarly, giving the larger model even a modest test-time compute budget—say, best-of-8 majority voting, which costs `8×` inference FLOPs but is trivial to implement—would create a much stronger baseline. The current comparison essentially asks: "Is a smaller model with sophisticated inference better than a larger model with *no* inference strategy?" The answer may well be yes, but the more practically relevant question is: "Is a smaller model with sophisticated inference better than a larger model with *some* inference strategy?" The paper cannot answer this because it never gives the larger model any test-time compute.
+
+The reported numbers (e.g., +27.8% relative improvement on easy questions at `R` ≪ 1 for revisions, Figure 1 top-right bar chart) should be interpreted as **upper bounds** on the advantage of test-time compute over pretraining. Against a stronger baseline (Chinchilla-optimal architecture, best-of-8 decoding), these margins would shrink, perhaps substantially. The paper's conclusion that "test-time compute can outperform a `14×` larger model" is technically true for this specific comparison but overstates the practical inference-budget tradeoff.
+
+**What evidence exists in the paper.** The FLOPs-matched comparison (Figure 9, Table in Section 5, bar charts in Figure 1) reports all numbers relative to this specific baseline. The paper does not include an ablation where the larger model gets test-time compute. The PRM search results (Figure 9 right) provide indirect evidence that the baseline weakness matters: PRM search shows negative relative improvement on hard questions even at `R` ≪ 1 (−3.6%), and sharply negative on medium and hard at `R` ≫ 1 (−30.8% to −52.9%). If the baseline were truly weaker, we would expect *positive* gains consistently—the fact that PRM search loses in several regimes suggests the larger model's raw capability advantage is real and substantial, and that revisions (which do show positive gains in more regimes) benefit disproportionately from the baseline's lack of test-time compute.
+
+**Mitigation status.** The paper acknowledges the first limitation (parameter-only scaling) explicitly but does not address the second (no test-time compute for the larger model). The Section 9 discussion notes this as future work: "compute-optimal scaling of pretraining compute where the data and parameters are both scaled equally." The omission of test-time compute for the larger model is not acknowledged as a limitation. The FLOPs-matched claims should therefore be read with the caveat that they compare against a larger model *at its weakest*—and the practical advantage of test-time compute over pretraining is likely smaller than reported.
+
+---
+
+### 6.4 Verifier Over-Optimization Is Documented but Not Solved, Limiting the Gains from Additional Compute
+
+**The assumption or constraint.** All search-based methods (beam search, lookahead search, best-of-N weighted) depend on the PRM to score and select candidate solutions. The PRM is a learned model, and like all learned models, it can be exploited: search can find solutions that score highly under the PRM but are actually incorrect. The paper documents this phenomenon—which it terms "PRM over-optimization"—as a central limiting factor: beam search degrades easy-problem performance at high budgets (Figure 3, right, bin 1: ~78% at 4 generations → ~77% at 256), lookahead search (the strongest optimizer) paradoxically performs worst overall (Figure 3, left), and qualitative examples in Appendix M show degenerate outputs (repetitive low-information steps, overly short 1–2 step solutions) that score highly under the PRM but are incorrect.
+
+**The consequence.** The compute-optimal policy *mitigates* over-optimization by routing easy problems away from aggressive search (using best-of-N instead of beam search on bin 1), but it does not *solve* the underlying problem. On medium-difficulty problems where beam search is deployed (bins 3–4), over-optimization still limits the scaling ceiling—the beam search curves in Figure 3 flatten and, in some cases, decline well before the budget is exhausted. This means that **additional test-time compute beyond a certain budget provides diminishing or negative returns**, and the saturation point is determined by verifier quality, not by search algorithm design. The paper cannot answer the question: "If we improved the PRM, how much more would test-time compute scale?" No experiments vary verifier quality systematically (e.g., comparing PRMs of different capacities, training data sizes, or training objectives) to see how the over-optimization threshold shifts.
+
+For practitioners, this means that investing in better verifiers is likely more impactful than investing in more sophisticated search algorithms—the paper shows that lookahead search, which is algorithmically more complex than beam search, performs *worse* because it over-optimizes more aggressively. The bottleneck is the verifier signal, not the search procedure. But the paper offers no guidance on *how much* verifier improvement is needed to shift the over-optimization threshold, or whether the Monte Carlo roll-out training procedure (Appendix D) could be improved to produce more robust verifiers.
+
+**What evidence exists in the paper.** Over-optimization is documented qualitatively: beam search degradation on bin 1 (Figure 3 right), lookahead search underperformance (Figure 3 left), and degenerate output examples (Appendix M). The PRM aggregation strategy ablation (Appendix E, Figure 13) shows that different ways of combining per-step scores ("min" vs. "prod" vs. "last") produce different scaling behavior, suggesting that score calibration matters. But there is no direct experiment measuring the correlation between PRM scores and ground-truth correctness as a function of search intensity—which would directly quantify over-optimization. The paper does not try adversarial PRM training, ensemble verification, or constrained search with KL penalties to combat over-optimization. The RLVR approach in Tülu 3 (using binary verifiable rewards instead of a learned reward model) can be seen as a response to this problem—by replacing the learned verifier with a ground-truth check, over-optimization in the conventional sense becomes impossible—but this solution applies only to domains with programmatic verification and was developed in a different context (post-training, not test-time search).
+
+**Mitigation status.** The compute-optimal policy is a partial mitigation: it avoids aggressive search where over-optimization is most damaging (easy problems). The paper does not propose or evaluate any methods to directly reduce over-optimization (e.g., adversarial PRM training, KL-constrained search, ensemble verification). Section 8 flags verifier robustness as a key area for future work: "improving verifier robustness is the key bottleneck for further scaling test-time compute." The limitation is therefore well-documented but not addressed within the paper's scope.
+
+---
+
+### 6.5 Single Benchmark, Single Model Family, Small Test Set
+
+**The assumption or constraint.** All test-time compute experiments use the MATH benchmark (500 test questions) with PaLM 2-S\* as the base model. The paper states that "we believe this model is representative of the capabilities of many contemporary LLMs" (Section 4), but this is an untested assertion. The difficulty bins are computed per-model and split a 500-question test set into quintiles of approximately 100 questions each, which are then further split by two-fold cross-validation for strategy selection—meaning the compute-optimal policy is selected based on approximately 50 questions per fold per bin.
+
+**The consequence.** Several aspects of the findings could be model-specific or benchmark-specific in ways that limit generalizability:
+
+- The PRM's quality and over-optimization behavior depend on PaLM 2-S\*'s output distribution. A model with different calibration properties, error patterns, or problem-solving strategies might exhibit different difficulty-dependent scaling curves. For example, a model that tends to produce verbose but incorrect reasoning might benefit differently from PRM-guided search than a model that produces terse but sometimes correct answers.
+- The revision model's ability to learn from incorrect in-context examples depends on the base model's in-context learning capabilities, which vary substantially across model families (e.g., PaLM, Llama, GPT, Qwen have different in-context learning strengths at comparable parameter counts).
+- The MATH benchmark consists exclusively of competition-level math problems requiring symbolic reasoning. It is unclear whether the difficulty-dependent patterns (beam search hurting easy problems, revisions helping easy problems, nothing helping hard problems) generalize to other reasoning domains—code generation (where unit tests provide a different verifier signal), logical reasoning, scientific QA, or multi-step planning—or to tasks requiring factual knowledge rather than step-by-step inference.
+- The test set size (500 questions) and the per-bin sample size for strategy selection (~50 questions) raise concerns about statistical reliability. The paper does not report confidence intervals on the compute-optimal scaling curves, making it unclear whether observed differences between methods at specific budgets (e.g., beam search vs. best-of-N at 64 generations in bin 3) are statistically significant or could be due to variance from the small bin size. The two-fold cross-validation reduces but does not eliminate this concern—with only ~50 questions per bin per fold, the variance of accuracy estimates is substantial.
+
+**What evidence exists in the paper.** The difficulty-bin analyses (Figures 3 right, 7 right) are broken out by bin, meaning the sample size per data point is roughly 100 questions for the full-bin plots and roughly 50 for the cross-validation folds. The curves show clear qualitative patterns (beam search helps on bin 3–4, hurts on bin 1) that are consistent across multiple budget levels, which provides some confidence that the trends are real despite the small sample. But the lack of error bars or confidence intervals means the *magnitude* of differences—especially at specific budget points—should be interpreted cautiously. The paper does not replicate any finding on a second benchmark or second model family. The Tülu 3 portion of the paper uses a different model family (Llama 3.1) and a broader benchmark suite, but the test-time compute experiments (which form the reference example and the core of the methodological innovation) are MATH + PaLM 2-S\* only.
+
+**Mitigation status.** The paper acknowledges the single-benchmark limitation implicitly by choosing MATH as a "representative" reasoning benchmark and PaLM 2-S\* as a "representative" model (Section 4), but does not frame this as a limitation or discuss generalizability. The small test set and lack of confidence intervals are not discussed. The paper does not suggest future work on replicating the findings across benchmarks or model families, though this is a natural extension. The Tülu 3 development suite (Section 7) demonstrates evaluation methodology that could be applied to such a replication, but the specific test-time compute experiments are not replicated.
+
+---
+
+### 6.6 The Revision Model Has a 38% Correct-to-Incorrect Reversion Rate and Is Fragile to Training Methodology
+
+**The assumption or constraint.** The revision model is trained exclusively on sequences where all in-context answers are incorrect, followed by a correct answer (Section 6.1). This means at test time, when the model generates a correct answer early in the revision chain, it has never been trained on what to do when the current answer is *already* correct. The consequence is that approximately 38% of correct answers produced during a revision chain get "revised" back to incorrect answers in the subsequent step (Section 6.1). The paper mitigates this with a selection mechanism (majority voting or verifier-based selection) that picks the best answer from any point in the chain rather than always taking the last revision, but this is a post-hoc patch—it does not fix the model's tendency to break correct answers.
+
+**The consequence.** The revision model cannot be used as a monotonic improver—you cannot trust that more revisions will produce better answers, because the model may corrupt a correct answer it has already produced. This forces the inference procedure to evaluate every step in the chain (with a verifier or majority voting) and select the best one, which adds computational overhead and reduces the effective gain from additional revisions. If the model were trained to recognize when no revision is needed—i.e., to output a "stop" token or to simply repeat the previous answer when it's already correct—the revision chain could be terminated early, saving compute. The 38% reversion rate means that roughly 4 in 10 revision steps on correct answers are actively harmful.
+
+More broadly, the fragility of revision training is evidenced by the ReST^{EM} experiment (Appendix K, Figure 16). Attempting to optimize the revision model with on-policy RL training caused performance to degrade substantially: at 256 generations, fully sequential performance dropped to approximately 33.5%, compared to roughly 38.5% at the optimal ratio for the standard revision model. The authors hypothesize that on-policy data collection "exacerbates spurious correlations in revision data, causing the model to fail to learn the revision task properly." This suggests that the positive revision results depend on specific training choices (offline data construction, edit-distance-based pairing of incorrect and correct answers, training on sequences of up to 4 incorrect answers) that are not robust to modification. Practitioners attempting to replicate or extend the revision approach may find that small changes to the training pipeline—particularly anything that shifts the data distribution toward on-policy generation—cause the revision capability to collapse.
+
+**What evidence exists in the paper.** The 38% reversion rate is explicitly reported in Section 6.1. The ReST^{EM} failure is documented in Appendix K (Figure 16). The paper's mitigation—within-chain selection via majority voting or verifier—is evaluated and shown to recover most of the lost performance (Figure 6 right shows sequential + best-of-N weighted outperforming parallel at 64 generations), confirming that the selection mechanism compensates for reversion. However, the paper does not explore alternative training strategies to reduce reversion directly (e.g., including correct-to-correct transitions in the training data, training an explicit "stop revising" classifier, or using the PRM to decide when to terminate revision). The fragility of revision training is noted as a limitation implicitly (the ReST^{EM} result is presented as a negative finding) but not discussed in detail.
+
+**Mitigation status.** The within-chain selection mechanism (Section 6.1) partially mitigates the reversion problem by not forcing the model to use the final revision. But this is a workaround, not a fix—it doesn't prevent the model from wasting compute on revisions that corrupt correct answers, and it requires evaluating every step in the chain. The paper does not propose or evaluate any method for directly reducing the reversion rate. The ReST^{EM} failure is reported but not investigated further—the paper does not identify which specific aspect of on-policy training caused the degradation, leaving practitioners without guidance on what to avoid.
 
 ## 7. Implications and Future Directions
 - How this work changes the landscape

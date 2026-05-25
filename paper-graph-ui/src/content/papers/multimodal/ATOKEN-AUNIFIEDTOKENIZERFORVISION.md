@@ -8,175 +8,707 @@ ATOKEN introduces the first unified visual tokenizer capable of encoding images,
 
 ---
 
-## 1. Executive Summary (2–3 sentences)
-ATOKEN is a single “visual tokenizer” that converts images, videos, and 3D assets into a shared set of tokens that work for both high‑fidelity reconstruction and semantic understanding. It achieves this by encoding all modalities into a sparse 4D latent space (time x, y, z) using a pure transformer with 4D positional geometry, and by training with a stable, GAN‑free perceptual objective plus a progressive curriculum (Sections 3–4). Across benchmarks, it delivers competitive generation quality while preserving strong alignment with text for understanding (Table 3).
+## 1. Executive Summary
+
+This paper introduces **ATOKEN**, the first unified visual tokenizer that achieves both high-fidelity reconstruction and semantic understanding across images, videos, and 3D assets within a single framework. The system employs a pure transformer architecture with a sparse 4D latent representation and 4D rotary position embeddings to process visual inputs of arbitrary resolutions and temporal durations, trained with an **adversarial-free training objective** combining perceptual and Gram matrix losses (replacing unstable GAN-based training common in transformer tokenizers) and a **progressive training curriculum** (building incrementally from image-only to multimodal capabilities across four stages). ATOKEN achieves 0.21 rFID with 82.2% ImageNet zero-shot accuracy for images, 3.01 rFVD with 40.2% MSRVTT retrieval for videos, and 28.28 PSNR with 90.9% classification accuracy for 3D — representing the first method to unify all three modalities for both tasks — while in downstream applications enabling competitive performance across multimodal LLMs, image generation with both continuous and discrete tokens, text-to-video generation, and image-to-3D synthesis, establishing that a single tokenizer can serve as a universal visual foundation without compromising task-specific performance only when sufficient model capacity is available (a Base model degrades under multimodal expansion while the So400m model improves).
 
 ## 2. Context and Motivation
-- Problem/gap addressed:
-  - In language, a common tokenizer (e.g., BPE) enables one model to generalize across many tasks. Vision lacks such a unified tokenizer because:
-    - Reconstruction tokenizers (e.g., VAEs/VQ‑VAEs) preserve fine detail but do not produce semantic features suitable for understanding tasks.
-    - Understanding encoders (e.g., CLIP/SigLIP2) map images to semantic spaces but cannot reconstruct pixels.
-    - Tokenizers are fragmented by modality: image vs. video vs. 3D typically require separate systems (Section 2; Table 1).
-  - Existing transformer tokenizers that aim for reconstruction often rely on adversarial (GAN) training, which is unstable at scale—especially for transformers and when extending to 3D (Section 2; Figure 4a).
 
-- Why this matters:
-  - A shared token space across modalities and tasks would enable “language model–style” scaling and transfer in vision: one encoder feeds many downstream generators and multimodal LLMs, reduces duplicated training, and simplifies system design (Introduction; Figure 1).
+### The Core Problem: Visual Representation Remains Fragmented Despite Language's Success
 
-- Prior approaches and their shortcomings (Table 1; Section 2):
-  - Reconstruction-only (e.g., SD‑VAE, Hunyuan, Wan, Trellis‑SLAT): excellent fidelity but no text alignment or understanding.
-  - Understanding-only (e.g., SigLIP2, VideoPrism, PEcore): excellent semantics but no reconstruction.
-  - Limited “unified” attempts (VILA‑U, UniTok) handle both tasks but only for images.
-  - Architectural trade-offs: conv VAEs handle resolution flexibly but scale poorly in parameter efficiency; transformers scale better but training is unstable with GANs (Section 2).
+The fundamental problem this paper addresses is deceptively simple: **why hasn't visual AI achieved the same unification as language AI?** Large Language Models (LLMs) have achieved remarkable generalization — a single model can handle coding, reasoning, translation, and numerous other tasks that previously required specialized systems — largely because language tokenization converged on universal approaches like Byte-Pair Encoding (BPE). Whether the input is code, a scientific document, a table, or text in any language, it gets converted into the same token space, enabling efficient scaling and seamless knowledge transfer. This unification is arguably *the* enabling factor for modern LLMs.
 
-- Positioning:
-  - ATOKEN is the first to jointly unify tasks (reconstruction + understanding) and modalities (images, videos, 3D) in one transformer framework with both continuous and discrete tokens, while avoiding adversarial training (Abstract; Table 1; Sections 3–4).
+Visual data, by contrast, remains fundamentally fragmented. The paper identifies three dimensions along which this fragmentation manifests, and these dimensions are not independent — they compound one another:
+
+**Task specialization.** Generation and understanding are treated as entirely separate problems requiring different types of representations. Generation demands tokenizers that preserve low-level visual details for faithful reconstruction — pixel-level fidelity matters enormously because tiny artifacts in texture or color become obvious to human observers. Understanding demands encoders that extract high-level semantic features aligned with language, where fine-grained pixel information is actively *detrimental* because it adds noise that obscures the semantic signal. This creates a fundamental tension: one system's useful signal is another system's noise. Consequently, the field has developed two largely non-overlapping families of models — VAE-based tokenizers (SD-VAE, VQGAN, Cosmos) for generation and contrastively-trained encoders (CLIP, SigLIP, VideoPrism) for understanding — with minimal cross-pollination.
+
+**Modality fragmentation.** Even within a single task, different visual formats require different architectures. Image tokenizers operate on 2D grids. Video tokenizers must additionally model temporal dynamics across sequences of frames. 3D tokenizers must process varied representations — meshes, voxels, point clouds, Gaussian splats — each with fundamentally different geometric structure. While some video tokenizers can handle images as single-frame videos (a natural degenerate case), and some 3D tokenizers can process rendered multi-view images, no existing method provides comprehensive coverage across all three modalities. This means practitioners must maintain separate models for each combination of task and modality, with no shared representation that would allow knowledge transfer between them.
+
+**Architectural trade-offs.** Different design choices have created separate lineages of models with incompatible properties. Convolutional architectures dominate reconstruction tokenizers because they naturally handle arbitrary input resolutions and lack the training instability problems of transformer-based alternatives, but they scale poorly with model size — they show "diminishing returns when scaling model parameters" (Section 1). Transformer architectures scale better and are the backbone of modern understanding encoders, but transformer-based reconstruction tokenizers have historically suffered from "severe adversarial training instabilities" (Section 1) that make them unreliable at scale. Discrete token representations are compatible with LLMs and enable autoregressive generation, but sacrifice reconstruction quality compared to continuous latents. Continous latents preserve visual fidelity but cannot be directly consumed by language models. Resolution handling creates yet another divide: convolutional architectures naturally support variable resolutions, while most transformer-based approaches require fixed-size inputs.
+
+The consequence of this fragmentation is that **visual systems remain fundamentally limited in ways that language systems are not**. There is no visual analog of a pretrained language model that can be fine-tuned for generation, understanding, and reasoning across images, videos, and 3D from a single shared representation. Each new task or modality requires starting largely from scratch.
+
+### Why This Matters: Real-World Impact and Theoretical Significance
+
+This fragmentation has practical consequences that go beyond academic curiosity. Modern AI deployment pipelines increasingly require multi-modal understanding and generation capabilities — a virtual assistant must understand images, generate images, process video, and potentially reason about 3D spaces, ideally within a single integrated system. Under the current paradigm, this means deploying multiple specialized models, each with its own pretraining, its own inference infrastructure, and its own failure modes. The engineering complexity and computational cost of maintaining such a heterogeneous system is substantial.
+
+More fundamentally, the fragmentation represents a **theoretical roadblock** to the kind of emergent generalization that has made language models so powerful. When a language model learns to answer questions about a scientific paper, it can transfer that reasoning capability to legal documents, coding problems, and conversational dialogue because all these inputs exist in the same token space. A visual model that learns to reconstruct textures on 2D images cannot transfer that capability to reconstructing surface properties on 3D meshes because the representations are incompatible. The paper argues that without a shared representation across visual modalities, "vision systems remain fundamentally limited, unable to achieve the generalization and transfer learning that characterizes modern language models" (Section 1).
+
+The parallel to language is worth making explicit: before BPE and similar subword tokenization schemes became standard, NLP also suffered from fragmentation — different tokenizers for different languages, different preprocessing for code versus natural language, different handling of rare words. The convergence on universal tokenization was a key enabling step toward the LLM revolution. This paper positions itself as attempting the analogous convergence for vision.
+
+### Prior Approaches and Their Limitations
+
+The paper provides a comprehensive taxonomy of existing approaches in Table 1 and Section 6, but the key limitations of each category are worth examining in detail because they motivate ATOKEN's specific design choices.
+
+**Reconstruction-only tokenizers** (rows 1–13 in Table 1) represent the dominant paradigm in visual generation. Methods like SD-VAE, FLUX.1, Cosmos, Hunyuan, and WAN use convolutional encoders and decoders trained with adversarial losses (GANs) plus pixel-level reconstruction objectives. They achieve impressive reconstruction quality — FLUX.1 reaches 0.176 rFID on ImageNet — but have no semantic understanding capabilities whatsoever. They cannot produce embeddings that can be compared to text for retrieval, classification, or any understanding task. This is not an oversight; it is a consequence of their training objective. GAN-based training optimizes for perceptual realism in the reconstructed output, which incentivizes preserving low-level statistics (textures, edges, color distributions) but provides no signal about high-level semantics. A VAE that perfectly reconstructs an image of a dog has no internal representation corresponding to "dog" — that information is distributed opaquely across the latent dimensions in a form that is not aligned with language.
+
+The paper also notes a more specific limitation: **scaling behavior**. While convolutional architectures dominate reconstruction tokenizers, they "exhibit diminishing returns when scaling model parameters" (Section 1). GigaTok attempts to scale to 3 billion parameters using a hybrid conv-transformer architecture, but its reconstruction quality (0.795 rFID for the XL-XXL variant) lags far behind smaller convolutional models. This suggests that the convolutional lineage has a fundamental scaling ceiling that limits its potential as a foundation model.
+
+Within reconstruction-only tokenizers, a secondary fragmentation exists between continuous and discrete representations. Discrete tokenizers (VQGAN, GigaTok, Cosmos-DV) enable autoregressive generation compatible with LLM architectures, but consistently underperform their continuous counterparts on reconstruction quality. Cosmos-0.1-CI8×8 (continuous) achieves 1.031 rFID while Cosmos-0.1-DI8×8 (discrete) degrades to 0.867 — a substantial gap. This means practitioners must choose between generation quality and LLM compatibility, with no method providing both at competitive levels.
+
+**Understanding-only encoders** (rows 14–17 in Table 1) have achieved remarkable semantic capabilities through contrastive vision-language pretraining. SigLIP2 reaches 83.4% ImageNet zero-shot accuracy, and VideoPrism achieves 52.7% text-to-video R@1 on MSRVTT. However, these models are **architecturally incapable of reconstruction**. They produce a single global embedding vector (or a small set of patch-level embeddings) that captures semantic content but discards the spatial and textural information needed to reconstruct the original input. This is by design — the contrastive objective pushes the model to strip away instance-specific details in favor of category-level semantic features. A SigLIP embedding of a specific photograph of a golden retriever is close to its embedding of a different photograph of a golden retriever, and also close to its text embedding of "a golden retriever," but contains essentially no information about the individual dog's pose, lighting, or background.
+
+A specific limitation the paper highlights is **resolution handling**. Most understanding encoders process images at fixed resolutions (typically 224×224 or 256×256), discarding the fine-grained spatial information that would be needed for tasks like document understanding or medical imaging. SigLIP2 is a notable exception with native resolution support, which ATOKEN builds upon directly.
+
+**Attempted unified approaches** (rows 18–20 in Table 1) represent the most direct precursors to ATOKEN, but the paper argues they fall short in critical ways. VILA-U combines reconstruction and understanding for images by adding a reconstruction decoder to a transformer encoder trained with contrastive objectives. However, it achieves only 22.24 PSNR and 4.23 rFID on ImageNet reconstruction — dramatically worse than reconstruction-only methods — and 78.0% zero-shot accuracy — below understanding-only encoders. The compromise between tasks is severe. UniTok improves on this with multi-codebook quantization (MCQ), reaching 0.362 rFID and 78.6% accuracy, but remains image-only with no video or 3D capabilities. Both methods demonstrate that naive combination of objectives produces mediocre results on both tasks — the unified model performs worse than specialized models on each task individually.
+
+The paper also identifies a more fundamental limitation: **no existing unified approach extends beyond images**. Video and 3D modalities require temporal modeling and geometric understanding that are absent from VILA-U and UniTok's architectures. The challenge of unifying modalities is qualitatively different from unifying tasks — it requires reconciling fundamentally different data structures (2D grids, temporal sequences, 3D volumes) within a single architecture, not just adding a reconstruction loss to a semantic encoder.
+
+### How ATOKEN Positions Itself
+
+The paper frames its contribution not as a single technical innovation — though it introduces several — but as a **systematic integration** that addresses all three fragmentation dimensions simultaneously. This positioning is evident in the "all checkmarks" row of Table 1: ATOKEN is the only method that achieves reconstruction and understanding for images, videos, and 3D, with both continuous and discrete tokens, under adversarial-free training with native resolution support.
+
+The paper's stance is that the failure of previous unification attempts stems from **insufficient architectural and training design**, not from an inherent incompatibility between tasks or modalities. VILA-U and UniTok show that unification is *possible* — they do achieve both reconstruction and understanding, albeit weakly — but their limitations (poor reconstruction quality, modality restriction, architectural compromise) suggest that achieving strong performance requires a more carefully engineered approach. ATOKEN's specific design choices address each limitation:
+
+- **Transformer architecture with 4D RoPE** addresses the scaling ceiling of convolutional approaches while avoiding the training instability that has plagued previous transformer tokenizers (OmniTokenizer achieves only 26.74 PSNR vs. Hunyuan's 33.32, demonstrating how far behind transformer-based reconstruction was prior to this work).
+
+- **Sparse 4D representation** addresses modality fragmentation by giving each format a natural embedding in a shared space — images as 2D slices, videos as temporal stacks, 3D as surface voxels — rather than requiring separate encoders or ad-hoc format conversions.
+
+- **Adversarial-free training with Gram loss** addresses the GAN instability problem that Section 1 identifies as a key barrier to transformer-based tokenization. The paper explicitly shows (Figure 4a) that GAN training fails in their setting — the discriminator overpowers the generator — and that Gram loss provides superior and stable reconstruction (Figure 4c).
+
+- **Progressive training curriculum** addresses the difficulty of joint optimization across tasks and modalities. Rather than attempting to train everything simultaneously (which led to VILA-U's weak performance), ATOKEN builds capabilities incrementally, starting from a strong image understanding foundation and adding reconstruction, then video, then 3D.
+
+The paper also implicitly argues against the prevailing assumption that **specialization is necessary for strong performance**. The results in Table 3 challenge this directly: ATOKEN-So/C achieves 0.21 rFID on images (competitive with FLUX.1's 0.176), 3.01 rFVD on videos (competitive with WAN2.2's 3.19), and 28.28 PSNR on 3D (surpassing Trellis-SLAT's 26.97) — all while maintaining 82.2% ImageNet accuracy (within 1.2% of understanding-only SigLIP2). A single model matches or approaches specialized models on every dimension simultaneously. This is the paper's core empirical argument: **the fragmentation of visual AI is not a necessity — it is an artifact of insufficiently unified training**.
+
+A nuance worth emphasizing: the paper does not claim that ATOKEN *exceeds* specialized models on every metric. FLUX.1 still achieves better image rFID (0.176 vs. 0.209), and SigLIP2 still achieves higher ImageNet accuracy (83.4% vs. 82.2%). The claim is that ATOKEN achieves *competitive* performance across all dimensions simultaneously — a single model does what previously required at least five separate models (one each for image reconstruction, image understanding, video reconstruction, video understanding, and 3D processing). The practical implication is that a single ATOKEN deployment could replace a heterogeneous ensemble of specialized models, dramatically reducing engineering complexity and enabling forms of cross-modal transfer that are impossible when each modality uses a different representation.
 
 ## 3. Technical Approach
-ATOKEN comprises a unified 4D latent representation, a pure transformer encoder–decoder that preserves sparsity, and a stable multi‑objective training scheme, all brought together by a progressive training curriculum.
 
-1) Unified sparse 4D latent representation (Section 3.1; Eq. (1); Figure 2)
-- Idea in plain terms:
-  - Represent any visual input as a set of “patch tokens,” each with a feature vector and a 4D position p = [t, x, y, z]. Only the relevant axes are “active”:
-    - Image: occupies a single 2D slice (x, y) with t = z = 0.
-    - Video: occupies (t, x, y) with z = 0.
-    - 3D asset: occupies (x, y, z) with t = 0 (surface voxels).
-- Mechanism:
-  - Space‑time patchification: split inputs into non‑overlapping blocks of size t × p × p (Section 3.2). For images, add temporal padding so shapes match video patches.
-  - 3D assets: render multiple views on a sphere, patchify the RGB views, then aggregate view features into a 64^3 voxel grid by back‑projection and nearest‑view aggregation (Figure 3; Section 3.2).
-- Output:
-  - A sparse set of pairs {(z_i, p_i)} where z_i ∈ R^C is the token feature and p_i is the 4D coordinate (Eq. (1)).
+### 3.1 Reader Orientation
 
-2) Dual pathways for reconstruction and understanding (Sections 3.1–3.2; Figure 2)
-- Reconstruction path:
-  - Project each latent to a lower‑dim continuous space `z_r = W_r(z)` with KL regularization (to make the distribution well-behaved); optionally quantize `z_r` into discrete tokens via FSQ (Finite Scalar Quantization) (Section 3.1).
-    - FSQ here splits the 48‑dim latent into 8 groups of 6 dims, quantized to 4 levels per dimension → each group is a 4096‑way code (4^6), producing 8 discrete tokens (Stage 4; Figure 5; Section 3.4).
-  - A transformer decoder maps the set of structured latents back to outputs:
-    - Image/video: decode directly to pixels (Eq. (2)).
-    - 3D: decode to per‑voxel sets of Gaussian “splats” (position offset o, color c, scale s, opacity α, rotation r) used for fast rendering; offsets are constrained near the source voxel: x_k = p + tanh(o_k) (Eq. (3); Figure 3).
-- Understanding path:
-  - Use attention pooling over the latent tokens to produce a global representation z̄, then project it to a semantic vector `z_s = W_s(z̄)` for text alignment (Section 3.1; Figure 2).
-  - This reuses the same encoded features, so one encoder supports both decoding (reconstruction) and pooled semantic alignment (understanding).
+ATOKEN is a single transformer-based model that takes images, videos, or 3D assets as input and produces two parallel outputs from a shared internal representation: a high-fidelity pixel reconstruction (enabling generation tasks) and a semantic embedding aligned with text (enabling understanding tasks). The system solves the problem of visual representation fragmentation — where different tasks and modalities historically required entirely separate models — by learning a **unified 4D latent space** where images become 2D slices, videos become temporal stacks, and 3D assets become surface voxels, all processed through the same architecture with the same training objective.
 
-3) Transformer architecture with 4D geometry and sparsity (Section 3.2; Figure 2)
-- Encoder:
-  - Initialize from SigLIP2’s vision tower (a strong image‑text encoder).
-  - Extend to 4D by:
-    - Space‑time patch embedding (t × p × p) with zero‑initialized temporal weights so image performance is preserved initially.
-    - 4D RoPE (Rotary Position Embeddings) in every attention layer, giving relative position awareness across (t, x, y, z) (Section 3.2). RoPE rotates query/key vectors based on positions; 4D RoPE generalizes this to 4 axes so tokens “know” where they are in time and 3D space.
-- Decoder:
-  - Same transformer style, trained from scratch for reconstruction.
-- Sparse processing:
-  - The model processes sets of (feature, 4D‑position) pairs rather than dense grids. This naturally supports arbitrary resolutions and sequence lengths without padding (Sections 3.2–3.4).
+### 3.2 Big-Picture Architecture (Diagram in Words)
 
-4) Training objectives: stable, adversarial‑free (Section 3.3; Figure 4)
-- Global objective: L = λ_rec L_rec + λ_sem L_sem + λ_KL L_KL (Eq. (4)).
-- Reconstruction loss:
-  - Image: L1 (pixel), LPIPS (perceptual similarity), Gram matrix loss (matches second‑order feature statistics like texture/style), and CLIP perceptual loss (semantic consistency) (Eq. (6)).
-  - Video/3D: L1 only for efficiency; detailed textures transfer from the image objective (Section 3.3).
-  - Why Gram loss? Decomposing rFID into mean and covariance shows 86.6% of error comes from covariance (texture/style) rather than means (Figure 4b). Gram loss directly targets covariance and avoids GAN instability (Figure 4a). It trains stably and improves rFID consistently (Figure 4c).
-- Semantic loss:
-  - Images: distill SigLIP2 image‑text alignment by matching similarity distributions via KL divergence (Eq. (7)).
-  - Videos/3D: use Sigmoid alignment loss (as in SigLIP) which is more stable for smaller batch sizes (Section 3.3).
+The system has five major components connected in a single pipeline:
 
-5) Progressive curriculum and efficiency (Section 3.4; Figure 5; Figure 6; Table 2)
-- Four stages:
-  - Stage 1 (Image foundation): add reconstruction to SigLIP2 with 1×16×16 patches; train on 64–512 px images.
-  - Stage 2 (Video dynamics): switch to 4×16×16 patches, enable temporal modeling; handle images up to 1024 px, videos up to 512 px. Use temporal tiling with KV‑caching to avoid redundant compute across tiles (Figure 6).
-  - Stage 3 (3D geometry): add 64^3 3D voxel latents and Gaussian decoding; raise image to 2048 px and video to 1024 px.
-  - Stage 4 (Discrete tokens): apply FSQ quantization (8×6D groups, 4 levels per dim → 4096 codes per group), fine‑tune all modalities end‑to‑end.
-- Sampling ratios and resolution limits per stage are specified in Table 2.
+1.  **Space-Time Patch Embedding**: The raw visual input (any modality) is divided into non-overlapping 3D patches across time and space, producing a set of feature-position pairs — a 4D coordinate `[t, x, y, z]` plus a learned vector — forming a sparse representation that naturally handles variable resolutions and durations.
+2.  **Sparse Transformer Encoder**: A 27-block transformer (initialized from SigLIP2) processes these sparse feature-position pairs using 4D Rotary Position Embeddings (RoPE) at every attention layer, producing enriched feature-position latents that capture both local detail and global context.
+3.  **Dual Projection Heads**: From the encoder's output latents, two separate projections split the information: a lower-dimensional projection (with optional quantization) for reconstruction, and an attention-pooled global representation followed by a linear projection for semantic understanding.
+4.  **Sparse Transformer Decoder**: A separate 27-block transformer (trained from scratch) maps the reconstruction latents back to pixel space for images and videos, or to Gaussian splatting parameters for 3D assets.
+5.  **Training Objective**: A joint loss combining reconstruction terms (L1, perceptual LPIPS, CLIP perceptual, and Gram matrix losses) with semantic alignment terms (knowledge distillation from a frozen SigLIP2 for images, sigmoid loss for video and 3D) and a KL regularization term, all without adversarial training.
 
-6) Implementation (Section 3.5)
-- Encoder and decoder: 27 transformer blocks each, hidden size 1152, 16 heads. Encoder initialized from SigLIP2‑SO400M (patch16). AdamW training; cosine schedule; EMA 0.9999.
-- Compute: 256×H100 GPUs, global batch sizes tuned per task; full curriculum totals ~138k GPU‑hours (≈22 days on 256 GPUs).
-- Data (progressively): DFN + Open Images + internal (images); WebVid + TextVR + Panda70M (videos); Objaverse + Cap3D (3D) (Section 3.5).
+Information flows as follows: visual input → space-time patchification to sparse feature-position pairs → transformer encoder with 4D RoPE → reconstruction latents projected to lower dimension → transformer decoder → pixel or Gaussian splat output (for reconstruction); simultaneously, encoder latents → attention pooling → linear projection → semantic embedding aligned with frozen text encoder (for understanding).
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First**, the unified 4D latent representation (Section 3.1), because it defines the fundamental data structure that reconciles images, videos, and 3D — this is the "shared language" all modalities get translated into.
+- **Second**, the space-time patch embedding and sparse transformer architecture (Section 3.2), covering how raw pixels become input tokens, how 4D RoPE provides position awareness across all dimensions, and how the encoder/decoder process sparse representations.
+- **Third**, the training objectives (Section 3.3), examining each loss term in sequence — why GANs fail, how Gram loss addresses the covariance-dominant rFID error, and how semantic alignment differs between image distillation and video/3D sigmoid loss.
+- **Fourth**, the progressive training curriculum (Section 3.4), which is critical for understanding how the model avoids catastrophic interference when adding modalities — this is not a standard training loop but a carefully staged process with round-robin sampling.
+- **Fifth**, implementation details (Section 3.5), including model dimensions, optimization hyperparameters, dataset composition, and training logistics.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily a **systems and training methodology paper** whose core idea is that a carefully designed 4D transformer architecture with adversarial-free training and progressive curriculum can produce a single visual tokenizer that matches specialized models across images, videos, and 3D for both reconstruction and understanding tasks.
+
+---
+
+#### Unified Latent Representation: The 4D Coordinate Space
+
+The fundamental design decision in ATOKEN is the choice of representation: rather than building separate encoders for each modality, all visual inputs are mapped to a shared 4D coordinate space where each modality naturally occupies a different subspace. The representation is formally a set of feature-coordinate pairs:
+
+$$z = \{(z_i, p_i)\}_{i=1}^{L}$$
+
+where `$z_i \in \mathbb{R}^C$` is the latent feature vector at position `$p_i = [t, x, y, z] \in \{0, 1, \ldots, N-1\}^4$` in the 4D grid (temporal coordinate `$t$`, and three spatial coordinates `$x, y, z$`), `$C$` is the feature dimension, `$N$` defines the resolution along each axis, and `$L$` is the number of active (non-empty) locations.
+
+**What it represents:** This is a sparse set — only occupied positions exist, not a dense 4D array (which would be `$N^4$` entries, computationally prohibitive). Images activate the `$(x, y)$` plane at `$t = z = 0$`, producing a set of 2D grid positions. Videos activate the `$(t, x, y)$` subspace at `$z = 0$`, producing a stack of 2D grids across time. 3D assets activate the `$(x, y, z)$` subspace at `$t = 0$`, producing a 3D volume of surface voxels. The sparsity is crucial — a 256×256 image requires only ∼256 patches (at 16×16 patch size), not `$256^4$` entries.
+
+**Why this form:** Previous approaches handled modality differences through architectural specialization — a 2D conv encoder for images, a 3D conv encoder for videos, a separate point-cloud or voxel encoder for 3D. This precludes weight sharing and cross-modal transfer because parameters trained on one modality cannot be applied to another. The 4D coordinate representation solves this by making modality a matter of **which coordinates are active**, not which architecture is used. The transformer processes all modality types through the same self-attention mechanism, with the 4D RoPE providing relative position information that naturally handles the different dimensionalities — in 2D regions, the temporal and z-axis position differences are zero, so attention reduces to standard 2D relative attention; in 3D regions, all three spatial axes contribute.
+
+An important subtlety: the paper explicitly acknowledges that the `$(x, y, z)$` coordinates serve dual purposes across modalities (Section 3.1). For 3D assets, they represent actual physical occupancy in a 3D volume. For images and videos, they function as grid indices on a 2D display plane embedded in 3D space. The authors conceptualize this as "placing a monitor within 4D space and encoding its displayed content" — the same coordinate system can represent both a physical object and its 2D projection because the 4D RoPE provides relative rather than absolute position information. What matters for attention computation is the distance between positions, not their absolute coordinate values.
+
+**Dual-task projections.** From the encoded latents `$z$`, the model extracts two separate representations for reconstruction and understanding through complementary projections. For reconstruction, each latent is projected to a lower-dimensional space:
+
+$$z_r = W_r(z)$$
+
+where `$W_r$` is a learned linear projection that reduces the encoder's hidden dimension to a compact latent dimension (32 in Stage 1, 48 in Stages 2–4). An optional Finite Scalar Quantization (FSQ) step discretizes these latents:
+
+$$\tilde{z}_r = \text{FSQ}(z_r)$$
+
+for applications requiring discrete tokens (e.g., autoregressive generation with LLM-compatible architectures). For understanding, the latents are aggregated via attention pooling — a learned query vector attends to all `$L$` latent positions, producing a weighted average — into a global representation `$\bar{z}$`, which is then projected:
+
+$$z_s = W_s(\bar{z})$$
+
+for alignment with text embeddings from a frozen SigLIP2 text encoder.
+
+**Why two projections instead of a single shared representation:** The tension between reconstruction and understanding noted in Section 2 is real — reconstruction requires preserving fine-grained spatial details at every position, while understanding benefits from aggregating away instance-specific variation. By using the same encoder backbone but separate projection heads, the encoder learns to produce latent features `$z$` that contain both types of information, which are then routed to the appropriate downstream pathway. This is analogous to multi-task learning where shared features support task-specific heads, except here the "tasks" require fundamentally different information granularity (per-position vs. global).
+
+---
+
+#### Unified Space-Time Patch Embedding
+
+The first processing step converts raw visual input into the sparse feature-position format. The paper employs a unified patchification scheme: given an input `$x \in \mathbb{R}^{T \times H \times W \times 3}$` (temporal dimension `$T$`, height `$H$`, width `$W$`, 3 color channels), it is partitioned into non-overlapping space-time patches of size `$t \times p \times p$`. The specific sizes evolve through training: Stage 1 uses 4×16×16 patches (temporal padding for images), Stages 2–4 maintain 4×16×16.
+
+For images (`$T = 1$`), the paper applies **temporal zero-padding** to create `$t$`-frame patches from a single frame. This means the image is effectively duplicated or padded temporally to match the patch dimensions, ensuring consistent dimensions across modalities — the patching operation always expects `$t \times p \times p$` blocks. The temporal weights in the patch embedding are zero-initialized, so at initialization the patching operation does not introduce temporal artifacts; the temporal dimension is effectively ignored, behaving as if the model were processing a 2D image. As training progresses, these weights may learn to capture useful temporal structure even from static images (e.g., treating spatial features as "temporal" sequences).
+
+For videos, the input is directly partitioned along both spatial and temporal dimensions, producing a 3D grid of patches. For 3D assets, the paper adapts the Trellis-SLAT pipeline (Xiang et al., 2024): multi-view images are rendered from spherically sampled cameras around the 3D object, each rendered view is patchified using the same space-time scheme, and then each voxel in a 64×64×64 grid back-projects to gather and average patch features from the relevant camera views. Unlike the original Trellis-SLAT which used DINOv2 features, ATOKEN uses raw RGB patches from the renderings — a simplification that eliminates the dependency on a separate feature extractor while achieving comparable quality.
+
+All patch features — regardless of originating modality — are flattened into vectors and passed through a **shared linear layer** to produce the initial embeddings `$\{z_i\}$` for the transformer encoder. This shared layer is the first point where cross-modal weight sharing occurs.
+
+---
+
+#### Sparse Transformer Architecture with 4D RoPE
+
+ATOKEN uses a pure transformer architecture for both encoder and decoder, with both processing sparse structured representations — sets of feature-position pairs rather than dense grids. This sparsity is the key enabler for variable-resolution and variable-duration processing: unlike dense transformers that require fixed-size inputs with padding, sparse transformers attend only to positions that actually contain content.
+
+**Encoder architecture.** The encoder extends the pretrained SigLIP2 vision tower (Tschannen et al., 2025) in two ways. First, the patch embedding is generalized from 2D image patches to 4D space-time blocks of size `$t \times p \times p$`, with zero-initialized temporal weights preserving the original SigLIP2 image features at initialization. Second, SigLIP2's learnable 2D position embeddings are augmented with **4D Rotary Position Embeddings (RoPE)** applied in every attention layer.
+
+4D RoPE works by applying rotation transformations to query and key vectors based on their relative positions in the 4D coordinate space. For two positions `$p_i = [t_i, x_i, y_i, z_i]$` and `$p_j = [t_j, x_j, y_j, z_j]$`, the attention computation incorporates relative position information through rotations parameterized by the difference in each dimension separately. The key property is that RoPE encodes **relative** rather than absolute positions, which means:
+- The model can generalize to resolutions and temporal durations not seen during training (the relative offset encoding is inherently resolution-agnostic).
+- The same attention mechanism works for 2D (where `$t$` and `$z$` offsets are zero), 3D (where `$t$` offset is zero), and 4D (full spatiotemporal) contexts without architectural modification.
+- Cross-modal attention can naturally attend between different subspaces — e.g., a video query at `$[t, x, y, 0]$` can attend to a 3D key at `$[0, x', y', z']$` with the RoPE encoding the 4D distance.
+
+The encoder contains 27 transformer blocks with hidden dimension `$d = 1152$` and 16 attention heads, initialized from SigLIP-SO400M-patch16-naflex.
+
+**Decoder architecture.** The decoder shares the encoder's transformer architecture — 27 blocks, same hidden dimension and head count — but is trained from scratch for reconstruction. It maps structured latents `$\{(z_i, p_i)\}_{i=1}^{L}$` back to visual outputs through task-specific heads.
+
+For images and videos, the decoder outputs directly to pixel space:
+
+$$D_P : \{(z_i, p_i)\}_{i=1}^L \to x \in \mathbb{R}^{T \times H \times W \times 3}$$
+
+treating images as single-frame videos (`$T = 1$`) and discarding temporal padding. This follows the approach of TAE (Polyak et al., 2024), where the temporal dimension is always present in the architecture but set to 1 for image decoding — no separate image and video decoder branches are needed.
+
+For 3D assets, the decoder first maps to pixel-space features, then applies an additional layer to generate **Gaussian splatting parameters** for efficient rendering:
+
+$$D_{GS} : \{(z_i, p_i)\}_{i=1}^L \to \{\{(o_i^k, c_i^k, s_i^k, \alpha_i^k, r_i^k)\}_{k=1}^K\}_{i=1}^L$$
+
+where each latent position `$i$` generates `$K$` Gaussians (the paper does not specify `$K$` explicitly, but Trellis-SLAT uses `$K=4$` on its base setting; the precise value is not critical to understanding the architecture), each with five parameter groups:
+- `$o_i^k$`: position offset from the source voxel center (constrained via `$\tanh$` to keep Gaussians local)
+- `$c_i^k$`: color (RGB values for the Gaussian)
+- `$s_i^k$`: scale (anisotropic covariance determining the Gaussian's spread in 3D)
+- `$\alpha_i^k$`: opacity (transparency, determining how much this Gaussian contributes to rendered pixels)
+- `$r_i^k$`: rotation (orientation of the anisotropic Gaussian in 3D space)
+
+The constraint `$x_i^k = p_i + \tanh(o_i^k)$` ensures each Gaussian remains near its source voxel, maintaining local feature coherence — without this constraint, Gaussians could drift arbitrarily far from their source positions during training, leading to unstable geometry.
+
+**KV-caching for video decoding.** For video decoding, ATOKEN employs a temporal tiling strategy with KV-caching (illustrated in Figure 6). A long video is divided into temporal tiles (e.g., 16–32 frames → 4–8 latent frames). During encoding, each tile is processed sequentially, but previously computed key-value activations from earlier tiles are cached and reused, eliminating redundant computation across overlapping temporal contexts. During decoding, the same mechanism applies in reverse: tiles are decoded with access to cached encoder keys and values, maintaining temporal coherence without recomputing attention for the full sequence. This enables processing videos of arbitrary length with linear rather than quadratic scaling in temporal duration.
+
+---
+
+#### Training Objectives: Adversarial-Free Reconstruction and Semantic Alignment
+
+The total training loss combines three components:
+
+$$L = \lambda_{\text{rec}} L_{\text{rec}} + \lambda_{\text{sem}} L_{\text{sem}} + \lambda_{\text{KL}} L_{\text{KL}}$$
+
+where `$\lambda_{\text{rec}} = 0.2$`, `$\lambda_{\text{sem}} = 1.0$`, and `$\lambda_{\text{KL}} = 10^{-8}$` are fixed coefficients balancing reconstruction fidelity, semantic alignment strength, and KL regularization respectively, with `$L_{\text{KL}}$` being the standard KL divergence between the projected reconstruction latents `$z_r$` and a unit Gaussian prior (following the VAE formulation from Rombach et al., 2022).
+
+**What it computes:** A single scalar loss value that the optimizer minimizes by updating all trainable parameters (encoder, decoder, projection heads). The `$\lambda_{\text{rec}}$` coefficient at 0.2 means reconstruction loss is intentionally under-weighted relative to semantic loss, which reflects the design decision to prioritize semantic preservation when the two objectives conflict. The KL coefficient at `$10^{-8}$` is very small, indicating that latent regularization is treated as a soft constraint rather than a dominant training signal — the latents are regularized just enough to be well-behaved for downstream generative models without forcing them toward a pure Gaussian that would limit expressiveness.
+
+**Why this form:** Multi-task optimization with fixed coefficients is simpler than dynamic weighting schemes (e.g., uncertainty weighting, gradient normalization), avoiding the complexity and potential instability of adaptive balancing. The specific coefficient values were likely determined through preliminary experimentation rather than formal hyperparameter optimization, based on the principle that semantic alignment should not be sacrificed for marginal reconstruction improvements.
+
+---
+
+#### Reconstruction Loss: Why Adversarial Training Fails and Gram Loss Succeeds
+
+The reconstruction loss is the most technically novel component of the training objective. The paper begins with a negative result: **GAN-based training fails catastrophically for their transformer architecture**. Figure 4(a) shows the discriminator's real-vs-fake logits rapidly diverging during training — the discriminator learns to distinguish real from reconstructed images much faster than the generator (decoder) learns to fool it, causing mode collapse where the generator stops producing diverse outputs and reconstruction quality degrades.
+
+This failure is attributed to the transformer architecture: convolutional decoders have strong inductive biases toward local smoothness that make them naturally resistant to adversarial artifacts, while transformers lack these biases and can more easily produce outputs that exploit the discriminator's blind spots — high-frequency patterns that fool the discriminator into thinking the output is real but look unnatural to humans. This is consistent with prior observations that transformer-based tokenizers like OmniTokenizer suffer from adversarial training instabilities (Section 1).
+
+To develop an alternative, the paper analyzes **what makes up the rFID reconstruction error**. rFID (reconstruction Fréchet Inception Distance) measures the distributional distance between real and reconstructed images in Inception feature space. Decomposing rFID into components, the paper finds that approximately **86.6% of the error comes from covariance mismatch** (second-order statistics — texture, style, feature correlations), while only ~13.4% comes from mean feature mismatch (first-order statistics — average color, overall brightness). This decomposition is shown in Figure 4(b) and is the key insight that motivates the Gram loss.
+
+**Gram matrix loss** (Gatys et al., 2016) directly optimizes feature covariance:
+
+$$L_{\text{Gram}}(x, \hat{x}) = \sum_l \|G(\Phi_l(x)) - G(\Phi_l(\hat{x}))\|_F^2$$
+
+where `$\Phi_l(x)$` is the feature map from layer `$l$` of a pretrained network `$\Phi$` (typically VGG or similar), `$G(F) = F F^\top$` is the Gram matrix computed as the outer product of the feature map with itself (capturing pairwise channel correlations at each spatial location), `$\|\cdot\|_F$` is the Frobenius norm (element-wise squared difference summed), and the sum runs over multiple layers.
+
+**What it computes:** For each layer's feature map, the Gram matrix entry `$G_{ij}$` measures the correlation between feature channel `$i$` and channel `$j$` — high values mean the two channels tend to activate together, capturing texture patterns like "vertical edges often co-occur with blue colors." The loss encourages the reconstructed image to have the same channel correlation patterns as the original, pushing the decoder to reproduce fine-grained texture and style statistics.
+
+**Why this form:** Unlike adversarial training where a discriminator provides a learned signal that can be exploited, Gram loss provides a **deterministic, differentiable signal** based on fixed pretrained features. The discriminator in a GAN can adapt to the generator's outputs, creating an adversarial dynamic where the generator constantly searches for new vulnerabilities. Gram loss, by contrast, is a fixed target — the decoder cannot "fool" the Gram matrix computation because it's not learned; it can only minimize the squared difference, which genuinely drives the decoder toward matching the real feature statistics. Figure 4(c) confirms this: Gram loss achieves stable, monotonic rFID improvement throughout training, unlike the oscillating and eventually diverging GAN training.
+
+The full image reconstruction loss combines four complementary terms:
+
+$$L_{\text{rec}}^I = \lambda_1 L_1 + \lambda_{\text{LPIPS}} L_{\text{LPIPS}} + \lambda_{\text{GRAM}} L_{\text{GRAM}} + \lambda_{\text{CLIP}} L_{\text{CLIP}}$$
+
+where:
+- `$\lambda_1 = 1.0$`, `$\lambda_{\text{LPIPS}} = 10.0$`, `$\lambda_{\text{GRAM}} = 10^3$`, `$\lambda_{\text{CLIP}} = 1.0$` are per-term coefficients
+- `$L_1 = \|x - \hat{x}\|_1$` provides low-level pixel supervision (absolute difference in RGB space)
+- `$L_{\text{LPIPS}}$` (Zhang et al., 2018) measures perceptual similarity using deep features (trained to match human judgments of image similarity)
+- `$L_{\text{GRAM}}$` captures second-order texture statistics
+- `$L_{\text{CLIP}}$` enforces semantic consistency between original and reconstructed images in CLIP embedding space
+
+For video and 3D reconstruction, the loss simplifies to `$L_{\text{rec}}^{V/3D} = L_1$` only, relying on cross-modal transfer from the richer image loss to provide texture and semantic supervision. This design choice reflects the computational expense of computing perceptual losses on video frames (which would multiply cost by frame count) and the difficulty of defining perceptual metrics for 3D geometry. The paper's results suggest this transfer is effective — video and 3D reconstruction quality remain competitive with specialized models despite the simpler loss.
+
+A practical detail about loss normalization: reconstruction losses are normalized **over patches** rather than summed, following Esser et al. (2020). This provides stable gradients across different input resolutions — larger images have more patches, but each patch contributes equally to the gradient rather than dominating because of larger spatial extent.
+
+---
+
+#### Semantic Loss: Modality-Specific Text Alignment
+
+The semantic alignment objective differs between images and the other two modalities, reflecting different constraints on batch size and training stability.
+
+**Image semantic loss: knowledge distillation.** For images, ATOKEN distills from the frozen SigLIP2 vision encoder rather than training directly with contrastive loss:
+
+$$L_{\text{sem}}^I = \text{KL}\left(\text{softmax}(\tau^{-1} s_{\text{teacher}}) \,\|\, \text{softmax}(\tau^{-1} s_{\text{student}})\right)$$
+
+where `$s_{\text{teacher}}$` are vision-text similarity scores from the frozen SigLIP2 vision encoder paired with a frozen SigLIP2 text encoder, `$s_{\text{student}}$` are similarity scores from ATOKEN's understanding head `$z_s$` paired with the same frozen text encoder, `$\tau = 2.0$` is a temperature parameter controlling the softness of the distribution, and KL is the Kullback-Leibler divergence.
+
+**What it computes:** For each batch, the system computes similarity between every image and every text caption (yielding a matrix of scores), applies softmax with temperature `$\tau$` to convert these scores to probability distributions over captions for each image, and then measures the KL divergence between the teacher's distribution and the student's. A low KL means the student assigns similar relative probabilities to captions as the teacher — preserving the teacher's ranking of which captions best describe each image.
+
+**Why distillation instead of direct contrastive loss:** Direct contrastive training (e.g., SigLIP's sigmoid loss or CLIP's InfoNCE) requires large batch sizes (typically 16K–32K) to provide sufficient negative examples. During multimodal training with round-robin sampling (Section 3.4), the effective batch size for images is reduced because only a fraction of each batch is dedicated to image understanding. Distillation decouples the semantic signal from batch size — the teacher's distribution provides soft targets that encode rich similarity relationships even within a small batch, avoiding the need for large-batch contrastive training. Additionally, distillation prevents catastrophic forgetting of the pretrained SigLIP2 knowledge when reconstruction objectives are added — the student is explicitly regularized to stay close to the teacher's behavior.
+
+**Video and 3D semantic loss: direct sigmoid loss.** For videos and 3D, the paper uses the **sigmoid loss** from SigLIP (Zhai et al., 2023):
+
+$$L_{\text{sem}}^{V/3D} = -\frac{1}{|B|} \sum_{(v, t) \in B} \left[ y_{vt} \log \sigma(s_{vt}) + (1 - y_{vt}) \log(1 - \sigma(s_{vt})) \right]$$
+
+where `$v$` is a video or 3D asset embedding, `$t$` is a text embedding, `$s_{vt}$` is their cosine similarity, `$y_{vt} \in \{0, 1\}$` indicates whether the pair is matched, `$\sigma$` is the sigmoid function, and `$B$` is the batch.
+
+**What it computes:** This is a binary classification loss applied independently to each vision-text pair: for matching pairs (`$y=1$`), the model is encouraged to produce high cosine similarity; for non-matching pairs (`$y=0$`), low similarity. Unlike InfoNCE which requires computing similarities across all pairs in a batch for a softmax normalization, sigmoid loss treats each pair independently.
+
+**Why sigmoid loss for video/3D:** The paper states it "proves more stable for the smaller batch sizes typical in these domains" (Section 3.3). Video and 3D data are more memory-intensive than images (video clips span multiple frames; 3D assets require multi-view rendering), so practical batch sizes are smaller. Sigmoid loss, being independently computed per pair, does not suffer from the same batch-size sensitivity as contrastive losses that rely on batch-level normalization. This dual-strategy approach — distillation for images where teacher models exist and batch sizes can be large, direct alignment for modalities where these conditions don't hold — is an example of pragmatic design rather than theoretical purity.
+
+---
+
+#### Progressive Training Curriculum
+
+ATOKEN's training proceeds through four sequential stages, each building on the previous checkpoint. The curriculum is not merely a scheduling convenience; it is designed to prevent the catastrophic interference that would occur if all modalities and tasks were trained simultaneously from scratch.
+
+**Round-robin sampling.** Within each stage, modalities and tasks are sampled in a round-robin fashion with gradient accumulation. This means the optimizer sees one batch of image reconstruction, then one batch of video understanding, then one batch of video reconstruction, etc., accumulating gradients before each weight update. This ensures all objectives contribute to each parameter update without any single task dominating the gradient statistics. The specific ratios for each stage are provided in Table 2:
+
+- **Stage 1** (200k steps): 100% image reconstruction (semantic distillation is also active — the "100%" refers to the reconstruction component of the multimodal sampling, while understanding is maintained through distillation on every image batch)
+- **Stage 2** (200k steps): 22.2% image reconstruction, 11.1% video understanding, 66.6% video reconstruction
+- **Stage 3** (50k steps): 22.2% image reconstruction, 11.1% video understanding, 44.4% video reconstruction, 11.1% 3D understanding, 11.1% 3D reconstruction
+- **Stage 4** (100k steps): same ratios as Stage 3, with FSQ quantization added
+
+**Stage 1: Image Foundation.** Starting from the pretrained SigLIP2 weights, the model adds image reconstruction capability. Images are processed at variable resolutions from 64 to 512 pixels (sampled uniformly across this range during training). The latent dimension is 32. L1 loss is computed at the native resolution, while perceptual losses (LPIPS, CLIP perceptual, Gram) use 224×224 interpolation to match their pretrained feature extractors. The 4×16×16 space-time patches with temporal padding ensure architectural consistency with later stages.
+
+This stage establishes a crucial baseline: the model learns to reconstruct images while preserving SigLIP2's understanding via distillation. The paper's results show that after Stage 1, the model achieves 0.258 rFID on ImageNet and 82.7% zero-shot accuracy — reconstruction capability emerges without destroying semantic understanding (only 0.7% degradation from SigLIP2's 83.4%).
+
+**Stage 2: Video Dynamics.** The model extends to temporal sequences with several architectural modifications. The latent dimension expands from 32 to 48 to accommodate the additional complexity of motion (following Seawead et al., 2025). Resolution capabilities increase to 1024 for images and 512 for videos. The sampling strategy for video reconstruction uses two regimes: stride 1–3 for temporal consistency (consecutive frames are highly similar, training the model on fine-grained motion) and stride 4–12 for diversity (sparsely sampled frames cover longer time spans, training the model on larger temporal context). For video understanding, 1 FPS sampling up to 64 frames ensures coverage of longer videos.
+
+The KV-caching mechanism (Figure 6) is critical for efficiency: without it, encoding a 64-frame video as 16-frame tiles with 8-frame overlap would require computing attention across all frames for each tile, resulting in quadratic scaling. With KV-caching, each new tile only needs to compute attention with its own frames plus the cached keys and values from the preceding context window, reducing computation to roughly linear in video length.
+
+**Stage 3: 3D Geometry.** The model incorporates 3D assets as active voxels in 64×64×64 grids, with Gaussian splatting for reconstruction and attention pooling for understanding. Resolution further increases to 2048 for images and 1024 for videos. The paper reports a counterintuitive finding: adding 3D capability **improves** image reconstruction (rFID drops from 0.246 to 0.209) and video reconstruction (PSNR rises from 35.63 to 36.07 on TokenBench). The hypothesis is that geometric understanding from 3D provides complementary signals — learning to reason about 3D structure may improve the model's ability to infer occluded surfaces and depth relationships in 2D images, leading to better texture reconstruction.
+
+**Stage 4: Discrete Tokenization (Optional).** FSQ quantization is added for discrete generation tasks. The 48-dimensional latents are partitioned into 8 groups of 6 dimensions each. Each 6-dimensional sub-vector is quantized to 4 levels, producing 8 discrete tokens (one per group) from 4096-entry codebooks (`$4^6 = 4096$` possible values per group). The entire model (encoder and decoder) is fine-tuned, adapting all modalities to the discrete token space. This stage enables compatibility with autoregressive models that require discrete token inputs (e.g., LlamaGen, TokenBridge).
+
+**Why progressive rather than joint training:** The paper's scaling analysis (Figure 7) provides the answer. A smaller Base model trained with the same curriculum suffers severe degradation when expanding to video — ImageNet rFID degrades 49% from 0.323 to 0.483, and video PSNR declines across stages. The So400m model, by contrast, improves continuously. This suggests that multimodal tokenization has a **capacity requirement**: small models suffer from destructive interference between modalities (gradients from video training overwrite useful image features), while large models can leverage cross-modal learning (video and 3D training provide complementary signals that enhance image understanding). The progressive curriculum mitigates interference by introducing new modalities gradually and maintaining strong distillation from previous stages, but cannot overcome fundamental capacity limitations.
+
+---
+
+#### Implementation Details
+
+The architectural and optimization specifications are detailed in Section 3.5:
+
+**Model dimensions:** Both encoder and decoder contain 27 transformer blocks with hidden dimension `$d = 1152$` and 16 attention heads. The encoder is initialized from SigLIP-SO400M-patch16-naflex (Tschannen et al., 2025); the decoder is trained from scratch.
+
+**Optimization:** AdamW optimizer with `$\beta_1 = 0.9$`, `$\beta_2 = 0.95$`, weight decay 0.1. Learning rate follows linear warmup for 2,000 steps to `$\eta_{\text{max}} = 3 \times 10^{-4}$`, then cosine annealing to `$\eta_{\text{min}} = 3 \times 10^{-5}$`. The pretrained encoder uses a reduced learning rate `$\eta_{\text{encoder}} = 0.1 \times \eta_{\text{base}}$` to prevent overwriting SigLIP2's pretrained features too aggressively. Exponential moving average of weights is maintained with decay rate `$\gamma = 0.9999$`.
+
+**Hardware and batch sizes:** Training uses 256 H100 GPUs. Image understanding maintains a batch size of 8,192 samples throughout all stages. Reconstruction batch sizes scale with complexity: image reconstruction uses 1,024–4,096, video reconstruction uses 512–1,024, and 3D reconstruction uses 256–512. The total training time is 138k GPU hours across all stages (approximately 22 days with 256 GPUs).
+
+**Data composition:** Stage 1 uses DFN (Fang et al., 2023), Open Images (Kuznetsova et al., 2020), and internal datasets for images. Stage 2 adds WebVid (Bain et al., 2021) and TextVR (Wu et al., 2025c) for video understanding, with Panda70M (Chen et al., 2024b) for video reconstruction. Stage 3 adds Objaverse (Deitke et al., 2023) with Cap3D (Luo et al., 2024a) annotations for 3D. Datasets are sampled proportionally to their size, with per-task ratios controlled by the round-robin schedule in Table 2.
 
 ## 4. Key Insights and Innovations
-- Unified sparse 4D token space across modalities and tasks (Sections 3.1–3.2; Figures 1–3)
-  - Fundamental innovation: one encoder produces structured tokens that work for both per‑pixel decoding and pooled semantics, across images, videos, and 3D, without architectural forks.
-  - What’s new vs. prior work: earlier “unified” tokenizers covered only images; video tokenizers didn’t handle 3D; 3D tokenizers didn’t leverage large‑scale image/video pretraining (Table 1).
 
-- Pure‑transformer tokenizer with 4D RoPE and native resolution (Section 3.2)
-  - Significance: maintains transformer scaling advantages while handling arbitrary spatial/temporal sizes natively and efficiently via sparse sets and KV‑caching (Figure 6).
+### Innovation 1: Gram Matrix Loss as a Drop-in Replacement for Adversarial Training in Transformer Tokenizers
 
-- Adversarial‑free reconstruction objective centered on Gram loss (Section 3.3; Figure 4)
-  - Innovation: replaces GANs with a principled, stable combination of L1 + LPIPS + Gram + CLIP perceptual for images, and L1 for video/3D—driven by an empirical analysis that covariance dominates rFID error (Figure 4b).
-  - Impact: state‑of‑the‑art reconstruction quality without GAN instability (Figure 4c; Tables 3–4, 6, 8).
+The most consequential diagnostic move in this paper is not a new architecture or curriculum — it's the decomposition of rFID error into mean and covariance components (Figure 4b) and the insight that **second-order statistics dominate reconstruction quality for visual tokenization**. This is a genuinely novel *analytical frame* for understanding why GANs work (and fail) for this task, and it leads directly to a practical breakthrough.
 
-- Progressive curriculum that improves, rather than hurts, single‑modality performance (Section 3.4; Table 4; Figure 7)
-  - Observation: image rFID improves from 0.258 → 0.246 → 0.209 as video and 3D are added (Table 4 “ATOKEN‑So/C Stage 1→2→3”).
-  - Capacity finding: scaling study shows a small “Base” model degrades when adding modalities, while the larger “So400m” improves (Figure 7). This clarifies a capacity requirement for multimodal tokenizers.
+**What the field assumed before this work:** Adversarial training was considered essentially mandatory for high-quality visual tokenization. Every state-of-the-art reconstruction tokenizer — SD-VAE, FLUX.1, Hunyuan, WAN, OmniTokenizer — used a discriminator as part of its training objective. The rationale was well-established: pixel-space losses (L1, L2) produce blurry outputs because they average over possible high-frequency configurations, while perceptual losses (LPIPS) help but don't fully capture photorealism. GANs, by providing a learned signal that distinguishes real from reconstructed images, push the decoder toward the natural image manifold. This worked reliably for convolutional architectures, so the field largely treated adversarial training as a necessary evil — annoying to tune but unavoidable.
 
-- Dual continuous and discrete tokens from the same encoder (Stages 3–4; Tables 3, 11–12)
-  - Continuous latents deliver top reconstruction and diffusion‑based generation; discrete FSQ enables autoregressive generation and drop‑in compatibility with discrete LLM‑style generators.
+**The breakdown for transformers:** When prior work attempted transformer-based reconstruction tokenizers (OmniTokenizer, ViTok), they imported the same GAN training recipe and ran into severe instability. The field's diagnosis was that "transformers are harder to train with GANs," but the *mechanism* of failure was not well-characterized. The paper provides a clear diagnostic: the discriminator overpowers the generator (Figure 4a, diverging logits), causing mode collapse. But this diagnosis alone doesn't suggest a solution — you could try stronger regularization, spectral normalization, gradient penalties, etc., as decades of GAN literature has explored.
+
+**The conceptual move:** Instead of asking "how do we stabilize GAN training for transformers?", the paper asks "what is the discriminator actually providing, and can we get it from a non-adversarial source?" The rFID decomposition answers this: ~86.6% of the reconstruction error comes from covariance mismatch — textures, styles, correlations between feature channels — while only ~13.4% comes from mean features (overall brightness, average color). This is a *measurement-based* insight, not a theoretical claim. It says: if you can fix the covariance, you get ~87% of the way to perfect reconstruction, regardless of what else you do.
+
+Gram matrix loss (Gatys et al., 2016) was originally developed for artistic style transfer, where matching Gram matrices of deep features captures the texture statistics of a style image while preserving the content structure of another. The paper repurposes it for tokenizer training, but the innovation is less the loss function itself (which is standard) and more the **justification for why it can replace GANs**: the Gram loss directly optimizes the covariance term that dominates rFID, and because it's a fixed, deterministic loss based on frozen pretrained features, it cannot be exploited the way a learned discriminator can. There's no adversary to "overpower" — only a fixed target to converge toward.
+
+**Why this is fundamental, not incremental:** This isn't a small tweak to GAN training. It eliminates an entire training paradigm (adversarial optimization) and replaces it with a simpler, more stable alternative. The paper demonstrates this empirically — Figure 4c shows monotonic rFID improvement with Gram loss vs. diverging performance with GANs — but the deeper contribution is the **diagnostic methodology**. The rFID decomposition provides a general tool for analyzing reconstruction failures in any tokenizer, not just transformers. Future work can use this decomposition to understand what their tokenizer is getting wrong and design targeted losses accordingly.
+
+**A nuance worth flagging:** The Gram loss success is likely specific to the *combination* with other losses (L1, LPIPS, CLIP perceptual). Gram loss alone might over-emphasize texture at the expense of structure — the paper's full reconstruction loss (Equation 6) uses Gram as one of four complementary terms. The innovation is less "Gram loss solves everything" and more "Gram loss efficiently handles the dominant error mode, letting simpler losses handle the rest."
+
+**Evidence anchor:** Figure 4 provides the complete story — (a) shows GAN failure, (b) shows the covariance-dominant decomposition, (c) shows Gram loss achieving superior and stable rFID. The downstream results in Table 4 confirm that this training approach produces competitive reconstruction (ATOKEN-So/C: 0.209 rFID at 16×16 compression, approaching FLUX.1's 0.176 at 8×8 compression) while being the first transformer-based tokenizer to do so at scale.
+
+---
+
+### Innovation 2: Multimodal Training as a Positive-Sum Game (Not a Zero-Sum Compromise)
+
+A deep assumption in the visual tokenization literature — implicit in the proliferation of modality-specific models — is that **adding capabilities necessarily degrades existing ones**. The reasoning is straightforward: model capacity is finite, training signals from different modalities may conflict, and joint optimization creates destructive interference. Prior unified approaches (VILA-U, UniTok) empirically reinforced this assumption: they achieved both reconstruction and understanding, but at quality levels substantially below specialized models on each task.
+
+ATOKEN challenges this assumption with a finding that, if robust, changes how the field should think about multimodal visual learning.
+
+**The counterintuitive result:** As modalities are added through the progressive curriculum, **image reconstruction improves, not degrades**. Stage 1 (image-only): 0.258 rFID. Stage 2 (adds video): 0.246 rFID. Stage 3 (adds 3D): 0.209 rFID. That's a 19% improvement in image reconstruction quality simply from training the model to also reconstruct videos and 3D objects. Video reconstruction similarly benefits from 3D training: TokenBench PSNR rises from 35.63 (Stage 2) to 36.07 (Stage 3). Semantic understanding drops only marginally (82.7% → 82.3% → 82.2%), well within the range of negligible degradation.
+
+**What makes this surprising:** The standard expectation would be that adding video and 3D training — which use different data distributions, different loss functions (L1 only vs. rich perceptual losses for images), and different spatial structures — would interfere with the carefully optimized image reconstruction pathway. The decoder, in particular, is trained from scratch and must learn to produce images, video frames, and Gaussian splat parameters from the same latent representation. One would expect these competing demands to produce a "jack of all trades, master of none" outcome.
+
+**The paper's hypothesis** (Section 4.2): "temporal dynamics from video and geometric understanding from 3D provide complementary signals for image reconstruction." In other words, learning to track objects across video frames may teach the model about object permanence and occlusion that helps reconstruct single images more accurately. Learning to infer 3D surface properties from multi-view renders may teach the model about depth, lighting, and material properties that transfer to 2D image reconstruction.
+
+**Why this is a conceptual reframing, not just a scaling result:** The paper's scaling analysis (Figure 7) provides the crucial boundary condition: a smaller Base model (192M parameters) trained with the same curriculum *does* suffer catastrophic interference — ImageNet rFID degrades 49% when video is added. This means cross-modal benefit is not automatic; it's a **capacity-dependent emergent property**. Large models (So400m, ~800M parameters) have sufficient representational capacity to learn shared features that benefit all modalities, while small models are forced into destructive competition for limited parameters.
+
+This reframes the unification problem from "how do we prevent interference between modalities?" to "**at what model capacity does cross-modal learning become positive-sum?**" The answer has practical implications: if you're building a multimodal tokenizer and seeing degradation, the problem may not be your training strategy — it may simply be that your model is too small. The field's prior assumption that specialization is necessary for strong performance may just reflect the fact that previous attempts at unification used models below the critical capacity threshold.
+
+**A cautionary note:** The paper doesn't prove *why* video and 3D training help images — the hypothesis about complementary signals is plausible but unverified. It could also be that the expanded training data (more diverse images and videos seen during Stages 2–3) provides a regularization benefit unrelated to cross-modal knowledge transfer. Or it could be an artifact of the specific loss coefficients and round-robin sampling ratios used. The paper doesn't ablate data volume vs. modality diversity to isolate the causal factor.
+
+**Evidence anchor:** Table 4's progressive Stage 1→2→3 rFID trajectory (0.258→0.246→0.209) is the primary evidence. Figure 7's contrast between Base and So400m models provides the capacity-dependence boundary condition.
+
+---
+
+### Innovation 3: Difficulty-Agnostic Tokenization Through Sparse 4D Representation with Dimensional Subspace Activation
+
+A persistent challenge in multimodal architectures is **representation format mismatch**: images are 2D grids, videos are 3D spatiotemporal volumes, 3D assets are geometric structures. Prior solutions fall into two categories, both unsatisfactory. The first is to use modality-specific encoders — 2D convolutions for images, 3D convolutions for videos, point cloud or voxel encodings for 3D — which prevents weight sharing and cross-modal transfer. The second is to force all modalities into a common dense format — e.g., treating images as single-frame videos, or treating videos as batched images and losing temporal structure — which discards modality-specific inductive biases.
+
+ATOKEN introduces a **third path**: represent all modalities as sparse subsets of a shared 4D coordinate space, where modality differences are simply differences in which dimensions are active.
+
+**The conceptual insight:** A 4D coordinate `[t, x, y, z]` is overparameterized for any single modality — images only need 2 coordinates, videos need 3, 3D assets need 3 — but this overparameterization is *useful* because it creates a unified addressing scheme. An image patch at position `[0, x, y, 0]` and a video patch at position `[t, x, y, 0]` don't need separate encoders; they go through the same transformer, and the difference is handled by the position encoding (4D RoPE), which computes relative offsets in all four dimensions. For the image patch, `Δt = 0` and `Δz = 0` for all pairs, so the RoPE reduces to standard 2D relative encoding without any architectural branching.
+
+**Why this is different from prior "unified" architectures:** Previous transformer-based video models (e.g., VideoMAE, TimeSformer) use separate spatial and temporal attention or factorized 3D attention. They can't process 3D voxel data because the architecture assumes a specific dimensional structure. OmniTokenizer handles images and videos through a joint transformer but uses standard 2D position embeddings with temporal position treated as a separate learnable embedding — it can't incorporate 3D. ATOKEN's sparse 4D approach has no baked-in assumptions about which dimensions are active; it processes whatever subset of `[t, x, y, z]` coordinates are provided, with the same transformer and same position encoding mechanism.
+
+**The "monitor in 4D space" mental model:** The paper provides a helpful conceptualization (Section 3.1) for understanding why the same coordinates can represent both physical space and display grid: images and videos are like content displayed on a 2D monitor embedded in 3D space. The `(x, y, z)` coordinates for an image represent the monitor's pixel grid, not physical object locations. For a 3D asset, the same coordinates represent actual voxel occupancy. The dual interpretation doesn't cause confusion because RoPE encodes *relative* positions — what matters for attention is the distance between two tokens, not whether that distance is measured in physical space or pixel space. A token 5 units away in the `y` dimension gets the same positional encoding regardless of whether `y` represents a pixel offset or a physical coordinate.
+
+**Evidence that this actually works:** The 3D tokenization pipeline (Figure 3) adapts Trellis-SLAT's approach but replaces DINOv2 features with raw RGB patches processed through the same space-time patch embedding as images and videos. The resulting 3D reconstruction (Table 8) surpasses Trellis-SLAT (28.28 PSNR vs. 26.97) while using a shared encoder with images and videos — evidence that the unified representation doesn't compromise 3D-specific geometric understanding.
+
+**Limitations and open questions:** The paper doesn't demonstrate cross-modal attention *between* modalities — e.g., a video token attending to a 3D token for geometric reasoning, or an image token attending to a video token for temporal context. The 4D representation enables this in principle (all tokens exist in the same coordinate space), but the paper's training paradigm processes modalities separately within each batch, not jointly. The potential for cross-modal attention — and whether it would yield further benefits — remains unexplored.
+
+**Evidence anchor:** The architecture description in Section 3.1–3.2, the 3D pipeline in Figure 3, and the strong 3D results in Table 8 despite using a shared architecture with images and videos.
+
+---
+
+### Innovation 4: Progressive Curriculum as a Capacity-Dependent Enabler of Multimodal Unification
+
+Training curricula are common in the literature, but ATOKEN's progressive strategy is not merely a scheduling convenience — it's a **deliberate answer to the question of how to add capabilities without destroying existing ones**. The paper provides evidence that this answer is correct *only above a certain model capacity*, which transforms the curriculum from a training trick into a diagnostic tool.
+
+**What prior work did:** Most multimodal models train all objectives jointly from the start. VILA-U, UniTok, and Show-o all combine reconstruction and understanding objectives simultaneously from initialization (or from a pretrained understanding checkpoint with reconstruction added immediately). The results — VILA-U's 4.23 rFID, UniTok's 0.36 rFID — suggest that joint optimization from the start produces a compromise representation that is suboptimal for both tasks.
+
+**ATOKEN's hypothesis** (implicit in the curriculum design): Each new capability requires the model to restructure its internal representations. If too many new capabilities are introduced simultaneously, the restructuring signals conflict and the model settles into a suboptimal compromise. By introducing capabilities sequentially — first reconstruction for images, then video dynamics, then 3D geometry, then discretization — the model can restructure once and consolidate before the next change.
+
+**The capacity-dependence insight from Figure 7:** The Base model follows the same curriculum but degrades with each new stage, while the So400m model improves. This suggests the curriculum is **necessary but not sufficient** — it prevents catastrophic interference but only enables positive transfer when the model has capacity to spare. Below the critical capacity threshold, no curriculum can prevent degradation because there simply aren't enough parameters to represent all the necessary features simultaneously.
+
+**This is a reframing with practical implications:** If you're building a multimodal tokenizer and it's not working, the diagnosis tree is now: (1) is your curriculum progressive enough? (2) is your model large enough? Prior work could only ask question (1). The paper provides evidence that for many realistic model sizes, the answer to (2) may be "no" — and no amount of curriculum refinement will fix a capacity shortage. This should redirect research effort toward understanding *where the capacity threshold is* for different modality combinations, rather than endlessly refining training strategies for models below that threshold.
+
+**Evidence anchor:** Figure 7's comparative scaling curves (Base degrades, So400m improves) and the progressive reconstruction quality improvements in Table 4 (0.258→0.246→0.209 rFID).
 
 ## 5. Experimental Analysis
-- Evaluation setup (Sections 4–5):
-  - Datasets and metrics:
-    - Images: ImageNet 256×256 for reconstruction (PSNR, rFID, LPIPS) and zero‑shot classification; COCO for reconstruction generalization (Table 4–5).
-    - Videos: DAVIS 1080p, TokenBench 720p for reconstruction (PSNR/SSIM/LPIPS/rFVD); MSR‑VTT/MSVD for retrieval (Table 6–7).
-    - 3D: Toys4k for reconstruction (PSNR/SSIM/LPIPS) and zero‑shot classification (Table 8; Table 3).
-  - Baselines span reconstruction‑only VAEs/VQ‑VAEs, understanding‑only encoders, and prior “unified” image‑only tokenizers (Table 3).
 
-- Cross‑modality headline (Table 3):
-  > ATOKEN‑So/C achieves “0.21 rFID with 82.2% ImageNet accuracy” for images, “3.01 rFVD with 40.2% MSRVTT R@1” for video, and “28.28 PSNR with 90.9% classification accuracy” for 3D, while also supporting discrete tokens (ATOKEN‑So/D).
-  - Compared to unified image‑only baselines, ATOKEN improves both reconstruction (e.g., rFID 0.21 vs. UniTok 0.36) and understanding (82.2% vs. 78.6% ImageNet accuracy) and extends coverage to video and 3D.
+### Evaluation Methodology
 
-- Image reconstruction and understanding (Tables 4–5):
-  - Reconstruction:
-    - Under a unified evaluation protocol, ATOKEN‑So/C (16×16 compression, 48 channels) improves across stages to rFID 0.209 on ImageNet and 2.026 on COCO (Table 4).
-    - It outperforms many strong tokenizers at similar or higher compression; the curriculum notably helps (Stage 1→3: 0.258→0.209 rFID).
-  - Understanding:
-    - Zero‑shot ImageNet accuracy remains close to SigLIP2 across resolutions and stages (e.g., 82.2% vs. 83.4% at 256px; Table 5).
-    - Retrieval on COCO/Flickr remains competitive (Table 5).
+- **Dataset.** The paper evaluates on three modality-specific benchmarks: **ImageNet** (Deng et al., 2009) at 256×256 resolution for image reconstruction (PSNR, rFID) and zero-shot classification (accuracy); **TokenBench** (Agarwal et al., 2025) at 720p resolution with 471 videos and **DAVIS** (Pont-Tuset et al., 2017) at 1080p with 50 videos for video reconstruction (PSNR, rFVD), plus **MSR-VTT** (Xu et al., 2016) and **MSVD** (Chen & Dolan, 2011) for video understanding (text-to-video retrieval R@1); and **Toys4k** (Stojanov et al., 2021b) for 3D reconstruction (PSNR, LPIPS) and zero-shot classification (accuracy). Additional downstream evaluations use a suite of multimodal LLM benchmarks (RW-QA, AI2D, SQA, MMMU, MathVISTA, OCRBench, TextVQA for images; VideoMME, PercepTest, NExT-QA, LongVideoBench, MLVU, LVBench for videos) and generation benchmarks (ImageNet class-conditional generation, VBench for text-to-video, and image-to-3D synthesis on Toys4k).
 
-- Video reconstruction and retrieval (Tables 6–7; Figure 6):
-  - Reconstruction:
-    - ATOKEN‑So/C Stage 3: 33.11 PSNR on DAVIS; 36.07 PSNR with rFVD 3.01 on TokenBench, comparable to Wan2.1/2.2 and Hunyuan (Table 6).
-    - Discrete ATOKEN‑So/D achieves 29.75 PSNR on DAVIS and 22.16 rFVD on TokenBench, outperforming OmniTokenizer’s discrete variant (Table 6).
-    - Temporal tiling + KV‑cache accelerates decoding while keeping coherence (Figure 6).
-  - Retrieval:
-    - MSRVTT R@1 = 40.2%; MSVD R@1 ≈ 53.5% (Table 7)—reasonable but below specialized video encoders trained on larger video‑text corpora.
+- **Base model.** The primary model is **ATOKEN-So400m** (~800M parameters), initialized from SigLIP-SO400M-patch16-naflex (Tschannen et al., 2025) with a 27-block transformer encoder (hidden dimension 1152, 16 attention heads) and a matching 27-block decoder trained from scratch. A smaller **Base** variant (~192M parameters) is used for scaling ablations, initialized from SigLIP-Base-patch16-naflex with 12 transformer blocks and hidden dimension 768. The So400m model is chosen as "representative of the capabilities of many contemporary" vision models (Section 4), sitting in a regime large enough to demonstrate positive multimodal transfer but small enough for practical training.
 
-- 3D reconstruction and understanding (Table 8; Figure 11):
-  - Reconstruction:
-    - 28.28 PSNR and 0.951 SSIM, surpassing Trellis‑SLAT’s 26.97 PSNR (Table 8).
-    - Qualitatively stronger color consistency (Figure 11).
-  - Understanding:
-    - 90.9% zero‑shot classification on Toys4k (Table 3).
+- **Metrics.** For reconstruction, the paper uses standard image/video/3D quality metrics: **PSNR** (peak signal-to-noise ratio, higher is better, measures pixel-level fidelity), **SSIM** (structural similarity index, higher is better, measures perceptual structure preservation), **LPIPS** (learned perceptual image patch similarity, lower is better, measures deep-feature perceptual distance), **rFID** for images (reconstruction Fréchet Inception Distance, lower is better, measures distributional distance between real and reconstructed images in Inception feature space), and **rFVD** for videos (reconstruction Fréchet Video Distance, lower is better, analogous distributional distance for video features). For understanding, the paper uses **zero-shot accuracy** (ImageNet and Toys4k classification) and **text-to-video R@1** (recall at 1 for video-text retrieval). For generation, standard metrics include **gFID** (generation FID, lower is better), **sFID** (spatial FID), **Inception Score** (higher is better), **Precision** and **Recall** (higher is better, measuring fidelity and diversity respectively), **CLIP-Score** and **Pick-Score** for text-to-image alignment, and **VBench** aggregate scores for video generation quality.
 
-- Scaling and representation ablations (Section 4.5; Figure 7–8):
-  - Capacity ablation: larger “So400m” improves when adding modalities; smaller “Base” degrades (Figure 7).
-  - Embedding visualization: dense features cluster cleanly by class; after 48‑dim projection (with KL), t‑SNE shows more mixing, yet performance remains strong (Figure 8).
+- **Baselines.** The paper compares against three categories of methods. **Reconstruction-only tokenizers**: SD-VAE (Rombach et al., 2022), FLUX.1 (Labs et al., 2025), Cosmos-0.1 variants (Agarwal et al., 2025), Qwen-Image (Wu et al., 2025a), VA-VAE (Yao & Wang, 2025), GigaTok (Xiong et al., 2025), OmniTokenizer (Wang et al., 2024b), Hunyuan (Kong et al., 2024), WAN (Wan et al., 2025), MAGVIT-v2 (Yu et al., 2023a), ViTok (Hansen-Estruch et al., 2025), TAE (Polyak et al., 2024), and Trellis-SLAT (Xiang et al., 2024) for 3D. **Understanding-only encoders**: SigLIP2 (Tschannen et al., 2025), VideoPrism (Zhao et al., 2024), PEcore (Bolya et al., 2025), CLIP variants (Radford et al., 2021; Xu et al., 2023; Sun et al., 2023; Fang et al., 2023). **Unified reconstruction-understanding methods**: VILA-U (Wu et al., 2024c), UniTok (Ma et al., 2025a), and SeTok (Wu et al., 2024b). For downstream generation comparisons, additional baselines include DiT (Peebles & Xie, 2022), SiT (Ma et al., 2024a), REPA (Yu et al., 2024b), Lightning-DiT (Yao & Wang, 2025), LlamaGen, TokenBridge (Wang et al., 2025), and SlowFast-LLaVA-1.5 with Oryx-ViT (Xu et al., 2025).
 
-- Downstream applications (Section 5; Tables 9–13; Figures 12–14):
-  - Multimodal LLMs: swapping ATOKEN‑So/C into SlowFast‑LLaVA‑1.5 (frozen encoder) yields gains vs. Oryx‑ViT on several image QA benchmarks (e.g., RW‑QA and SQA) and competitive video QA, especially at smaller LLM scales (Tables 9–10).
-  - Image generation (continuous tokens): with Lightning‑DiT, ATOKEN‑So/C Stage 3 reaches gFID 1.56 (Table 11), approaching specialized reconstruction tokenizers while being multimodal.
-  - Image generation (discrete tokens): with TokenBridge‑L, gFID 2.23—competitive with prior discrete tokenizers and better than UniTok (Table 12).
-  - Text‑to‑video: with an MMDiT‑style generator under limited compute, ATOKEN matches Hunyuan/Wan on VBench totals and surpasses Cosmos (Table 13).
-  - Image‑to‑3D: generates plausible 3D assets but sometimes misses color/style faithfulness, likely due to higher latent dimensionality; authors suggest tuning diffusion schedules and conditioning (Section 5.5; Figure 14).
+- **Generation budget / compute accounting.** The paper does not use a unified compute budget across modalities (unlike the FLOPs-matched comparison in the reference example). Instead, each modality is evaluated independently at fixed compression ratios and latent dimensions. Image evaluation uses 256×256 center-cropped inputs; video evaluation uses native resolutions (720p–1080p) with temporal tiling; 3D evaluation uses 64×64×64 voxel grids. For downstream generation experiments, models are compared at equal parameter counts and training data scales. For the text-to-video generation comparison (Table 13), the paper "normalize[s] the effective token budget for video generation across all tokenizers by adjusting the patch size" — using patch size 2×2 for 8×8 spatial compression and 1×1 for 16×16 compression, and adjusting classifier-free guidance scale to account for differing channel sizes (scale 9.0 for 48-channel latents, 4.5 for 16-channel latents).
 
-- Do the experiments support the claims?
-  - Yes for unification and breadth: metrics across three modalities confirm both reconstruction and understanding with one tokenizer (Table 3).
-  - Stability: GAN‑free training is empirically substantiated (Figure 4).
-  - Capacity requirement: clearly supported (Figure 7).
-  - Video and 3D understanding are solid but not state‑of‑the‑art; they reflect data/batch constraints (Tables 7, 10; Section 3.3).
+- **Cross-validation / statistical protocol.** The paper heavily emphasizes **re-evaluation of all baseline methods using a unified protocol** with official implementations to ensure fair comparison (Section 4.1, Table 4). Specifically: "We re-evaluated all baseline methods using a unified protocol with official implementations to ensure fair comparison. All images are resized and center-cropped to 256×256, with metrics computed using identical scripts." This is a crucial methodological choice — many papers compare against reported numbers from original publications, which may use different preprocessing or evaluation scripts. By re-evaluating everything under identical conditions, ATOKEN's comparisons control for evaluation protocol variance. The paper does not report confidence intervals or statistical significance tests. Downstream MLLM evaluations use the lmms-eval toolkit (Zhang et al., 2024a) and report official metrics without output filtering.
+
+---
+
+### Main Quantitative Results
+
+#### Unified Tokenizer Comparison (All Modalities)
+
+Table 3 provides the headline comparison of ATOKEN against all categories of visual tokenizers across images, videos, and 3D. This table is the central empirical contribution — it shows that ATOKEN is the only method achieving competitive performance in every cell of the reconstruction-understanding × image-video-3D matrix.
+
+**Image results.** ATOKEN-So/C (continuous variant) achieves **29.72 PSNR, 0.21 rFID, and 82.2% zero-shot ImageNet accuracy**. This places it among the top reconstruction-only tokenizers (FLUX.1 achieves 0.176 rFID but with 8× compression vs. ATOKEN's 16×) while maintaining understanding accuracy within 1.2% of understanding-only SigLIP2 (83.4%). The discrete variant ATOKEN-So/D achieves 27.00 PSNR and 0.38 rFID with identical 82.2% accuracy, substantially outperforming prior discrete tokenizers (GigaTok-XL-XXL: 0.795 rFID, UniTok: 0.362 rFID).
+
+**Video results.** ATOKEN-So/C achieves **36.07 PSNR and 3.01 rFVD on TokenBench**, competitive with specialized video-only tokenizers (Wan2.2: 36.39 PSNR, 3.19 rFVD; Hunyuan: 36.37 PSNR, 3.78 rFVD) while adding semantic understanding (40.2% MSRVTT R@1). The discrete variant achieves 33.12 PSNR and 22.16 rFVD — dramatically better than OmniTokenizer's 19.89 PSNR and 202.46 rFVD for discrete video tokens, and competitive with Cosmos-0.1-DV's 31.20 PSNR and 25.94 rFVD.
+
+**3D results.** ATOKEN-So/C achieves **28.28 PSNR and 0.062 LPIPS on Toys4k**, surpassing the specialized Trellis-SLAT (26.97 PSNR, 0.054 LPIPS) in PSNR while slightly trailing in LPIPS, with **90.9% zero-shot classification accuracy**. This is the first demonstration of a single tokenizer handling 3D reconstruction and understanding alongside images and videos.
+
+**The key structural insight from Table 3:** Methods cluster into three groups with clear tradeoffs. Reconstruction-only methods (rows 1–13) achieve strong image and video metrics but have empty understanding columns. Understanding-only methods (rows 14–17) achieve strong retrieval and classification but have empty reconstruction columns. Prior unified methods (rows 18–20) fill some cells but with substantially degraded performance (VILA-U: 4.23 rFID, 78.0% accuracy; UniTok: 0.362 rFID, 78.6% accuracy). ATOKEN fills all cells at competitive or state-of-the-art levels — the "all checkmarks" row is not just architecturally possible but empirically validated.
+
+---
+
+#### Image Tokenization: Reconstruction Quality
+
+Table 4 provides a detailed image reconstruction comparison on ImageNet and COCO. The results reveal several patterns that go beyond the headline numbers.
+
+**Multimodal training improves image reconstruction.** The progressive stages show monotonic improvement: ATOKEN-So/C Stage 1 (image-only): 0.258 rFID; Stage 2 (adds video): 0.246 rFID; Stage 3 (adds 3D): 0.209 rFID — a **19% improvement** from the image-only baseline. This is the paper's most counterintuitive result: training on additional modalities improves single-modality performance rather than causing interference.
+
+**The compression-dimension tradeoff.** At 16×16 spatial compression, ATOKEN achieves 0.209 rFID with 48-dimensional latents — substantially better than Cosmos-0.1-CI16×16 (0.959 rFID with 16-dim) and competitive with methods using lower compression. FLUX.1 achieves 0.176 rFID but at 8×8 compression (4× more tokens per image). VAVAE needs 32-dimensional latents to achieve 0.279 rFID at the same 16×16 compression, suggesting ATOKEN's latent representation is more information-dense.
+
+**Transformer vs. convolutional architectures.** ATOKEN dramatically outperforms OmniTokenizer, the only other pure transformer reconstruction tokenizer in the comparison — 29.72 PSNR vs. 26.74 PSNR on ImageNet. This gap (3 dB PSNR) is enormous in reconstruction terms and validates the adversarial-free training approach. Previous transformer tokenizers attempted GAN training and failed; ATOKEN's Gram loss makes the transformer approach viable for the first time.
+
+**Cross-dataset consistency.** Discrete tokenizers typically show large ImageNet-to-COCO generalization gaps — UniTok degrades from 0.362 rFID on ImageNet to 3.918 on COCO (a 10× degradation), GigaTok-XL-XXL degrades from 0.795 to 5.757. ATOKEN-So/D degrades from 0.379 to 3.270 — still a gap, but substantially smaller, suggesting better generalization.
+
+---
+
+#### Image Tokenization: Semantic Understanding
+
+Table 5 evaluates zero-shot classification and retrieval against understanding-only encoders. The results address the critical concern of **whether adding reconstruction degrades semantic capabilities**.
+
+**Progressive stability.** ImageNet accuracy across stages: 82.7% (Stage 1) → 82.3% (Stage 2) → 82.2% (Stage 3). The 0.5% degradation from image-only to full multimodal is remarkably small. This means adding video and 3D reconstruction + video and 3D understanding costs less than 1% in image classification accuracy relative to the image-only baseline.
+
+**Comparison to SigLIP2.** The gap to understanding-only SigLIP2 (83.4% on ImageNet) is 1.2% at 256×256 resolution. This is substantially narrower than previous unified attempts (VILA-U: 78.0%, UniTok: 78.6%). The paper frames this as "narrowing the gap" — ATOKEN is closer to a dedicated understanding encoder than to prior unified methods.
+
+**Resolution scaling.** At higher resolutions (512×1024), ATOKEN achieves 82.9% accuracy vs. SigLIP2's 84.3% — a 1.4% gap. The gap widens slightly at higher resolution, suggesting that reconstruction optimization may slightly interfere with the model's ability to leverage fine-grained spatial information for semantics, or that SigLIP2's native resolution handling is more optimized for this regime.
+
+**Cross-modal retrieval.** COCO and Flickr30k retrieval metrics show similar patterns: small degradation from image-only to multimodal, with Stage 3 achieving 53.7% T→I and 70.5% I→T on COCO, vs. SigLIP2's 55.4% and 71.5%. The gap is consistently 1–2 percentage points across retrieval benchmarks.
+
+**Discrete tokenization preserves semantics.** ATOKEN-So/D achieves 82.2% ImageNet accuracy — identical to the continuous variant — validating that FSQ quantization does not harm semantic representations. This is important because discrete tokens are needed for LLM compatibility; if quantization degraded understanding, the architecture's practical utility would be limited.
+
+---
+
+#### Video Tokenization: Reconstruction Quality
+
+Table 6 evaluates video reconstruction on DAVIS (1080p) and TokenBench (720p). The video domain represents one of the hardest tests for unification because video tokenizers must handle temporal dynamics on top of spatial compression.
+
+**Competitive with specialized models.** ATOKEN-So/C achieves 33.11 PSNR and 10.76 rFVD on DAVIS, and 36.07 PSNR and 3.01 rFVD on TokenBench. These numbers are in the same range as specialized video-only tokenizers: Wan2.1 (33.50 PSNR, 17.75 rFVD on DAVIS; 36.11 PSNR, 3.21 rFVD on TokenBench), Wan2.2 (33.06 PSNR, 12.65 rFVD; 36.39 PSNR, 3.19 rFVD), and Hunyuan (32.33 PSNR, 22.94 rFVD; 36.37 PSNR, 3.78 rFVD). ATOKEN is not the absolute best on any single metric, but it is in the top cluster while handling two additional modalities.
+
+**Transformer architecture viability for video.** OmniTokenizer, the only other pure transformer video tokenizer in the comparison, achieves 21.06 PSNR on DAVIS — dramatically worse than ATOKEN's 33.11 PSNR. The 12 dB gap is massive and reinforces that ATOKEN's adversarial-free training is what makes transformer-based video reconstruction work. OmniTokenizer uses GAN training and suffers the instabilities documented in Figure 4a.
+
+**Cross-modal transfer from 3D to video.** Stage 2 to Stage 3 improvement on TokenBench: 35.63 → 36.07 PSNR, and 3.63 → 3.01 rFVD. Adding 3D training improves video reconstruction. This is consistent with the image reconstruction improvement (Stage 1 → Stage 3) and suggests that geometric reasoning from 3D provides signals that enhance temporal modeling — understanding of object permanence, occlusion, and depth may transfer to better video frame prediction.
+
+**Discrete video tokenization.** ATOKEN-So/D achieves 29.75 PSNR on DAVIS, substantially outperforming Cosmos-0.1-DV (27.26 PSNR) and dramatically outperforming OmniTokenizer discrete (20.62 PSNR). However, the gap to continuous ATOKEN-So/C (33.11 PSNR) is 3.36 dB — larger than the continuous-discrete gap for images (2.58 dB: 29.72 vs. 27.14). This suggests that temporal modeling is more sensitive to quantization errors than spatial reconstruction, likely because small quantization artifacts in individual frames compound across the temporal sequence.
+
+---
+
+#### Video Tokenization: Semantic Understanding
+
+Table 7 evaluates zero-shot video-text retrieval on MSRVTT and MSVD.
+
+**Reasonable but not state-of-the-art.** ATOKEN achieves 40.2% text-to-video R@1 on MSRVTT, compared to understanding-only VideoPrism (52.7%), PE-Core-L14 (49.1%), and SigLIP2 (41.9%). The gap to dedicated video understanding models is larger than the image understanding gap (1.2% behind SigLIP2 for images vs. 1.7% for video retrieval). This is expected — ATOKEN's training data includes far fewer video-text pairs than dedicated video encoders (WebVid + TextVR vs. VideoPrism's massive video-text corpus), and the reconstruction objective crowds out semantic optimization on the video side.
+
+**Stage-wise stability.** MSRVTT R@1 across stages: 40.8% (Stage 1, image-only encoding applied frame-by-frame) → 40.1% (Stage 2, adds video temporal understanding) → 40.2% (Stage 3, adds 3D). The slight drop from Stage 1 to 2 likely reflects the model learning temporal compression (discarding some frame-level detail for sequence-level representation), while the slight recovery in Stage 3 may reflect 3D geometric knowledge transferring to better spatial understanding within video frames.
+
+**Resolution sensitivity.** All video understanding results are reported at 224×224 resolution (the standard for SigLIP2-based methods). The paper notes that "alternative pooling strategies without frame averaging yielded lower performance, likely due to the limited video-text pairs in our training data compared to dedicated video understanding models" (Section 4.3) — an honest acknowledgment that video understanding is constrained by data scale rather than architectural limitations.
+
+---
+
+#### 3D Tokenization
+
+Table 8 evaluates 3D reconstruction on Toys4k. The comparison is simpler than for images and videos because there are far fewer baselines — Trellis-SLAT is the primary specialized 3D tokenizer.
+
+**Surpassing the specialized baseline.** ATOKEN-So/C achieves 28.28 PSNR and 0.062 LPIPS, compared to Trellis-SLAT's 26.97 PSNR and 0.054 LPIPS. The 1.31 dB PSNR improvement is notable, especially given that (a) ATOKEN processes images and videos through the same encoder, and (b) the paper adapted Trellis-SLAT's pipeline to use raw RGB patches instead of DINOv2 features. The LPIPS is slightly worse (0.062 vs. 0.054), suggesting ATOKEN's reconstructions may have better pixel-level accuracy but slightly less perceptual similarity — a common tradeoff when optimizing L1 loss alongside perceptual losses.
+
+**Understanding results.** The 90.9% zero-shot classification accuracy on Toys4k is reported alongside reconstruction metrics but without comparison to understanding-only baselines (no prior work reports 3D understanding for unified tokenizers because no prior unified tokenizer handles 3D). This number establishes a baseline for future work rather than proving superiority.
+
+**Qualitative observations (Figure 11).** The paper notes that ATOKEN demonstrates "improved color consistency" compared to Trellis-SLAT, attributing this to "unified training across modalities transfers color understanding from images and videos to improve 3D reconstruction." This is an interesting claim about cross-modal transfer — the model learns about realistic color distributions from 2D images and applies that knowledge when reconstructing 3D surface colors — but it's supported only by qualitative examples, not quantitative color metrics.
+
+---
+
+#### Multimodal LLM Integration: Image Understanding
+
+Table 9 evaluates ATOKEN as a frozen vision encoder within SlowFast-LLaVA-1.5 (Xu et al., 2025), compared against using Oryx-ViT (Liu et al., 2024b) — a vision encoder specifically designed for MLLMs.
+
+**ATOKEN outperforms the dedicated MLLM encoder.** Across 1B, 3B, and 7B LLM scales, SlowFast-LLaVA-1.5 with ATOKEN matches or exceeds the version with Oryx-ViT on most benchmarks. At 7B scale: RW-QA (68.8% vs. 67.5%), AI2D (81.2% vs. 80.4%), SQA (92.1% vs. 91.1%), TextVQA (77.7% vs. 76.4%). This is striking because Oryx-ViT was purpose-built for multimodal understanding, while ATOKEN was trained with reconstruction objectives across three modalities. The fact that ATOKEN is competitive or better suggests that the unified training does not compromise — and may even enhance — the quality of semantic features for downstream vision-language tasks.
+
+**Weakness on specific benchmarks.** ATOKEN underperforms Oryx-ViT on MathVISTA at 7B (61.2% vs. 62.5%) and MMMU at 7B (48.7% vs. 49.0%). The gaps are small (1.3% and 0.3% respectively) but consistent. MathVISTA requires mathematical reasoning over visual diagrams, and MMMU requires multi-discipline expert-level reasoning — both may benefit from Oryx-ViT's MLLM-specific optimization that ATOKEN lacks.
+
+**Competitive with state-of-the-art MLLMs.** Compared to larger, more specialized systems: SlowFast-LLaVA-1.5-7B with ATOKEN (2.36M input pixels) achieves 68.8% on RW-QA vs. InternVL2.5-8B (9.63M pixels, 70.1%) and Qwen2-VL-7B (70.1%). Given the 4× fewer input pixels, this is strong — suggesting ATOKEN's representation is more information-dense per token.
+
+---
+
+#### Multimodal LLM Integration: Video Understanding
+
+Table 10 evaluates video understanding across general QA and long-form understanding benchmarks.
+
+**Strong on general video QA, especially at small scales.** At 1B LLM scale, ATOKEN achieves or approaches state-of-the-art: VideoMME 56.7% (vs. Apollo-1.5B 53.0%), PercepTest 63.9%, LongVideoBench 55.1%, MLVU 64.7%, LVBench 41.1%. At 7B scale: VideoMME 64.5% (best among compared models), PercepTest 70.3% (best among compared models). This suggests ATOKEN's temporal modeling — even though trained primarily for reconstruction — produces video representations well-suited for QA tasks that require understanding actions and events.
+
+**Weakness on long-form video understanding.** ATOKEN trails Oryx-ViT on MLVU (69.8% vs. 71.5% at 7B) and LongVideoBench (60.6% vs. 62.5% at 7B). The paper hypothesizes this is because "Oryx-ViT was specifically designed for video understanding in LLMs and was trained on long-video retrieval tasks" (Section 5.1). This is a frank acknowledgment that specialized optimization for long-form temporal reasoning provides benefits that general-purpose unified training has not yet captured. The proposed fix — "incorporating more long videos into our training data to strengthen temporal modeling over long-range context" — is speculative but directionally reasonable.
+
+**Scale-dependent behavior.** At 3B scale, ATOKEN is competitive with Oryx-ViT across the board, with some benchmarks favoring one and some the other. At 7B scale, ATOKEN pulls ahead on general QA but still lags on long-form understanding. This suggests that as LLM capacity increases, the benefits of ATOKEN's representation become more apparent for tasks that can leverage its strengths (action recognition, event understanding), while the specialized advantages of Oryx-ViT (long-range temporal context) persist.
+
+---
+
+#### Image Generation with Continuous Tokens
+
+Table 11 evaluates class-conditional ImageNet 256×256 generation using the Lightning-DiT (Yao & Wang, 2025) framework, comparing ATOKEN variants against specialized generation tokenizers.
+
+**Competitive but not state-of-the-art.** ATOKEN-So/C Stage 3 achieves 1.56 gFID. This is competitive with VAVAE (1.35 gFID), a tokenizer specialized for image generation with DINOv2 alignment, and REPA (1.42 gFID), which uses representation alignment for generation. However, ATOKEN does not surpass these specialized methods. This is the one major benchmark where ATOKEN is clearly behind the state-of-the-art — the gap of 0.21 gFID to VAVAE is meaningful in the ImageNet generation literature.
+
+**Multimodal training improves generation (for So400m).** ATOKEN-So/C Stage 2 achieves 1.88 gFID, while Stage 3 achieves 1.56 gFID — a substantial improvement. This is consistent with the reconstruction finding: adding 3D training improves image-related capabilities. The Base model shows the opposite pattern: Stage 1 achieves 1.44 gFID, and Stage 3 slightly degrades to 1.58 gFID — consistent with the scaling analysis showing that smaller models suffer from multimodal interference.
+
+**Channel dimension and CFG interaction.** The paper notes that VAVAE "applies CFG only to the first 3 latent channels," while ATOKEN applies CFG to all 48 channels. The CFG scales differ accordingly (6.7 for VAVAE vs. 1.65 for ATOKEN), making direct comparison somewhat complicated. The paper's claim that ATOKEN is "competitive" relies on the assumption that these CFG differences don't substantially advantage either method — a reasonable but unverified assumption.
+
+---
+
+#### Image Generation with Discrete Tokens
+
+Table 12 evaluates discrete token generation on ImageNet using the TokenBridge (Wang et al., 2025) framework.
+
+**Competitive with specialized discrete tokenizers.** ATOKEN-So/D achieves 2.23 gFID with TokenBridge-L, compared to TokenBridge's 1.76 gFID (with its own tokenizer), LFQ's 1.91 gFID, and VQGAN+LlamaGen's 2.34 gFID. ATOKEN outperforms UniTok (2.51 gFID) — the only other unified tokenizer in the comparison.
+
+**Vocabulary size challenge.** ATOKEN uses 8 codebooks of 4096 entries each, while TokenBridge uses 16 dimensions with 8-level vocabularies — a much smaller discrete space. The paper notes this makes ATOKEN's configuration "more challenging" because the generative model must learn to predict from a larger vocabulary. The 0.47 gFID gap to TokenBridge is attributed partly to this vocabulary difference and partly to TokenBridge's FFT-based dimension ordering (generating low-frequency structure first), which ATOKEN does not use.
+
+**Practical significance.** The discrete generation results validate that ATOKEN-So/D's tokens are usable for autoregressive generation — they are not just theoretically discrete but practically compatible with LLM-style architectures. The gap to specialized discrete tokenizers indicates room for improvement, but the fact that generation works at all across all three modalities (images, video in Table 13, 3D in Section 5.5) from a single tokenizer is unprecedented.
+
+---
+
+#### Text-to-Video Generation
+
+Table 13 evaluates text-to-video (T2V) generation by integrating ATOKEN into a MMDiT-based video generation model, compared against specialized video tokenizers.
+
+**Competitive with specialized video tokenizers.** ATOKEN-So/C Stage 3 achieves 78.46% VBench total score, compared to Wan2.1 (78.60%), Hunyuan (78.02%), and Cosmos-0.1-CV (74.84%). The gaps are remarkably small — 0.14% behind WAN on the aggregate metric — despite ATOKEN handling three modalities while the baselines are video-specialized. CLIP-Score (32.50) and Pick-Score (21.74) for T2I generation are also competitive.
+
+**Stage 2 to Stage 3 improvement.** VBench total improves from 77.92% (Stage 2) to 78.46% (Stage 3), and GenEval improves from 63.08% to 64.61%. This is interesting because video generation quality improves when the tokenizer has been trained on 3D — even though the generation task itself is 2D+time. The implication is that the tokenizer's improved geometric understanding (from 3D training) leads to latents that are easier for the video generator to model, perhaps because they encode more consistent object structure across frames.
+
+**Resource-constrained setting.** The paper explicitly states that "Due to computational constraints, we conduct experiments with smaller models and limited training data" (Section 5.4). All models in Table 13 are trained at low resolution (256×256 for images, 192×336 for videos) with identical data. This levels the playing field but means absolute numbers are not comparable to production-scale video generation systems. The comparison is about tokenizer quality, not absolute generation capability.
+
+**CFG scale adjustment.** The paper adjusts CFG scale to account for channel dimension differences: 9.0 for ATOKEN's 48-channel latents vs. 4.5 for the 16-channel baselines. This is a thoughtful normalization — wider latents generally need stronger guidance — but it means the comparison is not a pure "replace tokenizer only" ablation.
+
+---
+
+#### Image-to-3D Synthesis
+
+Section 5.5 describes image-to-3D generation using ATOKEN tokens within the Trellis-SLAT diffusion framework.
+
+**Functionally works but with quality gap.** The paper reports that "our approach successfully generates 3D assets from single conditioning images" but "does not yet match the fidelity of the original Trellis-SLAT model." Specifically: "the generative model sometimes struggles to maintain this consistency. The generated assets do not always adhere strictly to the color and style of the input image" (Section 5.5). No quantitative metrics are reported for this downstream task — the evaluation is qualitative only, supported by Figure 14.
+
+**Hypothetical explanation.** The paper attributes the performance gap to ATOKEN's larger latent channel dimension (48 vs. Trellis-SLAT's 8), speculating that "a diffusion model operating in this higher-dimensional space likely requires further optimization of training and inference hyperparameters." This is plausible — diffusion models are known to be sensitive to latent dimension — but untested. The paper leaves hyperparameter optimization "as a promising direction for future work."
+
+**Significance and limitations.** This is the only downstream result where ATOKEN shows a clear quality gap rather than competitive performance. It's also the least rigorously evaluated, with no quantitative metrics and only qualitative description. This weakens the paper's claim of "competitive performance across all benchmarks" (Section 1) — image-to-3D is competitive in the sense that it works, but not in the sense that it matches specialized methods.
+
+---
+
+### Ablation Studies and Robustness Checks
+
+**Scaling analysis (Base vs. So400m, Figure 7):** The So400m model (~800M parameters) and Base model (~192M parameters) are compared through all training stages. The finding is stark: **the Base model degrades catastrophically with multimodal expansion while So400m improves**. Specifically, Base model ImageNet rFID degrades 49% from Stage 1 to Stage 2 (0.323 → 0.483), while So400m rFID improves 19% from Stage 1 to Stage 3 (0.258 → 0.209). Video PSNR on DAVIS declines for Base across stages (29.44 → 30.50 → 32.08 vs. So400m's 29.70 → 32.51 → 33.11). This is the paper's key evidence that multimodal tokenization has a minimum capacity threshold — small models cannot benefit from the progressive curriculum because they lack sufficient parameters to represent all modalities without destructive interference.
+
+**Stage-wise progression on image reconstruction (Table 4):** So400m rFID improves from 0.258 (Stage 1) → 0.246 (Stage 2) → 0.209 (Stage 3), while PSNR improves from 28.77 → 29.55 → 29.72. This demonstrates monotonic improvement with each added modality, countering the expectation that adding tasks degrades existing ones.
+
+**Stage-wise progression on semantic understanding (Table 5):** ImageNet accuracy remains essentially stable across stages: 82.7% → 82.3% → 82.2% at 256×256 resolution. The 0.5% total degradation from image-only to full multimodal is negligible, validating that the distillation-based semantic loss (for images) and progressive curriculum successfully preserve understanding.
+
+**Discrete tokenization impact on reconstruction (Tables 4, 6, 8):** FSQ quantization causes consistent but controlled degradation. Image rFID: 0.209 (continuous) → 0.379 (discrete). Video TokenBench PSNR: 36.07 → 33.12. 3D Toys4k PSNR: 28.28 → 28.17. The 3D degradation is minimal (0.11 PSNR), while the video degradation is substantial (2.95 PSNR) — suggesting temporal dynamics are most sensitive to quantization.
+
+**Discrete tokenization impact on understanding (Tables 5, 7):** ImageNet accuracy: 82.2% (continuous) vs. 82.2% (discrete) — no degradation. MSRVTT R@1: 40.2% vs. 40.3% — essentially identical. FSQ does not harm semantic representations, supporting the dual-projection design where understanding and reconstruction latents are separated before quantization.
+
+**Representation structure analysis (Figure 8):** T-SNE visualizations of ImageNet class embeddings across training stages. Dense features (before projection) show clear semantic clustering with distinct class separation across all stages. However, after projection to 48-dimensional latents, class distributions become "more intermixed." The paper notes this raises "an interesting question: whether explicit semantic clustering in low-dimensional spaces... is necessary for strong performance, or whether larger models can effectively leverage seemingly intermixed representations." This is a non-obvious finding: the model maintains strong understanding (82.2% accuracy) despite T-SNE showing poor class separation in the compressed latent space, suggesting that semantic information is encoded in ways not captured by 2D projections — possibly through high-dimensional manifold structure that T-SNE cannot represent.
+
+**Video understanding pooling strategies:** The paper reports (Section 4.3) that "alternative pooling strategies without frame averaging yielded lower performance" for video retrieval. This is mentioned in passing without a formal ablation table, but it suggests that the choice of temporal aggregation significantly impacts video understanding. The failure of more sophisticated pooling may be due to limited video-text training data — the model may not have learned the representations needed for learned pooling to outperform simple averaging.
+
+**Multimodal LLM scale analysis (Tables 9, 10):** ATOKEN's performance relative to Oryx-ViT varies with LLM scale. For image understanding (Table 9), ATOKEN outperforms Oryx-ViT at all three scales (1B, 3B, 7B). For video understanding (Table 10), ATOKEN excels at 1B scale (best on 5/6 benchmarks) but the gap narrows or reverses at 7B (trailing on long-form video benchmarks). This scale-dependent behavior suggests ATOKEN's representations are particularly effective when LLM capacity is limited — the unified training may produce more "ready-to-use" features that smaller LLMs can exploit efficiently.
+
+---
+
+### Critical Assessment
+
+#### Claim 1: "First unified visual tokenizer across modalities and tasks"
+
+**What was tested:** ATOKEN was evaluated on reconstruction and understanding for images (Tables 4, 5), videos (Tables 6, 7), and 3D (Table 8). The model achieves competitive or state-of-the-art performance in every cell of this 3×2 matrix.
+
+**What was demonstrated:** The paper convincingly shows that a single model can handle all three modalities for both tasks at quality levels that are individually competitive. This is genuinely unprecedented — prior work achieved at most 2 modalities × 1 task or 1 modality × 2 tasks.
+
+**What was NOT demonstrated:** The paper does not test whether representations actually transfer usefully *between* modalities. The claim is about coverage (one model handles all), not about transfer (knowledge from images helps with video understanding, or knowledge from 3D helps with image classification). The progressive training shows that adding modalities doesn't hurt existing ones, but doesn't show whether video-specific tasks benefit from image pretraining beyond what a video-only model would achieve. The cross-modal benefit is inferred from reconstruction improvements (image rFID improves when video/3D are added), but this could also be explained by expanded data volume or training iterations rather than genuine cross-modal knowledge sharing. An ablation that kept data volume constant while varying modality diversity would be needed to isolate the causal factor.
+
+#### Claim 2: "Adversarial-free training achieves state-of-the-art reconstruction quality"
+
+**What was tested:** GAN training was shown to fail (Figure 4a) with diverging discriminator logits and degraded rFID. Gram loss was shown to achieve stable training (Figure 4c) with superior rFID. The resulting model was compared against GAN-based tokenizers (Table 4).
+
+**What was demonstrated:** The paper convincingly shows that (a) GAN training fails in their setting, (b) Gram loss works, and (c) the resulting reconstruction quality is competitive with GAN-trained baselines. This is a strong result — it provides a viable alternative to adversarial training for transformer-based tokenizers.
+
+**What was NOT demonstrated:** The paper does not isolate whether the improvement comes from Gram loss specifically or from the *combination* of Gram loss with other losses. The reconstruction loss (Equation 6) contains four terms (L1, LPIPS, CLIP perceptual, Gram). Without ablating each term, it's unclear how much each contributes. Would L1 + LPIPS alone suffice? Would Gram loss alone work? The paper doesn't answer this. Additionally, the GAN failure is demonstrated only for the specific GAN configuration tried — a more thorough ablation would test different GAN architectures, spectral normalization, gradient penalties, etc., before concluding that GANs are fundamentally incompatible. The paper tested one GAN setup that failed, which is evidence for difficulty but not proof of impossibility.
+
+#### Claim 3: "Progressive curriculum enables stable learning while maintaining strong performance"
+
+**What was tested:** The four-stage curriculum was compared implicitly (through stage-wise evaluation in Tables 4, 5) and explicitly through the Base vs. So400m scaling analysis (Figure 7).
+
+**What was demonstrated:** The progressive stages show monotonic improvement (image rFID: 0.258 → 0.246 → 0.209), and the scaling analysis shows that the Base model degrades while So400m improves. This suggests the curriculum is effective for large models.
+
+**What was NOT demonstrated:** The paper never compares progressive training against a joint training baseline (all modalities added simultaneously). Without this comparison, it's unclear whether the curriculum is necessary or merely convenient. Perhaps a sufficiently large model trained jointly from Stage 1 on all modalities would achieve similar or better results. The paper's argument that progressive training prevents catastrophic interference is plausible but unproven — we only see that progressive training works, not that alternative approaches fail. This is a significant missing experiment for a paper that lists "progressive curriculum" as a key contribution.
+
+#### Claim 4: "Strong empirical validation across downstream applications"
+
+**What was tested:** Multimodal LLMs (Tables 9, 10), image generation with continuous tokens (Table 11), image generation with discrete tokens (Table 12), text-to-video generation (Table 13), image-to-3D synthesis (Section 5.5).
+
+**What was demonstrated:** ATOKEN is usable and competitive for most downstream tasks. MLLM results are strong, outperforming dedicated encoders on several benchmarks. Image generation (both continuous and discrete) is competitive. Text-to-video generation matches specialized tokenizers. These are impressive results for a unified model.
+
+**What was NOT demonstrated convincingly:** Image-to-3D synthesis is the clear weakness — the paper acknowledges quality gaps and provides no quantitative evaluation. This is the one downstream task where ATOKEN is not competitive, and it's evaluated only qualitatively. The paper's claim of "competitive performance across all benchmarks" needs the caveat "except image-to-3D, where a quality gap remains."
+
+**Additional weaknesses across the experimental design:**
+
+1. **Single family of base architectures.** All experiments use SigLIP2-initialized transformers. The paper's claims about transformer viability and adversarial-free training effectiveness are demonstrated for this specific architecture. Whether the approach transfers to other vision transformer families (ViT, Swin, MAE-initialized) or to convolutional architectures is unknown.
+
+2. **No direct comparison to some important baselines.** For understanding, the paper compares to understanding-only encoders (SigLIP2, VideoPrism) but does not show what happens when you take a reconstruction-only tokenizer like FLUX.1 and add a separate CLIP model for understanding — a simple two-model ensemble that might outperform ATOKEN on both tasks. The argument for ATOKEN is about *architectural unification*, not necessarily about Pareto-optimal performance, but this comparison would help quantify the unification-performance tradeoff.
+
+3. **Training data asymmetry.** ATOKEN uses a mix of public and internal datasets for images. Baselines are evaluated using their official implementations but may have been trained on different data. The paper does not control for training data quantity or quality, which could explain some performance differences.
+
+4. **Limited 3D evaluation.** Toys4k is a relatively small and simple 3D dataset. Evaluation on larger-scale 3D benchmarks (ShapeNet, Objaverse test sets with more diverse objects) would strengthen the 3D claims.
+
+5. **Resource-constrained downstream generation.** The text-to-video and image-to-3D experiments used smaller models and limited training data due to computational constraints. The paper is transparent about this, but it means the downstream generation results represent a lower bound — we don't know what ATOKEN could achieve with full-scale generation training.
+
+6. **No statistical significance reporting.** No confidence intervals or error bars are reported for any result. With test sets of 500 (ImageNet), 471 (TokenBench), 50 (DAVIS), and unknown Toys4k size, some of the smaller observed differences (e.g., 36.07 vs. 36.39 PSNR on TokenBench) may not be statistically significant.
+
+7. **The 3D LPIPS tradeoff is unexplained.** ATOKEN achieves better PSNR but worse LPIPS than Trellis-SLAT on 3D reconstruction (28.28 vs. 26.97 PSNR; 0.062 vs. 0.054 LPIPS). This is an interesting signal — the model is better at pixel-level accuracy but worse at perceptual similarity — but the paper doesn't explore why or what this implies about the learned representation.
 
 ## 6. Limitations and Trade-offs
-- Compute and scale:
-  - Training is resource‑intensive (≈138k GPU‑hours on 256 H100s; Section 3.5). Benefits rely on large capacity (Figure 7).
-- Data dependence and reproducibility:
-  - Uses internal datasets for images; reconstruction quality and semantics can reflect data curation choices (Section 3.5).
-- Semantic alignment for video:
-  - Retrieval lags specialized video encoders trained on massive video‑text data (Table 7). The model uses sigmoid loss with relatively small batch sizes for video/3D (Section 3.3); understanding performance improves with more/longer video data (Table 10 discussion).
-- 3D representation scope:
-  - 3D assets are integrated via multi‑view rendering and 64^3 voxel aggregation, decoded as Gaussian splats (Sections 3.1–3.2). This targets object‑level geometry; complex scenes, large environments, or very high‑frequency details may be limited by voxel resolution and rendering setup.
-- Reconstruction objectives for video/3D:
-  - Only L1 loss is used to save compute; while image Gram/LPIPS/CLIP losses transfer some detail, they may cap perceptual sharpness in video/3D (Section 3.3).
-- Discrete tokens trade‑off:
-  - FSQ discretization preserves semantics (Table 5) but reduces reconstruction quality vs. continuous latents (Table 3; Table 4), and autoregressive generation still trails highly optimized discrete pipelines (Table 12).
-- Latent projection semantics:
-  - t‑SNE suggests semantic clusters are less separable after 48‑dim projection (Figure 8), though performance is good; how to preserve clear clusters in very low dimensions remains open (Section 4.5).
+
+### 6.1 Cross-Modal Transfer Benefits Are Observed but Not Isolated or Proved Causal
+
+**The assumption or constraint.** The paper's central narrative — that multimodal training is not just compatible with but actively *beneficial* for single-modality performance — rests on a correlation observed during the progressive curriculum. As modalities are added through Stages 1→2→3, image rFID improves from 0.258 to 0.246 to 0.209 (Table 4), and video PSNR improves from 35.63 to 36.07 on TokenBench (Section 4.3). The paper interprets this as evidence that "temporal dynamics from video and geometric understanding from 3D provide complementary signals for image reconstruction" (Section 4.2) and that "geometric understanding may enhance temporal modeling" (Section 4.3).
+
+**The consequence.** These statements conflate correlation with causation. The progressive stages differ along at least three axes simultaneously: (1) modality diversity (images only → images + video → images + video + 3D), (2) total training iterations (200k → 400k → 450k steps), and (3) effective data volume (the model sees additional video and 3D data, some of which contains images or image-like content). Any of these factors could explain the performance improvement independently of genuine cross-modal knowledge transfer. If the gains come primarily from additional training iterations or expanded data volume rather than from synergies between modalities, then the paper's claim that "multimodal training can enhance rather than compromise single-modality performance" (Section 1) is misleading — what is actually demonstrated is that training for longer on more data with regularization from auxiliary losses helps, which would be true for any auxiliary task, not specifically video or 3D.
+
+This matters for practitioners because it determines whether they should invest in collecting multimodal data and engineering a multimodal training pipeline. If the benefit is simply "more training iterations + more data," a practitioner could achieve the same improvement by training an image-only tokenizer for 450k steps with additional image data — a far simpler engineering proposition. The paper provides no evidence to distinguish these hypotheses.
+
+**What evidence exists in the paper.** The primary evidence is the stage-wise progression trajectory in Table 4 and the Base vs. So400m scaling analysis in Figure 7. Neither experiment isolates the causal factor. The Base model degrades when video is added (Figure 7b), which is consistent with capacity-limited interference but does not prove that the So400m model's improvement comes from cross-modal synergies rather than simply having enough capacity to benefit from additional training data without interference. An experiment that kept total training iterations and effective data volume constant while varying only modality composition (e.g., Stage 2 with image-only data for the same number of steps vs. Stage 2 with images + video) is absent.
+
+**Mitigation status.** The paper does not acknowledge this as a limitation or propose an experiment to isolate causality. The language throughout treats the cross-modal benefit interpretation as established fact rather than a hypothesis requiring verification. This is an important gap because the cross-modal transfer claim is one of the paper's most provocative contributions — if true, it would change how the field approaches visual pretraining — but the evidence presented is insufficient to support it.
+
+---
+
+### 6.2 Image-to-3D Generation Shows a Clear Performance Gap That Contradicts the "Competitive Across All Benchmarks" Claim
+
+**The assumption or constraint.** The paper claims in Section 1 that ATOKEN "enable[s] diverse applications from multimodal LLMs to image-to-3D generation" and achieves "competitive performance across all benchmarks." Section 5.5 presents image-to-3D synthesis results using ATOKEN tokens within the Trellis-SLAT diffusion framework.
+
+**The consequence.** The image-to-3D results are the only downstream task where ATOKEN demonstrably underperforms a specialized baseline, and the evaluation is exclusively qualitative. The paper acknowledges that "performance does not yet match the fidelity of the original Trellis-SLAT model" and that "the generative model sometimes struggles to maintain this consistency. The generated assets do not always adhere strictly to the color and style of the input image" (Section 5.5). No quantitative metrics (PSNR, LPIPS, Chamfer distance, or any standard 3D generation metric) are reported — only Figure 14 provides visual examples. This is a significant gap in the paper's empirical validation: the one downstream task where ATOKEN shows a clear quality gap is also the one evaluated least rigorously.
+
+This matters because 3D generation is arguably the most challenging and potentially impactful of the downstream tasks tested. If ATOKEN cannot match specialized 3D tokenizers on generation tasks, the practical value of 3D unification — one of the paper's headline contributions — is limited to reconstruction and classification, tasks for which specialized models already exist and may be simpler to deploy. A practitioner considering ATOKEN for a 3D generation pipeline would need to know the magnitude of the performance gap, which the paper does not quantify.
+
+**What evidence exists in the paper.** Section 5.5 and Figure 14. The textual description is qualitative ("successfully generates," "struggles to maintain consistency," "do not always adhere strictly"), and Figure 14 shows rendered examples without quantitative comparison. The paper hypothesizes that the gap arises from ATOKEN's larger latent channel dimension (48 vs. Trellis-SLAT's 8) requiring hyperparameter optimization that was not performed.
+
+**Mitigation status.** The paper partially addresses this by providing a plausible explanation (latent dimension affecting diffusion model optimization) and framing the issue as future work: "We leave the exploration of these optimizations as a promising direction for future work" (Section 5.5). However, this does not change the fact that the "competitive across all benchmarks" claim is overstated for 3D generation. A more accurate characterization would be that ATOKEN achieves competitive performance on multimodal LLMs, image generation, and video generation, but currently trails specialized methods on image-to-3D generation with a gap of unknown magnitude.
+
+---
+
+### 6.3 The Progressive Curriculum Is Never Compared Against Joint Training — The Claim That It "Enables Stable Learning" Is Unverified
+
+**The assumption or constraint.** The paper lists "progressive training curriculum" as a key contribution and states that it "enables stable learning while maintaining strong performance" (Section 1) and "enables effective multimodal learning" (Section 3). The four-stage curriculum is presented as a deliberate design choice that prevents catastrophic interference between modalities.
+
+**The consequence.** The paper never trains a model with all modalities and tasks jointly from initialization (or from the SigLIP2 checkpoint) to compare against the progressive approach. Without this ablation, it is impossible to determine whether the curriculum is necessary, beneficial, or merely irrelevant — the results show that progressive training *works*, not that it works *better than* alternative strategies. Given the substantial engineering complexity of implementing the four-stage pipeline with per-stage data ratios (Table 2) and temporal tiling with KV-caching, a practitioner needs to know whether this complexity is justified or whether simply training on all modalities from the start would achieve similar results.
+
+The case where this matters most is at large model scales. The paper's scaling analysis (Figure 7) shows that the So400m model improves through progressive stages while the Base model degrades. This is interpreted as evidence that multimodal learning requires sufficient capacity. But an alternative explanation is that the Base model, being smaller, would degrade under *any* multimodal training strategy — progressive or joint — while the So400m model, being larger, would improve under *any* strategy. If that alternative is correct, the progressive curriculum is not what enables the So400m's success; it's simply that model capacity is sufficient, and a joint training approach would achieve similar or better results with less engineering complexity.
+
+**What evidence exists in the paper.** None. There is no experiment comparing progressive vs. joint training at any model scale. The scaling analysis (Figure 7) compares Base vs. So400m under the same progressive curriculum, not different curricula for the same model.
+
+**Mitigation status.** Not addressed. The paper treats the progressive curriculum as a contribution without verifying its necessity relative to simpler alternatives. This is a significant methodological gap because one of the paper's four key contributions (Section 1, "Progressive curriculum across modalities") rests on an untested premise.
+
+---
+
+### 6.4 Model Capacity Requirements for Positive Multimodal Transfer Are Not Characterized — The Threshold Is Unknown
+
+**The assumption or constraint.** The paper demonstrates that a Base model (192M parameters, initialized from SigLIP-Base) degrades under multimodal expansion while a So400m model (800M parameters, initialized from SigLIP-SO400M) improves. This is presented as evidence that multimodal tokenization has a capacity requirement.
+
+**The consequence.** The paper tests exactly two model sizes — ~192M and ~800M parameters — and finds that one fails while the other succeeds. This establishes that the capacity threshold lies somewhere in this range but provides no information about where. A practitioner attempting to deploy ATOKEN with a different-sized backbone has no guidance: a 300M parameter model might work or might degrade; a 500M parameter model might be sufficient or might not be. The paper's finding (Section 4.5) that "small models suffer from interference while large models benefit from cross-modal learning" is directionally informative but insufficient for practical decision-making, since the definition of "large" is only pinned down to somewhere above 192M and at or below 800M parameters.
+
+More critically, the threshold likely depends on multiple factors the paper does not explore: the number of modalities being unified (perhaps a 300M model could handle images + video but not images + video + 3D), the compression ratio and latent dimension (the Base model uses fewer parameters but also might need proportionally smaller latents), the diversity of training data, and the loss coefficients balancing reconstruction vs. understanding. Without characterizing any of these dependencies, the scaling analysis tells a compelling qualitative story but provides limited quantitative guidance.
+
+**What evidence exists in the paper.** Figure 7 compares Base and So400m models across stages. The Base model's ImageNet rFID degrades from 0.323 (Stage 1) to 0.483 (Stage 2) — a 49% increase — while video PSNR on DAVIS hovers around 29–32 PSNR across stages without consistent improvement. The So400m model's ImageNet rFID improves from 0.258 (Stage 1) to 0.209 (Stage 3) — a 19% decrease — while video PSNR rises from 29.70 to 33.11. These are the only two data points. No intermediate model sizes, no ablation of how different Stage 2 configurations affect the Base model's trajectory, and no test of whether the Base model would succeed with reduced latent dimensions or adjusted loss coefficients.
+
+**Mitigation status.** The paper acknowledges the finding but does not attempt to characterize the threshold. The authors present the capacity dependence as an insight (that multimodal tokenization has a capacity requirement) without addressing the practical question of what that requirement actually is. This is a missed opportunity — a scaling study with 3–4 model sizes could have mapped the threshold and provided actionable guidance.
+
+---
+
+### 6.5 The Difficulty Estimation Cost Analogy from the Reference Paper Has No Counterpart Here — Training and Inference Computational Costs Are Significant but Not Compared Against Baselines
+
+**The assumption or constraint.** The paper trains ATOKEN on 256 H100 GPUs for approximately 22 days (138k GPU hours), using a progressive curriculum with carefully controlled per-stage data ratios, per-task batch sizes, and learning rate schedules. The downstream text-to-video and image-to-3D generation experiments use "smaller models and limited training data" due to computational constraints (Section 5.4).
+
+**The consequence.** The paper never compares the total computational cost of training and deploying ATOKEN against the cost of training and deploying a set of specialized models that collectively achieve the same capabilities. This matters for two reasons. First, a practitioner deciding between ATOKEN and an ensemble of specialized models needs to weigh the benefits of architectural unification (simpler deployment, potential for cross-modal transfer) against the costs (a single large model needing 138k GPU hours to train, vs. potentially smaller specialized models trained independently with simpler curricula). The paper provides no basis for this cost-benefit analysis.
+
+Second, the downstream generation comparisons (Tables 11, 12, 13) use identical training data and model sizes for ATOKEN and baselines, which makes them fair *per experiment* but obscures the fact that training a single ATOKEN replaces multiple specialized tokenizers. If ATOKEN requires 138k GPU hours to train one model that handles all modalities, while training separate FLUX.1 (image reconstruction), WAN (video reconstruction), SigLIP2 (image understanding), VideoPrism (video understanding), and Trellis-SLAT (3D) requires some total cost X, the paper provides X neither for ATOKEN nor for the baseline ensemble. A practitioner cannot determine whether unification is more or less expensive than specialization at equal capability levels.
+
+This is particularly relevant given the paper's finding that the Base model fails — if only models above some unknown capacity threshold can successfully unify modalities, then unification may be *more* expensive than specialization for many practical deployment scenarios, because the minimum viable model is large and expensive to train.
+
+**What evidence exists in the paper.** Section 3.5 provides hardware and training time details: 256 H100 GPUs, 138k total GPU hours across four stages, approximately 22 days. No baseline training costs are reported. Downstream generation experiments note computational constraints but do not quantify them.
+
+**Mitigation status.** The paper is transparent about its own training cost but makes no attempt to compare against the cost of achieving equivalent capabilities through specialized models. Given that one of the paper's core arguments is that unification provides practical benefits (simpler deployment, cross-modal transfer), the absence of cost analysis is a significant gap. The paper would be stronger if it estimated, even roughly, the total GPU hours required to train the set of specialized models that ATOKEN is compared against in Tables 4–8.
+
+---
+
+### 6.6 Video Understanding Benefits Are Limited by Training Data Scale, Not Architecture — and the Paper Does Not Test Whether Scaling Data Would Close the Gap
+
+**The assumption or constraint.** ATOKEN's video understanding results (Table 7) show a larger gap to understanding-only models than the image understanding results (Table 5). On MSRVTT text-to-video retrieval, ATOKEN achieves 40.2% R@1 compared to VideoPrism's 52.7% and PE-Core-L14's 49.1% — gaps of 12.5 and 8.9 percentage points respectively. In contrast, on ImageNet zero-shot classification, ATOKEN achieves 82.2% compared to SigLIP2's 83.4% — a gap of only 1.2 percentage points.
+
+**The consequence.** The paper attributes this gap to training data scale, noting that video understanding uses "WebVid and TextVR for video understanding" (Section 3.5) while dedicated video encoders like VideoPrism are trained on substantially larger video-text corpora. This is a reasonable hypothesis, but the paper does not test it. Without experiments that scale video-text training data and measure the resulting improvement, a practitioner cannot determine whether ATOKEN's video understanding is fundamentally limited by the architecture (e.g., the reconstruction objective crowding out semantic optimization, or temporal compression discarding fine-grained information needed for retrieval) or simply by data scale — and therefore cannot decide whether investing in more video-text data for ATOKEN training would yield returns comparable to using a dedicated video encoder.
+
+The architectural concern is non-trivial. ATOKEN's video understanding pathway uses frame embedding averaging with zero-padding for temporal aggregation, and the paper notes that "alternative pooling strategies without frame averaging yielded lower performance" (Section 4.3). This suggests that ATOKEN's video representations may not be as expressive as those from models designed specifically for temporal reasoning, and that simply adding more data might not close the gap if the architecture imposes a ceiling. The paper provides no evidence to distinguish between these hypotheses.
+
+**What evidence exists in the paper.** Table 7 shows the performance gap. Section 4.3 discusses the gap and attributes it to limited video-text pairs. The mention of alternative pooling strategies underperforming is in Section 4.3. No data scaling experiment is reported.
+
+**Mitigation status.** The paper does not address this limitation or propose an experiment to isolate whether the gap is data-limited or architecture-limited. The discussion in Section 5.1 (for video MLLMs) mentions that "incorporating more long videos into our training data to strengthen temporal modeling over long-range context" is future work, but this addresses the MLLM long-form video understanding gap specifically, not the broader video-text retrieval gap or the data-vs-architecture question. Given that video understanding is a core capability claimed in the paper's "unified tokenizer for understanding" thesis, the lack of characterization of what limits its video understanding performance is a significant gap.
 
 ## 7. Implications and Future Directions
 - Field impact:

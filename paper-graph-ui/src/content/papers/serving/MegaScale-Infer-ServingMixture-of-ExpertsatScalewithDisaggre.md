@@ -9,184 +9,745 @@ MegaScale-Infer introduces a novel system architecture for serving massive Mixtu
 ---
 
 ## 1. Executive Summary
-MegaScale-Infer is a system for serving Mixture-of-Experts (MoE) large language models that splits each model layer into two independently scaled parts—`attention` and `experts` (the FFN sub-networks)—and connects them with a high-performance many-to-many (M2N) network layer. It adds a “ping-pong” micro-batch pipeline that overlaps computation with communication and introduces a specialized M2N communication library to make token routing fast and stable. Across 132B–317B MoE models, MegaScale-Infer delivers up to 1.9× higher per-GPU decoding throughput than state-of-the-art serving systems and up to 1.86× higher throughput per unit cost under heterogeneous GPUs (Figures 8(a) and 9(a), Abstract).
+
+MegaScale-Infer introduces an efficient serving system for large-scale Mixture-of-Experts (MoE) models that disaggregates attention and FFN modules onto separate GPU pools, enabling independent scaling and heterogeneous hardware deployment. The system employs **disaggregated expert parallelism** — a hybrid strategy that replicates attention modules via data parallelism while scaling FFN modules with expert parallelism — combined with **ping-pong pipeline parallelism** (splitting request batches into micro-batches that shuttle between attention and expert nodes to hide communication latency) and a custom **high-performance M2N communication library** (eliminating GPU-to-CPU copies, group initialization overhead, and GPU synchronization for the many-to-many token dispatch pattern unique to MoE). Evaluated on Mixtral 8×22B, DBRX, and a 317B scaled MoE model across homogeneous and heterogeneous GPU clusters, MegaScale-Infer achieves up to 1.90× higher per-GPU decoding throughput than state-of-the-art serving systems (vLLM and TensorRT-LLM) and 1.86× higher throughput per unit cost under heterogeneous deployment, establishing that the sparsity-induced GPU underutilization in MoE inference can be substantially mitigated through disaggregation only when attention-side replication is balanced against expert-side parallelism via a difficulty-aware deployment plan that jointly optimizes tensor parallelism degrees, micro-batch count, and the attention-to-expert node ratio.
 
 ## 2. Context and Motivation
-- Problem addressed
-  - During inference, MoE sparsity routes each token to a small subset of experts (top-k). This reduces per-expert batch sizes during decoding, making the expert FFNs memory-bound and under-utilized on GPUs despite MoE’s compute savings (Section 2.3; Figure 1(b)).
-  - Attention during decoding is inherently memory-bound (due to key–value cache lookups over all past tokens), while FFNs are compute-efficient only when batch size is large enough to amortize weight loads (Section 2.1; Figure 1(a)).
-  - With realistic latency targets and KV-cache memory limits, the total batch size cannot be made arbitrarily large, so per-expert batches shrink as the number of experts grows—further depressing utilization (Section 2.3; Roofline analysis and the Mixtral 8x22B example).
 
-- Why it matters
-  - Low GPU utilization inflates inference costs for large-scale MoE services. The paper targets cost and energy efficiency at production scale (nearly 10,000 GPUs; Section 8), with demonstrated 1.5–2.0× cost reductions in deployment.
+### The Core Problem: MoE Sparsity Breaks the Standard LLM Serving Playbook
 
-- Limitations of prior approaches
-  - Traditional model parallelism (tensor parallelism and pipeline parallelism) does not address MoE-induced per-expert batch fragmentation and can add communication overhead (Section 2.2).
-  - Expert parallelism improves expert GEMM shapes but requires expensive all-to-all token dispatch per MoE layer (Figure 2(b)).
-  - Disaggregation for long-context dense models (e.g., Infinite-LLM) replicates attention to grow batch size, but it does not tackle MoE’s dynamic token routing and top-k sparsity, and assumes simpler communication (Section 2.4).
+This paper addresses a specific, measurable inefficiency that arises when serving MoE-based large language models at scale: **the sparsity that makes MoE models computationally efficient during training actually *reduces* GPU utilization during inference, particularly in the decoding phase.** To understand why, we need to examine what happens inside a GPU during LLM inference.
 
-- Positioning
-  - MegaScale-Infer goes beyond prefill/decoding disaggregation used in prior systems by disaggregating within the layer: attention on one set of GPUs and experts on another (Figure 3). It then:
-    - Replicates attention (data parallelism) to aggregate requests.
-    - Scales experts (expert parallelism) to keep expert GEMMs compute-bound.
-    - Introduces a ping-pong micro-batch pipeline and a purpose-built M2N library to hide and stabilize token routing costs (Sections 3–5).
+During the decoding phase—which dominates serving time because each output token requires a separate forward pass—the attention module and the FFN module exhibit fundamentally different computational characteristics. The attention module must access the key-value (KV) cache of all previous tokens in the sequence. Since each request in a batch has its own distinct KV cache (different prompt tokens, different generation history), these memory accesses cannot be shared across requests. The attention module is therefore **memory-bandwidth-bound**: the GPU's compute units spend most of their time waiting for data to be fetched from high-bandwidth memory (HBM) into SRAM. As the batch size increases, the total KV cache access grows proportionally, and GPU utilization for attention remains stubbornly low.
+
+The FFN module, by contrast, is **compute-bound** under normal conditions. Its computation involves large matrix multiplications where the model weights are loaded once and reused across all tokens in the batch. For a dense model with a single FFN per layer, the relationship described in Section 2.3 tells us that GPU utilization for FFN matrix multiplications scales as `util = min(B/F * b, 1)`, where `b` is the batch size, `B` is memory bandwidth, and `F` is compute capability. At the batch sizes typically feasible in production (constrained by GPU memory for KV cache and SLO latency requirements), a dense model's FFN can achieve high utilization because the batch size is large enough to amortize weight loading.
+
+**MoE shatters this happy equilibrium.** In an MoE model, each token is routed to only a subset of experts (`top-k` out of `E` total experts). With `E=8` experts and `top-k=2`, each expert processes on average only `b × 2/8 = b/4` tokens from a batch of size `b`. The GPU utilization formula becomes:
+
+$$\text{util} = \min\left(\frac{\text{topk}}{\#\text{expert}} \cdot \frac{B}{F} \cdot b, 1\right)$$
+
+This is the critical equation from Section 2.3. For Mixtral 8×22B on an A100-80GB GPU (312 TFLOPS, 2 TB/s bandwidth), the minimum batch size for full utilization is 156 tokens. But with top-2 routing across 8 experts, the effective batch per expert is only `156 × 2/8 = 39` tokens—yielding a theoretical Model FLOPs Utilization (MFU) of only **25%**. This is the core waste: 75% of the GPU's compute capability sits idle because there simply aren't enough tokens per expert to keep the matrix multiplication units fed.
+
+### Why This Problem Matters: Cost, Not Just Throughput
+
+The practical consequence is not merely academic. In production serving, GPU costs dominate the total cost of ownership. An MoE model with 141B parameters (like Mixtral 8×22B) that achieves only 25% MFU on FFN layers effectively wastes three-quarters of the GPU rental or purchase cost during decoding. This is perverse because the *reason* organizations adopt MoE in the first place is efficiency—the sub-linear scaling of FLOPs with model size means an MoE model can match or exceed the quality of a much larger dense model. But if the inference system cannot translate that FLOP-efficiency into cost-efficiency, the economic value proposition collapses.
+
+The problem compounds with model scale. Larger MoE models typically deploy *more* experts (e.g., 32 experts in the Scaled-MoE model evaluated in this paper), which increases sparsity and further reduces per-expert token counts. As Section 2.3 notes: "the increased sparsity lowers the GPU utilization of FFN modules, rendering them no longer compute-intensive, and resulting in unnecessary computational costs." This is not merely a small-model phenomenon—it becomes *worse* as models grow.
+
+Furthermore, this inefficiency is structural, not circumstantial. It is baked into the MoE architecture itself: sparse activation is what makes MoE models attractive during training (lower FLOPs per token), but it is also what destroys inference efficiency. The paper identifies this as a mismatch between the *characteristics of LLM inference* (attention is memory-bound, FFN should be compute-bound) and the *compute capabilities of GPUs* (which require sufficient arithmetic intensity to achieve high utilization). MoE sparsity pushes FFN modules below the arithmetic intensity threshold where they transition from compute-bound to memory-bound, collapsing GPU utilization.
+
+### Prior Approaches and Their Limitations
+
+The paper situates its contribution against two categories of prior work: **LLM serving systems** and **MoE-specific optimizations**.
+
+#### General LLM Serving Systems (vLLM, TensorRT-LLM, Orca)
+
+Standard LLM serving systems like vLLM and TensorRT-LLM implement a battery of optimizations: continuous batching (dynamically adding/removing requests from a batch), PagedAttention (virtual memory management for KV cache), FlashAttention (IO-aware attention computation), and various forms of model parallelism. However, these systems are designed primarily for *dense* models and treat the attention and FFN modules as a co-located unit within each GPU.
+
+The consequence for MoE is severe. As the paper demonstrates in Section 7.2, serving Mixtral 8×22B with vLLM or TensorRT-LLM means that the batch size seen by each expert FFN is exactly the global batch size divided by the number of experts times the top-k ratio. Even with continuous batching maximizing the global batch size, each expert processes too few tokens to escape memory-bandwidth-bound behavior. These systems have no mechanism to **increase the per-expert batch size independently of the global batch size**, because attention and FFN are locked together.
+
+TensorRT-LLM partially addresses this by supporting expert parallelism (EP), which distributes experts across GPUs. However, expert parallelism alone only *distributes* the work; it does not increase the effective batch size per expert. In fact, it can make matters worse by introducing all-to-all communication overhead between the attention (gating) computation and the expert computation, without solving the fundamental utilization problem.
+
+A deeper limitation: these systems cannot exploit a key asymmetry in LLM inference. The attention module's workload (KV cache access) scales with sequence length, not batch size, making its GPU utilization insensitive to batching. The FFN module's workload scales with batch size, making its utilization highly sensitive to batching. A co-located deployment forces both modules to operate at the same batch size, which means either the FFN is starved (insufficient batch) or the attention module wastes memory capacity (excess batch that doesn't improve its own utilization).
+
+#### Disaggregation Approaches (Splitwise, DistServe, Infinite-LLM)
+
+The insight that prefill and decoding phases have different computational characteristics has led to prefill/decoding (P/D) disaggregation systems like Splitwise and DistServe. These systems separate the compute-bound prefill phase (processing all prompt tokens in parallel) from the memory-bound decoding phase (generating tokens autoregressively), deploying them on different hardware with different resource allocations.
+
+MegaScale-Infer builds on this insight—it also uses P/D disaggregation—but identifies a further inefficiency *within* the decoding phase itself: the attention and FFN modules, even within a single layer during decoding, have different characteristics. Infinite-LLM explored disaggregating attention from FFN for long-context dense model inference, where the KV cache size (not the MoE sparsity) is the primary memory constraint. This solves a *memory capacity* problem: by replicating attention, it enables larger context windows. The communication pattern in Infinite-LLM is relatively simple compared to MegaScale-Infer's challenge, because dense models use All-to-All patterns only for tensor parallelism, whereas MoE models require dynamic, per-token routing to specific experts.
+
+**Crucially, MegaScale-Infer argues that existing disaggregation approaches are insufficient for MoE.** P/D disaggregation separates the phases but does nothing about the underutilization within decoding. Attention-FFN disaggregation for dense models (Infinite-LLM) addresses memory capacity, not MoE sparsity. The paper explicitly states: "Consequently, its solution is less effective in addressing the unique challenges of MoE inference" (Section 1).
+
+#### MoE-Specific Optimizations (DeepSpeed-MoE, Tutel, Lina)
+
+The MoE training and inference literature has focused primarily on two concerns: **load balancing** (ensuring tokens are distributed evenly across experts to avoid stragglers) and **efficient communication** (optimizing the All-to-All operations that route tokens between attention and expert modules). Systems like DeepSpeed-MoE, Tutel, and Lina have advanced the state of expert parallelism by improving the communication primitives and load-balancing algorithms.
+
+However, these approaches operate *within* the co-located paradigm. They assume that attention and FFN reside on the same devices, and their optimizations aim to make the existing All-to-All communication faster and the per-expert workload more balanced. They do not address the fundamental mismatch: even with perfect load balancing and zero-cost communication, the per-expert batch size is still `b × topk/E`, and if that value is too small, the FFN remains memory-bound regardless of how efficiently tokens are routed.
+
+The paper's key departure from prior work is not a better expert parallelism scheme. It is the observation that **the batch size per expert is the primary bottleneck**, and that increasing it requires *disaggregating attention and scaling it independently* so that the FFN side sees a larger effective batch. This is a systems-level insight that no prior MoE serving system had operationalized.
+
+#### Hardware Offloading (Lamina, MoE-Lightning, FASTDECODE)
+
+Some prior work offloads attention computation to cheaper devices (CPUs or lower-end GPUs) during decoding. Lamina and FASTDECODE exploit the fact that attention is memory-bound and can tolerate lower compute density. MoE-Lightning similarly uses offloading to fit MoE models on memory-constrained GPUs. These approaches reduce *cost* but do not improve *utilization* of the primary GPUs—and they add latency, which can violate SLO constraints. MegaScale-Infer takes the opposite approach: instead of demoting attention to weaker hardware, it *replicates* attention across more compute resources so that the pooled FFN batch size is larger, transforming FFN from underutilized to fully utilized.
+
+### How MegaScale-Infer Positions Itself
+
+MegaScale-Infer's contribution is not a single new technique but a **system architecture** that rethinks how MoE models are deployed at the cluster level. The central thesis is:
+
+> "Disaggregating attention and FFN modules and scaling them independently can convert the FFN back from memory-intensive to compute-intensive, recovering the GPU utilization that MoE sparsity destroys."
+
+This thesis rests on two pillars that the paper develops in parallel:
+
+**1. Independent scaling creates larger effective FFN batches.** By replicating attention using data parallelism while scaling FFN using expert parallelism, the attention replicas pool their requests into a larger batch that flows through the experts. The effective batch per expert is no longer `b × topk/E` but rather `b × na × topk/E`, where `na` is the number of attention replicas. With sufficient replication, the per-expert batch crosses the compute-bound threshold.
+
+**2. Heterogeneous deployment matches hardware to module characteristics.** Since attention is memory-bandwidth-bound and FFN is compute-bound, they benefit from different GPU architectures. Attention thrives on GPUs with high memory bandwidth and large capacity per dollar (like H20), while FFN thrives on GPUs with high compute throughput per dollar (like L40S). A disaggregated architecture enables mixing GPU types within a single serving instance, something no prior MoE serving system supports.
+
+The paper explicitly positions these as **complementary to—not replacements for—existing optimizations**. The disaggregated architecture "naturally adapts to prefill/decoding (P/D) disaggregation" (Section 7.1) and builds on tensor parallelism within nodes. The ping-pong pipeline and M2N communication library are not alternatives to existing parallel strategies but rather **enablers** of the disaggregation that prior work could not realize efficiently.
+
+The paper also positions itself against a specific failure mode: the naive disaggregation approach of simply splitting attention and FFN onto separate nodes would introduce idle time, because during FFN computation the attention nodes would sit idle waiting for results, and vice versa. The **ping-pong pipeline parallelism** strategy (Section 4.1) is thus presented as *necessary* infrastructure to make disaggregation practical—without it, the throughput gains from larger FFN batches would be negated by GPU idle time.
+
+Finally, the paper's M2N communication library is positioned as an engineering contribution that addresses a gap in existing collective communication libraries. NCCL, the dominant library, is optimized for symmetric communication patterns (All-to-All, All-Reduce) where the number of senders equals the number of receivers. In disaggregated MoE serving, the number of attention nodes (`na`) and expert nodes (`E`) can be unequal and arbitrary, creating an M2N pattern that NCCL handles inefficiently. The paper argues that this gap has been invisible because prior work never attempted the specific communication pattern that disaggregated expert parallelism requires.
+
+In summary, MegaScale-Infer addresses the problem that **MoE's architecture-level efficiency (sub-linear FLOPs scaling) does not translate to system-level efficiency (GPU utilization) under standard serving paradigms**. It argues that the solution requires a fundamental restructuring of how MoE layers are deployed—disaggregating attention and FFN, replicating the former, and optimizing the communication between them—and that neither general LLM serving systems nor MoE-specific communication optimizations have addressed this structural mismatch.
 
 ## 3. Technical Approach
-The system’s core is “disaggregated expert parallelism”: separate attention and experts—each with its own parallelism strategy and hardware—then add a pipeline and communication layer that make this split efficient (Figure 3).
 
-- Architecture and parallelism choices
-  - Attention nodes
-    - Replicate attention parameters and store the KV cache (data parallelism). Use tensor parallelism inside a node to exploit high intra-node bandwidth (NVLink) (Section 3).
-    - Rationale: decoding attention is memory-bound and benefits from large memory capacity/bandwidth and cheap replication.
-  - Expert nodes
-    - Each node hosts parameters for one expert; all expert nodes form an expert-parallel group (Figure 3). Use tensor parallelism inside a node (Section 3).
-    - Rationale: experts should get as many aggregated tokens as possible, making their GEMMs compute-bound and efficient.
+### 3.1 Reader Orientation
 
-- Ping-pong micro-batch pipeline (Figure 4; Section 4.1)
-  - Problem: After disaggregation, attention and experts would be idle while waiting for each other or for network transfers.
-  - Solution: Split the global batch into m micro-batches and shuttle them in a ping-pong fashion through attention → experts → attention for each MoE layer, twice per layer (A2E and E2A).
-  - Key conditions to keep GPUs busy and hide communication (Equations (1)–(3)):
-    - Balance compute: `Ta ≈ Te` (attention vs expert time per micro-batch).
-    - Communication faster than compute: `Tc < Tf`, where `Tf = max(Ta, Te)`.
-    - Enough micro-batches to fill the pipeline and cover two communications per layer:
-      - `m × Tf ≥ 2 × (Tf + Tc)` ⇒ `m ≥ 2 × (1 + Tc/Tf)`.
-      - With fast links (`Tc < 0.5 Tf`), m ≥ 3 is sufficient; slower links need m ≥ 4 (Section 4.1).
-  - Latency model (Equations (4)–(5)):
-    - Per-micro-batch iteration latency bounded by `(Ta + Te + 2Tc) + m Tf (L − 1) ≤ Titer ≤ m Tf L`.
-    - Total iteration latency for the global batch: `Ttotal = (Ta + Te + 2Tc) + Tf (mL − 1)`.
+MegaScale-Infer is a **distributed serving system** that deploys different parts of a Mixture-of-Experts Transformer layer onto different physical GPUs — attention modules on one set of GPUs, expert FFN modules on another — so that each part can be scaled independently and the FFN side can receive a large enough batch of tokens to escape the memory-bandwidth-bound regime that standard co-located deployment traps it in. The paper is primarily a **systems design and empirical evaluation paper** whose core insight is that the sparsity-induced GPU underutilization in MoE inference can be reversed through disaggregation, but only when three interdependent mechanisms are co-designed: a **ping-pong pipeline** to keep both sides busy despite serial dependencies, a **deployment plan search algorithm** that balances the compute time of attention and expert nodes to prevent either from becoming a bottleneck, and a **custom M2N communication library** that makes the resulting many-to-many token dispatch pattern efficient enough to be hidden behind computation.
 
-- Deployment plan search with a performance model (Algorithm 1; Sections 4.1–4.2)
-  - Search space: tensor parallel sizes `tpa` (attention) and `tpe` (experts), number of attention nodes `na`, number of micro-batches `m`, and global batch size `B` (subject to a latency SLO).
-  - Modeling compute times using GEMM arithmetic intensity and measured constants (Table 2; Section 4.2):
-    - Attention time per micro-batch `Ta ≈ k1 ba + k2`, with `ba` the per-attention micro-batch size; includes memory-bound KV-cache reads proportional to `ba × s` and TP sync overhead.
-    - Expert time per micro-batch `Te ≈ k3 be + k4`, with `be` the per-expert micro-batch size.
-    - Relationship: `ba × m × na = be × m × E/K = B` (total tokens conserved), so we set `na ≈ (k1 E)/(k3 K)` to balance `Ta` and `Te` (Constraint 1).
-  - Modeling communication (Equation (6)):
-    - For A2E and E2A, time is the slower of send and receive: 
-      - `Tc = max{ (ba h K / tpa) / (Wa × Util(ba h K / tpa)), (be h / tpe) / (We × Util(be h / tpe)) }`,
-      - where `Wa, We` are per-GPU link bandwidths and `Util(msg_size)` is the measured bandwidth utilization curve vs. message size.
-  - Constraints:
-    - Pipeline constraints (Equations (1)–(3)).
-    - SLO on time-between-tokens: `Titer ≤ SLO` (Equation (7)); SLO is set to 150 ms in evaluations (Section 7.1).
-    - GPU memory capacity for attention: `4 m ba s h L / g + 2 Pa < tpa Ca` (Equation (8); GQA groups `g`; bfloat16; Pa is attention parameter size; Ca per-GPU memory).
-  - Objective: maximize throughput per unit cost = `(B / Ttotal) / (tpa na Costa + tpe E Coste)` by simulating plans and picking the best (Algorithm 1; Section 4.2).
-  - Practical bounds: `Nm` (max micro-batches) is 4—too many micro-batches degrade expert GEMM efficiency—and GPU-per-node choices are typically {1,2,4,8}, keeping search tractable (Algorithm 1 commentary).
+### 3.2 Big-Picture Architecture (Diagram in Words)
 
-- High-performance M2N communication library (Section 5; Figures 6–7; Figure 5)
-  - Why NCCL struggles for MoE-style M2N token dispatch:
-    - Extra GPU→CPU proxy copies (issue #852), group op batching limits (max 8 ops), and general per-group setup overhead inflate latency; tail latency spikes with more receivers (Figure 5).
-    - GPU-side synchronization and memory access add instability at high percentiles (Section 5; references [41,83]).
-  - Design: CPU-driven RDMA with stream-aware blocking, avoiding GPU-to-CPU copies and GPU synchronizations.
-    - Sender flow (Figure 6): wait on CUDA event (previous kernel), block the CUDA stream using `cuStreamWaitValue32`, do RDMA write-with-immediate from pre-registered GPU buffers, poll completion queue, then unblock the CUDA stream via a shared flag.
-    - Receiver flow (Figure 7): ensure target buffer is free, block stream, poll CQ to ensure arrival, perform a GDRCopy-based flush for GPU visibility, then unblock the stream.
-    - Traffic tuning: prioritize ACKs on separate high-priority queues to prevent head-of-line blocking; adjust congestion control for unbalanced traffic (Section 5).
-  - Comparison to DeepEP (GPU-to-GPU comms):
-    - GPU kernels can push higher packet rates for tiny messages but consume SMs and need intricate low-level tuning (e.g., PTX, L2 usage). In MegaScale-Infer’s regime (hundreds of KB per sender–receiver pair), a CPU thread saturates NIC bandwidth while keeping GPUs fully available for compute (Section 5).
+The system consists of five major components deployed across a cluster:
 
-- Additional implementation details
-  - Fused kernels: fuse all-gather with subsequent GEMM using Flux to overlap intra-node TP comms with compute; fuse gating, top-k selection, token scatter preparation, and related memory-bound steps (Section 6).
-  - Expert load balancing: on-device redundancy for “hot” experts using a greedy approximation that minimizes the max per-node cost `max_j Cj` with allocation fractions `x_{i,j}` and expert activity costs `a_i` (Section 6).
-  - Code footprint: about 4.9k C/C++ and 5k Python LOC for the M2N library (Section 6).
+1. **Attention Nodes** — Each attention node holds a complete replica of all attention module parameters (QKV projection, output projection) and stores the KV cache for the requests it serves. Attention nodes are replicated via data parallelism (DP): `na` identical replicas, each receiving a fraction of the incoming request batch. Tensor parallelism (TP) is applied *within* each attention node across its local GPUs.
 
-- Heterogeneous deployment (Section 4.3; Table 3)
-  - Map attention to GPUs with high per-cost memory capacity and bandwidth (e.g., H20), and experts to GPUs with high per-cost compute (e.g., L40S). Table 3 quantifies GB/GB/s/TFLOPS per dollar.
-  - Also improves throughput per watt because H20 and L40S respectively offer efficient bandwidth and compute per power (Section 4.3; Figure 10).
+2. **Expert Nodes** — Each expert node holds the parameters of one expert FFN. All `E` expert nodes together form one expert parallelism group such that each expert resides on its own set of GPUs. Token routing (which expert each token goes to) is determined by the gating network, which runs on the attention nodes.
+
+3. **Ping-Pong Pipeline Scheduler** — Splits a global batch of requests into `m` micro-batches, then orchestrates the interleaved execution of attention computation, M2N communication (attention→expert), expert computation, and N2M communication (expert→attention) such that when one side is computing, the other side is either computing a different micro-batch or communicating, minimizing idle time.
+
+4. **M2N Communication Library** — A custom high-performance networking layer that transfers token embeddings between the `na` attention nodes (senders) and `E` expert nodes (receivers) using RDMA, eliminating the overhead that standard libraries like NCCL impose for this asymmetric communication pattern.
+
+5. **Deployment Plan Search** — An offline optimization procedure that, given model specifications, hardware characteristics, and latency SLO constraints, searches over the feasible space of `tpa`, `tpe`, `na`, and `m` to find the configuration that maximizes throughput per unit cost while satisfying the time-between-tokens constraint.
+
+Information flows through the system as follows: A global batch of `B` requests enters the system and is partitioned into `m` micro-batches of size `B/m`. Each micro-batch advances through layers sequentially, but multiple micro-batches are pipelined so that at any given time, attention nodes are processing micro-batch `i` at layer `k`, expert nodes are processing micro-batch `j` at layer `k`, and network links are transferring micro-batch `l` between layers `k` and `k+1`. Within each layer: (1) attention nodes compute attention for all tokens and produce the gating decision (which expert each token routes to); (2) the M2N communication library sends each token's embedding from its attention node to the appropriate expert node; (3) expert nodes compute the FFN forward pass for their assigned tokens; (4) the N2M communication sends the FFN output back to the originating attention nodes; (5) the residual connection is applied, completing the layer.
+
+The output is generated tokens accumulated per-request, with the KV cache stored on the attention node that originally served the request (since tokens always return to their originating attention node after expert processing).
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First**, the **ping-pong pipeline parallelism** design (Section 4.1), because it is the central mechanism that makes disaggregation *practical* by keeping GPUs busy during what would otherwise be idle periods. We'll examine the idle-time problem, the micro-batch splitting strategy, and the three mathematical constraints that determine whether a given configuration can achieve full overlapping.
+
+- **Second**, the **deployment plan search** algorithm (Section 4.2), because it operationalizes the pipeline by selecting the specific parallelism degrees, micro-batch count, and node counts for a given model and hardware setup. This builds on the pipeline constraints from Section 4.1 and adds throughput-per-cost optimization.
+
+- **Third**, **heterogeneous deployment** (Section 4.3), which exploits the disaggregated architecture's ability to match different GPU types to different module characteristics, trading off cost, bandwidth, and compute capability.
+
+- **Fourth**, the **M2N communication library** (Section 5), because it is the enabling infrastructure for the ping-pong pipeline — without fast enough communication, the pipeline's overlapping promises cannot be realized. We'll examine the sender/receiver architecture, the overhead elimination strategy, and the traffic-oriented optimizations.
+
+- **Fifth**, **supporting implementation details** (Section 6), including fused kernels, load balancing, and the integration of the communication library.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily a **systems design paper** whose core idea is that MoE inference efficiency can be recovered by disaggregating attention and FFN modules with independent parallelism strategies, interleaving their execution through a ping-pong pipeline, and optimizing the resulting asymmetric communication pattern through a purpose-built M2N library.
+
+---
+
+#### Ping-Pong Pipeline Parallelism
+
+**The Problem: Disaggregation Creates Idle GPUs**
+
+When attention and FFN modules are disaggregated onto separate nodes, a naive implementation that processes one global batch sequentially would leave half the GPUs idle at any given time. During attention computation, expert nodes are idle waiting for input; during expert computation, attention nodes are idle waiting for results; and during either M2N or N2M communication, *both* sides are idle waiting for data to transfer. This idle time would erase any throughput gains from the increased FFN batch size. The paper's solution is to **split the global batch into `m` micro-batches and interleave their execution** so that when one side is computing micro-batch `i`, the other side can compute micro-batch `j` and the network can transfer micro-batch `k`.
+
+**The Pipeline Operation**
+
+Figure 4 illustrates the mechanism. Consider `m = 4` micro-batches flowing through `L = 2` MoE layers. The execution trace proceeds as follows:
+
+1. At time 0, the attention node begins computing micro-batch 1, layer 1 (denoted `1_1` in the figure).
+2. When `1_1` attention completes, M2N communication sends its tokens to expert nodes (duration `Tc`).
+3. While experts compute `1_1` (duration `Te`), the attention node can begin computing micro-batch 2, layer 1.
+4. When `1_1` experts finish, N2M communication sends results back to attention nodes.
+5. The attention node can now complete `1_1`'s residual connection and begin `1_2` (micro-batch 1, layer 2), while continuing to process `3_1` or `4_1`.
+
+This creates a "ping-pong" pattern: attention nodes and expert nodes alternate being busy, with communication slots sandwiched between computation phases. The dependencies are that a micro-batch must complete layer `k` before moving to layer `k+1`, but different micro-batches at different layers can be in flight simultaneously.
+
+**Three Mathematical Constraints for Full Utilization**
+
+The paper derives three necessary conditions for the pipeline to achieve full GPU utilization — meaning that no GPU sits idle, and all communication is hidden behind computation.
+
+**Constraint 1 — Balanced Computation Time:**
+
+$$T_a \approx T_e$$
+
+where `Ta` (attention computation time for one micro-batch on one attention node) and `Te` (expert computation time for one micro-batch on one expert node) are the forward pass durations for their respective modules.
+
+**What this means operationally:** If attention takes twice as long as experts, then expert nodes will finish their computation and sit idle waiting for the next micro-batch to arrive from attention. Conversely, if experts take twice as long, attention nodes idle. The approximation symbol (`≈`) rather than strict equality acknowledges that perfect balance is impossible in practice, but the design goal is to minimize the maximum idle time. The paper operationalizes this balance through the attention node count `na` — by choosing `na` such that `na` attention nodes collectively process the same number of tokens per unit time as `E` expert nodes.
+
+**Why this constraint, not a stricter one:** A naive approach might require `Ta = Te` exactly, which would be over-constrained. The pipeline can tolerate small imbalances because micro-batches buffer the mismatch — if attention is slightly faster, it can "get ahead" on later micro-batches; if experts are slightly faster, the pipeline naturally absorbs the slack. The constraint only requires approximate balance to prevent systematic accumulation of idle time across layers.
+
+**Constraint 2 — Communication Hidden by Computation:**
+
+$$T_c < T_f$$
+
+where `Tc` is the one-way communication time for a single micro-batch (same for M2N and N2M, since the network path and data volume are symmetric), and `Tf = max(Ta, Te)` is the maximum of attention and expert computation time.
+
+**What this means operationally:** For communication to be completely overlapped with computation, the time to transfer a micro-batch between attention and expert nodes must be strictly less than the time to compute that micro-batch on whichever side is slower. If `Tc ≥ Tf`, then even with perfect pipelining, GPUs will experience idle periods because the communication cannot be fully hidden behind computation — some cycles will be spent waiting for data to arrive.
+
+**Why this matters for the design space:** This constraint determines which hardware configurations are viable. Deployments with fast interconnects (e.g., InfiniBand with high message rates) can satisfy this for larger micro-batches and tensor parallelism degrees. Deployments with slower networks may require reducing batch sizes or increasing the per-batch computation time (e.g., by reducing tensor parallelism, which concentrates more computation on fewer GPUs) to keep `Tc/Tf` below 1.
+
+**Constraint 3 — Sufficient Pipeline Depth:**
+
+$$m \times T_f \geq 2 \times (T_f + T_c)$$
+
+which simplifies to:
+
+$$m \geq 2 \times \left(1 + \frac{T_c}{T_f}\right)$$
+
+where `m` is the number of micro-batches.
+
+**What this means operationally:** The right-hand side `2(Tf + Tc)` is the total time for one micro-batch to pass through one MoE layer (attention compute + M2N communication + expert compute + N2M communication). The left-hand side `mTf` is the total computation time across all micro-batches for the same layer on a single node. For the pipeline to be "full" — meaning there are always micro-batches queued up to fill any idle slots — the total compute time across all micro-batches must exceed the time to push one micro-batch completely through the layer.
+
+**How to read the simplified form:** The ratio `Tc/Tf` captures how fast communication is relative to computation. When communication is very fast (`Tc ≪ Tf`), the ratio approaches 0, and the constraint reduces to `m ≥ 2`. When communication is slower, more micro-batches are needed to fill the pipeline. The paper states: "For deployments with fast communication (`Tc < Tf/2`), at least 3 micro-batches are required. For those with relatively slower communication, at least 4 micro-batches are required." The boundary case `Tc = Tf/2` gives `m ≥ 2 × (1 + 0.5) = 3`; the case `Tf/2 < Tc < Tf` gives `m ≥ 2 × (1 + ε)` where `0.5 < ε < 1`, so `m ≥ 4`.
+
+**Why not simply use the largest possible `m`:** Increasing `m` reduces the size of each micro-batch (since the global batch `B` is fixed), which reduces GEMM efficiency — matrix multiplications on GPUs achieve peak throughput only when the batch dimension is sufficiently large. The paper limits `Nm` (the maximum micro-batch count considered) to 4, stating that "splitting into too many micro-batches reduces GEMM efficiency in expert nodes and thus increases the latency." This creates a tension: more micro-batches improve pipeline utilization but degrade per-micro-batch computational efficiency, and the deployment plan search must navigate this tradeoff.
+
+**Latency Analysis**
+
+The paper derives bounds on the decoding iteration latency for one micro-batch:
+
+$$(T_a + T_e + 2T_c) + m \cdot T_f \cdot (L - 1) \leq T_{\text{iter}} \leq m \cdot T_f \cdot L$$
+
+where `L` is the number of MoE layers.
+
+**What this computes:** The lower bound assumes ideal overlapping — the first micro-batch pays the full cost of one layer (`Ta + Te + 2Tc`) and then each subsequent layer adds at most `mTf` because the pipeline is fully utilized and communication is hidden. The upper bound assumes no overlapping benefit — each of the `L` layers takes `mTf` for all micro-batches in sequence. The pipeline operates somewhere between these extremes depending on how well constraints 1, 2, and 3 are satisfied.
+
+The total latency for the global batch is:
+
+$$T_{\text{total}} = (T_a + T_e + 2T_c) + T_f \cdot (m \cdot L - 1)$$
+
+**What this computes:** The first term is the time for the first micro-batch to clear the first layer (the pipeline "fill" phase). The second term is the steady-state time after the pipeline is full: each subsequent micro-batch-layer unit takes `Tf` (the slower of attention or expert compute), and there are `mL - 1` such units remaining after the first.
+
+**Why this form matters for SLO compliance:** The SLO constraint (`Titer ≤ SLO`) is checked against the per-micro-batch latency, not the global batch latency. Since micro-batches are processed independently from the perspective of an individual request, the latency a request experiences is the time from when its micro-batch begins a decoding iteration to when that iteration completes — which depends on the pipeline depth but not on the global batch size.
+
+---
+
+#### Deployment Plan Search
+
+**The Optimization Problem**
+
+Given a specific MoE model (with known layer count `L`, hidden size `h`, intermediate size `h'`, number of experts `E`, top-k `K`, and GQA group count `g`), workload characteristics (average sequence length `s`), available hardware (GPU memory capacities `Ca, Ce`, maximum GPUs per node `Ma, Me`), and an SLO latency constraint, the deployment plan search finds the configuration `(tpa, tpe, na, m, B)` that maximizes:
+
+$$\text{tpuc} = \frac{B/T_{\text{total}}}{tpa \cdot na \cdot \text{Cost}_a + tpe \cdot E \cdot \text{Cost}_e}$$
+
+where `tpuc` is throughput per unit cost, `B` is the global batch size, `Ttotal` is the total iteration latency from Equation 5, `tpa` and `tpe` are the tensor parallelism sizes for attention and expert nodes respectively, `na` is the number of attention replicas, `E` is the number of experts (each on its own node group), and `Costa, Coste` are the per-GPU costs for the attention and expert GPU types.
+
+**What this computes:** The numerator `B/Ttotal` is the instantaneous throughput (tokens generated per second across the entire instance). The denominator is the total cost of all GPUs in the instance. The ratio gives throughput per unit cost — the metric to maximize. This is not raw throughput; it is throughput normalized by the dollar cost of the hardware, which captures the economic objective of serving systems.
+
+**Why throughput per cost rather than per GPU:** Under heterogeneous deployment, attention GPUs and expert GPUs have different prices, different compute capabilities, and different memory bandwidths. Normalizing by total cost allows the optimizer to find the most cost-efficient mix. An alternative formulation using throughput per GPU would be misleading under heterogeneity because it would treat a $5/GPU-hour device as equivalent to a $1/GPU-hour device.
+
+**The Search Algorithm (Algorithm 1)**
+
+The paper presents pseudocode for a brute-force search over the feasible space:
+
+1. **Initialize** `plan* ← ∅` (empty optimal plan).
+2. **Outer loop** over `tpe ∈ {1, 2, ..., Me}`: for each possible expert tensor parallelism size.
+3. **Inner loop** over `tpa ∈ {1, 2, ..., Ma}`: for each possible attention tensor parallelism size.
+4. **Feasibility check:** `if tpa × Ca > Pa and tpe × Ce > Pe` — the aggregated GPU memory on each node must exceed the parameter size of the module it hosts. `Pa` is the attention parameter size, `Pe` is one expert's parameter size.
+5. **Balance computation:** `na ← balance(G, tpa, tpe)` — compute the number of attention replicas that approximately equalizes `Ta` and `Te`, using the relationship derived from the roofline analysis.
+6. **Micro-batch loop:** for `m ∈ {3, 4, ..., Nm}`, where `Nm = 4`.
+7. **Simulate:** `B, tpuc ← simulate(G, plan, SLO)` — determine the maximum global batch size that satisfies the SLO constraint through binary search, and compute the resulting throughput per cost.
+8. **Update best:** if the current plan's `tpuc` exceeds the best seen, store it.
+
+**What this nested enumeration achieves:** The search space is `O(M^2 * Nm)` where `M = max(Ma, Me)` and `Nm = 4`. For modern GPU servers where `M` is typically at most 8 (8 GPUs per node), this is at most `64 × 4 = 256` evaluations, which is computationally trivial. The search is performed offline before deployment; it is not a runtime optimization.
+
+**Why a brute-force search rather than gradient-based optimization:** The objective function is non-convex, non-differentiable, and defined over a small discrete space. The `simulate` function involves integer operations (micro-batch counts, TP degrees) that create discontinuities. An exhaustive search over the feasible space is simpler, more robust, and guaranteed to find the global optimum within the discretization.
+
+**Performance Simulation Model**
+
+The `simulate` function models `Ta`, `Te`, and `Tc` as functions of the deployment parameters and workload characteristics.
+
+**Modeling `Ta` (attention computation time):**
+
+The attention module executes two GEMMs per layer: QKV Project and Attention Output. Their shapes (from Table 2) are `(ba, h) × (h, h(1 + 2/g)/tpa)` and `(ba, h/tpa) × (h/tpa, h)`, where `ba = B/(m × na)` is the micro-batch size per attention node.
+
+The paper models `Ta` as a linear function:
+
+$$T_a = k_1 \cdot b_a + k_2$$
+
+where `k1` captures computation that scales with batch size (the GEMMs), and `k2` captures fixed overheads. The KV cache access time is proportional to `ba × s` (batch size times average sequence length), which is included in `k1`. The tensor parallelism synchronization time is `O(ba × h × (tpa - 1)/tpa)`, also absorbed into `k1`. The coefficients `k1` and `k2` are obtained through profiling and interpolation — the system runs test micro-batches at several batch sizes, measures the time, and fits a linear model.
+
+**Modeling `Te` (expert computation time):**
+
+The expert module executes two GEMMs: FFN Input `(be, h) × (h, h'/tpe)` and FFN Output `(be, h'/tpe) × (h'/tpe, h)`, where `be = ba × na × K/E` is the micro-batch size per expert node.
+
+Similarly, `Te` is modeled as:
+
+$$T_e = k_3 \cdot b_e + k_4$$
+
+with `k3` and `k4` obtained from profiling.
+
+**Why a linear model rather than a detailed roofline analysis:** The linear interpolation approach captures the dominant scaling behavior without requiring precise modeling of arithmetic intensity, cache behavior, and memory hierarchy details that vary across GPU architectures. Since the deployment plan search only needs to compare relative throughput, a well-calibrated linear model suffices — the plan that the search selects will be validated in deployment.
+
+**Modeling `Tc` (communication time):**
+
+$$T_c = \max\left(\frac{b_a \cdot h \cdot K/tp_a}{W_a \cdot \text{Util}(b_a h K/tp_a)}, \frac{b_e \cdot h/tp_e}{W_e \cdot \text{Util}(b_e h/tp_e)}\right)$$
+
+**What each term represents:** The first argument is the time for an attention node to *send* all tokens destined for one expert: `ba × h × K/tpa` is the total bytes to send (micro-batch size times hidden dimension times top-k divided by attention tensor parallelism, since TP splits the hidden dimension), and `Wa × Util(...)` is the effective sending bandwidth — the raw NIC bandwidth `Wa` multiplied by the bandwidth utilization at the given message size. The second argument is the time for an expert node to *receive* all tokens from one attention node: `be × h/tpe` bytes at effective receiving bandwidth `We × Util(...)`.
+
+**Why max of send and receive:** The communication is bidirectional and limited by the slower of the two paths. If the attention node has less bandwidth per GPU (e.g., because it uses GPUs with fewer or slower NICs), it becomes the bottleneck; if the expert node's NIC is the bottleneck, that dominates. The `Util` function, which maps message size to achieved bandwidth fraction, is profiled empirically.
+
+**Relationship Between Attention and Expert Batch Sizes:**
+
+The micro-batch sizes are linked by the MoE routing topology:
+
+$$b_a \times m \times n_a = b_e \times m \times \frac{E}{K} = B$$
+
+**What this states:** The total number of tokens entering a layer across all attention replicas (`ba × m × na`) equals the total number of tokens processed across all experts (`be × m × E/K`), which equals the global batch size `B`. The factor `E/K` appears because each token is processed by `K` out of `E` experts, so the total expert-side work summed across all experts is `B × K`, but each expert sees only a fraction `1/E` of that, giving per-expert batch `be × m = B × K/E`. Solving for micro-batch: `be = B × K/(E × m)`.
+
+**Determining `na` for Balanced Computation:**
+
+Using the linear models for `Ta` and `Te` and the relationship between `ba` and `be`, the paper solves for `na` that approximately balances computation:
+
+$$n_a = \frac{b_e \cdot E}{b_a \cdot K} \approx \frac{k_1 \cdot E}{k_3 \cdot K}$$
+
+**What this derives:** From the batch size relationship, `na = (be × E)/(ba × K)`. From the condition `Ta ≈ Te`, we have `k1 × ba + k2 ≈ k3 × be + k4`. Ignoring the constant terms `k2` and `k4` (which are relatively small for typical batch sizes), `k1 × ba ≈ k3 × be`, so `be/ba ≈ k1/k3`. Substituting: `na ≈ (k1 × E)/(k3 × K)`. This gives the number of attention replicas that makes the per-micro-batch computation times roughly equal, satisfying Constraint 1.
+
+**Why `k1` and `k3` capture the right scaling:** These coefficients reflect the hardware-dependent compute efficiency — `k1` represents the inverse of effective TFLOPS for attention GEMMs on the attention GPU type, and `k3` represents the inverse of effective TFLOPS for FFN GEMMs on the expert GPU type. The ratio `k1/k3` naturally captures the relative speed of attention vs. expert computation per token on their respective hardware.
+
+**Additional Constraints in the Search:**
+
+The search enforces two additional constraints beyond the pipeline conditions from Section 4.1.
+
+**SLO Constraint:**
+
+$$T_{\text{iter}} \leq \text{SLO}$$
+
+where `Titer` is the per-micro-batch decoding iteration latency bounded by Equation 4, and SLO is the service-level objective for time-between-tokens (set to 150ms in the evaluation). The `simulate` function performs binary search over `B` to find the largest global batch size satisfying this constraint.
+
+**Memory Capacity Constraint:**
+
+$$4 \cdot m \cdot b_a \cdot s \cdot h \cdot \frac{L}{g} + 2 \cdot P_a < tp_a \cdot C_a$$
+
+where the first term is the KV cache size. The KV cache stores, for each token in the batch, the key and value projections for all `L` layers. With GQA, there are `h/g` key-value heads. The factor 4 accounts for bfloat16 (2 bytes) times 2 (key + value). The second term `2 × Pa` accounts for bfloat16 model parameters. The right side `tpa × Ca` is the total GPU memory on one attention node.
+
+**What this constrains:** The KV cache grows linearly with both batch size and sequence length `s`. For long-context serving, this becomes the dominant constraint, limiting how large the micro-batch can be before the attention node runs out of memory. This constraint explains why attention replication is necessary: splitting `B` across `na` attention replicas reduces per-node KV cache pressure to `B/na`.
+
+---
+
+#### Heterogeneous Deployment
+
+**The Opportunity**
+
+Because MegaScale-Infer deploys attention modules and expert modules on separate GPUs, the two modules can use *different GPU types* optimized for their respective computational characteristics. This is impossible in co-located systems, where every GPU must host both modules and must therefore be a compromise.
+
+The paper explicitly characterizes the hardware requirements:
+
+- **Attention nodes** are **memory-intensive**: "spending most of their time on memory access and requiring significant storage for the KV cache." The ideal attention GPU has high memory bandwidth per dollar (to serve KV cache lookups) and large memory capacity per dollar (to fit large KV caches for many tokens or long sequences).
+
+- **Expert nodes** are **compute-intensive**: their performance is limited by matrix multiplication throughput. The ideal expert GPU has high compute TFLOPS per dollar, with memory bandwidth being secondary.
+
+**GPU Characterization (Table 3)**
+
+The paper evaluates five GPU types, normalizing prices relative to the L20:
+
+| GPU | Norm. Price | Memory (GB) | BW (GB/s) | Compute (TFLOPS) | GB/$ | GB/s/$ | TFLOPS/$ |
+|-----|------------|--------------|-----------|-------------------|------|--------|-----------|
+| L20 | 1.00 | 48 | 864 | 119.5 | 48 | 864 | 119.5 |
+| H800 | 5.28 | 80 | 3430.4 | 989 | 15.2 | 649.7 | 187.3 |
+| A800 | 2.26 | 80 | 2039 | 312 | 35.4 | 902.2 | 138.1 |
+| H20 | 1.85 | 96 | 4096 | 148 | 51.9 | 2214.1 | 80.0 |
+| L40S | 1.08 | 48 | 864 | 362 | 44.4 | 800.0 | 335.2 |
+
+**Interpreting the cost-effectiveness columns:**
+
+For attention nodes (memory-bandwidth-bound): the highest GB/s/$ is H20 at 2214.1, followed by A800 at 902.2 and L40S at 800.0. The highest GB/$ (memory capacity per dollar) is also H20 at 51.9. This makes H20 the natural choice for attention.
+
+For expert nodes (compute-bound): the highest TFLOPS/$ is L40S at 335.2, followed by H800 at 187.3 and A800 at 138.1. H20 is particularly poor at only 80.0 TFLOPS/$. This makes L40S the natural choice for experts.
+
+**The paper's heterogeneous configuration:** H20 for attention, L40S for experts. This simultaneously maximizes the cost-effectiveness of both memory bandwidth (attention) and compute throughput (experts). The paper states the intuition directly: "H20 is more suitable for attention due to its large memory capacity and high memory bandwidth per unit cost. Meanwhile, the L40S GPU is more cost-effective for experts."
+
+**Integration with the Deployment Plan Search:**
+
+In heterogeneous deployment, the search algorithm enumerates all pairs of GPU types for attention and expert roles, computing `tpuc` with the corresponding `Costa` and `Coste` prices, `Ca` and `Ce` capacities, and profiled `k1, k3` coefficients. The search therefore finds not just the optimal parallelism configuration but also the optimal hardware assignment.
+
+**Energy Efficiency:**
+
+The paper also reports that heterogeneous deployment reduces energy consumption, because H20 and L40S each have lower power consumption per unit of their respective strengths (bandwidth and compute). The TDP values: H20 at 500W for 4096 GB/s (8.2 GB/s/W) and 148 TFLOPS (0.30 TFLOPS/W); L40S at 350W for 864 GB/s (2.5 GB/s/W) and 362 TFLOPS (1.03 TFLOPS/W). By using H20 for the bandwidth-heavy attention work and L40S for the compute-heavy expert work, the system achieves higher throughput per watt than using either GPU type for both roles.
+
+---
+
+#### High-Performance M2N Communication
+
+**Why NCCL Is Insufficient**
+
+The paper identifies three specific sources of overhead in NCCL's peer-to-peer communication that make it unsuitable for the M2N pattern in disaggregated MoE serving:
+
+**1. GPU-to-CPU copies.** NCCL requires intermediate copies from GPU memory to a CPU proxy before network operations can proceed. Even with user buffer registration (which aims to reduce copies), these are not fully eliminated. For MoE token dispatch, where each attention GPU sends tens of thousands of small messages (one per expert receiver, per micro-batch), these copies accumulate into substantial latency.
+
+**2. Group initialization overhead.** NCCL's group operations (the mechanism for initiating multiple concurrent peer-to-peer sends) are processed in batches of at most 8 operations. When `N = 32` receivers, this requires 4 sequential group launches, each with setup and teardown overhead. For the M2N pattern where every attention node must send to (potentially) every expert node, this serialization is a bottleneck.
+
+**3. General-purpose overhead.** As a general collective communication library supporting hundreds of primitives and configurations, NCCL performs "general group operation setup, including preparing and launching a batch of N send operations, internal handling and verifications." These steps, while necessary for generality, are pure overhead for the specific M2N pattern.
+
+**Figure 5 Evidence:** The paper compares NCCL to perftest (a bare-metal RDMA benchmark) for a single sender transmitting 128KB to N receivers. Median latency with NCCL "significantly exceeds" perftest. At the 99th percentile, NCCL's latency "exhibits a significant surge, particularly when scaling to 32 or more receivers," while perftest shows "only a slight increase." This instability is attributed to GPU synchronization operations and device memory accesses present in NCCL but absent in perftest.
+
+**M2N Sender Architecture (Figure 6)**
+
+The sender is designed as a stream-compatible CUDA extension that eliminates GPU-to-CPU copies and GPU synchronization. The execution flow:
+
+1. **CUDA Event Wait:** The sender uses `cudaEventQuery` to ensure that the previous compute kernel has finished populating the pre-registered tensor buffer. This is a non-blocking check — the GPU stream proceeds independently.
+
+2. **Pre-registered Tensor:** The output of the attention module is placed in a pre-registered GPU memory buffer (registered with the NIC for RDMA). Pre-registration means the NIC can directly read from this buffer without intermediate copies.
+
+3. **Stream Block:** The sender calls `cuStreamWaitValue32` (a CUDA driver operation) to block the GPU stream. This prevents the next compute kernel from overwriting the tensor buffer while the network transfer is in progress.
+
+4. **RDMA Write with Immediate:** The in-house CPU communication library ("Core Sender") performs an RDMA write operation that directly transfers data from the sender's GPU memory to the receiver's GPU memory through the RNIC, with an "immediate" value that notifies the receiver of completion. The CPU orchestrates this without involving the GPU's compute units.
+
+5. **Completion Queue Poll:** The sender polls the RDMA completion queue to confirm that the data has been successfully written to the remote buffer.
+
+6. **Stream Unblock:** The sender updates a shared memory flag to unblock the GPU stream, allowing the next compute kernel to proceed (which will reuse the pre-registered buffer for subsequent layers or micro-batches).
+
+**What this eliminates:** No `cudaMemcpy` to CPU proxy memory (step 2 uses RDMA directly from GPU memory). No GPU-side kernel launches for communication (the CPU Core Sender manages the network operations). No batch-group initialization (each send operation is independent and can proceed as soon as its data is ready). No `cudaDeviceSynchronize` or equivalent global barriers (synchronization is per-stream, via the event-wait and stream-block/unblock mechanism).
+
+**M2N Receiver Architecture (Figure 7)**
+
+The receiver complements the sender with a similar stream-oriented design:
+
+1. **CUDA Event Wait:** Ensure the receive buffer is no longer in use by the previous compute kernel.
+
+2. **Pre-registered Buffer:** The buffer where incoming expert outputs will be placed is pre-registered for RDMA writes from the sender.
+
+3. **Stream Block:** Prevent subsequent kernels from reading the buffer before data arrives.
+
+4. **Completion Queue Poll:** The Core Receiver polls the RDMA completion queue to verify that all expected senders have completed their RDMA writes. This uses `poll_cq()` to check for the "immediate" notifications sent by the senders.
+
+5. **GDRCopy Flush:** The receiver uses GDRCopy (GPU Direct RDMA Copy) — a library that allows the CPU to write to GPU memory through the PCIe bus — to perform a cache flush operation. This ensures that the RDMA-written data is visible to the GPU's compute units (the GPU's L2 cache may still hold stale data from the previous kernel's use of the buffer).
+
+6. **Stream Unblock:** Signal through shared memory that the data is ready, allowing the next compute kernel (residual connection, next layer's attention) to proceed.
+
+**Why GDRCopy flush is necessary:** RDMA writes go directly to GPU memory through the NIC's PCIe path, bypassing the GPU's L2 cache. If the GPU's L2 cache still holds the old content of that memory region (from the previous kernel's output), subsequent compute kernels will read stale data. The flush operation invalidates the relevant cache lines, forcing the GPU to read from HBM, where the RDMA-writen data now resides.
+
+**Traffic-Oriented Optimizations**
+
+The paper details two optimizations derived from empirical observation during scale testing.
+
+**High-Priority ACKs:** In bidirectional communication (the ping-pong pipeline involves simultaneous M2N and N2M flows), ACK (acknowledgment) packets are part of the RDMA reliable transport protocol. The paper observed that ACK packets were "often queued or transmitted with low priority (e.g., round-robin scheduling)," causing senders to stall waiting for acknowledgments. The solution: "assign ACK packets to high-priority queues, isolating them from data packets, and fine-tuning the associated weight configurations empirically." This prevents head-of-line blocking where data packets delay ACKs, which in turn delay subsequent data transmissions.
+
+**Congestion Control Fine-Tuning:** In unbalanced communication scenarios where different receivers get different amounts of data (which occurs in MoE because expert load is naturally imbalanced — some experts are "hotter" than others), standard congestion control algorithms may overreact by reducing the sending rate. The paper states they "fine-tune our congestion control algorithms to minimize rate-limiting effects and allow faster convergence." This reduces tail latency in scenarios where some connections have high throughput and others have low throughput due to imbalanced expert assignment.
+
+**Comparison with DeepEP**
+
+The paper explicitly contrasts its CPU-based approach with DeepEP's GPU-based approach (DeepSeek's expert-parallel communication library). The fundamental tradeoff:
+
+- **CPU-based (MegaScale-Infer):** The CPU manages network operations, issuing RDMA commands from userspace without consuming GPU compute resources. The CPU's higher clock speed gives lower latency for single-QP (queue pair) operations because it can issue doorbells (notifications to the NIC) faster than a GPU kernel can. However, CPU-based approaches have limited parallelism — a single-threaded CPU sender can manage a fixed number of connections.
+
+- **GPU-based (DeepEP):** GPU streaming multiprocessors manage network operations directly. GPUs offer higher parallel throughput (many SMs can manage many QPs simultaneously), which is advantageous when the number of connections is very large. However, GPU-based approaches consume SM resources that would otherwise be used for computation and require careful orchestration to avoid L2 cache contention between communication and computation kernels. DeepEP uses custom PTX (assembly-like) instructions to minimize L2 cache usage.
+
+**Why MegaScale-Infer chooses CPU-based:** The paper argues that in their scenario, "the amount of data transferred between each sender-receiver pair typically reaches several hundred kilobytes (§7.3). At this scale, a single-threaded CPU is sufficient to saturate the bandwidth." In other words, the per-connection message size is large enough that the bottleneck is NIC bandwidth, not CPU command rate. If the number of experts were to increase dramatically (reducing per-connection message size), the paper acknowledges that "leveraging the GPU's superior parallel processing capabilities may offer greater advantages in terms of throughput."
+
+This is a design choice grounded in the specific workload: for the MoE models evaluated (8, 16, and 32 experts), the per-connection data volume is large enough that CPU-based orchestration achieves full bandwidth utilization without consuming GPU resources, making it more efficient *for this regime* than GPU-based alternatives.
+
+---
+
+#### Supporting Implementation Details
+
+**Fused Kernels**
+
+The paper implements two types of kernel fusion to reduce latency:
+
+**Communication-Computation Overlap (via Flux):** Intra-node tensor parallelism uses high-speed interconnects like NVLink, but still introduces non-negligible communication overhead for the All-Gather operations that reassemble split tensors. The paper uses Flux to fuse the All-Gather communication with the subsequent GEMM operation into a single kernel. For example, the All-Gather that reassembles the QKV projection across TP ranks is fused with the attention computation, so the GEMM can begin processing data as it arrives rather than waiting for the complete tensor.
+
+**Sequential Memory-Intensive Operator Fusion:** The MoE gating and token dispatch pipeline involves several small, memory-bound operations executed sequentially: (1) compute top-k expert selection from the gating network output; (2) compute per-expert token counts; (3) normalize token weights; (4) scatter tokens into per-expert buffers for dispatch. These are fused into a single kernel to reduce kernel launch overhead (each kernel launch has microsecond-scale overhead on the CPU) and to avoid intermediate reads/writes to HBM.
+
+**Load Balancing**
+
+In production traffic, expert load is highly imbalanced (some experts process many more tokens than others). The paper deploys experts with *on-device redundancy*: popular (hot) experts are replicated across multiple nodes, while cold experts remain on a single node. The load-balancing problem is formalized as:
+
+$$\min \max_{j=1..N} C_j, \quad \text{where } C_j = \sum_{i=1..M} x_{i,j} \cdot \max(a_i, K)$$
+
+where `Ci` is the computational cost on node `j` (which corresponds to latency, since stragglers determine pipeline bubble size), `xi,j` is the fraction of expert `i`'s tokens sent to node `j` (with the constraint that fractions sum to 1), `ai` is the cost of processing active tokens for expert `i`, and `K` is a floor cost for cold experts. The min-max objective minimizes the maximum load across nodes — effectively minimizing the straggler latency.
+
+The paper uses a greedy approximation algorithm "based on traffic within a previous time period," implying that expert load distributions are relatively stable and can be estimated from recent history. Figure 16 confirms this: during decoding, "expert load remains relatively stable across batches," motivating a "static or periodic expert load balancing strategy during decoding."
+
+**Attention Load Balancing**
+
+Even within the attention replica group, load imbalance arises from sequence length variation: two batches of the same token count may have very different computation times if one batch has much longer sequences (more KV cache access). The paper profiles the runtime of key attention operators under varying sequence lengths and batch sizes, then composes micro-batches "on each attention node to match a predefined target execution time, thereby balancing the workload across nodes." This is a form of length-aware batching that ensures all attention replicas finish their micro-batch computation at approximately the same time, minimizing synchronization bubbles in the pipeline.
+
+**M2N Library Implementation**
+
+The library is built as a PyTorch extension: approximately 4,900 lines of C/C++ and 5,000 lines of Python. It uses GPUDirect (for RDMA from GPU memory without CPU staging) and GDRCopy (for the receiver-side cache flush). Network monitoring tools are built alongside the library to enable diagnosis of performance issues during deployment.
 
 ## 4. Key Insights and Innovations
-- Disaggregated expert parallelism is a new within-layer split for MoE serving.
-  - What’s new: previous work disaggregates phases (prefill vs decoding); MegaScale-Infer disaggregates modules within each layer (attention vs experts) and scales them independently (Figure 3).
-  - Why it matters: it converts sparse, memory-bound expert computation into compute-bound GEMMs by aggregating tokens from many attention replicas, unlocking FFN efficiency (Sections 2.3 and 3).
 
-- Ping-pong pipeline that provably hides communication
-  - What’s new: a micro-batch pipeline that enforces concrete conditions (Equations (1)–(3)) to overlap two bidirectional communications per MoE layer with compute (Figure 4).
-  - Why it matters: it keeps both sides busy despite per-layer token routing, which would otherwise create frequent bubbles.
+### Innovation 1: Disaggregation as a Structural Fix for MoE Sparsity, Not Just a Resource Management Trick
 
-- A purpose-built, CPU-driven M2N library for token routing
-  - What’s new: a stream-aware, RDMA write-with-immediate design that avoids GPU-to-CPU copies, NCCL group overheads, and GPU synchronization; adds traffic-aware ACK prioritization and congestion control tuning (Section 5; Figures 6–7).
-  - Why it matters: drastically lowers both median and tail latencies and improves throughput for the large-message regime typical in MoE routing (Figures 11–12), enabling communication to be fully hidden by the ping-pong pipeline.
+Prior work on LLM serving disaggregation—most notably Splitwise and DistServe for prefill/decoding separation, and Infinite-LLM for attention/FFN separation in long-context dense models—treated disaggregation as a way to *manage resources more flexibly*. The dominant framing was: different phases or modules have different compute/memory profiles, so putting them on separate hardware pools lets you right-size each pool independently and avoid overprovisioning. This is fundamentally a resource-allocation insight.
 
-- Heterogeneous deployment that matches hardware strengths to module characteristics
-  - What’s new: formalizes attention-on-memory-rich GPUs and experts-on-compute-efficient GPUs, then evaluates end-to-end cost and power (Section 4.3; Table 3; Figures 9–10).
-  - Why it matters: yields up to 3.24× higher decoding throughput per cost versus strong baselines on H20 and 1.80× higher decoding throughput per watt (Figures 9(a) and 10(a)).
+MegaScale-Infer makes a categorically different argument. The paper identifies that MoE sparsity *qualitatively changes the computational nature of FFN modules*—specifically, it pushes them from compute-bound to memory-bound by starving them of tokens per expert. This is not just a resource-sizing problem; it is a *phase transition* in GPU behavior. Under co-located deployment, no amount of batching or load balancing can fix this because the per-expert token count is structurally capped by the global batch size divided by the number of experts times top-k. The FFN is memory-bound *by construction*, and standard optimizations (continuous batching, PagedAttention, expert parallelism) operate within a regime where the arithmetic intensity is permanently below the roofline threshold.
 
-- A practical, search-based deployment planner grounded in a simple, profile-calibrated performance model
-  - What’s new: closed-form constraints and simple linear models for compute plus an empirical link model for communication enable a fast search of `tpa, tpe, na, m, B` under SLO and memory constraints (Algorithm 1; Section 4.2).
-  - Why it matters: finds configurations where `Ta ≈ Te` and `m` suffices to hide communication, maximizing throughput per dollar given real hardware and workloads.
+The disaggregation in MegaScale-Infer does something fundamentally different from prior disaggregation systems: it **reverses the phase transition**. By replicating attention modules and pooling their requests, the effective batch per expert becomes `B × na × topk/E` rather than `B × topk/E`. The variable `na` (number of attention replicas) is a new degree of freedom that can be tuned to push the per-expert batch size past the `F/B` threshold where computation becomes compute-bound again. The paper demonstrates this concretely through the roofline analysis in Section 2.3: for Mixtral 8×22B on an A100, the theoretical MFU jumps from 25% (co-located, `b = 156`) to potentially 100% if `na` is large enough to make `B × na × 2/8` exceed the 156-token threshold.
+
+This is not an incremental refinement of Infinite-LLM or DistServe. It is a diagnostic insight about *why* MoE inference is inefficient that prior work missed: the problem is not that attention and FFN have different resource requirements (that was already known for dense models), but that MoE sparsity *breaks* the FFN's ability to ever become compute-bound under co-located deployment. The solution is not just separation for flexibility but replication of the memory-bound side to feed the compute-bound side.
+
+The evidence for this phase-transition framing comes from Figure 1, which shows the qualitative difference in GPU utilization curves: in dense models (Figure 1a), FFN utilization rises with batch size and can reach 100% within feasible batch sizes; in MoE (Figure 1b), the `topk/#expert` factor caps FFN utilization at a fraction of maximum regardless of batch size; in MegaScale-Infer (Figure 1c), disaggregation restores the ability to saturate FFN by decoupling the attention-side batch constraint from the expert-side batch size.
+
+---
+
+### Innovation 2: Pipelines as a Complement to Batching, Not a Substitute
+
+The standard approach to hiding latency in distributed ML serving is batching: increase the batch size so that more work is available to overlap with communication or memory stalls. The ping-pong pipeline in MegaScale-Infer inverts this logic. The paper demonstrates that **splitting batches into micro-batches and interleaving them across modules can achieve full GPU utilization even when the per-micro-batch computation time is shorter than the communication time per micro-batch**, provided the *aggregate* computation across micro-batches is sufficient (Constraint 3).
+
+This is counterintuitive for practitioners coming from training systems, where pipeline parallelism typically trades increased latency for increased throughput by partitioning layers across devices. In training, pipelines introduce bubbles (idle time) at the beginning and end of each batch, which are amortized over many micro-batches. MegaScale-Infer's pipeline has the opposite property: it *eliminates* idle time that would exist without pipelining (the idle time from sequential attention-then-FFN execution in a disaggregated architecture) by ensuring that when one side computes micro-batch `i`, the other side computes micro-batch `j`.
+
+What makes this intellectually distinctive is the **tripartite overlapping**: computation on attention nodes, computation on expert nodes, and communication on the network are all simultaneously active, each working on different micro-batches at different layers. This is more than just pipeline parallelism—it is a form of *full-system pipelining* where the pipeline stages are not different model layers (as in GPipe-style training pipelines) but different module types (attention, communication, expert) that alternate within each layer.
+
+The paper's mathematical formalization of the necessary conditions (Constraints 1–3) is also distinctive because it provides **actionable design criteria** rather than just empirical tuning heuristics. The condition `m ≥ 2(1 + Tc/Tf)` tells a system designer how many micro-batches are needed based on the measurable ratio of communication to computation time, and the condition `Tc < Tf` defines the feasibility boundary for any deployment. This transforms pipeline configuration from an empirical art into a verifiable engineering constraint.
+
+The evidence for this innovation is primarily in Figure 14, where the ablation shows that increasing `m` from 1 (no pipeline) to 2 yields a 1.9× throughput improvement by allowing attention and experts to work simultaneously, and increasing from 2 to 3 yields an additional 1.10–1.38× by hiding communication. The fact that `m = 3` provides the largest jump for the largest model (Scaled-MoE, 1.38× improvement) confirms that communication hiding becomes more valuable as the communication-to-computation ratio increases—precisely what the constraint analysis predicts.
+
+---
+
+### Innovation 3: The Deployment Plan Search as a Formalization of Pervasive Asymmetry
+
+Distributed serving systems have always had to choose parallelism strategies (how many GPUs for tensor parallelism, how many for pipeline parallelism, etc.), but prior work treats these as largely independent dimensions. MegaScale-Infer identifies that **in disaggregated MoE serving, the parallelism choices for attention and experts are tightly coupled through the micro-batch pipeline**, and that finding the optimal configuration requires jointly optimizing over a space where the interactions are non-trivial and sometimes counterintuitive.
+
+The distinctive conceptual move is recognizing that `na` (the number of attention replicas) is not just a scaling parameter—it is a **balancing knob** that determines whether the pipeline's Constraint 1 (Ta ≈ Te) is satisfied. Too few attention replicas, and expert nodes sit idle waiting for tokens (Figure 15, DP of 1–4); too many, and attention nodes sit idle waiting for expert results (Figure 15, DP of 16). The optimum is a **tension point** where neither side is the bottleneck, and it depends on the hardware characteristics of *both* GPU types through the ratio of the `k1` and `k3` coefficients.
+
+This insight is not obvious from first principles. A natural intuition would be: "just add more attention replicas until the expert batch is large enough to reach peak TFLOPS." But Figure 15 demonstrates that throughput per GPU *degrades* past the optimal `na` because the attention side becomes the bottleneck and the resulting idle time on attention nodes is not compensated by higher expert utilization. The paper's formalization of this through the balance equation `na ≈ (k1 × E)/(k3 × K)` captures the key dependency: the optimal ratio depends on the relative speed of attention GEMMs vs. expert GEMMs on their respective hardware (`k1/k3`), the number of experts (`E`), and the MoE routing factor (`K`).
+
+This is significant beyond raw throughput numbers because it **makes the deployment problem solvable**. Without this formalization, system operators would need to empirically sweep a multi-dimensional space (TP degrees for both sides, DP degree for attention, micro-batch count, batch size) for every new model or hardware configuration—a combinatorially expensive process. The deployment plan search in Algorithm 1 reduces this to a structured, offline computation with complexity `O(M² × Nm)`, which is negligible.
+
+The evidence is in Figure 15, which shows the throughput and latency curves as a function of attention DP degree for DBRX. Throughput per GPU peaks sharply at DP = 8 and degrades on either side, confirming that the optimal operating point is a specific balance rather than a monotonic function. The paper's ability to predict this optimum from profiled coefficients validates the formalization.
+
+---
+
+### Innovation 4: CPU-Based M2N Communication as a Strategic Choice, Not a Compromise
+
+The high-performance communication library in MegaScale-Infer could be dismissed as "just an optimized NCCL replacement." But the paper makes a more interesting argument: it identifies **specific structural properties of MoE token dispatch**—asymmetric sender/receiver counts, intermediate message sizes (hundreds of KB), CPU clock-speed advantages for single-QP latency, and the undesirability of consuming GPU SM resources for communication—that make a CPU-orchestrated design **preferable on net** to GPU-orchestrated alternatives like DeepEP *for this specific workload regime*.
+
+This is a rare example of a systems paper explicitly arguing why a simpler approach (CPU-based) outperforms a more complex one (GPU-based SM-level orchestration) given the workload characteristics, rather than simply presenting the simpler approach as an engineering expedient. The paper's comparison with DeepEP (Section 5) is particularly valuable: it acknowledges that GPU-based approaches have advantages (higher parallel QP management, better throughput for very small messages) but argues that in the regime where per-connection message sizes are hundreds of kilobytes, "a single-threaded CPU is sufficient to saturate the bandwidth" and the GPU SM resources saved can be used for computation instead.
+
+This is significant because it **inverts the default assumption** in distributed ML systems, where moving work to the GPU is almost always considered an optimization. The paper argues that for the specific M2N pattern in MoE serving, keeping communication orchestration on the CPU is not a limitation to be overcome but a deliberate design choice that avoids L2 cache contention, eliminates GPU synchronization overhead, and leverages the CPU's higher clock speed for per-QP doorbell latency. This is a nuanced, workload-aware engineering argument rather than a blanket "GPU is faster" claim.
+
+The evidence is compelling: Figure 11 shows that the M2N library achieves up to 80.8% lower median latency and 96.2% lower P99 latency than NCCL, with throughput improvements up to 9.9×. For the deployment-relevant message size of 256KB, the improvements are 68.2% median latency reduction, 92.9% tail latency reduction, and 4.2× throughput improvement. Figure 12 demonstrates that these gains are sustained as the number of senders and receivers scales, with 54.7–96.9% tail latency reduction at scale—directly addressing the instability that NCCL exhibits at higher connection counts.
+
+The tail latency improvement is particularly important for the ping-pong pipeline: Constraint 2 requires `Tc < Tf`, and tail-latency spikes in communication would create pipeline bubbles even if median latency satisfies the constraint. By eliminating GPU synchronization and group initialization overhead (the identified sources of NCCL's tail instability), the M2N library ensures that communication remains reliably hidden behind computation, which is what actually enables the pipeline to function efficiently in practice.
 
 ## 5. Experimental Analysis
-- Setup (Section 7.1)
-  - Hardware
-    - Homogeneous: 8 nodes with 8× 80GB Ampere GPUs each, NVLink (400 GB/s intra-node), 8× 200 Gbps NICs per node.
-    - Heterogeneous: H20 nodes (900 GB/s NVLink, 4× 400 Gbps NICs) and L40S nodes (PCIe intra-node, 2× 400 Gbps NICs).
-  - Models (Table 4)
-    - Mixtral-8×22B (141B params, 8 experts, top-2), DBRX (132B params, 16 experts, top-4), Scaled-MoE (317B params, 32 experts, top-4).
-  - Workload: in-house production traces; median input length 571 tokens, output length 159; bfloat16 weights/activations/KV (Section 7.1).
-  - Metrics
-    - Primary: decoding throughput (tokens/s) per GPU for homogeneous, and per unit cost for heterogeneous; latency SLO is TBT ≤ 150 ms (Section 7.1).
-    - Also: end-to-end throughput including prefill; throughput per unit power; M2N microbench latencies/throughput (Section 7.1).
-  - Baselines: vLLM and TensorRT-LLM (both with TP/PP; TRT-LLM also supports EP). Prefill/decoding are evaluated separately for fairness (Section 7.1).
 
-- Main results
-  - Homogeneous decoding throughput (Figure 8(a))
-    - MegaScale-Infer vs baselines:
-      - Mixtral-8×22B and DBRX: up to 2.56× higher per-GPU decoding throughput over vLLM and 1.28× over TensorRT-LLM.
-      - Scaled-MoE (multi-node): 7.11× over vLLM and 1.90× over TensorRT-LLM.
-    - Interpretation: disaggregation and ping-pong overlap sustain FFN utilization even at scale, while baselines suffer from inter-node overhead and per-expert batch shrinkage.
-  - Latency (TBT) (Figure 8(b))
-    - Despite adding cross-node comms per layer, mean TBT is comparable to baselines, indicating communication is largely hidden by the pipeline and M2N efficiencies.
-  - End-to-end throughput (prefill + decoding) on homogeneous GPUs (Figure 8(c))
-    - Gains are smaller (up to 1.18×) because prefill is compute-bound and not improved by the decoding-focused design; still shows net benefits.
-  - Heterogeneous decoding throughput per cost (Figure 9(a))
-    - With attention on H20 and experts on L40S, MegaScale-Infer achieves up to 3.24× (vs vLLM on H20) and 1.86× (vs TensorRT-LLM on H20) higher throughput per dollar.
-    - Mean TBT remains comparable or slightly better than L40S-only baselines (Figure 9(b)).
-  - Heterogeneous end-to-end throughput per cost (Figure 9(c))
-    - Offloading expert compute to L40S (cheaper compute) yields up to 1.66× end-to-end throughput per cost improvement versus H20 baselines.
-  - Throughput per watt (Figure 10)
-    - MegaScale-Infer achieves 1.80× (decoding) and 1.72× (end-to-end) higher throughput per unit power due to matching module characteristics to energy-efficient hardware.
+### Evaluation Methodology
 
-- M2N microbenchmarks (Section 7.3; Figures 11–12)
-  - Varying message sizes (2 KB–8 MB), with M=N=8:
-    - Median latency reduced by up to 80.8% and P99 by up to 96.2% vs NCCL; throughput improves by up to 9.9× (Figure 11).
-    - For the typical 256 KB size, median latency −68.2%, P99 −92.9%, throughput +4.2× (Figure 11).
-  - Varying number of senders/receivers (M=N=4–32) at 256 KB:
-    - Tail latency consistently lower (−54.7% to −96.9%), throughput +3.3× to +5.8× (Figure 12).
-  - Takeaway: the library’s design choices and traffic tuning materially stabilize and accelerate token dispatch at the scales and sizes relevant to MoE inference.
+- **Dataset.** The paper uses an internal production workload dataset rather than a public benchmark. The workload is described by its median input length (571 tokens) and median output length (159 tokens) — these are the sequence length characteristics that drive KV cache memory consumption and attention computation time. The paper does not disclose the total number of requests, the distribution of sequence lengths, or the domain of the queries. This is a meaningful omission because results on production traffic may not generalize to workloads with different sequence length distributions (e.g., much longer contexts would change the memory-capacity constraint in Equation 8, potentially altering the optimal deployment plan).
 
-- Ablations and diagnostics
-  - Value of disaggregation and M2N (Figure 13)
-    - Disaggregation alone (with NCCL) yields up to 4.66× over a colocated baseline by aggregating tokens across attention replicas.
-    - Replacing NCCL with the custom M2N adds up to another 1.53× by hiding comms fully (meeting `Tc < Tf`).
-  - Effect of micro-batch count m (Figure 14)
-    - m=1 (no pipeline) under-utilizes GPUs; m=2 gives ~1.9× throughput; m=3 allows overlap of comm and compute, adding 1.10×/1.28×/1.38× more for Mixtral/DBRX/Scaled-MoE; larger m shows diminishing returns in a high-bandwidth testbed.
-  - Choosing the right attention replication (Figure 15)
-    - For DBRX, increasing attention DP from 1→8 shifts the bottleneck from attention to experts, maximizing normalized throughput without raising TBT. Further DP increases hurt by idling attention while experts compute—evidence for the “`Ta ≈ Te`” balance rule (Constraint 1).
+- **Base models.** Three MoE models are evaluated: Mixtral 8×22B (141B total parameters, 56 layers, hidden size 6144, 8 experts with top-2 routing, intermediate size 16384), DBRX (132B parameters, 40 layers, hidden size 6144, 16 experts with top-4 routing, intermediate size 10752), and a "Scaled-MoE" model (317B parameters, 48 layers, hidden size 8192, 32 experts with top-4 routing, intermediate size 8192). The Scaled-MoE model is described as sharing "a similar structure but includes more experts" — it appears to be an internal model, not a publicly available one, which limits reproducibility. All models use bfloat16 for weights, activations, and KV cache. The model selection is deliberate: Mixtral 8×22B represents a widely-used open MoE model, DBRX tests a different expert/top-k configuration (16 experts, top-4), and Scaled-MoE pushes the expert count to 32 to stress the sparsity problem that motivates the system.
 
-- Deployment evidence (Section 8; Figure 16)
-  - Production-scale deployment (∼10k GPUs) reduces cost by 1.5–2.0×.
-  - Real traffic shows large expert load skew (Figure 16(a)); decoding expert loads are stable over time while prefill is more volatile (Figures 16(b)–(c)), motivating static/periodic balancing for decoding and more frequent adjustments for prefill.
-  - Attention load imbalance arises from variable sequence lengths; they batch to a target per-node compute time using profiled operator runtime curves (Section 8).
+- **Metrics.** The primary metric is **per-GPU decoding throughput** (tokens generated per second, excluding the first output token, divided by the number of GPUs). This focuses on the decoding phase, which is where MoE sparsity causes the underutilization that the paper addresses. For heterogeneous deployment, the metric becomes **per-cost decoding throughput** — throughput normalized by the total GPU purchase price (using normalized prices from Table 3, which can be replaced by cloud rental prices). Both metrics are subject to a **time-between-tokens (TBT) SLO of 150 milliseconds**, meaning the system must deliver each output token within 150ms of the previous one. The paper also reports **mean time between tokens** corresponding to the throughput results (to verify SLO compliance) and **end-to-end throughput** (including the prefill phase and first token generation) to show that decoding-phase improvements translate to full-pipeline gains. Additionally, Figure 10 reports **throughput per unit power** (tokens per second per watt) for the heterogeneous deployment evaluation.
 
-- Overall assessment
-  - The experimental design isolates decoding (where the method’s benefits accrue) and provides ablations that tie observed gains to the proposed mechanisms (pipeline fill, comm-latency reduction, balance of `Ta` and `Te`).
-  - Results are consistent across models, scales, and hardware, and the microbenchmarks validate the communication substrate that underpins the pipeline-overlap claim.
+- **Baselines.** Two state-of-the-art serving systems are compared: **vLLM** (Kwon et al., 2023) and **TensorRT-LLM** (NVIDIA, 2024). Both support FlashAttention, PagedAttention, and continuous batching. Their parallelism strategies differ: vLLM "primarily relies on tensor parallelism for distributed LLM serving," while TensorRT-LLM "additionally supports expert parallelism for expert layers." For MoE models, both baselines co-locate attention and FFN modules on the same GPUs. Due to GPU memory constraints, Mixtral 8×22B and DBRX require a minimum of 8 GPUs with these baselines, while Scaled-MoE requires multi-node deployment. The paper notes that both baselines "are still in the process of supporting or optimizing P/D disaggregation," so to create a fair comparison, all systems (including MegaScale-Infer) temporally separate their prefill and decoding phases — meaning the decoding throughput numbers exclude prefill computation, and the end-to-end numbers include it. This is a reasonable normalization, but it means MegaScale-Infer's advantage over baselines in end-to-end scenarios may be narrower than in decoding-only scenarios because MegaScale-Infer gains more from decoding optimization than from prefill optimization under homogeneous deployment.
+
+- **Generation budget / compute accounting.** Compute is not measured in FLOPs or GPU-hours but implicitly in the number of GPUs and the achieved throughput. The fairness of comparison rests on: (1) all systems are evaluated on the same hardware (80GB Ampere GPUs for homogeneous, H20+L40S for heterogeneous); (2) all systems are subject to the same TBT SLO constraint of 150ms; (3) the per-GPU throughput metric normalizes for the number of GPUs used. There is no direct accounting for the cost of the communication network (InfiniBand NICs, switches), which could be significant for MegaScale-Infer's multi-node disaggregated architecture relative to the baselines' single-node deployments for Mixtral 8×22B and DBRX. The paper also does not account for the compute cost of the deployment plan search itself (Algorithm 1), though this is a one-time offline cost and is negligible relative to serving throughput.
+
+- **Cross-validation / statistical protocol.** No cross-validation or statistical significance testing is reported. All throughput and latency numbers appear to be point estimates from single experimental runs — the paper does not mention error bars, confidence intervals, or repeated measurements. This is a limitation, particularly for the tail latency claims in the M2N micro-benchmarks (Section 7.3), where P99 values are compared but their variance across runs is unknown. For the end-to-end experiments, the production workload is fixed, but the paper does not describe whether results are averaged over multiple workload samples or are from a single representative trace. The lack of statistical rigor means that small differences between configurations (e.g., the marginal improvements from `m=3` to `m=4` in Figure 14) cannot be distinguished from measurement noise.
+
+---
+
+### Main Quantitative Results
+
+#### End-to-End Decoding Throughput on Homogeneous GPUs
+
+The headline result from Figure 8(a): on NVIDIA 80GB Ampere GPUs, MegaScale-Infer achieves **2.56× and 1.28× higher per-GPU decoding throughput than vLLM and TensorRT-LLM** for Mixtral 8×22B, and **7.11× and 1.90× higher** for Scaled-MoE. The absolute throughput for Mixtral 8×22B with MegaScale-Infer reaches approximately 1,700–1,800 tokens/s per GPU (reading from Figure 8a), compared to roughly 700 tokens/s for vLLM and 1,400 tokens/s for TensorRT-LLM.
+
+The gap widens dramatically for Scaled-MoE: MegaScale-Infer achieves roughly 1,500–1,600 tokens/s per GPU versus approximately 200 tokens/s for vLLM and 800 tokens/s for TensorRT-LLM. The paper attributes this widening to the "expensive inter-node communication overhead, coupled with certain implementation limitations in a multi-node environment" for the baselines. Specifically, vLLM and TensorRT-LLM serve Scaled-MoE across multiple nodes but cannot overlap computation with communication the way MegaScale-Infer's ping-pong pipeline does, leading to "even lower GPU utilization for the baselines."
+
+The scaling pattern is informative: the advantage over TensorRT-LLM (which supports expert parallelism) is smaller than over vLLM (which does not), confirming that expert parallelism alone partially addresses the sparsity problem but does not solve it. MegaScale-Infer's additional gain over TensorRT-LLM (1.28× for Mixtral, 1.90× for Scaled-MoE) represents the benefit of disaggregation and attention replication beyond what expert parallelism provides.
+
+**Latency results (Figure 8b):** The mean time between tokens for MegaScale-Infer "remains comparable to those of the baseline systems." The paper acknowledges that the disaggregation architecture "introduces cross-node communication at every layer, which affects latency," and that ping-pong pipeline parallelism "does not reduce the per-token latency for an individual micro-batch." The fact that latency is comparable despite this additional communication is attributed to the high-performance M2N communication library. The absolute TBT values (from Figure 8b) range from approximately 30–40ms for Mixtral 8×22B to roughly 140ms for Scaled-MoE — all below the 150ms SLO, though Scaled-MoE approaches the limit for TensorRT-LLM.
+
+**End-to-end results (Figure 8c):** When including the prefill phase, the advantage narrows to "up to a 1.18× improvement in throughput." This is expected: the prefill phase is compute-bound and benefits less from the FFN batching gains, and homogeneous deployment does not exploit the heterogeneous hardware matching that would improve prefill cost-efficiency. The paper acknowledges this explicitly: "As the prefill phase is predominantly compute-bound, our approach does not yield performance improvements for this stage under homogeneous deployments."
+
+#### End-to-End Throughput on Heterogeneous GPUs
+
+The headline from Figure 9(a): under heterogeneous deployment (H20 for attention, L40S for experts), MegaScale-Infer achieves **up to 3.24× and 1.86× higher decoding throughput per unit cost** compared to vLLM and TensorRT-LLM running on H20 GPUs. The absolute per-cost throughput for Mixtral 8×22B with MegaScale-Infer reaches approximately 1,100 tokens/s per normalized cost unit (reading from Figure 9a), compared to roughly 340 tokens/s for vLLM on H20 and 590 tokens/s for TensorRT-LLM on H20.
+
+The paper explicitly compares against baselines running on H20 (not L40S) because "H20 is more suitable for LLM serving due to its large memory capacity, higher bandwidth, and faster communication," making it the stronger baseline. The baselines on L40S perform worse: "the 48GB memory capacity of L40S" forces "a multi-node setup" and "the relatively weak intra-node and inter-node communication performance of the L40S leads to low GPU utilization." This is a fair comparison — the paper selects the best-performing baseline configuration for each GPU type.
+
+The heterogeneous advantage comes from simultaneously exploiting H20's high memory bandwidth per dollar (2214.1 GB/s/$) for attention and L40S's high compute per dollar (335.2 TFLOPS/$) for experts. The paper quantifies this: "This results in an improvement of up to 3.24× and 1.86× on the unit cost decoding throughput compared to vLLM and TensorRT-LLM on H20, respectively."
+
+**Latency results (Figure 9b):** Mean TBT under heterogeneous deployment "remains comparable to those of the baselines," and "when compared to the baselines deployed exclusively on L40S GPUs, our approach achieves slightly improved latency performance." This is notable because L40S has weaker intra-node communication (PCIe rather than NVLink), and the fact that MegaScale-Infer's latency is *better* despite using L40S for experts suggests that the larger effective batch size on experts compensates for the slower interconnect.
+
+**End-to-end results (Figure 9c):** Including prefill, MegaScale-Infer achieves "up to a 1.66× improvement in throughput per unit cost compared to the baselines." The improvement over homogeneous end-to-end (1.18×) is larger because heterogeneous deployment also benefits the prefill phase: "heterogeneous deployment does not enhance resource utilization during the prefill phase" but "effectively reduces inference costs by offloading expert computations to the more cost-efficient L40S GPUs."
+
+**Energy efficiency (Figure 10):** MegaScale-Infer's heterogeneous deployment achieves **1.80× higher decoding throughput per unit power** and **1.72× higher end-to-end throughput per unit power** compared to the best baseline. This is because H20 has higher bandwidth per watt for the memory-intensive attention work, and L40S has higher TFLOPS per watt for the compute-intensive expert work. The paper presents this as a secondary benefit of heterogeneity — cost optimization and energy optimization are aligned because the GPUs that are most cost-effective for each module type are also the most energy-efficient for those workloads.
+
+#### Communication Micro-Benchmarks (M2N Library Performance)
+
+The M2N communication library is evaluated in isolation (without model computation) to isolate its contribution.
+
+**Varying data size (Figure 11):** With 8 senders and 8 receivers, MegaScale-Infer's M2N library achieves **up to 80.8% reduction in median latency** (Figure 11a) and **up to 96.2% reduction in P99 latency** (Figure 11b) compared to NCCL, with throughput improvements of **up to 9.9×** (Figure 11c). The largest relative gains occur at small data sizes, where NCCL's fixed overheads (GPU-to-CPU copies, group initialization) dominate. At the deployment-relevant data size of 256KB, the improvements are: **68.2% reduction in median latency, 92.9% reduction in P99 latency, and 4.2× higher throughput**. The absolute throughput at 256KB reaches approximately 180 Gbps per NIC (reading from Figure 11c), which represents roughly 90% utilization of the 200 Gbps link — confirming the paper's claim that a single-threaded CPU can saturate the bandwidth at this message size.
+
+An important detail: the throughput curve for MegaScale-Infer at 512KB and 8MB is slightly *below* 200 Gbps, suggesting that even for large messages, there are residual overheads (possibly from completion queue polling or the stream-block/unblock mechanism) that prevent reaching full line rate. The paper does not comment on this gap.
+
+**Varying sender/receiver count (Figure 12):** With a fixed data size of 256KB and scaling `M = N` from 4 to 32, MegaScale-Infer's M2N library **maintains stable performance** while NCCL degrades significantly. The P99 latency for NCCL surges from approximately 400μs at M=N=4 to over 1,600μs at M=N=32, while MegaScale-Infer's P99 latency remains below roughly 150μs across all scales (Figure 12b). The paper quantifies: "54.7%–96.9% reduction in tail latency and 3.3×–5.8× improvement in throughput." The stability of MegaScale-Infer's library at scale is attributed to the elimination of GPU synchronization and group initialization overhead, plus the congestion control fine-tuning that prevents rate-limiting in unbalanced scenarios.
+
+**A notable absence:** The paper does not evaluate the M2N library under the specific imbalanced traffic patterns that arise in real MoE serving (where some experts receive more tokens than others). This is a gap because the congestion control fine-tuning is specifically motivated by "unbalanced communication scenarios," but no experimental evidence demonstrates that the fine-tuning actually improves performance under realistic expert load distributions.
+
+---
+
+### Ablation Studies and Robustness Checks
+
+**Disaggregated expert parallelism vs. co-located baseline (Figure 13):** The paper decomposes MegaScale-Infer's gains into two components: (1) the gain from disaggregation alone (using NCCL for communication), and (2) the additional gain from the M2N communication optimization. On Ampere GPUs, disaggregation with NCCL achieves "up to a 4.66× throughput improvement over the colocated baseline" (vLLM). Adding the M2N library provides "an additional throughput improvement of up to 1.53×." For Mixtral 8×22B, the absolute values are: colocated vLLM ≈ 700 tokens/s per GPU, Disaggregated+NCCL ≈ 1,700 tokens/s per GPU (4.66×? — this appears inconsistent with the 2.56× overall improvement over vLLM in Figure 8a; the 4.66× may refer specifically to Scaled-MoE), and Disaggregated+M2N ≈ 1,700–1,800 (the 1.53× additional gain appears to apply to specific model-hardware combinations).
+
+The paper's explanation for the M2N gain: "By leveraging our optimized M2N communication library, we further reduce communication overhead, enabling the M2N communication time of a single micro-batch to fall below its computation time (satisfying constraint 2). As a result, communication can be fully overlapped with computation through the use of the ping-pong pipeline." This is a concrete causal claim: the M2N library doesn't just make communication faster — it makes it fast enough to satisfy the `Tc < Tf` constraint, which is necessary for the pipeline to achieve full overlapping. Without this, even the ping-pong pipeline would have residual idle time during communication.
+
+**Number of micro-batches (Figure 14):** Varying `m` while keeping micro-batch size constant (and using the optimal deployment plan where Ta ≈ Te):
+- `m = 1` (no pipeline): lowest throughput, because attention and expert nodes idle alternately.
+- `m = 1 → 2`: throughput improves by **1.9×**, as both modules can simultaneously process two micro-batches.
+- `m = 2 → 3`: throughput improves by **1.10×** for Mixtral 8×22B, **1.28×** for DBRX, and **1.38×** for Scaled-MoE, as communication is now overlapped with computation.
+- `m = 3 → 4`: "only marginal improvements."
+
+The scaling of the `m = 2 → 3` gain with model size confirms the paper's analysis: "Larger models require more GPUs for serving, leading to increased communication overhead. Consequently, increasing m provides more significant benefits for larger models." Scaled-MoE (the largest, with 32 experts) gains the most from the third micro-batch because its communication-to-computation ratio `Tc/Tf` is largest, making the communication-hiding benefit of additional micro-batches more valuable.
+
+**Attention DP degree (deployment plan optimization, Figure 15):** Using DBRX as a case study with `m = 3` fixed:
+- **DP = 1–4:** Latency is constant at roughly 30ms/token (Figure 15a), and per-GPU throughput scales linearly (Figure 15b). This means attention is the bottleneck — adding more attention replicas increases total throughput proportionally because the bottleneck resource is being scaled.
+- **DP = 8:** Latency remains similar, but normalized throughput reaches its peak at roughly 1,600 tokens/s per GPU. This is the balanced point where `Ta ≈ Te`.
+- **DP = 12–16:** Latency increases (to roughly 80–125ms), and normalized throughput degrades. The bottleneck has shifted to experts — attention nodes are producing tokens faster than expert nodes can process them, causing attention nodes to idle and reducing per-GPU efficiency.
+
+This ablation directly validates the paper's central deployment-planning thesis: there exists a specific, non-obvious optimal `na` that balances the pipeline, and departing from it in either direction harms throughput per GPU. The sharp degradation at DP=16 (throughput drops to roughly 800 tokens/s per GPU, half the peak) underscores that overscaling attention is as harmful as underscaling it.
+
+**Heterogeneous vs. homogeneous deployment (Figures 8 vs. 9):** While not presented as a formal ablation, the comparison between homogeneous (all Ampere GPUs) and heterogeneous (H20 + L40S) deployments is instructive. Under homogeneous deployment, MegaScale-Infer's advantage is primarily from increased GPU utilization through disaggregation. Under heterogeneous deployment, an additional advantage comes from matching GPU types to module characteristics. The per-cost throughput improvement over TensorRT-LLM is 1.28× on homogeneous Ampere but 1.86× on H20+L40S, suggesting that hardware matching contributes roughly an additional 45% relative improvement in cost efficiency beyond what disaggregation alone provides. However, this comparison is confounded by the different GPU generations (Ampere vs. Hopper/Ada Lovelace), so the attribution is not clean.
+
+---
+
+### Critical Assessment
+
+#### Do the experiments actually demonstrate that disaggregation reverses the MoE sparsity-induced phase transition from compute-bound to memory-bound?
+
+The paper's foundational claim is that MoE sparsity makes FFN modules memory-bound, and disaggregation with attention replication can push them back to compute-bound by increasing the per-expert batch size. The experiments demonstrate that MegaScale-Infer achieves higher throughput than co-located baselines — but do they *specifically* demonstrate the phase-transition mechanism?
+
+The roofline analysis in Section 2.3 gives a clean theoretical prediction: for Mixtral 8×22B on A100, the FFN MFU should be capped at 25% under co-located deployment but should approach 100% under disaggregation with sufficient attention replication. However, the paper never reports measured GPU utilization or MFU for either the baseline or MegaScale-Infer. The throughput improvements (1.28–1.90× over TensorRT-LLM, which already uses expert parallelism) are consistent with a large utilization improvement, but they are also consistent with other mechanisms — for example, the ping-pong pipeline might be reducing idle time from communication rather than from compute underutilization, and the M2N library might be reducing per-layer latency. Without direct utilization measurements, the causal chain from "disaggregation → larger per-expert batch → compute-bound FFN → higher utilization → higher throughput" remains inferred rather than demonstrated.
+
+This gap is not fatal to the paper's claims — the throughput results speak for themselves — but it means a careful reader cannot distinguish how much of the gain comes from the claimed mechanism (phase-transition reversal) versus from other sources (better communication overlapping, more flexible parallelism). A simple experiment that reports GPU utilization or achieved TFLOPS as a fraction of peak for expert GPUs under different `na` values would directly validate the roofline analysis and strengthen the paper's core intellectual contribution.
+
+#### Are the baseline comparisons fair?
+
+The paper makes several reasonable choices to ensure fairness: both baselines and MegaScale-Infer use the same hardware (for homogeneous comparisons), the same TBT SLO constraint, and temporal separation of prefill and decoding. However, several factors may tilt the comparison:
+
+**1. Multi-node vs. single-node deployment.** For Mixtral 8×22B and DBRX, vLLM and TensorRT-LLM serve the model on a single node (8 GPUs). MegaScale-Infer is deployed "across multiple nodes for all models due to its disaggregated deployment." This means MegaScale-Infer uses more GPUs and more network bandwidth than the baselines for the same models. The per-GPU throughput metric normalizes for GPU count, but it does not normalize for the additional networking infrastructure (NICs, switches) that MegaScale-Infer requires. In a TCO (total cost of ownership) calculation, those networking costs would partially offset the per-GPU throughput advantage. The paper does not discuss this.
+
+**2. Lack of expert parallelism optimization in baselines.** While TensorRT-LLM "additionally supports expert parallelism for expert layers," the paper does not describe whether expert parallelism was optimally configured for each model. The large gap between vLLM and TensorRT-LLM for Scaled-MoE (7.11× vs. 1.90× improvement) suggests that vLLM's tensor-parallelism-only approach is particularly poorly suited to large expert counts, which inflates MegaScale-Infer's advantage over vLLM. The 1.90× improvement over TensorRT-LLM is a more conservative and credible estimate of MegaScale-Infer's benefit over a reasonably optimized baseline.
+
+**3. P/D disaggregation normalization.** Both baselines "are still in the process of supporting or optimizing P/D disaggregation," so all systems are evaluated with temporal prefill/decoding separation. This is fair for the decoding-throughput comparison, but it means the baselines are evaluated in a configuration they were not optimized for, while MegaScale-Infer was designed for this separation. A reader evaluating the end-to-end numbers should note that the baselines' end-to-end performance might improve with native P/D disaggregation support.
+
+**4. No ablation of MegaScale-Infer without M2N optimization against optimized baselines.** The ablation in Figure 13 compares "Disaggregated+NCCL" against vLLM, showing a 4.66× gain. But it does not compare against TensorRT-LLM with expert parallelism. Since TensorRT-LLM already achieves some of the benefit through EP, the incremental gain from mere disaggregation (without M2N optimization) over TensorRT-LLM is unknown. This makes it difficult to attribute the gains precisely: how much comes from disaggregation itself, and how much from the M2N library?
+
+#### Do the scaling trends validate the pipeline constraints?
+
+The paper's Constraints 1–3 provide a mathematical framework for understanding when the ping-pong pipeline achieves full utilization. The ablation in Figure 14 partially validates Constraint 3 (micro-batch count): `m = 3` provides a meaningful gain over `m = 2`, confirming that more micro-batches help hide communication. The diminishing returns at `m = 4` are consistent with `Tc/Tf` being small enough that `m = 3` already satisfies the constraint.
+
+However, several predictions of the constraint framework are not tested:
+- The paper does not vary the communication bandwidth (e.g., by downgrading from InfiniBand to Ethernet) to test whether the optimal `m` shifts as `Tc/Tf` increases, as Constraint 3 predicts.
+- Constraint 1 (`Ta ≈ Te`) is tested indirectly through the DP-degree ablation (Figure 15), but the paper does not systematically vary the `na` around the predicted optimal value to show that the peak occurs where `k1/k3` predicts.
+- Constraint 2 (`Tc < Tf`) is never explicitly violated — there is no experiment showing what happens when communication is too slow to be hidden (e.g., by using a slower network or reducing the micro-batch size until `Tc > Tf`). This would demonstrate that the constraint is a real boundary, not just a conservative bound.
+
+These missing experiments mean the constraint framework remains primarily a design tool rather than a validated predictive model. The paper demonstrates that the search algorithm (which incorporates the constraints) finds good configurations, but it does not demonstrate that the constraints themselves are necessary or that violating them reliably degrades performance.
+
+#### Production workload representativeness and reproducibility
+
+The evaluation uses "a dataset from our production" with median input length 571 and output length 159 tokens. Several concerns arise:
+
+**1. Sequence length distribution.** The memory capacity constraint (Equation 8) depends on `s` (average sequence length), and the KV cache access time in the `Ta` model scales with `ba × s`. Workloads with much longer sequences would shift the optimal deployment plan and might violate the memory constraint at lower batch sizes. The paper's results may not generalize to long-context serving scenarios without additional validation.
+
+**2. Request arrival patterns.** The paper evaluates steady-state throughput with fixed batch sizes and micro-batch counts. In production, request arrival rates fluctuate, and the system must decide when to form micro-batches. The paper does not evaluate MegaScale-Infer under dynamic load, variable arrival rates, or bursty traffic. The ping-pong pipeline requires micro-batches to be roughly equal in computation time; how does the system handle variable sequence lengths within a micro-batch? The attention load balancing scheme (Section 6) addresses this partially, but its effectiveness is not evaluated.
+
+**3. Reproducibility.** The Scaled-MoE model and the production workload are not publicly available. This means the community cannot fully reproduce the results, particularly for the largest-scale experiments where MegaScale-Infer shows its strongest advantages (7.11× over vLLM for Scaled-MoE). The Mixtral 8×22B and DBRX results on A100 GPUs are the most reproducible part of the evaluation.
+
+**4. Single workload trace.** The paper does not evaluate on multiple workload traces with different characteristics (e.g., different domains, different sequence length distributions, different request rates). The 1.5–2.0× cost reduction reported from production deployment (Section 8) is the closest to a multi-workload validation, but no details are provided about the workload characteristics or the variation in cost reduction across different traffic patterns.
+
+#### What is missing from the evaluation?
+
+Several experiments that would strengthen the paper are absent:
+
+- **GPU utilization measurements.** Reporting MFU or achieved TFLOPS for expert GPUs in both the baseline and MegaScale-Infer would directly validate the phase-transition claim.
+
+- **Varying MoE sparsity.** Testing models with different `topk/E` ratios (e.g., top-1 vs. top-4 vs. top-8 on the same number of experts) would show whether MegaScale-Infer's advantage scales as predicted with sparsity. The three models tested have different `topk/E` ratios (2/8 = 0.25, 4/16 = 0.25, 4/32 = 0.125), but they also differ in other dimensions (layer count, hidden size), so the effect of sparsity cannot be isolated.
+
+- **Varying network bandwidth.** The homogeneous experiments use 200 Gbps InfiniBand; the heterogeneous experiments use 400 Gbps NICs. Testing on 100 Gbps or 400 Gbps networks would show whether the pipeline constraints hold across a range of communication speeds and whether the optimal deployment plan shifts as predicted.
+
+- **Dynamic batching behavior.** An experiment showing throughput and latency under time-varying arrival rates would demonstrate that MegaScale-Infer's advantages persist under production-like dynamics, not just steady-state saturation.
+
+- **Comparison with DeepEP.** The paper provides a conceptual comparison with DeepEP in Section 5 but does not experimentally compare the two approaches. An experiment substituting DeepEP for the M2N library (or running DeepEP's benchmarks on the same hardware configuration) would substantiate the claim that CPU-based orchestration is superior for this message-size regime.
+
+- **Ablation of the deployment plan search itself.** The paper does not compare the throughput achieved by the search algorithm's optimal plan against a reasonable hand-tuned configuration. This would demonstrate whether the search algorithm is actually necessary or whether simple heuristics (e.g., "use TP=1, DP=8, m=3") would suffice. Given that the search space is small and the optimal configuration might be intuitive for experienced practitioners, this is a relevant question.
+
+#### Summary of experimental support for key claims
+
+The paper's central claim — that MegaScale-Infer achieves up to 1.90× higher per-GPU decoding throughput than state-of-the-art baselines — is **well-supported** by the experiments in Figure 8 for the specific models, hardware, and workload tested. The claim that heterogeneous deployment provides up to 1.86× higher throughput per unit cost is similarly supported by Figure 9.
+
+The claim that these gains arise specifically from reversing the MoE sparsity-induced phase transition (rather than from better communication hiding or more flexible parallelism in general) is **suggested but not directly demonstrated** — GPU utilization data would be needed for conclusive evidence.
+
+The claims about the M2N communication library (68.2% latency reduction, 4.2× throughput improvement over NCCL) are **well-supported** by the micro-benchmarks in Figures 11 and 12, though these benchmarks use uniform data sizes and do not test imbalanced traffic patterns that arise in real MoE serving.
+
+The constraint framework (Constraints 1–3) is **partially validated** by the micro-batch count ablation (Figure 14) and the DP-degree ablation (Figure 15), but key predictions (the effect of varying `Tc/Tf` on optimal `m`, the necessary condition `Tc < Tf`) are not experimentally tested.
+
+The production deployment results (1.5–2.0× cost reduction, Section 8) are **reported without supporting evidence** — no details are provided about the production workload, the comparison baseline, or the measurement methodology. These claims should be treated as anecdotal unless accompanied by more rigorous evaluation.
 
 ## 6. Limitations and Trade-offs
-- Balance and pipeline assumptions
-  - The ping-pong pipeline relies on `Ta ≈ Te` and `Tc < Tf`. When compute balance or communication regimes change (e.g., very slow networks or very small messages due to extremely high expert counts), the overlap can break down or require m ≥ 4 (Equations (1)–(3); Section 4.1).
-  - The planner depends on profiling-derived constants (`k1..k4`) and measured bandwidth utilization curves; workload drift or software updates can invalidate them, requiring periodic re-profiling (Section 4.2).
 
-- Specialized communication stack and hardware
-  - The M2N library assumes RDMA, GPUDirect, and GDRCopy are available and well-tuned; not all deployments have these capabilities (Section 6).
-  - CPU-driven communication wins at hundreds of KB per connection (their regime), but for very small messages and very high degrees, a GPU-driven approach like DeepEP could outperform it (Section 5, “Comparison with DeepEP”).
+### 6.1 The Deployment Plan Search Assumes a Single, Stable Workload Profile
 
-- Scope focus on decoding
-  - The largest gains come during decoding. Prefill benefits mainly via heterogeneous cost savings, not raw speedups (Figures 8(c), 9(c)).
+**The assumption.** The deployment plan search in Section 4.2 optimizes throughput per unit cost for a single workload profile — specifically, a fixed average sequence length `s` and a fixed arrival pattern that allows a stable global batch size `B`. The paper acknowledges implicitly that `s` is a workload-dependent parameter (it appears in the KV cache memory constraint, Equation 8, and in the `Ta` model via KV cache access time), but the evaluation uses a single production trace with fixed median characteristics (571 input tokens, 159 output tokens).
 
-- Memory footprint and replication
-  - Attention replication across `na` nodes increases total memory for attention parameters and KV caches (Equation (8)), potentially limiting max batch sizes on smaller-memory GPUs (Section 4.2).
+**The consequence.** In production systems, workload characteristics drift over time. The sequence length distribution can vary diurnally (e.g., more long-context queries during business hours), and request arrival rates fluctuate. A deployment plan optimized for `s = 571` tokens might violate the memory capacity constraint if the average sequence length shifts to 2,000 tokens (e.g., during a long-context feature rollout), causing out-of-memory errors on attention nodes. Alternatively, a shift toward shorter sequences would reduce per-micro-batch computation time, potentially violating Constraint 2 (`Tc < Tf`) if the reduced `ba` makes attention faster relative to communication. In either case, the carefully balanced pipeline would degrade — but the system provides no mechanism for detecting or adapting to such shifts without an offline re-optimization and redeployment.
 
-- Load-imbalance dynamics
-  - Expert popularity skews change over time; the paper proposes on-device redundancy and periodic plans but does not detail an online reactive scheme (Section 6; Section 8, Figure 16).
+More subtly, the optimal `na` derived from the balance equation `na ≈ (k1 × E)/(k3 × K)` depends on the profiled coefficients `k1` and `k3`, which are themselves functions of the micro-batch size `ba` and `be`. If the workload's sequence length distribution changes substantially, the relationship between `ba` and `Ta` may shift (since KV cache access time is proportional to `ba × s`), and the `k1` coefficient as a function of `ba` may no longer be accurate. The paper does not discuss the sensitivity of the optimal deployment plan to workload drift.
+
+**What evidence exists.** The paper evaluates only on a single workload trace (Section 7.1: "We obtain a dataset from our production and use it as the experimental workload"). No sensitivity analysis is performed — there are no experiments varying `s` or RPS (requests per second) to measure throughput degradation when the workload diverges from the optimization point. The production deployment experience (Section 8) mentions that cost reduction varies between 1.5–2.0× "depending on the workload characteristics," which indirectly confirms that the method's effectiveness is workload-dependent, but no characterization of this dependency is provided.
+
+**Mitigation status.** The paper does not address workload drift or propose a re-optimization mechanism. The deployment plan search is presented as a one-time offline process. A natural extension — not explored — would be periodic re-profiling with updated workload traces and automated redeployment, or an online adaptation mechanism that adjusts the number of active attention replicas or micro-batch count based on real-time measurements of `Ta`, `Te`, and `Tc`.
+
+### 6.2 Difficulty Estimation for Deployment Planning Requires Profiling on the Target Hardware
+
+**The assumption.** The deployment plan search (Algorithm 1) relies on profiling to obtain the coefficients `k1, k2, k3, k4` that model computation time, and the `Util()` function that models bandwidth utilization as a function of message size. These coefficients are hardware-specific and model-specific — they must be measured on the exact GPU type and interconnect that will be used in deployment. The paper treats this as a one-time cost but does not quantify it.
+
+**The consequence.** For an organization deploying MegaScale-Infer on a new GPU type or with a new model architecture, the profiling step represents a non-trivial engineering investment. The profile must cover a range of micro-batch sizes to fit the linear models for `Ta` and `Te`, and a range of message sizes to fit the `Util()` function. For the search to be accurate, the profiling must be done on the same hardware topology (same NVLink configuration, same NIC count per GPU, same InfiniBand fabric) as the production deployment. If the profiling environment differs from production (e.g., shared vs. dedicated cluster, different GPU SKUs within the same family), the search may select a suboptimal plan.
+
+This is not a fundamental limitation — it is a practical barrier to adoption. Compare to vLLM or TensorRT-LLM, where the deployment configuration is typically selected from a small set of standard options (e.g., TP=2 or TP=4) based on heuristics, without requiring a profiling-based search. MegaScale-Infer's additional configuration complexity (4–5 degrees of freedom vs. typically 1–2) means that getting the deployment plan *right* requires either the profiling infrastructure or accepting the risk of a default configuration that may be substantially suboptimal. Figure 15 illustrates the risk: deploying DBRX with DP=4 attention replicas instead of the optimal DP=8 would reduce per-GPU throughput by roughly 50%. Without profiling, a practitioner has no way to know whether their chosen configuration is near-optimal.
+
+**What evidence exists.** The paper describes the profiling procedure only abstractly: "ki values can be obtained through profiling and interpolation as prior work does" (Section 4.2). No measurement of profiling cost (GPU-hours, wall-clock time) is provided. The sensitivity of the optimal plan to profiling accuracy is not analyzed — if the `k1/k3` ratio is estimated with 20% error, how much does the resulting per-GPU throughput degrade? This uncertainty is unquantified.
+
+**Mitigation status.** The profiling cost is not explicitly acknowledged as a limitation, and no attempt is made to reduce it (e.g., by reusing profiles across similar GPU architectures, or by building analytical performance models that avoid per-hardware profiling). The paper does not provide pre-computed deployment plans for common model-hardware combinations, which would lower the barrier to adoption.
+
+### 6.3 The M2N Communication Library's Advantage Depends on Message Size, and Smaller Expert Models Would See Smaller Gains
+
+**The assumption.** The M2N communication library is architected around a CPU-based orchestration model whose efficiency relative to GPU-based alternatives (like DeepEP) depends on the per-connection message size being large enough that a single-threaded CPU can saturate the NIC bandwidth. The paper explicitly states this boundary (Section 5): "If the number of experts increases further and the per-connection communication volume becomes smaller, leveraging the GPU's superior parallel processing capabilities may offer greater advantages in terms of throughput."
+
+**The consequence.** The paper's communication micro-benchmarks focus on data sizes of 256KB and above — values that are representative of the specific models tested. For Mixtral 8×22B with a micro-batch size of 128 tokens, TP=2 for attention, hidden size 6144, and top-k=2 over 8 experts, the per-connection data volume is `128 × 2/8 × 6144 × 2 bytes / 2 = ~196KB`, comfortably in the regime where CPU orchestration works well. However, MoE architectures are trending toward *more* experts with smaller per-expert workloads. A model with 128 experts, top-k=8, and hidden size 4096 would have a per-connection data volume of roughly `128 × 8/128 × 4096 × 2 bytes = ~64KB` (at TP=1), which is 3× smaller. At this message size, the CPU's ability to saturate bandwidth degrades, and the GPU-based approach might outperform.
+
+This limitation matters because **the paper's M2N library design choice is not universally optimal across MoE architectures**. Practitioners deploying models with very many experts (e.g., 256 or more) or smaller hidden dimensions would need to re-evaluate whether the CPU-based approach remains superior, and the paper does not provide guidance on where the crossover point lies. The paper acknowledges this (Section 5: "leveraging the GPU's superior parallel processing capabilities may offer greater advantages") but does not characterize the threshold.
+
+**What evidence exists.** The paper's micro-benchmarks (Figure 11) show M2N throughput per NIC reaching approximately 180 Gbps at 256KB message sizes, close to the 200 Gbps line rate. At 32KB (not shown), throughput would likely be lower, but this data point is absent. Figure 11 covers 2KB, 32KB, 512KB, and 8MB — at 2KB and 32KB, the absolute throughput is low for both NCCL and MegaScale-Infer (well below 50 Gbps), indicating that small messages are inherently difficult to saturate. The paper does not report whether the relative advantage over NCCL changes at very small message sizes or whether the absolute throughput is sufficient to satisfy Constraint 2 for models with many experts.
+
+**Mitigation status.** The paper acknowledges the limitation explicitly (Section 5, quoted above) and does not claim universal superiority of the CPU-based approach. However, it provides no experimental characterization of the crossover regime and no discussion of how practitioners should choose between CPU-based and GPU-based communication based on their model architecture. This is a missed opportunity for actionable guidance.
+
+### 6.4 Homogeneous Deployments Require More GPUs Than Co-Located Baselines for the Same Model
+
+**The assumption.** MegaScale-Infer's disaggregated architecture requires deploying attention and expert modules on separate GPU nodes. For large models like Scaled-MoE (317B parameters), expert nodes alone consume substantial GPU resources (one expert per node group, with tensor parallelism within each node). Adding attention replicas (`na`) on top of this means the total GPU count for MegaScale-Infer is `na × tpa + E × tpe`, compared to the co-located baseline which might use `E × tpe` GPUs if deploying with pure expert parallelism, or fewer if using pipeline parallelism.
+
+The paper reports throughput *per GPU*, normalizing for the different GPU counts. The total GPU count itself is not reported as a metric, and the implication is that per-GPU efficiency is the right objective — if each GPU is producing more tokens per second, the total system throughput is higher for a given GPU budget, and costs are lower.
+
+**The consequence.** While per-GPU throughput is the correct metric for efficiency, the *minimum GPU count* to serve a model is a practical constraint for many deployment scenarios. An organization with limited GPU capacity (e.g., a startup with 32 GPUs total) may find that MegaScale-Infer simply cannot fit their model — the minimum deployment might require 40+ GPUs even though each GPU is more efficient. In a co-located system, the same model might deploy on 16 or 32 GPUs and achieve lower throughput but at least be *runnable*.
+
+The paper does not report the absolute GPU counts used in its experiments. For Mixtral 8×22B on Ampere GPUs: vLLM and TensorRT-LLM serve this on a single 8-GPU node. MegaScale-Infer is "deployed across multiple nodes for all models due to its disaggregated deployment" (Section 7.2). If the deployment plan for Mixtral 8×22B uses, say, `na=4` attention replicas with `tpa=2` each (8 GPUs) plus `E=8` experts with `tpe=1` each (8 GPUs), that's 16 GPUs total — 2× the minimum of the baselines. The per-GPU throughput advantage (1.28× over TensorRT-LLM) must be weighed against the 2× higher GPU count: the *total* throughput of MegaScale-Infer's 16-GPU deployment would be `16 × 1.28 = 20.5` normalized throughput units, while TensorRT-LLM's 8-GPU deployment achieves `8 × 1.0 = 8` units — a 2.56× total throughput improvement, but using 2× the GPUs. The paper emphasizes the per-GPU metric (1.28×), which is meaningful for large-scale deployments where GPU count is flexible, but the minimum-scale story is different.
+
+This tradeoff matters for cost modeling. If cloud GPU rentals are priced per-GPU-hour and the minimum deployment requires 2× more GPUs, the total cost per hour is 2× higher even if per-GPU throughput is 1.28× higher — the cost reduction only materializes if the workload requires high enough throughput to justify the larger deployment. For low-traffic scenarios, MegaScale-Infer's minimum deployment size may be economically disadvantageous.
+
+**What evidence exists.** The paper does not report total GPU counts or discuss minimum deployment sizes. The deployment plan search in Algorithm 1 optimizes `tpuc` (throughput per unit cost) but includes no constraint on the total number of GPUs. The `simulate` function maximizes global batch size `B` up to the SLO constraint, but the resulting GPU count `na × tpa + E × tpe` is a byproduct, not a target. The ablation in Figure 15 varies `na` (DP degree) and shows throughput per GPU — but the total GPU count scales with `na`, and the paper does not discuss the capital expenditure implications of using more GPUs to achieve that throughput.
+
+**Mitigation status.** The paper does not address minimum deployment size as a distinct constraint. In production (Section 8), the system operates "on a cluster with nearly 10,000 GPUs," where the minimum deployment size is irrelevant because the cluster is large enough to absorb any overhead. For smaller-scale deployments, practitioners would need to compute the minimum viable GPU count themselves from the deployment plan parameters — which the paper does not provide.
+
+### 6.5 The Production Deployment Results Are Anecdotal and Unverifiable
+
+**The assumption.** Section 8 reports that "MegaScale-Infer has been deployed in the company's production inference services and is operating on a cluster with nearly 10,000 GPUs," achieving a "1.5–2.0×" cost reduction. These claims are presented as evidence of practical impact, but the paper provides no methodology for how the cost reduction was measured, what baseline it compares against, what workload characteristics were present, or over what time period the measurement was taken.
+
+**The consequence.** The production results are not reproducible by external parties — the workload, the baseline configuration, the measurement methodology, and the cost model are all proprietary. This reduces the weight that a practitioner can assign to these claims when deciding whether to invest in building a similar system. The 1.5–2.0× range is wide enough (a 33% span) to encompass substantially different value propositions: the lower bound suggests a meaningful but not transformative improvement; the upper bound suggests a system that halved costs. Without knowing when to expect which end of the range, the claim provides limited actionable information.
+
+Furthermore, the expert load distribution data in Figure 16 (which shows "received token count of each expert in a batch" and "received token ratio of each expert during decoding") is from production traffic and shows significant imbalance. The paper uses this to motivate the expert replication load-balancing scheme, but does not report what fraction of the cost savings comes from load balancing versus from disaggregation versus from the M2N communication library. These mechanisms are entangled in the production deployment, making it impossible to assess their relative importance.
+
+**What evidence exists.** Section 8 consists of two paragraphs of text plus Figure 16 as supporting data. Figure 16 demonstrates that expert load imbalance exists in production (which motivates load balancing) but does not directly support the 1.5–2.0× cost reduction claim. No experimental methodology, baseline configuration, or measurement period is described. The paper references "the same traffic" but does not specify what traffic volume or characteristics correspond to the cost reduction.
+
+**Mitigation status.** The paper does not frame this as a limitation — it presents the production results as validating evidence. However, the lack of methodological detail means that a critical reader should treat the 1.5–2.0× claim as an existence proof (the system has been deployed and achieved cost reductions in some range) rather than as a reproducible benchmark. This is common in industry systems papers, but it limits the strength of the conclusion.
+
+### 6.6 The Heterogeneous Deployment Advantage Depends on GPU Pricing That Is Volatile and Market-Specific
+
+**The assumption.** The per-cost throughput metric normalizes throughput by the purchase price of GPUs, using normalized prices from Table 3. The ranking of GPUs by cost-effectiveness (e.g., L40S having 335.2 TFLOPS/$ vs. H20 having 80.0 TFLOPS/$) depends directly on these price ratios. The paper acknowledges that prices "can easily be replaced by the rental price for cloud service users," implying that the methodology is general, but it does not evaluate sensitivity to price changes.
+
+**The consequence.** GPU pricing — especially for data-center GPUs — is volatile and market-specific. Cloud rental prices for H20, L40S, A100, and other GPUs vary across cloud providers (AWS, GCP, Azure, smaller providers), across regions, and over time (driven by supply constraints, demand from AI training, new hardware releases). A configuration that is optimal at the normalized prices in Table 3 may become suboptimal if, for example, L40S rental prices increase relative to H20 (due to demand for inference GPUs) or if H20 becomes more competitively priced (due to new hardware releases or changed export restrictions).
+
+The paper's heterogeneous deployment selects H20 for attention and L40S for experts based on H20 having the highest memory bandwidth per dollar (2214.1 GB/s/$) and L40S having the highest compute per dollar (335.2 TFLOPS/$). If relative prices shifted such that another GPU type (e.g., a future Blackwell-generation GPU) offered better memory bandwidth per dollar, the optimal assignment would change. The deployment plan search algorithm can be re-run with updated prices, but the paper's reported gains (1.86× over TensorRT-LLM on H20) are specific to the price ratios used and may not replicate in different pricing environments.
+
+More subtly, the paper's cost model uses *purchase price* normalized by L20, which assumes that the GPUs are owned and amortized. For cloud users paying per-GPU-hour, the pricing model is different — cloud providers charge different premiums for different GPU types based on demand and availability, not just hardware cost. A cloud-specific cost model might rank GPU cost-effectiveness differently than the purchase-price model in Table 3.
+
+**What evidence exists.** Table 3 provides the normalized prices and performance specifications for five NVIDIA GPUs. The paper evaluates the specific H20+L40S combination and reports per-cost throughput improvements. No sensitivity analysis is performed — the paper does not show how the optimal heterogeneous assignment changes if relative prices shift by, say, 20% in either direction, or if cloud rental prices are substituted for purchase prices.
+
+**Mitigation status.** The paper implicitly acknowledges this limitation by noting that rental prices can be substituted, but it does not perform this substitution or analyze price sensitivity. The deployment plan search framework (Algorithm 1) is flexible enough to accommodate any cost vector, which is the correct technical approach — but the specific numerical claims about heterogeneous deployment advantage are contingent on the price assumptions in Table 3 and should not be treated as universal.
 
 ## 7. Implications and Future Directions
 - Changing the design space of MoE serving

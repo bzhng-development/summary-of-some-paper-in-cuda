@@ -9,169 +9,707 @@ This paper introduces VeriCode, a taxonomy of 30 verifiable non-functional code 
 ---
 
 ## 1. Executive Summary
-This paper introduces two artifacts that make code evaluation reflect human preference, not just test passing: (1) VeriCode — a taxonomy of 30 verifiable, non‑functional “code instructions” (e.g., style, documentation, error handling) each paired with a deterministic checker; and (2) Vibe Checker — a testbed that augments mainstream code benchmarks with these instructions to evaluate both functional correctness and instruction following (IF). Evaluating 31 leading LLMs, the paper shows that adding such instructions significantly reduces pass@1 and that a composite of functionality and IF correlates best with real human preference (Figure 5, §4.5).
+
+This paper analyzes how non-functional code requirements—what users screen for during “vibe check”—shape model performance and human preference, introducing **VeriCode**, a taxonomy of 30 verifiable code instructions across five categories (e.g., line-length limits, branch-count caps, docstring conventions) paired with deterministic linter-based verifiers. Building on VeriCode, the authors construct **Vibe Checker**, a testbed that augments BigCodeBench and LiveCodeBench with these instructions to measure both functional correctness and instruction following (IF) across 31 LLMs under single-turn generation and multi-turn editing protocols. Adding five non-functional instructions causes average pass@1 regression of 5.85% on BigVibeBench and 6.61% on LiveVibeBench, while task-level IF success collapses—even the best model reaches only 46.75% and 40.95% respectively under five instructions. A composite score blending functional correctness and instruction following correlates best with LMArena human preference ratings, with IF emerging as the primary differentiator on real-world programming tasks, establishing that human preference reflects both functional and non-functional qualities—and that the latter is critically under-measured by pass@k alone.
 
 ## 2. Context and Motivation
-- Problem/gap
-  - Code LLMs are increasingly used in “vibe coding”: users iterate with an AI partner until the solution “feels right” (“vibe check”). A vibe check includes not only functional correctness but also adherence to non‑functional expectations (style, minimal edits, docstrings, library choices) that developers routinely enforce in real projects (Introduction, p. 1–2; Figure 1).
-  - Current evaluation focuses on pass@k, which captures only functional correctness and misses non‑functional preferences (§1, p. 1–2).
 
-- Why it matters
-  - Practical impact: In tools like Copilot or Cursor, users routinely reject functionally correct answers that violate style, complexity, or documentation constraints. The Copilot Arena ranking’s weak/negative correlation with functional benchmarks underscores this mismatch (Introduction, p. 2).
-  - Scientific impact: RL training in code often uses verifiable rewards tied to unit tests (pass@k). Optimizing only this signal yields models that score well on benchmarks but fail many real user vibe checks (Introduction, p. 2).
+### The Core Problem: Code Evaluation Ignores What Users Actually Care About
 
-- Prior approaches and shortcomings
-  - General instruction following has synthetic, verifiable checks (e.g., forced wording) or LLM-as-a-judge (§5). In coding, existing non‑functional evaluation either lacks verifiable signals or relies on subjective/hard‑to‑scale judgments (§5).
-  - Static linters exist, but there was no curated, verifiable set of non‑functional code instructions with corresponding deterministic verifiers that can be combined with standard benchmarks and unit tests (§2).
+This paper addresses a fundamental mismatch between how we evaluate LLMs for code generation and how humans actually judge code quality in practice. The standard metric for code evaluation—pass@k—measures only one thing: whether the generated code passes unit tests. If the code produces the correct output for a set of predefined inputs, it passes. If not, it fails. This binary signal has become the dominant yardstick for benchmarking code LLMs (Chen et al., 2021; Austin et al., 2021; Jimenez et al., 2024), and increasingly, it serves as the verifiable reward signal in reinforcement learning from verifiable rewards (RLVR) training pipelines (Da et al., 2025; DeepSeek-AI, 2025).
 
-- Positioning
-  - The paper reframes “instruction following” as the missing measurable component of vibe checks in code, alongside functionality. It contributes: a verifiable taxonomy (VeriCode), an augmented testbed (Vibe Checker), and evidence that human preference aligns best with a mix of IF and functionality (§§2–4).
+The problem, as the paper argues, is that **functional correctness is a severely incomplete proxy for code quality**. In real-world programming—what the paper frames as "vibe coding" (Karpathy, 2025; Willison, 2025)—users interact with LLMs through natural language, iteratively refining code until it meets their needs. Their accept/reject decision, the "vibe check," evaluates far more than whether the code runs correctly. They ask: Does the code follow project conventions? Is it readable? Does it have appropriate documentation? Does it avoid obvious anti-patterns? Does it use the right libraries? Is it maintainable? These are not cosmetic preferences—they are the criteria that determine whether generated code actually gets used versus thrown away and rewritten.
+
+The paper is grounded in a specific and telling empirical observation: **leaderboard rankings of code LLMs show weak or even negative correlations with how humans actually prefer them in practice**. The authors point to Copilot Arena (Chi et al., 2025), a large-scale platform where human programmers choose preferred candidate snippets. The rankings emerging from these real-world preferences do not align with functional correctness scores on popular benchmarks. This is not an abstract concern—it means that models can achieve high pass@k scores on leaderboards yet fail the vibe check when deployed, producing code that is technically correct but misaligned with what users actually want.
+
+This gap matters for several concrete reasons:
+
+**Training signal distortion.** When RLVR training optimizes solely for functional correctness (pass@k), it steers models toward an incomplete notion of code quality. The models learn to produce code that passes tests, but they may simultaneously learn to produce code that is unreadable, poorly documented, or incompatible with standard practices—because none of those qualities affect the reward signal. This creates a perverse optimization dynamic: the model gets better at a metric that correlates poorly with human satisfaction.
+
+**Evaluation blindness.** Benchmarks that only measure pass@k cannot distinguish between a model that produces elegant, well-documented solutions and one that produces fragile, unreadable code that happens to pass tests. This means the community lacks the measurement tools to track progress on non-functional qualities or to incentivize model developers to improve them.
+
+**Deployment failure.** The disconnect between benchmark performance and user preference means that organizations selecting models based on leaderboard rankings may deploy models that users reject in practice—not because the code is wrong, but because it does not meet the non-functional expectations that users apply during code review and integration.
+
+### Conflicting Signals: The Copilot Arena Evidence
+
+The paper anchors its motivation in a specific empirical puzzle. Copilot Arena (Chi et al., 2025) provides a large-scale, real-world test of code preferences: human programmers see candidate completions from different models and choose which one they prefer. These choices are aggregated into rankings. Strikingly, those rankings exhibit "weak or negative correlations with functional scores on popular benchmarks" (Section 1). This is not a small discrepancy—it is a systematic misalignment between what benchmarks measure and what humans value.
+
+This finding provides the paper's core empirical motivation: if pass@k does not predict human preference, then **something else must be driving preference**, and that something else is currently unmeasured. The paper's hypothesis is that this missing factor is **instruction following**—adherence to the non-functional constraints that users specify explicitly in their prompts or apply implicitly through their code-review judgment. The vibe check, in this framing, is not a mysterious subjective feeling but a composite of measurable signals, with instruction following as the primary under-measured component.
+
+### Where Existing Approaches Fall Short
+
+The paper identifies specific limitations in prior work across two axes: instruction-following evaluation for general language tasks, and non-functional code evaluation specifically.
+
+**General instruction following is well-studied, but its methods do not transfer to code.** Prior work on instruction following (IF) has focused primarily on synthetic constraints for general-purpose LLMs—forcing models to include specific words, adhere to formatting requirements, or follow structured output schemas (Pyatkin et al., 2025; Wang et al., 2025; Zhou et al., 2023; Jiang et al., 2024; Qin et al., 2024). These benchmarks stress-test whether a model can follow arbitrary constraints, and they have driven progress in IF capabilities through post-training methods like supervised fine-tuning (SFT) and reinforcement learning (RL) that use verifiable instructions as training signals (Pyatkin et al., 2025; Wang et al., 2025).
+
+However, these approaches suffer from two limitations when applied to code. First, the constraints are often synthetic and untethered from actual software development practices—forcing a model to include the word "purple" in a response tells us little about whether it can adhere to a real coding style guide. Second, and more critically, **they do not address the interaction between non-functional constraints and functional correctness** that is unique to code generation. A general IF benchmark measures whether a constraint is satisfied; it does not measure whether satisfying that constraint causes the model to produce incorrect code.
+
+**Non-functional code evaluation exists but lacks verifiability and systematic analysis.** Prior work has recognized that code quality extends beyond correctness. Singhal et al. (2024) introduced NoFunEval, which evaluates models on requirements beyond functional correctness (efficiency, maintainability, security), but uses DiffBLEU—a fuzzy text similarity metric—to compare generated code against ground truth. This is inherently unreliable: two functionally identical and equally maintainable solutions can have very different surface forms. Yan et al. (2025) introduced CodeIF, a benchmark for instruction-following in code generation, but relies on LLM-as-a-judge and human evaluation for scoring—methods that are expensive, slow, and introduce their own biases and inconsistencies.
+
+The critical gap these prior approaches share is **lack of deterministic verifiability**. Without a reliable, automated, binary signal for whether an instruction is followed, these benchmarks cannot scale—and crucially, they cannot serve as reward signals for RL-based training. The paper's emphasis on verifiability is not just about evaluation convenience; it is about creating signals that can close the loop between evaluation and training, just as pass@k has driven progress on functional correctness.
+
+**No prior work examines the tradeoff between functional correctness and instruction following.** Perhaps most importantly, prior work has studied these dimensions in isolation. Functional correctness benchmarks measure pass@k. Code quality benchmarks measure adherence to non-functional requirements. But no prior work has systematically analyzed what happens when models must satisfy **both simultaneously**—the scenario that real-world users actually face. The paper identifies this as the core unexamined tradeoff: adding non-functional constraints might cause models to sacrifice functional correctness, and vice versa. Understanding this tradeoff is essential for both evaluation (what is the right composite metric?) and training (what reward signal produces code that is both correct and well-formed?).
+
+### How This Paper Positions Itself
+
+The paper positions itself at the intersection of two research streams—instruction following and code evaluation—with a specific novel claim: **non-functional instruction following is the missing, measurable component of the vibe check that explains human code preference beyond functional correctness**.
+
+Rather than proposing a new benchmark from scratch, the paper constructs **VeriCode** as a taxonomy and tool that **augments existing, widely-used benchmarks**. This is a deliberate design choice with two advantages. First, it leverages the established unit tests of BigCodeBench and LiveCodeBench to consistently measure functional correctness—the paper does not need to re-solve the problem of functional evaluation, it only needs to layer non-functional evaluation on top. Second, augmentation means the paper's analysis is directly comparable to prior work on these benchmarks; the functional regression rates (FR$_k$) are computed relative to baseline pass@1 scores that the community already trusts.
+
+The paper's key positioning move is to frame the vibe check not as a subjective, unmeasurable phenomenon but as a **quantifiable composite** of functional correctness and instruction following. This reframing has profound implications: if the vibe check can be approximated by measurable signals, then those signals can become training targets. The paper explicitly connects its evaluation work to the RLVR training paradigm—its verifiers "provide a verifiable and scalable reward source for model training" (Section 1)—making clear that VeriCode is intended not just to benchmark models but to provide the reward signals needed to improve them.
+
+A subtle but important aspect of the paper's positioning: it does not claim that functional correctness is unimportant or that pass@k should be abandoned. Rather, it argues that pass@k is **necessary but insufficient**—a single dimension of a multi-dimensional quality signal. The optimal composite score (Section 4.5) blends both metrics, and the optimal blend varies by task type: for real-world programming, instruction following weighs more heavily; for algorithmic contest problems, functional correctness dominates. This nuanced position—that the right evaluation metric is task-dependent—distinguishes the paper from more extreme claims that pass@k is broken or irrelevant.
+
+Finally, the paper implicitly positions itself as addressing a **scaling problem** in code evaluation. LLM-as-a-judge approaches (Jiang et al., 2024; Qin et al., 2024) cannot scale to the volume of evaluations needed for model training or large-scale benchmarking. Human evaluation (Yan et al., 2025) is even more constrained. Deterministic verifiers—linter rules, AST analysis, regex checks—scale trivially and run in milliseconds. By grounding all 30 instructions in such verifiers, the paper makes a pragmatic argument: the path to better code evaluation is not more sophisticated judgment but **better measurement**—identifying the signals that can be reliably automated and showing that they capture what humans care about.
 
 ## 3. Technical Approach
-The work has two pillars: VeriCode (a taxonomy + verifiers) and Vibe Checker (benchmark augmentation + protocol + metrics).
 
-- Terminology used throughout
-  - `vibe coding`: iterative code development with an AI partner.
-  - `vibe check`: the user’s accept/reject decision based on overall “fit,” not only correctness (Figure 1).
-  - `instruction following (IF)`: whether generated code satisfies explicit non‑functional constraints.
-  - `pass@k`: standard metric for functional correctness; whether any of k attempts pass tests.
-  - `linter`: a static analysis tool that detects style and certain structural issues. The paper mainly uses `Ruff`, a Python linter that aggregates rules from popular tools (footnote 3).
-  - `AST` (Abstract Syntax Tree): a structural representation of code used for deterministic checks.
+### 3.1 Reader Orientation
 
-A. VeriCode: building a verifiable instruction taxonomy (§2)
-- Design principles (§2.1)
-  - Verifiability: each instruction has a deterministic pass/fail checker.
-  - Practice grounding: instructions reflect real developer expectations (style guides, linter rules).
-  - Comprehensive coverage: style, logic patterns, docs, error handling, and library/API constraints.
-  - Difficulty: each instruction challenges recent advanced LLMs; trivial ones are filtered out.
+The system being built is a testbed—**Vibe Checker**—that takes standard code benchmarks and layers on explicit, verifiable non-functional instructions (e.g., “keep all lines under 88 characters,” “use Google-style docstrings,” “each function must have at most 3 branches”) so that evaluating a model means checking both whether the code runs correctly and whether it obeys every constraint. It solves the problem that pass@k alone cannot capture whether generated code will survive a human “vibe check,” and the shape of the solution is an augmentation pipeline: a taxonomy of verifiable instructions is curated, an LLM-based selector attaches relevant subsets of those instructions to existing benchmark problems, and then models are tested under two interaction protocols—single-turn (all instructions at once) and multi-turn (instructions arrive one-by-one)—with two output scores, one for functional correctness and one for instruction following.
 
-- Construction pipeline (§2.2)
-  1) Candidate sourcing: start with >800 Ruff rules; add response‑level documentation instructions that linters alone cannot cover.
-  2) Scope/relevance filtering: consolidate overlapping rules; keep broadly applicable ones.
-  3) Difficulty filtering: run Gemini 2.5 Flash on BigCodeBench‑Hard; remove instructions that are too easy (success >90% with no functional degradation).
-  4) Expert review + verifier implementation: prefer linter‑backed checks; write AST/regex checkers where no rule exists. All verifiers return binary pass/fail and share a common interface (Appendix B.1 shows the Ruff helper in Figure 6).
+### 3.2 Big-Picture Architecture (Diagram in Words)
 
-- Resulting taxonomy (§2.3)
-  - 30 instructions across five categories: Coding Style & Conventions (9), Logic & Code Patterns (9), Documentation & Commenting (6), Error Handling & Exception Management (4), and Library & API Constraints (2).
-  - Each instruction has: category, description, distinct prompts for single‑turn vs multi‑turn use, parameters with recommended ranges, and verification code (schema in §2.3; examples in Table 1 and full cases in Figures 7–11).
-  - Parameterization as a difficulty dial: e.g., `line_length`, `max_branches`, or docstring `convention` (Table 1). This makes the 30 “core” instructions expandable into hundreds of concrete, checkable variants.
+The system has five major components:
 
-B. Vibe Checker: augmenting benchmarks and defining the protocol (§3)
-- Benchmarks (§3.1)
-  - BigVibeBench: BigCodeBench augmented with VeriCode instructions (real‑world programming).
-  - LiveVibeBench: LiveCodeBench augmented similarly (algorithmic/contest tasks).
-  - Category distributions show Logic/Style/Docs dominate; LiveVibeBench uses more Logic constraints; BigVibeBench has more Error and Library constraints (Appendix Figure 12).
+1. **VeriCode taxonomy** — a curated, hierarchical catalogue of 30 code instructions distributed across five categories, each paired with a deterministic, linter-backed verifier that returns a binary pass/fail. This is the “instruction vocabulary” from which benchmark constraints are drawn.
 
-- Augmentation pipeline (§3.1)
-  1) Instruction selection: for each base problem, permute the 30 taxonomy instructions; an LLM selector scans the list and keeps only those that (a) are relevant to the task and (b) do not conflict with already chosen instructions. The kept instructions, in the scanned order, form the constraint set.
-  2) Parameter selection + validation: an LLM proposes parameters for each selected instruction, guided by the instruction’s supported keys/ranges and the problem context; a rule‑based validator drops unsupported keys and reverts invalid values to defaults.
-  3) Selector choice: Gemini 2.5 Pro and Claude 4 Opus produce similar category distributions; the final benchmark uses Claude 4 Opus due to a lower invalid‑parameter rate (0.96% vs 2.47%).
+2. **Benchmark augmentation pipeline** — an LLM-driven selector that, for each original benchmark problem, scans a permuted list of the 30 instructions, keeps those that are relevant and mutually non-conflicting, assigns concrete parameter values, and appends them to the problem prompt. This produces the augmented testbeds BigVibeBench (from BigCodeBench) and LiveVibeBench (from LiveCodeBench).
 
-- Evaluation protocol (§3.2; Figure 2)
-  - Settings
-    - Single‑Turn Generation: all instructions appear once after the original query; the model returns a single implementation.
-    - Multi‑Turn Editing: first generate a base solution; then reveal instructions one‑by‑one across turns; the model edits the code each round; the final code is evaluated.
-  - Metrics
-    - Functionality: pass@1 against unit tests; report functional regression `FR_k = (S0 – S_k)/S0`, where `S0` is base pass@1 and `S_k` is pass@1 with `k` instructions (equation in §3.2).
-    - Instruction following:
-      - Instruction‑level: average fraction of passed instruction verifiers.
-      - Task‑level: all instructions must pass for a score of 1; otherwise 0 (equations in §3.2).
+3. **Interactive evaluation protocols** — two distinct prompt formats: single-turn generation (all selected instructions are given together after the original query) and multi-turn editing (an initial solution is generated, then instructions are introduced one per turn, and the model revises the code with full interaction history at each round).
 
-C. Experimental setup (§4.1)
-- 31 LLMs across 10 families (Appendix Table 4 lists the exact models and their LMArena Elo).
-- Data: 1,140 BigCodeBench and 1,055 LiveCodeBench tasks; each is augmented with five instructions, yielding >10K instruction‑level evaluations.
-- Inference details: temperatures follow underlying benchmarks; thinking‑mode enabled where supported; max context 32,768 tokens; API providers Vertex AI and OpenRouter (§4.1).
-- Some models with >10% response failures on LiveVibeBench are excluded from those analyses (Appendix D.1).
+4. **Scoring modules** — pre-existing unit tests (from BigCodeBench / LiveCodeBench) measure functional correctness; the VeriCode verifiers (Ruff linter rules, AST analysis, regex checks) measure instruction following. Both produce deterministic pass/fail signals.
+
+5. **Composite human-preference analysis** — a regression framework that computes Pearson and Spearman correlations between LMArena human Elo ratings and blended scores of the form `$\alpha \cdot \text{IF} + (1-\alpha) \cdot \text{Func}$`, sweeping `$\alpha \in [0,1]$` to identify the mixing ratio that best predicts human preference.
+
+Information flows as follows: start with an original problem from BigCodeBench or LiveCodeBench → the augmentation pipeline selects `$k$` instructions and assigns parameters → the augmented problem is presented to the model under single-turn or multi-turn protocol → the model generates a final code solution → unit tests run → each instruction’s verifier runs → the outputs are two scalar metrics (functional correctness and task-level instruction following) that feed into the correlation analysis against LMArena Elo.
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First**, the VeriCode taxonomy construction—the four design principles, the three-stage curation pipeline (sourcing, multi-stage filtering, expert review), and the resulting structure of 30 instructions across five categories. This is foundational because every downstream component depends on these instructions being verifiable, practice-grounded, and challenging.
+
+- **Second**, the benchmark augmentation procedure—how instructions are selected per problem (relevance and non-conflict criteria), how parameters are assigned and validated, and why the resulting instruction-category distributions differ between BigVibeBench and LiveVibeBench. This explains how a static taxonomy becomes a dynamic, per-problem constraint set.
+
+- **Third**, the evaluation protocols and metrics—the single-turn vs. multi-turn framing, the precise definitions of functional regression rate (FR$_k$), instruction-level IF, and task-level IF, and what each metric captures about model behavior.
+
+- **Fourth**, the human preference correlation framework—how LMArena Elo ratings are sourced, how the composite score is constructed, and what the correlation analysis reveals about the relative importance of IF vs. functionality across task types.
+
+- **Fifth**, the design choices and their justifications—why deterministic verifiers over LLM judges, why augmentation over building new benchmarks from scratch, why soft difficulty filtering, and why two interaction protocols.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily an **evaluation infrastructure paper** whose core idea is that non-functional instruction following is a measurable, under-counted component of code quality, and that a testbed combining verifiable instructions with existing functional benchmarks can quantify this component and demonstrate its importance for human preference.
+
+---
+
+#### 3.4.1 VeriCode Taxonomy Construction
+
+The VeriCode taxonomy is the paper’s central artifact: a curated set of 30 code instructions, each paired with a deterministic, automated verifier. The taxonomy is not built from scratch—it is distilled from hundreds of existing linter rules through a multi-stage process designed to ensure that every surviving instruction is verifiable, practically relevant, diagnostically challenging, and broadly applicable.
+
+##### Design Principles
+
+The paper establishes four explicit principles that govern taxonomy construction (Section 2.1):
+
+**Verifiability** means every instruction must be paired with an automated, deterministic verifier that returns a binary pass/fail signal. This is non-negotiable because it enables objective, scalable evaluation and—crucially—makes the instructions usable as reward signals in RL-based training. Without verifiability, the taxonomy would be limited to research evaluation and could not close the loop into model improvement.
+
+**Practice grounding** means instructions must reflect common developer expectations and conventions, not synthetic or adversarial constraints. The paper explicitly sources its candidate pool from Ruff, an industry-standard Python linter that aggregates over 800 rules drawn from widely used tools including Pyflakes, pycodestyle, and isort. This ensures that the instructions test behaviors that real developers actually enforce—through CI pipelines, code review, and style guides—rather than arbitrary challenges.
+
+**Comprehensive coverage** means the taxonomy spans the key non-functional dimensions that matter in software development: coding style and conventions, logic patterns and complexity constraints, documentation and commenting, error handling and exception management, and library/API usage constraints. The five categories are meant to be exhaustive of what users screen for during code selection but not prescriptive about specific tool choices.
+
+**Difficulty** means the instructions must be meaningfully challenging for state-of-the-art models. A constraint that every model satisfies trivially provides no diagnostic signal. The paper operationalizes this through a quantitative difficulty filter: any candidate instruction where Gemini 2.5 Flash achieves above 90% success rate (and no degradation in functional pass@1) on BigCodeBench-Hard is removed. This ensures that the final set discriminates among advanced models rather than testing capabilities that are already saturated.
+
+##### Candidate Pool Sourcing
+
+The construction process begins with Ruff’s rule set as the initial candidate pool. Ruff is chosen for three reasons: it covers a wide range of coding standards (PEP 8, pyflakes, isort, pycodestyle, pydocstyle, and many plugin rules), all of its rules are implemented as deterministic checks, and it is widely used in production. This provides a high-coverage, practice-grounded starting point.
+
+However, static linting has a fundamental limitation: it inspects only the code itself and cannot evaluate instructions that target the entire response. For example, a constraint like “include a JSON summary of the solution after the code block” cannot be checked by a linter because the linter only sees the code. To close this coverage gap, the authors manually add a set of instructions that target documentation and output formatting outside code blocks, extending coverage to aspects like “include a docstring outside the code block explaining the approach” or “format the output as a JSON object with specific fields.” The paper does not specify the exact number of manually added instructions, but their presence means the taxonomy covers both lintable code properties and response-level formatting requirements.
+
+##### Scope and Relevance Filtering
+
+The initial candidate pool is first filtered for scope and relevance through a top-down consolidation process. The core problem here is rule overlap: many linter rules are narrow specializations of broader principles. For example, multiple Ruff rules may target different aspects of function complexity (cyclomatic complexity, number of branches, number of return statements, number of local variables). Rather than including all of them, the consolidation process identifies the broader principle (e.g., “limit function complexity”) and prioritizes a representative instruction that captures the category. This prevents the taxonomy from being dominated by dozens of near-duplicate constraints from a single category while leaving other categories under-represented.
+
+The paper describes this as a manual curation step: “we apply a top-down consolidation to address rule overlap, prioritizing broader instructions over their more specific subsets.” This is not a mechanical deduplication; it requires judgment about which rules capture distinct enough behaviors to warrant separate inclusion and which are redundant. The goal is to ensure that each instruction is “broadly applicable across common coding tasks and not confined to niche scenarios.”
+
+##### Difficulty Filtering
+
+After consolidation, the remaining candidates undergo quantitative difficulty screening. The procedure:
+
+1. A test set is constructed from BigCodeBench-Hard—the subset of BigCodeBench problems that are most challenging for current models.
+2. Gemini 2.5 Flash (a strong but not top-tier model at the time of curation) generates solutions under each candidate instruction.
+3. Two measurements are taken: the instruction following rate (what fraction of generated solutions pass the instruction’s verifier) and the change in functional pass@1 relative to the unconstrained baseline.
+4. Any instruction where the success rate exceeds 90% **and** functional pass@1 shows no degradation is removed. The “no degradation” clause is important: an instruction could be easy to follow but cause functional regression (the model follows it but produces wrong code as a result), and such instructions are diagnostically useful because they reveal the functionality–IF tradeoff. So only instructions that are both trivially easy to follow **and** harmless to functionality are filtered out.
+5. Borderline cases—those near the 90% threshold or with ambiguous degradation patterns—are flagged for manual review by the authors.
+
+This step operationalizes the “difficulty” design principle: it ensures the final taxonomy contains only constraints that meaningfully challenge advanced models. The paper does not report the exact number of instructions removed at this stage, but the implication is that the 800+ initial Ruff rules were reduced to a far smaller candidate set through consolidation and difficulty filtering before the final expert review.
+
+##### Expert Review and Verifier Implementation
+
+The filtered instruction set undergoes a final manual review by domain experts on the author team “with coding-research experience.” This review assesses clarity (is the instruction description unambiguous?), real-world relevance (does it reflect actual developer practices, not just linter-rule abstractions?), and potential conflicts or edge cases.
+
+For each surviving instruction, a verifier is implemented. The implementation strategy prioritizes **linter-backed checks when available**—27 of the 30 verifiers use Ruff rules directly. This choice is motivated by several factors: Ruff rules are well-tested (they are used in production by thousands of projects), they are maintained and updated by the Ruff community (reducing maintenance burden for the benchmark), they are deterministic (same code, same result), and they are fast (millisecond-level execution).
+
+When no existing linter rule covers an instruction, the authors implement deterministic tests using **Abstract Syntax Tree (AST) analysis** and **regular expressions**. AST analysis parses the generated code into a tree structure and checks structural properties (e.g., “does every function have a docstring node?”). Regex-based checks handle pattern-matching tasks (e.g., “does the response contain a JSON block with specific fields?”). These custom verifiers share the same interface as the Ruff-backed verifiers: a function that takes generated code as input and returns a binary pass/fail.
+
+This common interface is a critical design property. Every verifier, regardless of its underlying implementation (Ruff, AST, regex), presents the same contract to the evaluation pipeline: `verify(code) -> {0, 1}`. This means the evaluation framework does not need to know how a particular instruction is checked; it just iterates over the selected instruction set, calls each verifier, and aggregates the binary outputs. This abstraction makes the system extensible—new instructions can be added by implementing a verifier conforming to the same interface, without modifying the evaluation pipeline.
+
+##### Resulting Taxonomy Structure and Schema
+
+The final VeriCode taxonomy contains 30 instructions organized into a two-level hierarchy:
+
+- **Root:** the overall concept of verifiable code instructions.
+- **Top-level nodes (5 categories):**
+  - **Coding Style & Conventions (9 instructions):** line length limits, naming conventions, whitespace rules, import ordering.
+  - **Logic & Code Patterns (9 instructions):** branch-count limits, function length constraints, complexity metrics, recursion restrictions.
+  - **Documentation & Commenting (6 instructions):** docstring format requirements (Google, NumPy, PEP 257), comment completeness, module-level documentation.
+  - **Error Handling & Exception Management (4 instructions):** specific exception types, try-except patterns, canonical aliases.
+  - **Library & API Constraints (2 instructions):** `pathlib` over `os.path`, modern API usage patterns.
+- **Leaf nodes:** the 30 individual instructions.
+
+Each instruction is specified through five required elements:
+
+1. **Category** — which of the five top-level nodes it belongs to.
+2. **Description** — a plain-language description of what the constraint requires.
+3. **Distinct prompts for single-turn and multi-turn** — because the two interaction protocols demand different phrasings. In single-turn, the instruction is given as a numbered requirement appended to the original query. In multi-turn, the instruction is introduced as a separate conversational turn (“Now modify the code to…”). The paper provides both prompt variants for every instruction.
+4. **Configurable parameters with recommended values** — each instruction defines a set of typed parameters. For example, `line_length` is an integer with recommended values of 79 (classic PEP 8) or 88 (modern Black default); `max_branches` is an integer with recommended range 2–4; `convention` is a string supporting values like “Google”, “NumPy”, or “PEP 257”. Parameters make the taxonomy extensible: a single instruction can generate many distinct constraint variants with different difficulty levels, expanding 30 core instructions into hundreds of distinct checkable constraints.
+5. **Verification code** — the implementation that returns a binary score. For Ruff-backed instructions, this is the Ruff rule identifier (e.g., E501 for line length, PLR0912 for branch count, D for docstring conventions). For custom instructions, this is the AST or regex implementation.
+
+This parameterized schema is the key mechanism for taxonomy extensibility that the paper emphasises: “our set of 30 core instructions can be programmatically expanded into hundreds of distinct and checkable constraints, providing a scalable framework for future research” (Section 2.3). Researchers can generate new benchmark variants by selecting different parameter values (tighter line lengths, fewer allowed branches, different docstring styles) without modifying the underlying instruction definitions or verifiers.
+
+##### Why This Construction Process Over Alternatives?
+
+The paper’s three-stage curation (sourcing → multi-stage filtering → expert review) is designed to avoid several pitfalls that would undermine the taxonomy’s utility:
+
+- **Purely synthetic instruction generation** (e.g., asking an LLM to invent constraints) would produce instructions that may not correspond to real-world practices and may be trivially easy or impossibly hard. Sourcing from Ruff ensures practice grounding.
+- **Using all available linter rules without filtering** would produce an unwieldy taxonomy dominated by minor stylistic preferences (e.g., 15 rules about whitespace around operators) while missing broader non-functional dimensions. The difficulty filter and expert review ensure diagnostic value and category balance.
+- **LLM-as-a-judge for verification** (as used by Yan et al., 2025) would introduce non-determinism, cost, latency, and potential bias. Deterministic verifiers make the benchmark reproducible and scalable to the volume needed for training.
+- **Human labels for every evaluation** would be prohibitively expensive and slow for the scale of evaluation the paper performs (31 models × 2 benchmarks × 2,000+ problems × multiple instruction counts). Automated verifiers enable the comprehensive sweep across models and conditions that the paper’s analysis requires.
+
+---
+
+#### 3.4.2 Benchmark Augmentation Pipeline
+
+Augmentation is the process that transforms the static VeriCode taxonomy into dynamic, per-problem constraint sets for the Vibe Checker testbed. The paper augments two existing benchmarks: BigCodeBench (1,140 real-world programming tasks) and LiveCodeBench v1–v6 (1,055 algorithmic contest problems spanning May 2023 to May 2025), producing BigVibeBench and LiveVibeBench respectively. Each problem in both benchmarks receives 5 instructions, resulting in over 10,000 instruction-level evaluations across the testbed.
+
+##### Instruction Selection Per Problem
+
+For each original benchmark problem, the augmentation pipeline performs two stages: instruction selection and parameter assignment.
+
+The instruction selection procedure is:
+
+1. **Permutation:** The full set of 30 taxonomy instructions is randomly permuted to produce an ordered list. The permutation is random to avoid systematic ordering biases where earlier instructions in a fixed list get selected more often.
+
+2. **Sequential scanning:** An LLM-based selector scans the permuted list once, in order, deciding for each instruction whether to keep or discard it. The decision is based on two criteria evaluated simultaneously:
+   - **Relevance:** The instruction must pertain to the query and plausibly influence the implementation. For example, an instruction about docstring format is relevant to a function-writing task but might be less relevant to a one-line script.
+   - **Non-conflict:** The instruction must not contradict any instruction already accepted earlier in the scan. For instance, if `pathlib` usage was already selected, an instruction about `os.path` conventions would conflict. The selector checks each candidate against the growing set of accepted instructions.
+
+3. **Output:** The accepted instructions, in their permuted order, constitute the constraint set for that problem. The instruction count is fixed at 5 per problem—the selector is instructed to accept exactly 5 relevant, non-conflicting instructions per problem.
+
+The paper tests both Gemini 2.5 Pro and Claude 4 Opus as selectors in this pipeline. Both produce “similar instruction-category distributions,” indicating that the taxonomy is robust to the specific selector model used. The final augmented benchmarks are built using Claude 4 Opus as the selector, chosen for its lower invalid-parameter rate (0.96% of generated parameter assignments had invalid keys or values, versus 2.47% for Gemini 2.5 Pro). This small difference reflects a practical concern: invalid parameters would require fallback to defaults, introducing noise into the evaluation, so the more reliable selector is preferred.
+
+The resulting instruction-category distributions differ between the two benchmarks in ways that reflect their distinct task types (detailed in Figure 12):
+
+- **BigVibeBench (real-world programming):** Coding Logic (35.9%), Coding Style (30.6%), Documentation (25.0%), Error Management (6.3%), Library Constraints (2.2%).
+- **LiveVibeBench (algorithmic contest):** Coding Logic (42.3%), Coding Style (30.5%), Documentation (26.3%), Error Management (0.9%), Library Constraints (0.1%).
+
+The algorithm-focused LiveVibeBench has more Coding Logic instructions (reflecting the emphasis on algorithmic patterns) and fewer Error Management/Library Constraint instructions (these are less relevant to contest-style problems where the focus is on algorithmic correctness and efficiency rather than production software engineering practices).
+
+##### Parameter Selection and Validation
+
+Once the 5 instructions are selected for a problem, the second stage assigns concrete parameter values to each parameterized instruction. An LLM (the same selector model) generates parameter assignments based on:
+
+- The instruction’s schema: supported parameter keys, their types, allowed ranges, and recommended values as defined in the taxonomy.
+- The context of the user query: parameters should be “both achievable and challenging.” For example, on a simple function, a `max_branches` of 2 might be reasonable; on a complex multi-branch algorithm, a value of 4 might be more appropriate (still a constraint, but one the model has a realistic chance of satisfying).
+
+The generated parameters then undergo a **rule-based validation step** that enforces two checks:
+
+1. **Key validation:** Any parameter keys that are not explicitly defined for that instruction in the taxonomy schema are removed. This prevents the LLM from inventing spurious parameters (e.g., assigning a `max_lines` parameter to an instruction that only defines `max_branches`).
+2. **Value validation:** Any parameter values that fall outside the allowed types, ranges, or supported values for that key are reverted to predefined defaults. This catches cases where the LLM assigns a float to an integer parameter or selects a docstring convention that is not in the supported list.
+
+This validation is the final gate before the augmented problem enters the benchmark. It ensures that every instruction in the testbed is evaluated with parameters that the verifier can actually check—the verifier implementation depends on concrete parameter values (e.g., E501 checks against a specific `line_length`), so malformed parameters would cause evaluation failures.
+
+##### Why LLM-Based Selection Over Manual Curation?
+
+A natural alternative would be to have human experts manually select 5 relevant, non-conflicting instructions and appropriate parameters for each of the 2,195 benchmark problems. This would be extremely time-consuming (2,195 × some minutes per problem) and would introduce inter-annotator variability. The LLM-based approach scales trivially and can be run deterministically (temperature 0.0 during augmentation). The consistency of instruction-category distributions across two different selector LLMs (Gemini 2.5 Pro and Claude 4 Opus) provides evidence that the selection process is robust to the specific model used, mitigating the concern that LLM selection introduces model-specific biases into the benchmark.
+
+The decision to use an LLM rather than a rule-based selector (e.g., keyword matching between problem text and instruction descriptions) reflects the difficulty of programmatically determining relevance and non-conflict for arbitrary natural language problem descriptions. An LLM can interpret that a problem about implementing a sorting algorithm is “relevant” to a branch-count instruction because sorting implementations typically involve conditional logic, whereas a keyword-based approach might miss this connection entirely.
+
+---
+
+#### 3.4.3 Evaluation Protocols
+
+##### Single-Turn Generation
+
+In the single-turn protocol, all selected instructions are presented to the model simultaneously, appended to the original problem query in a single prompt. The format is:
+
+```
+[Original problem description from BigCodeBench/LiveCodeBench]
+
+Also, generate the code to meet the following requirements:
+1. [Instruction 1 with parameter values]
+2. [Instruction 2 with parameter values]
+...
+5. [Instruction 5 with parameter values]
+```
+
+The model produces one code response, which is then evaluated against both the original unit tests (for functional correctness) and each instruction’s verifier (for instruction following).
+
+This protocol mirrors the real-world scenario where a user specifies all their requirements upfront—a “spec-first” interaction. It tests the model’s ability to integrate multiple non-functional constraints into a single implementation pass without iterative feedback. The challenge is that the model must simultaneously satisfy functional correctness, multiple non-functional instructions, and avoid conflicts between them.
+
+##### Multi-Turn Editing
+
+In the multi-turn protocol, the instructions are introduced sequentially across multiple conversational turns. The procedure is:
+
+**Turn 1:** The model receives the original problem query (no instructions) and generates an initial implementation.
+
+**Turn `$i+1$` (for `$i = 1, \ldots, 5$`):** The model receives the full interaction history (original problem description, previous code, and all previous instruction turns) plus the `$i$`-th instruction, and must produce a revised implementation that satisfies the new instruction while preserving the intent and correctness of the previous version.
+
+The code from the final turn (turn 6) is used for evaluation. This is a critical design choice: the evaluation is on the final revision, not on any intermediate revision. If the model makes a mistake in an early turn and never corrects it, that mistake carries through to the final evaluation.
+
+This protocol mirrors the iterative refinement workflow typical of “vibe coding,” where users start with a basic implementation and then layer on requirements incrementally (“now add docstrings,” “now shorten the lines,” “now switch to pathlib”). The model must maintain context across turns, adapt to evolving requirements without regressing on previously satisfied constraints, and preserve functional correctness through successive edits.
+
+##### Why Two Protocols?
+
+The single-turn and multi-turn protocols test fundamentally different capabilities. Single-turn generation tests **integration ability**—can the model process multiple constraints simultaneously and produce a coherent solution in one pass? Multi-turn editing tests **incremental refinement ability**—can the model adapt an existing solution to new requirements without breaking what already worked?
+
+The paper’s results show that these protocols yield different behaviors: single-turn better preserves functionality (less regression) but follows fewer instructions; multi-turn achieves higher instruction following at the cost of more functional regression. This tradeoff would be invisible if only one protocol were used, and it reveals important information about model behavior that matters for deployment (if you know a model tends to break functionality during iterative edits, you might choose a different interaction pattern).
+
+##### Evaluation Metrics: Functional Correctness
+
+Functional correctness is measured using the pre-existing unit tests from BigCodeBench and LiveCodeBench. The paper reports **functional regression rate** (FR$_k$) to quantify how much adding non-functional instructions degrades functional performance.
+
+> $$\text{FR}_k = \frac{S_0 - S_k}{S_0}$$
+
+where `$S_0$` is the functional score (typically pass@1) on the original, un-augmented problem, and `$S_k$` is the functional score after injecting `$k$` instructions.
+
+**What it computes:** the proportional decrease in functional correctness due to the added instructions. If `$S_0 = 50\%$` and `$S_5 = 40\%$`, then `$\text{FR}_5 = \frac{50 - 40}{50} = 0.20 = 20\%$`—adding five instructions caused a 20% relative drop in functional pass rate. If `$\text{FR}_5$` is negative, the model actually improved on the augmented version (which the paper observes in some cases, particularly for Claude models on BigVibeBench single-turn).
+
+**Why this form:** the regression rate normalizes for differences in baseline performance across models and benchmarks. A model with 80% baseline pass@1 and one with 40% baseline pass@1 might both drop by 5 absolute percentage points under five instructions, but the relative impact is very different (6.25% regression vs. 12.5% regression). The normalized rate makes these comparisons meaningful. The denominator `$S_0$` also handles the edge case where baseline performance differs substantially between the two benchmarks (BigCodeBench vs. LiveCodeBench), making regression rates comparable across task types.
+
+##### Evaluation Metrics: Instruction Following
+
+Instruction following is measured at two granularities. For a task with `$k$` instructions, let `$I_j \in \{0, 1\}$` indicate whether instruction `$j$` passes its verifier.
+
+**Instruction-level IF:**
+
+> $$\text{IF}_\text{instruction} = \frac{1}{k} \sum_{j=1}^{k} I_j$$
+
+where `$I_j \in \{0,1\}$` is the binary pass/fail for the `$j$`-th instruction, and `$k$` is the number of instructions.
+
+**What it computes:** the average fraction of instructions satisfied per task. If a task has 5 instructions and the model passes 3 of them, the instruction-level IF is 0.6 (60%). This metric captures partial success—a model that follows 4 out of 5 instructions gets a higher score than one that follows 2 out of 5.
+
+**Why this form:** the instruction-level score provides fine-grained signal about model capability. A model that reliably follows 3–4 out of 5 instructions is in a different capability regime than one that follows 1 out of 5, even if both have a task-level score of 0 (neither satisfies all 5). This matters for understanding *how close* models are to satisfying all constraints and for tracking incremental progress.
+
+**Task-level IF:**
+
+> $$\text{IF}_\text{task} = \mathbb{1}\left[\sum_{j=1}^{k} I_j = k\right]$$
+
+where `$\mathbb{1}[\cdot]$` is the indicator function that returns 1 if the condition holds and 0 otherwise.
+
+**What it computes:** the all-or-nothing success rate—what fraction of tasks have **all** `$k$` instructions simultaneously satisfied. If a model passes 4 out of 5 instructions on a task, the task-level score for that task is 0. The aggregate task-level score is the fraction of evaluated tasks where `$\text{IF}_\text{task} = 1$`.
+
+**Why this form:** the task-level score captures the user’s actual experience. In practice, a code solution that satisfies 4 out of 5 instructions but fails the 5th (say, it has lines over 80 characters but otherwise follows all constraints) still fails the vibe check—the user will notice the violation and ask for a revision. The task-level metric is the stricter, more realistic measure of whether a model’s output would be accepted without further modification. It also exhibits the exponential decay pattern the paper highlights: with 5 instructions and per-instruction pass rates around 80%, the task-level score drops to approximately `$0.80^5 \approx 0.328$`, which is what the results show (Table 3).
+
+---
+
+#### 3.4.4 Human Preference Correlation Framework
+
+##### Data Source
+
+The human preference signal comes from LMArena (Chiang et al., 2024), specifically its coding subset, which contains over 800,000 human votes. In LMArena, users are shown side-by-side code completions from two anonymous models and vote for which they prefer. These pairwise preferences are aggregated into Elo ratings using a standard chess-style rating system. The paper uses the Elo ratings from the September 18, 2025 leaderboard, with ratings from both the default setting and the style-controlled setting (Li et al., 2024, which attempts to factor out stylistic preferences like response length and formatting to isolate content quality).
+
+The paper maps each of its 31 evaluated models to its LMArena designation and retrieves the corresponding Elo rating (Table 4 in Appendix D.1). Not all evaluated models appear on the LMArena leaderboard (some are too new or too small to have accumulated sufficient votes), so the correlation analysis uses the subset of models with available Elo ratings.
+
+##### Composite Score Construction
+
+For each model, the paper computes two metrics from Vibe Checker:
+
+- **Func:** pass@1 on the original (un-augmented) benchmark problems. This captures the model’s raw functional competence.
+- **IF:** instruction-level IF score from the single-turn setting with one instruction. The single-turn, single-instruction condition is chosen because it is the simplest test of instruction following—no confounding from multiple-instruction interactions or multi-turn effects.
+
+The composite score is a linear blend:
+
+> $$\text{Composite} = \alpha \cdot \text{IF} + (1 - \alpha) \cdot \text{Func}$$
+
+where `$\alpha \in [0, 1]$` controls the weight assigned to instruction following versus functional correctness. At `$\alpha = 0$`, the composite is pure functionality; at `$\alpha = 1$`, it is pure instruction following; intermediate values represent mixtures.
+
+**What it computes:** a single scalar per model that blends its functional and non-functional performance according to the mixing weight `$\alpha$`. The paper then sweeps `$\alpha$` across its entire range and computes the Pearson and Spearman correlation between the composite scores and LMArena Elo ratings at each `$\alpha$`.
+
+**Why this form:** the linear blend is the simplest hypothesis for how functional and non-functional qualities might combine in human preference. A more complex model (e.g., multiplicative interaction, threshold effects) would be harder to interpret and would require more data to fit reliably. The linear form also makes the correlation analysis straightforward: a peak at intermediate `$\alpha$` directly indicates that both dimensions contribute to human preference, and the location of the peak indicates their relative importance. If the peak were at `$\alpha = 0$`, it would mean functionality alone explains preference; if at `$\alpha = 1$`, it would mean instruction following alone explains preference. The paper finds peaks at `$\alpha \approx 0.4$`–`$0.7$` depending on benchmark and correlation type, confirming that both dimensions matter.
+
+##### Correlation Analysis
+
+For each value of `$\alpha$`, the paper computes:
+
+- **Pearson correlation:** measures linear relationship strength. Sensitive to the absolute values of the composite scores and Elo ratings.
+- **Spearman correlation:** measures monotonic relationship strength (rank correlation). Robust to non-linear transformations and outliers.
+
+The analysis is repeated for both BigVibeBench and LiveVibeBench, and for both the style-controlled and default LMArena Elo ratings. The key findings are reported in Figure 5 (and extended with additional correlation types and style-control settings in Figure 15):
+
+- **On BigVibeBench (real-world programming):** The optimal Pearson `$\alpha$` is 0.4 (40% weight on IF), while the optimal Spearman `$\alpha$` is 0.7 (70% weight on IF). The Spearman result is particularly informative because Elo ratings are inherently ordinal (ranks matter more than absolute differences), and Spearman correlation captures rank-order alignment. The high Spearman `$\alpha$` indicates that, for distinguishing among models on real-world tasks, instruction following is the dominant factor.
+- **On LiveVibeBench (algorithmic programming):** The optimal Pearson `$\alpha$` is 0.4, and the optimal Spearman `$\alpha$` is 0.6. The lower Spearman `$\alpha$` (0.6 vs. 0.7) indicates that functional correctness plays a relatively larger role in algorithmic contest problems, consistent with the intuition that algorithmic correctness is paramount when the task is solving a well-defined computational problem.
+- **Pure IF vs. pure Func comparisons:** On BigVibeBench, pure IF (`$\alpha = 1$`) correlates over 0.1 points higher with human preference (Spearman) than pure Func (`$\alpha = 0$`). On LiveVibeBench, the opposite holds—pure Func has a clear advantage. This confirms that the relative importance of the two dimensions is task-dependent, and that ignoring either dimension leads to suboptimal alignment with human preference.
+
+##### Why This Correlation Framework?
+
+The paper could have conducted a user study where participants explicitly rate generated code on multiple dimensions, but this would be expensive, small-scale, and potentially biased by the specific raters and tasks chosen. Using LMArena Elo provides a large-scale, ecologically valid preference signal—800,000+ votes from real users making real choices about code completions. The tradeoff is that LMArena Elo is a coarse aggregate: it does not tell us *why* users preferred one completion over another, only that they did. The correlation analysis reverse-engineers the preference signal by testing which measurable properties of model outputs best predict the aggregate preferences. A high correlation between composite score and Elo provides evidence that the composite captures what users value, even if it does not identify the specific features driving individual pairwise votes.
+
+---
+
+#### 3.4.5 Design Choices and Their Justifications
+
+##### Deterministic Verifiers Over LLM Judges
+
+The paper could have used LLM-as-a-judge (as in Yan et al., 2025; Jiang et al., 2024; Qin et al., 2024) to evaluate instruction following. This approach would have been simpler to implement—just prompt an LLM with the generated code and the instruction, and ask for a pass/fail judgment. The paper’s choice of deterministic linter-based verifiers reflects several considerations:
+
+- **Reproducibility:** An LLM judge can produce different outputs for the same input (even at temperature 0, floating-point non-determinism and infrastructure changes can cause variance). A Ruff rule always returns the same result for the same code.
+- **Cost and speed:** Running Ruff on a code snippet takes milliseconds and costs nothing beyond CPU time. Running an LLM inference for every instruction evaluation across 31 models × 2,195 problems × multiple instruction counts would be expensive and slow.
+- **Training signal quality:** If the instruction verifiers are to become reward signals for RL training (as the paper explicitly envisions), they must be fast, reliable, and unbiased. An LLM judge introduces its own biases—it might be lenient on certain code styles, inconsistent across model families, or influenced by irrelevant surface features. A deterministic linter has none of these issues.
+- **Alignment with practice:** Developers already use linters in CI pipelines. A model that passes a linter-based evaluation is demonstrably compatible with real-world development workflows.
+
+The limitation is that deterministic verifiers can only check rules that have been explicitly implemented. There is no verifier for “the code should be readable” or “the algorithm should be efficient” in general—these are fuzzy human judgments. The 30 instructions in VeriCode are the subset of code quality concerns that can be mechanically checked, and they leave out many dimensions that matter to human judgment. The paper acknowledges this implicitly by framing IF as *part* of the vibe check, not the whole thing—the composite score with functionality is better than IF alone, and even the composite is not expected to capture everything humans care about.
+
+##### Augmentation Over New Benchmark Construction
+
+The paper augments existing benchmarks (BigCodeBench, LiveCodeBench) rather than building new ones from scratch. The justification:
+
+- **Leverage existing unit tests:** BigCodeBench and LiveCodeBench have well-tested, high-quality unit tests for functional correctness. Building a new benchmark with equivalent test coverage would require duplicating this effort.
+- **Continuity with prior work:** By augmenting benchmarks the community already uses, the paper’s results are directly comparable to published pass@k scores. The functional regression rates are computed relative to known baselines, not new, unvalidated ones.
+- **Task diversity:** BigCodeBench covers real-world programming tasks (API usage, file I/O, data processing) and LiveCodeBench covers algorithmic contest problems. Together they span the major categories of code generation tasks without the paper needing to design a task taxonomy from scratch.
+
+The limitation is that the augmented benchmarks inherit any biases or limitations of the originals. If BigCodeBench’s unit tests have false positives (accept incorrect code) or false negatives (reject correct code), those errors propagate into Vibe Checker’s functionality measurements. The paper does not re-validate the underlying unit tests.
+
+##### Soft Difficulty Filtering
+
+The difficulty filter (remove instructions with >90% success rate and no functional degradation) is a soft threshold rather than a hard, statistical criterion. The paper does not report statistical tests or confidence intervals for the filtering decisions. The alternative—setting a stricter threshold (e.g., 80%)—would retain more instructions but risk including constraints that are not diagnostically useful. The 90% threshold is a pragmatic choice that balances inclusivity (keeping enough instructions for comprehensive coverage) with discriminability (removing saturated constraints).
+
+The “no functional degradation” clause in the filter is important. An instruction could have 95% following rate but cause a 15% drop in functional pass@1—meaning that while models can technically follow it, doing so substantially harms their ability to produce correct code. Such an instruction is *diagnostically valuable* because it reveals the functionality–IF tradeoff. Filtering it out would lose this signal. The paper only removes instructions that are both trivially easy to follow *and* functionally harmless.
+
+##### Two Interaction Protocols
+
+The paper tests both single-turn and multi-turn because they represent the two dominant patterns in real-world LLM-assisted coding:
+
+- **Single-turn:** users describe what they want (including style and convention preferences) and expect a complete solution in one response. This is common for greenfield development and simple tasks.
+- **Multi-turn:** users start with a basic request, see the output, and iteratively refine it with additional requirements. This is the “vibe coding” pattern emphasised in the introduction.
+
+Testing both protocols is not just about coverage—it reveals interaction-dependent behaviors that matter for model selection. If a model excels at single-turn but regresses heavily in multi-turn (or vice versa), that information is crucial for deployment decisions. The paper’s results show that this distinction matters: single-turn better preserves functionality, multi-turn achieves higher IF, and the gap varies across model families.
+
+##### Five Instructions Per Problem
+
+Every augmented problem receives exactly 5 instructions. This is a fixed number rather than a variable tuned to problem complexity. The justification is implicit: 5 instructions create a challenging multi-constraint setting while remaining within the context window and generation capacity of current models. With fewer instructions (e.g., 2–3), the task-level IF score would be higher (fewer constraints to satisfy simultaneously), reducing discriminability between strong models. With more instructions (e.g., 10), the task-level IF would approach zero for all models (the exponential decay would push success rates into the low single digits), removing useful signal. Five instructions hit a diagnostically useful range where the best models are around 40–50% task-level success (Table 3)—low enough to show room for improvement, high enough to be meaningfully above chance.
+
+The paper does not experiment with varying the instruction count per problem, so the interaction between problem difficulty and optimal instruction count is unexplored. A natural extension would be to vary `$k$` per problem based on estimated complexity, which would create a more graded difficulty spectrum.
 
 ## 4. Key Insights and Innovations
-1) A verifiable, parameterized taxonomy of non‑functional code instructions (VeriCode) (§2)
-- What’s new: distills hundreds of linter/style rules into 30 broadly applicable, automatically checkable instructions with deterministic verifiers, many backed by Ruff. Includes response‑level doc checks that linters alone miss (Table 1; Figures 7–11).
-- Why it matters: enables scalable, objective measurement (and potential training rewards) for non‑functional aspects that drive human preference but were previously hard to evaluate at scale.
 
-2) A unified testbed (Vibe Checker) that couples unit tests with instruction verifiers (§3)
-- What’s new: augments mainstream benchmarks with relevant, non‑conflicting instruction sets and evaluates models in single‑turn and multi‑turn modes (Figure 2).
-- Why it matters: reveals trade‑offs that standard pass@k obscures (e.g., higher IF but lower functionality in multi‑turn), and supports realistic interaction patterns.
+### Innovation 1: Instruction Following as the Missing, Measurable Signal Behind Human Code Preference
 
-3) Empirical evidence that adding non‑functional instructions hurts functional correctness (§4.2)
-- Novel observation: even though instructions do not target functionality, pass@1 regresses consistently. This is quantified across many models and tasks (Table 2; Figure 3a).
+The paper's most fundamental conceptual move is not building a new benchmark or a new metric, but **identifying what has been missing from code evaluation and providing evidence that it explains real-world human preference**. Prior work treated the gap between pass@k and user satisfaction as either a measurement noise problem (better tests would fix it) or an ineffable subjectivity problem (user preference is too fuzzy to measure). The paper rejects both framings. Instead, it hypothesizes that **non-functional instruction following** is the specific, measurable signal that pass@k ignores, and it constructs an apparatus to test that hypothesis.
 
-4) Instruction following is the primary differentiator among strong models and correlates with human preference (§4.5)
-- Core finding: a weighted combination of IF and functionality best matches LMArena coding Elo; IF gets substantial weight, especially for real‑world tasks (Figure 5). This reframes evaluation/training priorities.
+What makes this a genuine conceptual advance rather than an incremental measurement improvement is the **diagnostic structure of the argument**. The paper does not simply claim "instruction following matters." It demonstrates a three-part chain of evidence:
 
-5) Behavioral analyses: position bias and single‑ vs multi‑turn trade‑offs (§4.3–§4.4)
-- New diagnostics: lost‑in‑the‑middle pattern at instruction positions (Figure 4) and systematic trade‑off where single‑turn preserves functionality better, while multi‑turn yields higher IF (Figure 3b).
+1. **The gap is real and systematic** (Section 1): Copilot Arena rankings show "weak or negative correlations" with functional benchmark scores. This is not a small discrepancy—it means the dominant evaluation paradigm and real-world preference are pointing in different directions. Prior work had observed this correlation weakness but treated it as a curiosity; this paper makes it the central puzzle to solve.
 
-Overall, items (1)–(2) are infrastructure contributions; (3)–(5) are substantive empirical insights about LLM coding behavior.
+2. **Instruction following is measurable** (Section 2): The VeriCode taxonomy demonstrates that a significant fraction of what users screen for during code selection can be captured by deterministic, linter-backed verifiers. This is a non-obvious claim. One might assume that "code quality" is inherently subjective—that readability, maintainability, and style are fuzzy human judgments that resist automation. The paper shows that at least 30 distinct dimensions of code quality are mechanically checkable, and that these checks are grounded in the same linter rules that professional developers already use in CI pipelines. The verification strategy is not an approximation of human judgment; it *is* the judgment mechanism that the software engineering community has already converged on.
+
+3. **Instruction following explains preference better than functionality alone** (Section 4.5): The correlation analysis against LMArena Elo ratings is the evidentiary capstone. A composite of IF and functionality correlates better with human preference than either alone, and the optimal mixing weight places substantial (40–70%) emphasis on IF. On real-world programming tasks (BigVibeBench), pure IF correlates over 0.1 Spearman points higher with Elo than pure functionality—a large effect size given that these are aggregate rankings of 30+ models.
+
+The significance of this finding extends beyond evaluation. If instruction following is a measurable component of human preference, then it can become a **training target**. The paper explicitly connects to the RLVR paradigm (Da et al., 2025; DeepSeek-AI, 2025), where verifiable reward signals drive model improvement. Currently, those reward signals are dominated by functional correctness (pass@k). The paper's framework provides the missing piece: 30 deterministic verifiers that can serve as additional reward channels, steering optimization toward code that is both correct and well-formed. This is a direct path from evaluation insight to training methodology—a path that was unavailable when instruction following was treated as unmeasurable or when it was measured with unreliable LLM judges.
+
+**Comparison to prior work:** Prior code quality benchmarks (Singhal et al., 2024; Yan et al., 2025) recognized that non-functional requirements matter but lacked the verifiability to scale or to serve as training signals. NoFunEval (Singhal et al., 2024) uses DiffBLEU—a fuzzy text similarity metric—as its evaluation signal, making it inherently noisy and unsuitable for RL. CodeIF (Yan et al., 2025) uses LLM and human judgment, which is expensive, slow, and non-deterministic. General instruction-following benchmarks (Pyatkin et al., 2025; Wang et al., 2025) are verifiable but test synthetic constraints untethered from software engineering practice. The paper synthesizes the strengths of both traditions—verifiability from general IF work, practice grounding from code quality research—while addressing their respective weaknesses.
+
+**Is this incremental or fundamental?** This is a **fundamental reframing**, not an incremental measurement improvement. The field already knew that pass@k was incomplete and that users care about non-functional qualities. The paper's contribution is converting that vague awareness into a **testable, quantifiable framework** and demonstrating that the framework explains real preference data. This shifts the conversation from "we should probably measure more than pass@k" to "here is specifically what to measure, here is how to measure it, and here is evidence that measuring it aligns evaluation with what humans actually want."
+
+---
+
+### Innovation 2: The Functionality–Instruction-Following Tradeoff as a First-Class Empirical Phenomenon
+
+The paper's second major contribution is **demonstrating and characterizing the tradeoff between functional correctness and instruction following**, a phenomenon that prior work had not systematically studied. The core finding—that adding non-functional instructions causes measurable functional regression—is not intuitively obvious. One might expect that following style conventions, adding documentation, and using modern API patterns would be orthogonal to algorithmic correctness: the code either works or it doesn't, and these surface-level changes shouldn't affect that. The paper shows this intuition is wrong.
+
+The evidence for the tradeoff is compelling precisely because it is consistent and large. Across 31 models on two benchmarks, adding five non-functional instructions causes average functional regression of 5.85% (BigVibeBench) and 6.61% (LiveVibeBench) under single-turn generation, with multi-turn editing showing even larger effects (Table 2). These are not marginal effects—for a model with 50% baseline pass@1, a 6% regression means losing approximately 3 absolute percentage points, enough to shift leaderboard rankings. For specific models under specific conditions, the regression is severe: o4 mini shows 9.56% regression on BigVibeBench single-turn with five instructions; Kimi K2 shows 16.36% on LiveVibeBench.
+
+The **asymmetric interaction-mode effects** make this tradeoff particularly interesting. Single-turn generation better preserves functionality (less regression) but follows fewer instructions; multi-turn editing achieves higher instruction following at the cost of more functional regression (Figures 3a, 3b). This is not a simple "more constraints = worse performance" monotonic relationship. The interaction protocol changes *how* the model trades off between the two objectives. In single-turn, the model sees all constraints simultaneously and can plan solutions that satisfy them together, which preserves functionality but may lead to missed constraints. In multi-turn, each new instruction triggers a localized edit, which is more effective for satisfying that specific instruction but risks breaking previously working code (the iterative edit problem well-known in software engineering).
+
+This finding has a deeper implication: **non-functional instructions are not neutral metadata**. They impose real cognitive and generative costs on the model. Satisfying "all lines under 88 characters" is not just a formatting change—it may require restructuring code, introducing intermediate variables, or altering control flow in ways that interact with algorithmic logic. Satisfying "each function has at most 3 branches" may require refactoring complex conditionals into helper functions, which introduces new failure modes. The paper's results quantify these costs and show they vary systematically across models (Claude 4 Opus shows negative regression—actually improving—on BigVibeBench single-turn, while o4 mini shows severe regression on the same setting), suggesting that **the functionality–IF tradeoff is a model capability that can be improved**, not an immutable constraint of the task.
+
+**Comparison to prior work:** Prior IF benchmarks typically evaluate whether a constraint is satisfied *without measuring the cost to other objectives*. General IF work (Pyatkin et al., 2025; Jiang et al., 2024) treats constraint satisfaction as the sole metric—a model either follows the instruction or it doesn't, and the benchmark reports success rates. This implicitly assumes that instruction following is an independent capability. The paper demonstrates it is not: following non-functional instructions can actively harm functional correctness, and the magnitude of this harm varies across models and interaction protocols. Prior code evaluation work that measured non-functional qualities (Singhal et al., 2024; Yan et al., 2025) did not systematically analyze this tradeoff because they did not simultaneously measure functional correctness and instruction following on the same tasks. The paper's augmentation approach—layering verifiable instructions onto benchmarks with existing unit tests—is what makes this joint measurement possible.
+
+**Is this incremental or fundamental?** This is a **novel empirical discovery** that changes how the field should think about multi-objective code generation. The existence of the tradeoff means that optimizing solely for instruction following (as some post-training pipelines might do with IF-specific reward signals) could degrade functional correctness, and vice versa. It means that benchmark designers must measure both dimensions and report them together, not independently. And it means that model developers face a genuine multi-objective optimization problem—there is no single knob that improves both functionality and IF simultaneously across all conditions.
+
+---
+
+### Innovation 3: Instruction Position Bias in Code Generation as a Distinct Failure Mode
+
+The paper identifies a specific behavioral pattern—**position bias in instruction following**—that was previously documented for long-context language understanding (Liu et al., 2024's "lost in the middle") but had not been shown for structured instruction following in code generation. The finding is striking because the prompts in Vibe Checker are only a few hundred tokens long—well within the context window where position effects are not expected to dominate.
+
+The evidence (Figure 4, with detailed per-position breakdowns in Tables 11–12) shows a clear **U-shaped pattern** on BigVibeBench: instructions in the middle of the list (positions 2–3 in single-turn, positions 2–4 in multi-turn) are followed less reliably than instructions at the beginning or end. This replicates the "lost in the middle" phenomenon in a new domain and at much shorter context lengths than typically studied. But the paper also documents a **protocol-dependent asymmetry** in the bias: single-turn generation shows a **primacy bias** (best performance on position 1, the first instruction), while multi-turn editing shows a **recency bias** (best performance on position 5, the last instruction added in the final turn).
+
+This asymmetry is not a mere curiosity—it has direct practical implications. In real-world usage, the order in which a user specifies requirements can systematically affect which requirements the model satisfies. A user who gives the most important instruction first (in single-turn) or last (in multi-turn) will get better adherence to that instruction than one who buries it in the middle. The paper does not prescribe mitigation strategies, but the finding implicitly suggests that **instruction reordering** could be a simple, cost-free intervention to improve overall instruction following—or that models should be trained with randomized instruction orders to reduce positional sensitivity.
+
+**Comparison to prior work:** Liu et al. (2024) documented position effects in long-context retrieval and reasoning, where relevant information in the middle of a long document is less likely to be used. The paper extends this finding in two novel ways: (1) it shows the effect at much shorter context lengths (hundreds, not thousands, of tokens), suggesting the mechanism is not purely about attention decay over long sequences but about how models allocate representational capacity across a structured list; and (2) it reveals that the direction of the bias (primacy vs. recency) depends on the interaction protocol, which prior position-bias work had not examined because it primarily studied single-turn document understanding, not multi-turn interactive editing. General IF benchmarks have not analyzed position effects because their constraint sets are typically simpler (fewer constraints, less structured presentation).
+
+**Is this incremental or fundamental?** This is a **diagnostic finding**—it identifies a specific, measurable failure mode that matters for deployment. It is not a fundamental reconceptualization of code evaluation, but it is the kind of detailed behavioral characterization that converts "models are imperfect at instruction following" into "here is specifically how they fail, and here is what you can do about it." For practitioners deploying models in multi-instruction coding scenarios, knowing that instruction position matters (and how it matters) is directly actionable.
+
+---
+
+### Innovation 4: Task-Dependent Re-weighting of Functional vs. Non-Functional Quality
+
+The paper's correlation analysis against LMArena reveals a finding more nuanced than "instruction following matters." The **optimal mixing weight between IF and functionality depends on the type of programming task**. On real-world programming tasks (BigVibeBench), instruction following carries more weight in explaining human preference—the Spearman correlation optimum puts 70% weight on IF. On algorithmic contest problems (LiveVibeBench), the balance shifts toward functionality—the optimal Spearman weight on IF drops to 60%, and pure functionality outperforms pure IF when considered alone (Section 4.5).
+
+This task-dependence is not a limitation of the finding; it is the finding. It demonstrates that **human preference is not a fixed weighting of code qualities**—it adapts to context. When users are solving algorithmic problems, they prioritize getting the right answer. When they are building real-world software (API integrations, data processing pipelines, file I/O tasks), they care more about whether the code is maintainable, documented, and stylistically consistent—because they will need to read, modify, and integrate that code into larger systems. The "vibe check" is sensitive to the task's purpose.
+
+This insight has direct implications for evaluation design. A single composite metric with fixed weights would be inappropriate across all benchmarks and use cases. Instead, evaluation should report the dimensions separately and allow users (or downstream systems) to apply context-appropriate weightings. It also has implications for training: models deployed in different contexts might benefit from different reward weightings during RLVR training. A model optimized for algorithmic contest assistance might weight functional correctness more heavily; a model optimized for production code generation might weight instruction following more heavily.
+
+**Comparison to prior work:** Prior code evaluation frameworks implicitly assume a single, universal notion of code quality. Pass@k benchmarks measure functionality; code quality benchmarks (Singhal et al., 2024) measure non-functional dimensions. But no prior work has asked: *does the relative importance of these dimensions depend on the task?* The paper's use of two distinct benchmarks (real-world vs. algorithmic) and its correlation against a single, task-agnostic preference signal (LMArena Elo) makes this comparison possible. The result is a more sophisticated picture of code quality than "pass@k plus style checks"—it is a picture where the evaluation criteria themselves should adapt to what the code is being written for.
+
+**Is this incremental or fundamental?** This is a **conceptual refinement** that deepens the paper's core argument. The primary claim—instruction following matters—would be valid even without task-dependent analysis. But showing that the importance of IF varies systematically with task type makes the argument more precise and more useful. It prevents the takeaway from being oversimplified to "just add IF to your benchmark" and instead points toward "understand the context in which you are evaluating, and weight accordingly."
+
+---
+
+### Innovation 5: The Augmentation Strategy as a Reusable Evaluation Methodology
+
+Beyond the specific VeriCode taxonomy and Vibe Checker testbed, the paper contributes a **generalizable methodology for augmenting existing code benchmarks with verifiable non-functional constraints**. This is a process-level innovation rather than a content-level innovation: the paper does not just provide a new benchmark; it provides a recipe for building such benchmarks that other researchers can apply to different languages, different constraint types, and different base benchmarks.
+
+The methodology has three reusable components:
+
+1. **Taxonomy construction by distilling existing standards:** Rather than inventing constraints from scratch, curate from production tools (linters, style checkers, type checkers) that already encode community standards. This ensures practice grounding and provides ready-made verifier implementations.
+
+2. **LLM-driven augmentation of existing benchmarks:** Rather than creating new problems, select relevant constraints for existing problems using an LLM-based relevance and non-conflict filter. This preserves the functional evaluation infrastructure (unit tests) while layering on non-functional measurement, and it ensures comparability with prior benchmark results.
+
+3. **Dual-protocol evaluation capturing interaction-mode effects:** Simultaneously test single-turn and multi-turn interaction patterns to reveal the functionality–IF tradeoff across different usage scenarios.
+
+This methodology addresses a structural problem in benchmark design: the tradeoff between coverage and maintainability. By augmenting rather than replacing, the approach piggybacks on the maintenance and validation efforts that existing benchmark maintainers already perform. When BigCodeBench updates its test suite or adds new problems, Vibe Checker inherits those improvements automatically (though the augmentation pipeline would need to be re-run for new problems). When new linter rules are added to Ruff, the VeriCode taxonomy can be extended through the same curation pipeline without rebuilding the entire evaluation framework.
+
+The extensibility of the instruction schema—where parameters turn 30 core instructions into hundreds of distinct constraints—further amplifies this methodology's reusability. A researcher studying a specific domain (e.g., scientific computing, web development) could take the VeriCode taxonomy, adjust parameter ranges to reflect domain-specific conventions, and produce a domain-tailored variant without modifying the verifier implementations or the augmentation pipeline.
+
+**Comparison to prior work:** Most code benchmarks are released as static artifacts: a fixed set of problems with fixed evaluation criteria. When new model capabilities emerge, the benchmarks must be manually extended or replaced (as HumanEval was extended to HumanEval+, as MBPP was extended to MBPP+). The paper's augmentation approach makes the benchmark partially self-extending: new constraints can be added to the taxonomy, and the LLM-based selector will incorporate them into augmented problems without manual per-problem annotation. This is not fully automated—the taxonomy itself requires curation, and the augmentation pipeline requires compute—but it dramatically reduces the human effort needed to keep non-functional evaluation current with evolving coding standards and model capabilities.
+
+**Is this incremental or fundamental?** This is a **methodological contribution** that is more about *how* to build evaluations than about any specific evaluation artifact. The paper's specific instantiation (30 instructions, Python, BigCodeBench + LiveCodeBench) is a proof of concept. The reusable methodology is what makes the contribution generalizable beyond this specific domain and timeframe. As coding conventions evolve, as new linter rules are developed, and as new programming languages become relevant to code LLM evaluation, the same pipeline can produce updated testbeds. This makes the contribution durable in a way that a static, one-time benchmark release would not be.
 
 ## 5. Experimental Analysis
-- Evaluation methodology
-  - Datasets/benchmarks: BigVibeBench and LiveVibeBench — augmented versions of BigCodeBench (real‑world programming) and LiveCodeBench (algorithmic/contest) (§3.1).
-  - Metrics: pass@1, `FR_k`, instruction‑level IF, and task‑level IF (§3.2).
-  - Setup: 31 LLMs, five instructions per task, both single‑turn and multi‑turn settings (§4.1).
 
-- Main quantitative results (selected highlights)
-  - Functional regression (Table 2; Figure 3a)
-    - Trend: Regression increases with the number of instructions and is worse in multi‑turn.
-    - Example (BigVibeBench, multi‑turn, 5 instr.): most models incur >5% regression; e.g., `o4 mini` +8.05%, `Kimi K2` +6.12% (Table 2).
-    - Example (LiveVibeBench, single‑turn, 5 instr.): strong regressions such as `o4 mini` +12.29% and `Kimi K2` +16.36% (Table 2).
-    - Aggregate: “average pass@1 drops by 5.85% and 6.61% under five instructions” on BigVibeBench and LiveVibeBench respectively (summary bullets in §4).
-    - Single‑turn vs multi‑turn: Single‑turn preserves functionality better; the gap grows with more constraints (Figure 3a).
+### Evaluation Methodology
 
-  - Instruction following (Table 3; Figure 3b)
-    - Task‑level IF (all constraints must pass) drops rapidly as constraints increase. With 5 instructions (single‑turn):
-      - BigVibeBench: best model reaches only 46.75% (`Claude 4 Opus`), and many strong models are in the 30–41% range (Table 3).
-      - LiveVibeBench: best among listed leaders is 40.95% (`GPT 5`), with several models below 30% (Table 3).
-      - Quote: > “Even the best performing model reaches only 46.75% and 40.95% success rate under five instructions” (Table 3, §4.3).
-    - Multi‑turn vs single‑turn: Multi‑turn improves task‑level IF by ~3–4.5% on BigVibeBench and ~8% on LiveVibeBench (Figure 3b), but at a functionality cost (Figure 3a).
+- **Dataset.** The paper constructs two augmented benchmarks: **BigVibeBench**, adapted from BigCodeBench (Zhuo et al., 2025), comprising 1,140 real-world programming tasks; and **LiveVibeBench**, adapted from LiveCodeBench v1–v6 (Jain et al., 2025), comprising 1,055 algorithmic programming contest problems spanning May 2023 to May 2025. Each instance in both benchmarks is augmented with exactly 5 instructions from the VeriCode taxonomy, yielding over 10,000 instruction-level evaluations across the testbed (Section 3.1).
 
-  - Position bias (§4.4; Figure 4)
-    - BigVibeBench shows a U‑shape across positions: mid‑list instructions are followed less reliably (lost‑in‑the‑middle). Single‑turn favors the first instruction (primacy bias), multi‑turn favors the last (recency bias).
-    - LiveVibeBench lacks a strong U‑shape but keeps the primacy/recency asymmetry.
+- **Base model(s).** The paper evaluates 31 LLMs spanning 10 distinct model families: Gemini (Gemini 2.5 Pro, Flash, 2.0 Flash, 2.0 Flash Lite), Claude (Opus 4, Sonnet 4, 3.7 Sonnet, 3.5 Sonnet, 3.5 Haiku, 3 Haiku), OpenAI (GPT-5, o4 mini, o3 mini high, GPT-4.1, GPT-4.1 mini, GPT-4o, GPT-4o mini), DeepSeek (R1 0528, V3 0324), Qwen (3 235B A22B, 3 32B, 3 30B A3B, 2.5 72B Instruct, 2.5 Coder), Grok (4, 3 mini beta), Gemma (3 27B, 3 12B), Mistral (Medium 3), MiniMax (M1), and Kimi (K2). All models are queried via the Vertex AI and OpenRouter APIs. The cohort was selected "to ensure a comprehensive analysis" (Section 4.1), covering frontier models and strong open-weight models across diverse training paradigms.
 
-  - Human preference correlation (§4.5; Figure 5)
-    - Composite score `α·IF + (1–α)·Func` correlates best with LMArena coding Elo.
-      - BigVibeBench: Pearson best at α=0.4; Spearman best at α=0.7.
-      - LiveVibeBench: Pearson best at α=0.4; Spearman best at α=0.6.
-      - Quote: > “The peak correlation … is achieved with a mixture of the two metrics” (Figure 5).
-    - Single‑metric comparison: For real‑world programming, pure IF correlates substantially better than pure functionality on rank correlation; for algorithmic tasks, functionality alone fares better than IF (Figure 5b discussion).
+- **Metrics.** The paper reports four primary metrics. **Functional regression rate (FR$_k$)** quantifies degradation in functional correctness when $k$ instructions are added: $\text{FR}_k = (S_0 - S_k) / S_0$, where $S_0$ is pass@1 on the original problem and $S_k$ is pass@1 with $k$ instructions. Negative values indicate the model improved under added constraints. **Instruction-level IF** computes the average fraction of instructions satisfied per task: $\text{IF}_\text{instruction} = \frac{1}{k} \sum_{j=1}^k I_j$, where $I_j \in \{0,1\}$ is the binary verifier output. **Task-level IF** is the all-or-nothing rate: the fraction of tasks where ALL $k$ instructions are simultaneously satisfied, computed as $\mathbb{1}[\sum_{j=1}^k I_j = k]$. **Composite human-preference score** blends IF and functionality as $\alpha \cdot \text{IF} + (1-\alpha) \cdot \text{Func}$, with $\alpha$ swept from 0 to 1 to find the mixing ratio that maximizes correlation with LMArena Elo ratings (Section 4.5).
 
-- Supporting analyses and implementation detail
-  - Instruction‑level IF scores for all models/settings (Appendix Tables 7–10); per‑position IF (Appendix Tables 11–12).
-  - System/evaluation prompts used (Appendix Figures 13–14).
-  - Verifier implementation detail: Ruff helper (Appendix Figure 6) and representative instructions with code (Figures 7–11).
+- **Baselines.** The paper uses each model's performance on the original, un-augmented benchmarks ("Base" pass@1 in Tables 2, 5, 6) as the primary baseline for computing functional regression. For instruction following, performance is reported at each instruction count (1 through 5) in both settings, making the lower-instruction-count conditions serve as progressive baselines. For the correlation analysis against human preference, pure functionality ($\alpha = 0$) and pure instruction following ($\alpha = 1$) serve as the extremes against which the optimal composite is compared.
 
-- Do the experiments support the claims?
-  - Yes, on three counts:
-    - Measurability: deterministic verifiers provide objective IF signals across >10K checks.
-    - Behavioral regularities: monotonic regression with more constraints; multi‑turn IF gains vs functionality losses; positional biases — all shown across many models and two benchmarks (Figure 3; Figure 4; Tables 2–3).
-    - Preference alignment: composite metric consistently outperforms either IF or functionality alone (Figure 5, Appendix E.2).
+- **Generation budget / compute accounting.** All models generate one code solution per task. There is no variable inference budget—the paper does not study scaling test-time compute but rather measures single-pass performance under varying constraint loads. The generation configuration sets temperature to 0.0 for BigVibeBench and 0.2 for LiveVibeBench (following the defaults of the underlying benchmarks), with thinking mode enabled on all models that support it. For Claude models with thinking mode enabled, the API requires temperature 1.0, so this is used as an exception. The context length is capped at 32,768 tokens (Section 4.1).
 
-- Failure modes/robustness
-  - Some models exhibit high error rates on LiveVibeBench (Appendix D.1), prompting exclusions.
-  - Certain instruction categories are more frequent than others (Figure 12), which may influence aggregate difficulty.
-  - The paper notes parameter validity checks and selector comparisons (Claude vs Gemini) to mitigate augmentation artifacts (§3.1).
+- **Cross-validation / statistical protocol.** The instruction selection and parameter assignment for benchmark augmentation use an LLM-based selector (Claude 4 Opus, chosen for its lower invalid-parameter rate of 0.96% versus 2.47% for Gemini 2.5 Pro) run at temperature 0.0 for determinism. The generated parameters undergo rule-based validation: any parameter keys not explicitly defined for an instruction are removed, and any invalid values are reverted to predefined defaults. On LiveVibeBench, models that fail to generate complete responses (due to OpenRouter provider errors or exceeding the token limit) are retried up to three times per task; models with an error rate exceeding 10% are excluded from LiveVibeBench analysis, reducing the cohort from 31 to 24 models for that benchmark (Appendix D.1). The correlation analysis against LMArena uses both Pearson and Spearman correlations, and is reported with and without LMArena's style control feature (Appendix E.2, Figure 15) to verify robustness.
 
-- Conditions and trade‑offs
-  - As the number of constraints rises, task‑level IF decays multiplicatively (satisfy-all requirement), leading to steep drops (Table 3, §4.3).
-  - Single‑turn prioritizes global correctness; multi‑turn enables targeted edits but risks regressions (§4.3).
+### Main Quantitative Results
+
+#### Functional Regression Under Non-Functional Instructions
+
+The central empirical finding is that **adding non-functional instructions causes measurable, systematic degradation in functional correctness across all evaluated models**. Table 2 reports this for a representative subset of top-performing models, with full results for all 31 LLMs in Appendix D Tables 5 and 6.
+
+**Aggregate regression magnitudes.** Under single-turn generation with five instructions, the average functional regression rate across all models reaches 5.85% on BigVibeBench and 6.61% on LiveVibeBench. Under multi-turn editing, the regressions are larger: 9.31% on BigVibeBench and 9.02% (roughly, based on the pattern across top models) on LiveVibeBench (Section 4.2, Figure 3a). These are average effects—individual model-instruction combinations show substantially larger regressions. For instance, o4 mini exhibits 9.56% regression on BigVibeBench single-turn with five instructions (Table 2), and Kimi K2 shows 16.36% on LiveVibeBench single-turn (Table 6).
+
+**Regression scales with instruction count.** As shown in Figure 3a, functional regression increases monotonically with the number of instructions across both benchmarks and both interaction protocols. On BigVibeBench single-turn, the average regression climbs from 2.48% with one instruction to 5.76% with five; in multi-turn, the corresponding rise is from 3.18% to 9.31%. The near-linear scaling suggests that each additional instruction imposes an independent, additive cost on functional correctness—the model does not adapt to the multi-constraint setting in a way that amortizes the cost.
+
+**Model-specific exemption.** A striking exception to the regression pattern is Claude 4 Opus on BigVibeBench single-turn, which shows **negative regression** across multiple instruction counts (Table 2): -0.86% at one instruction, -2.23% at two, -4.31% at three, -1.72% at four, and -2.08% at five. Negative regression means the model produces *more* functionally correct code when non-functional instructions are added than on the original unconstrained task. This is not observed for any other model at this magnitude, and the paper does not provide a mechanistic explanation. The most plausible interpretation is that for Claude 4 Opus, the added structural constraints (e.g., shorter lines, fewer branches, docstrings) actually guide the model toward cleaner implementations that are less error-prone—the non-functional requirements function as implicit code quality scaffolding.
+
+**Interaction-mode asymmetry.** Single-turn generation consistently preserves functionality better than multi-turn editing (Figure 3a), with the gap widening as instruction count increases. On BigVibeBench at five instructions, the single-turn advantage is approximately 3.5 percentage points in regression rate (5.76% vs. 9.31%). On LiveVibeBench, the gap is smaller at low instruction counts but also widens with more instructions. This asymmetry is intuitively explained by the editing dynamics: in multi-turn, each new instruction triggers localized code modifications that may inadvertently break previously working logic, a well-known challenge in iterative software development.
+
+#### Instruction Following Performance
+
+**Task-level IF collapses under multiple instructions.** Table 3 reports task-level IF scores for top models, with full results for all 31 LLMs in Appendix D Tables 8 and 10. The performance degradation with increasing instruction count is dramatic. On BigVibeBench single-turn with three instructions, most advanced models fall below 50% task-level success. At five instructions, the best-performing model is Claude 4 Opus at only 46.75% (single-turn) and 42.11% (multi-turn). On LiveVibeBench, the ceiling is even lower: GPT-5 achieves 40.95% in single-turn and 50.14% in multi-turn at five instructions. Several leading models fall into deep red territory (IF < 30) at five instructions on LiveVibeBench single-turn, including Gemini 2.5 Flash (17.06%), Claude 4 Sonnet (28.53%), o4 mini (27.20%), and Kimi K2 (11.94%).
+
+**Why such a steep drop?** The paper observes (Section 4.3) that even the best models fall below 90% on a single instruction (Claude 4 Opus achieves 88.77% on BigVibeBench single-turn with one instruction, Table 8). With per-instruction success around 0.85–0.90, five instructions produce an expected task-level success of approximately $0.85^5 \approx 0.44$ to $0.90^5 \approx 0.59$. The observed values (46.75% best case) fall within this multiplicative range, indicating that instruction successes are largely independent—models are not systematically better or worse at satisfying multiple instructions than would be predicted from single-instruction performance. This independence implies that satisfying one constraint does not meaningfully help (or hinder) satisfying another, which is consistent with the instructions being designed to cover distinct, non-conflicting dimensions.
+
+**Multi-turn editing advantage for IF.** In contrast to functionality, multi-turn editing **consistently outperforms single-turn generation** for instruction following (Figure 3b). On BigVibeBench, the multi-turn advantage in task-level IF is approximately 3–4.5 percentage points across instruction counts. On LiveVibeBench, the gap widens to roughly 8 percentage points. The paper attributes this to the iterative nature of multi-turn editing being better suited for targeted constraint satisfaction: when an instruction arrives in isolation, the model can focus its revision on that specific requirement without needing to simultaneously juggle all other constraints in a single planning pass. The cost, as shown above, is paid in functional regression—the model satisfies more instructions but breaks more previously correct logic in the process.
+
+**Model-specific breakdown.** GPT-5 achieves the highest task-level IF at five instructions on LiveVibeBench multi-turn (50.14%, Table 10), followed by Claude 4 Sonnet (44.64%) and Claude 4 Opus (43.70%). On BigVibeBench multi-turn, GPT-5 (48.51%) and Claude 4 Sonnet (42.89%) lead. Claude 4 Opus dominates BigVibeBench single-turn (46.75%). The ranking is not perfectly correlated with functional performance: GPT-5 is not the strongest model on baseline pass@1 (Gemini 2.5 Pro and o4 mini outperform it on LiveVibeBench), yet it leads task-level IF, suggesting that instruction following is a partially independent capability dimension.
+
+#### Instruction Position Bias
+
+**"Lost in the middle" at short context lengths.** Figure 4 (with per-model breakdowns in Appendix E.1 Tables 11 and 12) reveals a clear **U-shaped pattern** in instruction-level IF as a function of instruction position on BigVibeBench. Instructions in the middle positions (2–4) are less reliably followed than those at the periphery (1 and 5). This pattern is notable because the prompts are only a few hundred tokens long—far shorter than the long-context regimes where Liu et al. (2024) originally documented "lost in the middle" effects.
+
+**Protocol-dependent asymmetry.** The shape of the position bias differs by interaction protocol (Figure 4, Tables 11–12):
+
+- **Single-turn generation** shows a **primacy bias**: position 1 (first instruction in the numbered list) has the highest instruction-level IF. For example, Claude 4 Opus achieves 87.46% at position 1 vs. 83.95% at position 4 in single-turn BigVibeBench (Table 11). The position-5 instruction shows a modest recovery, creating a shallow U-shape with an overall downward trend.
+
+- **Multi-turn editing** shows a **recency bias**: position 5 (the final instruction, introduced in the last editing turn) achieves the highest IF. For Claude 4 Opus multi-turn, IF climbs from 84.56% at position 1 to 85.70% at position 5 (Table 11). The U-shape is more symmetric, with position 1 performing well (context is fresh) and position 5 performing best (most recent edit).
+
+**Quantitative magnitude.** On BigVibeBench, the single-turn primacy effect is substantial: averaged across models, the gap between position 1 (best) and position 3 (worst) is approximately 2–3 percentage points in instruction-level IF (Table 11). The multi-turn recency effect shows a similar magnitude but in the opposite direction. On LiveVibeBench, while the distinct U-shape does not generalize, the underlying positional preferences remain: single-turn generation favors the first instruction, multi-turn editing consistently performs best on the last (Table 12).
+
+**Practical implication.** The positional sensitivity means the order in which requirements are specified can systematically affect which ones the model satisfies. A user who places the most critical constraint first (in single-turn) or last (in multi-turn) will obtain better adherence to that constraint than one who lists it in the middle. This is an actionable deployment consideration that does not require model retraining—instruction reordering is a zero-cost intervention.
+
+#### Correlation with Human Preference
+
+**Composite IF+Func predicts preference better than either alone.** The correlation analysis against LMArena coding Elo ratings (Figure 5, with robustness checks in Appendix E.2 Figure 15) provides the paper's most direct evidence that instruction following captures a dimension of code quality that humans care about. Across both benchmarks, both correlation types (Pearson, Spearman), and both style-control settings (with and without), the **peak correlation between Vibe Checker performance and human Elo occurs at intermediate mixing weights** $\alpha$, not at the extremes of pure functionality or pure IF.
+
+**Optimal mixing weights:**
+
+- **BigVibeBench (real-world programming):** For Pearson correlation (with style control), the optimum is $\alpha = 0.4$—40% weight on instruction following, 60% on functionality. For Spearman correlation, the optimum shifts to $\alpha = 0.7$—70% weight on IF, 30% on functionality. The Spearman result is particularly important because Elo ratings are inherently ordinal (rank-based), and Spearman captures rank-order alignment more naturally than Pearson.
+
+- **LiveVibeBench (algorithmic programming):** For Pearson, the optimum is $\alpha = 0.4$. For Spearman, $\alpha = 0.6$. The downward shift from 0.7 to 0.6 in Spearman $\alpha$ indicates that functional correctness carries relatively more weight in distinguishing models on algorithmic tasks—consistent with the expectation that contest-style problems prioritize getting the right answer.
+
+**Pure IF vs. pure Func comparisons.** On BigVibeBench Spearman (Figure 5a, right panel), pure IF ($\alpha = 1$) correlates over **0.1 points higher** with human Elo than pure functionality ($\alpha = 0$)—a substantial difference given that these are correlation coefficients computed across 30+ models. On LiveVibeBench (Figure 5b, right panel), the relationship reverses: pure Func holds a clear advantage over pure IF. This task-dependent reversal is central to the paper's argument: it demonstrates that **neither dimension alone is sufficient** to explain human preference across coding scenarios, and that the right composite depends on what kind of code is being written.
+
+**Robustness to style control.** Appendix E.2 (Figure 15) replicates the correlation analysis under four conditions: with and without LMArena's style control feature (Li et al., 2024), across both benchmarks. The conclusions remain consistent—all four panels show optimal correlation at intermediate $\alpha$, with similar peak locations. Style control in LMArena attempts to factor out surface-level stylistic preferences (response length, formatting) to isolate substantive quality. If instruction following were purely about surface formatting, its contribution to the correlation should diminish when style control is applied. The fact that it remains a significant signal under style control suggests that IF captures something deeper than formatting—it captures adherence to constraints that users associate with code quality regardless of whether those constraints affect surface appearance.
+
+**Correlation magnitude.** The absolute Pearson correlations at the optimum are moderate: approximately 0.72 for BigVibeBench with style control (Figure 5a, left). This means the composite score explains roughly half the variance in LMArena Elo ratings ($R^2 \approx 0.52$). The remaining unexplained variance reflects factors the composite does not capture—code efficiency, algorithmic elegance, response latency, model-specific user biases, and the inherently noisy nature of pairwise preference data. This is not a weakness; it is an honest representation of the gap between what can be mechanically measured and the full richness of human preference.
+
+### Ablation Studies and Robustness Checks
+
+**Instruction category distributions across benchmarks (Appendix C.1, Figure 12).** The augmentation pipeline produces different category distributions for the two benchmarks that reflect their distinct task types. LiveVibeBench (algorithmic) has a higher proportion of Coding Logic instructions (42.3% vs. 35.9% in BigVibeBench) and a dramatically lower proportion of Error Management (0.9% vs. 6.3%) and Library Constraint instructions (0.1% vs. 2.2%). This validates that the LLM-based selector is making context-sensitive choices rather than applying a uniform distribution—contest problems genuinely have fewer opportunities for error handling and library usage constraints than real-world API and data processing tasks.
+
+**Selector model robustness (Section 3.1).** The paper tests both Gemini 2.5 Pro and Claude 4 Opus as the LLM-based selector for instruction assignment. Both produce "similar instruction-category distributions," indicating the augmentation pipeline is robust to the specific model used for selection. The final benchmark uses Claude 4 Opus based on its lower invalid-parameter rate (0.96% vs. 2.47%), a practical choice that minimizes evaluation noise from malformed parameter assignments.
+
+**Parameter validation efficacy (Section 3.1).** The rule-based validation step catches and corrects invalid parameters before they enter the benchmark. The paper reports invalid-parameter rates of under 1% for Claude 4 Opus (0.96%), meaning fewer than 1 in 100 parameter assignments require correction. Without this validation step, evaluation failures from malformed parameters (e.g., verifier expecting an integer but receiving a string) would contaminate results.
+
+**Thinking mode consistency (Section 4.1).** All models that support thinking mode have it enabled. For Claude models, this forces temperature to 1.0 (an API constraint), while all other models use benchmark-specific defaults (0.0 for BigVibeBench, 0.2 for LiveVibeBench). Claude models are therefore evaluated at higher temperature than other models in the single-turn setting, which could disadvantage them on functional correctness (higher temperature generally reduces pass@1 for deterministic tasks) but potentially benefit instruction following by allowing more flexible generation. The paper acknowledges this inconsistency but treats it as unavoidable given API constraints.
+
+**Error rate filtering for LiveVibeBench (Appendix D.1).** On LiveVibeBench, some models exhibit high rates of failing to generate complete responses—due to OpenRouter provider errors or exceeding the 32,768-token context limit. Models with error rates exceeding 10% are excluded from LiveVibeBench analysis. The paper does not list which specific models were excluded or report their error rates, which limits reproducibility for the exact LiveVibeBench cohort. The 10% threshold is a pragmatic choice to balance inclusion (keeping as many models as possible) with data quality (not reporting statistics on models where most runs failed).
+
+**Style control ablation in correlation analysis (Appendix E.2, Figure 15).** The correlation between composite scores and LMArena Elo is computed under four configurations: with and without style control, on both benchmarks. The peak $\alpha$ varies slightly across configurations (e.g., Spearman BigVibeBench: $\alpha = 0.7$ with style control, $\alpha = 0.6$ without), but the qualitative conclusion—that a mixture outperforms either extreme—holds in all four cases. This robustness check addresses the concern that IF might be confounded with superficial style preferences that LMArena's style control already factors out. The persistence of IF as a predictive signal under style control indicates it captures substantive constraint adherence beyond mere formatting.
+
+**Instruction position breakdowns by model (Appendix E.1, Tables 11–12).** The per-position, per-model IF scores confirm that the U-shaped pattern (BigVibeBench) and the protocol-dependent asymmetry (primacy in single-turn, recency in multi-turn) are not artifacts of averaging across heterogeneous models—they are consistent patterns visible across essentially all evaluated LLMs. The tables also reveal model-specific sensitivity magnitudes: some models (e.g., Claude 4 Opus) show relatively flat position curves, while others (e.g., GPT-4o mini, Qwen 2.5 Coder) show steeper U-shapes. This suggests position bias is a model capability that varies in severity and could potentially be improved through training interventions.
+
+**Multi-turn revision chain quality.** The paper does not explicitly ablate the number of revision turns or study whether models preserve previously satisfied instructions across turns (a form of "instruction retention" analogous to the functional regression metric). This is a notable absence: the task-level IF score is computed only on the final revision, so if a model satisfies instruction 3 at turn 3 but then breaks it at turn 5, the evaluation records a failure for instruction 3. The paper's design choice to evaluate only the final output is realistic (that is what a user would accept or reject) but obscures the dynamics of constraint retention versus loss across turns. An ablation tracking per-turn IF per instruction would reveal whether the multi-turn IF advantage comes from better initial constraint satisfaction or better constraint retention across edits.
+
+### Critical Assessment
+
+#### Does the evidence support the claim that "adding non-functional instructions causes functional regression"?
+
+**Supported, with an important qualification about direction.** The regression rates in Tables 2, 5, and 6 provide consistent evidence that aggregate pass@1 drops when instructions are added. However, the paper's claim that this represents a **causal effect of instructions on functionality** is harder to establish than it appears. The experimental design compares pass@1 on the original problem (without instructions) to pass@1 on the augmented problem (with instructions), but these are **different prompts presented to the model**. The model may generate different code for the augmented prompt for reasons unrelated to the instructions per se—the prompt is longer, structured differently, and includes explicit requirement language that could shift the model's generation distribution independently of the constraint content. The observed regression could partly reflect general prompt sensitivity rather than specific difficulty satisfying non-functional constraints while preserving correctness.
+
+The ideal ablation to isolate the causal effect—testing with "placebo" instructions that add prompt length and structure without imposing real constraints—is not performed. Without this, the regression rates should be interpreted as the joint effect of (a) genuine functionality–IF tradeoff and (b) prompt format effects. Claude 4 Opus's negative regression on BigVibeBench (Table 2) is suggestive: for at least one model, the augmented prompt format actually improves functionality, indicating that the "prompt effect" can be positive. This complicates a simple causal interpretation but does not undermine the practical finding that, on average, models produce less correct code when asked to also follow non-functional conventions.
+
+#### Does the evidence support the claim that "following multiple instructions remains challenging for LLMs"?
+
+**Strongly supported.** The task-level IF scores in Tables 3, 8, and 10 paint an unambiguous picture: even the best models fail to satisfy five simultaneous instructions more than half the time. The exponential decay pattern is internally consistent with per-instruction pass rates—the best models achieve ~85–90% on a single instruction, and $0.85^5 \approx 0.44$ to $0.90^5 \approx 0.59$, which brackets the observed best-case task-level scores of 46.75% (BigVibeBench) and 40.95% (LiveVibeBench). The exponential decay is not an assumption; it is what the data shows when you compute per-instruction rates and compare task-level predictions. The near-perfect alignment between predicted ($p^k$) and observed task-level scores across instruction counts (Tables 7–10) is itself strong evidence that instruction failures are approximately independent—models do not exhibit systematic "gets better with more instructions" or "gets worse with more instructions" effects beyond the multiplicative baseline.
+
+A potential weakness: the paper evaluates only $k \in \{1,2,3,4,5\}$. Extending to higher instruction counts (e.g., 8 or 10) would test whether the exponential decay continues or whether performance asymptotes at some non-zero floor. If models consistently satisfy a core subset of "easy" instructions regardless of total count, the decay might be sub-exponential at higher $k$. This is not tested.
+
+#### Does the evidence support the claim that "human preference reflects a mixture of functional correctness and instruction following"?
+
+**Supported, with important nuance about what the correlation demonstrates.** The correlation analysis in Figure 5 and Appendix Figure 15 shows that a linear composite of IF and Func correlates better with LMArena Elo than either alone, and that the optimal mixing weight places non-trivial emphasis on IF (40–70% depending on benchmark and correlation type). This is valid evidence that IF captures **variance in human preference that functionality does not**.
+
+However, correlation with LMArena Elo is not the same as demonstrating that IF **causes** human preference. LMArena Elo aggregates pairwise votes across diverse coding tasks and user populations; it is an observed preference signal, not a controlled experiment. Models that score highly on IF may also have other correlated unmeasured qualities (e.g., better overall code generation training data, more extensive post-training) that drive both IF performance and human preference. The paper cannot rule out that IF is a **proxy** for some deeper quality dimension rather than a direct contributor to preference. That said, for the practical purpose of building better benchmarks and training signals, the proxy-versus-cause distinction may not matter: if IF is reliably correlated with what users prefer, measuring and optimizing for it will improve user satisfaction regardless of the causal mechanism.
+
+A more substantial concern is the **single-data-point nature of the LMArena correlation**. The correlation is computed across models (each model is one data point with an Elo rating and a composite score), giving at most 30–31 data points depending on model availability on the leaderboard. With ~30 data points, a single outlier model can meaningfully shift the correlation. The paper does not report confidence intervals on the correlation coefficients or on the optimal $\alpha$, making it difficult to assess whether the peak at $\alpha = 0.4$ is statistically distinguishable from $\alpha = 0.3$ or $\alpha = 0.5$. The consistency of the finding across two benchmarks, two correlation types, and two style-control settings provides informal robustness, but formal statistical testing would strengthen the claim.
+
+#### Does the evidence support the claim that "IF is the primary differentiator among advanced models on real-world programming tasks"?
+
+**Qualified support, depending on interpretation.** On BigVibeBench Spearman correlation (Figure 5a, right panel), the Spearman correlation at $\alpha = 1$ (pure IF) is ~0.70, while at $\alpha = 0$ (pure Func) it is ~0.57—a gap of roughly 0.13. This is the basis for the "primary differentiator" claim. The Spearman correlation is rank-based, so this gap means that IF rankings among models align more closely with LMArena rankings than functional correctness rankings do—IF better predicts which model humans will prefer over which other model.
+
+But the claim requires careful framing. It does not mean IF is "more important" in an absolute sense for any individual code generation task—the optimal composite still includes substantial functionality weight (30–40% in Spearman space). It means that **among the set of models evaluated, differences in IF are more predictive of preference differences than differences in functionality**. This is partly a statement about the model cohort: if all evaluated models had nearly identical functional pass@1 but varied widely in IF, then IF would be the differentiator by construction. In the paper's cohort, functional pass@1 does vary substantially (from the 30s to the 80s on LiveVibeBench), so there is meaningful functional variance to compete with IF variance. The fact that IF still emerges as the stronger Spearman predictor on real-world tasks despite this functional variance is genuinely informative—it suggests that users are sensitive to non-functional qualities even when functional differences exist.
+
+#### Unaddressed weaknesses in the experimental design
+
+**Single-pass evaluation per task.** Each model generates exactly one code solution per augmented problem. This means the reported pass@1 scores (both functional and IF) are noisy estimates of the model's true capability, especially given that most models use non-zero temperature on at least one benchmark. With temperature 0.2 (LiveVibeBench), repeated generations would produce different outputs, and the paper does not estimate variance. For the functional regression metric, this is mitigated by using the same generation protocol for both $S_0$ and $S_k$, so the regression rate is computed from two equally noisy estimates—but the noise still affects individual model rankings. A pass@k metric with $k > 1$ would provide more stable estimates, at the cost of higher inference compute.
+
+**No explicit mitigation for code extraction failures.** The paper does not describe how it handles cases where the model output does not contain extractable code (e.g., the model produces natural language without a code block, or the code block is malformed). The "error rate" filtering on LiveVibeBench removes models that fail to generate complete responses more than 10% of the time, but within the retained models, individual extraction failures are presumably counted as functional failures (the code doesn't pass tests because it doesn't exist) and instruction failures (no code to verify). This is reasonable but unstated. If extraction failure rates differ across models and instruction counts (e.g., more instructions increase the probability of malformed outputs), this could inflate apparent functional regression beyond what is caused by the functionality–IF tradeoff per se.
+
+**Conflation of "instruction following" with "linter compliance."** The VeriCode verifiers check only whether the generated code passes a specific linter rule. But passing a linter rule is not identical to following the user's instruction as a human would interpret it. For example, the instruction "ensure all lines are no longer than 88 characters" paired with the E501 verifier may pass even if the model simply deleted problematic lines rather than reformatting them, which would violate the user's intent (preserve functionality while reformatting). The verifiers cannot detect whether the model followed the instruction in the intended spirit or found a degenerate compliance strategy. In practice, the observed functional regressions suggest models are not resorting to degenerate compliance (deleting code would break functionality), but the distinction between mechanical compliance and intent-aligned compliance is not measured.
+
+**Missing ablation: variable instruction count per problem.** Every problem receives exactly 5 instructions, regardless of problem complexity. This is a design simplification that enables clean cross-problem comparisons, but it raises the question of whether the difficulty of satisfying 5 instructions depends on the specific problem. A natural ablation would vary $k$ per problem based on an estimated problem complexity metric and test whether the relationship between $k$ and task-level IF changes. The paper's monotonic regression scaling (Figure 3a) and exponential IF decay (Figure 3b) are computed across problems, not within them, so the per-problem relationship between instruction count and performance is not assessed.
+
+**Missing correlation with fine-grained preference signals.** LMArena Elo aggregates pairwise preferences into a single scalar per model. This discards information about *which* tasks drive preference differences. A more granular analysis could correlate IF with preference on specific task categories (e.g., tasks where IF violations are more or less visible to users) or with preference margins (how strongly users prefer one completion over another). This would provide richer evidence about *when* and *why* IF matters, beyond the aggregate "IF matters" finding.
+
+**Generalizability beyond Python.** All 30 instructions are Python-specific, verified with Python linters and AST analysis. The paper claims the framework is language-agnostic, but no non-Python evaluation is performed. The generalizability of the core findings—functional regression under non-functional constraints, exponential IF decay, the primacy/recency position bias—to other programming languages (JavaScript, TypeScript, Rust, Go) is an open question. Different languages have different linter ecosystems, different community conventions, and different typical usage patterns with LLMs, all of which could affect the functionality–IF tradeoff.
+
+**Scale of instruction set.** Thirty instructions across five categories is a substantial curation effort, but it represents a small fraction of the non-functional expectations that real-world code review encompasses. The paper does not analyze whether the 30 instructions are a **representative sample** of broader code quality concerns or whether they capture particular dimensions disproportionately. The category distribution after augmentation (Figure 12) shows heavy representation of Coding Logic, Coding Style, and Documentation with thin coverage of Error Management and Library Constraints—this may reflect genuine differences in how often these dimensions are relevant, or it may reflect taxonomy imbalance. A coverage analysis against a comprehensive code review taxonomy (if one exists) would strengthen the claim that VeriCode captures what users screen for.
 
 ## 6. Limitations and Trade-offs
-- Assumptions and scope
-  - Language focus: current VeriCode and verifiers target Python, “the dominant language in code evaluation” (§2.3). Although the framework is language‑agnostic in principle, results may not immediately transfer to other ecosystems without equivalent lint/AST infrastructure.
-  - Instruction source: heavy reliance on Ruff rules; this favors checks that static analysis can capture. Deep semantic or project‑specific conventions may require custom verifiers and could be underrepresented.
 
-- Potential gaps
-  - Verifier coverage: some non‑functional preferences (e.g., “minimal edits,” intent preservation across refactors) are difficult to verify deterministically and may be only partially captured (Introduction; §3.2 uses binary pass/fail per instruction).
-  - Benchmark context: tasks are single‑file or function‑level; repository‑level constraints, cross‑file style consistency, and CI‑like pipelines are out of scope.
-  - Selection bias: an LLM chooses “relevant and non‑conflicting” instructions (§3.1). While validated, selector biases might shape the distribution and difficulty of constraints (Appendix Figure 12).
+### 6.1 Scaling of the Instruction Taxonomy: Limited Coverage of Code Quality Dimensions
 
-- Computational/engineering trade‑offs
-  - Multi‑turn editing incurs more tokens and turns, raising latency/cost and increasing regression risk (Figure 3a).
-  - Strict task‑level IF (all‑pass) yields interpretable scores but can mask partial adherence improvements.
+**The assumption or constraint.** The VeriCode taxonomy captures 30 instructions across five categories. This is a substantial curation effort, but it is explicitly bounded by what can be mechanically verified using existing linter rules, AST analysis, and regex checks. The paper acknowledges this indirectly by defining verifiability as a core design principle (Section 2.1): every instruction must be paired with a deterministic, binary verifier. This constraint limits the taxonomy to the subset of code quality concerns that have been operationalized as mechanical checks.
 
-- Open questions
-  - How to design verifiers for performance, memory use, or security properties that require dynamic analysis?
-  - How to reward “minimal diff” edits or preservation of prior intent across long interaction histories?
+**The consequence.** Many dimensions of code quality that influence human preference cannot be captured by VeriCode. For instance, there is no instruction for algorithmic efficiency (the code should use an O(n log n) sort rather than O(n²)), architectural soundness (the code should separate concerns appropriately), security (the code should not have injection vulnerabilities beyond specific exception-handling patterns), or logical clarity (the variable names should be semantically meaningful). These are all qualities that experienced developers screen for during code review—they are part of the vibe check—but they do not have deterministic, linter-backed verifiers. A model could achieve perfect instruction following on VeriCode while producing code that is algorithmically poor, architecturally unsound, or semantically obscure, yet it would receive a perfect non-functional score.
+
+This means that the paper's key claim—that instruction following is the missing, measurable component of human preference—captures only **the measurable subset** of that component. The correlation with LMArena Elo is moderate (Pearson ~0.72 at the optimum, Figure 5a), leaving roughly half the variance unexplained. Some of that unexplained variance is noise intrinsic to pairwise preference data, but some is almost certainly driven by the code quality dimensions that VeriCode does not measure. The taxonomy's 30 instructions are a lower bound on what matters for the vibe check, not an exhaustive enumeration.
+
+**What evidence exists in the paper.** The paper does not analyze coverage completeness—it does not map the 30 instructions against a comprehensive taxonomy of code review criteria to estimate what fraction of real-world review concerns is captured. The category distribution after augmentation (Figure 12) shows that Error Management and Library Constraints together account for less than 9% of selected instructions on BigVibeBench and less than 2% on LiveVibeBench. This thin coverage in these categories could reflect genuinely lower relevance of these dimensions to the benchmark tasks, or it could reflect the taxonomy's limited representation of these categories (only 4 error-handling instructions and 2 library-constraint instructions out of 30). The paper does not provide a principled argument that the category proportions in the taxonomy match the frequency with which these concerns arise in practice.
+
+**Mitigation status.** Not addressed. The paper's explicit goal (Section 1) is to "quantify models' code instruction following capabilities with measurable signals," which necessarily restricts the scope to what can be mechanically verified. The paper does not claim VeriCode is complete—it positions the taxonomy as a scalable starting point that captures a significant fraction of what users screen for. However, it also does not provide any estimates of that fraction, leaving practitioners uncertain about what the IF metric actually misses. Future work (not specified in the paper) could extend the taxonomy with additional verifiable instructions as new linter rules and static analysis tools become available, and could conduct coverage analyses against code review taxonomies to quantify the gap.
+
+---
+
+### 6.2 Difficulty Estimation Cost Is Unaccounted for in the Headline Findings
+
+**The assumption or constraint.** The VeriCode taxonomy construction process includes a difficulty filtering step (Section 2.2) that measures instruction following and functional regression on BigCodeBench-Hard using Gemini 2.5 Flash, removing instructions with greater than 90% success rate and no functional degradation. This filter requires running model inference across a large set of candidate instructions. The benchmark augmentation pipeline (Section 3.1) requires an LLM-based selector to scan the 30-instruction taxonomy for each of the 2,195 benchmark problems, assigning relevance judgments and parameter values. This is not a one-time cost—it must be repeated if the taxonomy is updated, if the base benchmarks are expanded, or if the augmentation is applied to a new benchmark.
+
+**The consequence.** The headline results—the functional regression rates in Table 2, the IF scores in Table 3, the composite correlation with LMArena in Figure 5—are reported without any accounting of the computational cost to produce the augmented benchmarks on which these results are measured. If an organization wants to deploy Vibe Checker for internal model evaluation, they must either (a) use the pre-computed augmented benchmarks released by the authors (which are static and may not reflect their specific use case) or (b) run the augmentation pipeline themselves, incurring LLM inference costs proportional to the number of problems × instruction selection + parameter assignment. For the 2,195 problems in the paper's testbed, this involves at least 2,195 calls to a frontier LLM (Claude 4 Opus) for instruction selection, plus additional calls for parameter assignment and validation.
+
+More importantly, if the framework is extended to new benchmarks, new programming languages, or updated taxonomy versions, these costs recur. The paper frames augmentation as a reusable methodology (Section 3.1), but does not report the computational budget required to instantiate it. For a small research lab without access to frontier LLM APIs at scale, this could be a non-trivial barrier to adoption.
+
+**What evidence exists in the paper.** The paper reports that the augmentation used Claude 4 Opus as the selector, chosen for its lower invalid-parameter rate (0.96% vs. 2.47% for Gemini 2.5 Pro, Section 3.1), but does not report the total number of API calls, the total token consumption, or the estimated cost of running the full augmentation pipeline. The difficulty filtering step used Gemini 2.5 Flash on BigCodeBench-Hard (Section 2.2), but the paper does not specify how many candidate instructions were tested, how many API calls were made, or what the filtering stage cost. These omissions are not unique to this paper—most benchmark-construction papers do not report construction costs—but they are relevant here because the augmentation methodology is presented as a contribution that other researchers can adopt.
+
+**Mitigation status.** The authors state they "will publicly release the taxonomy together with the corresponding verifiers to support community use" (footnote 4, Section 2.3). If the release includes the pre-augmented BigVibeBench and LiveVibeBench testbeds (the specific augmented problem instances with their selected instructions and parameters), then practitioners can use Vibe Checker without incurring the augmentation cost. However, this only mitigates the cost for the specific benchmarks, languages, and taxonomy version in the release. Anyone wanting to apply the methodology to a new domain (JavaScript code, SQL queries, shell scripts) or with an updated taxonomy still faces the full augmentation cost. The paper does not provide cost estimates or suggest cheaper alternatives (e.g., using a smaller model for instruction selection, caching relevance judgments, or using rule-based selection).
+
+---
+
+### 6.3 Single Programming Language Limits Generalizability Claims
+
+**The assumption or constraint.** All 30 VeriCode instructions are Python-specific. The verifiers use Python linters (Ruff), Python AST analysis, and Python-targeted regex patterns (Section 2.2). The benchmarks that are augmented—BigCodeBench and LiveCodeBench—are Python benchmarks. All 31 evaluated models are tested on their Python code generation capability only. The paper claims that "the framework is language-agnostic and can be applied to other languages using standard linters" (Section 2.3), but provides no evidence for this claim.
+
+**The consequence.** The paper's three core empirical findings—functional regression under non-functional constraints, exponential decay in multi-instruction task-level success, and the predictive power of a composite IF+Func score for human preference—are validated only for Python. Several aspects of these findings could be language-dependent:
+
+- **Linter maturity and coverage:** Python's linter ecosystem (Ruff, pylint, flake8, mypy) is unusually mature and comprehensive compared to most other programming languages. Ruff alone aggregates over 800 rules. JavaScript has ESLint with similarly broad coverage, but languages like Rust (Clippy), Go (staticcheck), or Ruby (RuboCop) have smaller rule sets. The density of verifiable instructions achievable in other languages may be substantially lower, reducing the fidelity of IF measurement.
+
+- **Instruction relevance to human preference:** The finding that instruction following drives human preference on real-world tasks (Section 4.5) depends on the specific instructions correlating with what Python developers care about. In other language communities, different non-functional dimensions may dominate. For example, Rust developers may prioritize ownership and borrowing patterns; Go developers may prioritize error handling conventions that are more idiomatic than Python's; JavaScript developers may prioritize framework-specific patterns (React hooks rules, Vue composition conventions). VeriCode's Python-grounded instructions would not transfer, and the correlation between IF and preference would need to be re-established for each language.
+
+- **Model capability distribution:** The 31 evaluated models may have different relative strengths in Python versus other languages. Models trained primarily on Python-heavy datasets (a common pattern in the code LLM space) might show different functionality–IF tradeoffs in Python than in languages where they have less training data. The paper's finding that Claude 4 Opus uniquely shows negative functional regression on BigVibeBench (Table 2) could be Python-specific and not replicate in other languages.
+
+**What evidence exists in the paper.** None. There is no multi-language evaluation, no analysis of whether the instruction categories would transfer to other languages, and no discussion of which languages would be most natural targets for extension. The "language-agnostic" claim (Section 2.3) is aspirational. All figures, tables, and conclusions are Python-only.
+
+**Mitigation status.** Not addressed. The paper does not even specify which other languages would be priority targets for extension. The claim that the framework is language-agnostic implies that the methodology—sourcing instructions from language-specific linters, filtering by difficulty, and augmenting existing benchmarks—would work for any language with a mature linter ecosystem. This is probably true for JavaScript/TypeScript and possibly for Rust, Go, and Java, but it is untested. Practitioners evaluating models for multi-language code generation cannot assume that Vibe Checker results on Python generalize to their languages of interest without independent validation.
+
+---
+
+### 6.4 Single-Pass Generation Protocol Masks Stochastic Variance and Bounds on Capability Inference
+
+**The assumption or constraint.** Every model generates exactly one code solution per augmented problem (Section 4.1). The paper reports pass@1—the fraction of problems for which the single generated solution is functionally correct and/or satisfies all instructions. This is standard practice in code evaluation (HumanEval, MBPP, and the original BigCodeBench and LiveCodeBench all primarily report pass@1), but it has a specific consequence for the paper's claims that is worth examining.
+
+**The consequence.** Pass@1 is a noisy estimator of a model's true capability, especially at non-zero temperature. On LiveVibeBench, the evaluation uses temperature 0.2 (Section 4.1). With stochastic generation, a single sample may fail to produce a correct solution even if the model has non-trivial probability of doing so—pass@1 underestimates the model's true pass rate when that rate is below 100%. More critically for this paper, **the functional regression rate FR_k compounds two noisy pass@1 estimates**. If the baseline pass@1 $S_0$ is underestimated and the $k$-instruction pass@1 $S_k$ is overestimated (both due to single-sample noise), the computed regression rate could be substantially different from the true regression rate. For models with baseline pass@1 in the 40–50% range (common on BigCodeBench, Table 5), a single-sample estimate has high variance.
+
+This measurement noise affects the paper's most granular claims—model-level rankings, which model shows the least regression, whether Claude 4 Opus truly exhibits negative regression on BigCodeBench. A model that appears to regress by 5% on a single evaluation run might regress by 2% or 8% in expectation. The aggregate trends (average regression across all models, the monotonic scaling with instruction count) are more robust to single-sample noise because they average over many models and problems, but the per-model numbers in Tables 2, 5, and 6 should be interpreted with appropriate uncertainty.
+
+For instruction following, the noise problem is slightly different. The task-level IF score is an all-or-nothing metric: a single missing instruction out of five causes a task-level failure. With a single generation, small stochastic variations—the model happens to format a docstring slightly differently, or puts a line break in an unexpected place—can flip a task from pass to fail. The paper's position-bias analysis (Figure 4, Tables 11–12) reports IF differences of 2–3 percentage points between positions, which could be within the noise floor of single-sample estimation. The primacy and recency effects are consistent across enough models that they are likely genuine, but their precise magnitude is uncertain.
+
+**What evidence exists in the paper.** The paper does not estimate the variance of pass@1 estimates by, for example, computing pass@k for $k > 1$ on a subset of problems or by bootstrapping. The Claude models are evaluated at temperature 1.0 (due to the thinking-mode API constraint, Section 4.1), which introduces substantially more stochasticity than the 0.0–0.2 temperatures used for other models. The paper does not discuss whether this puts Claude models at a disadvantage in the single-sample pass@1 comparison—with temperature 1.0, the variance of the single-sample estimator is higher, so Claude's performance numbers have wider confidence intervals. This is a potential confound in the per-model comparisons, particularly for the functional regression metric where Claude 4 Opus's negative regression could partly reflect estimation noise.
+
+**Mitigation status.** Not addressed. The paper follows the standard evaluation protocol of the underlying benchmarks, which is a defensible choice—departing from it would make results less comparable to prior work. The 2,195 problems across the two benchmarks provide a large enough sample that aggregate trends are reliable despite single-sample noise. But the paper does not acknowledge this measurement limitation or provide confidence information for per-model statistics. A simple mitigation would be to report pass@k with $k \geq 1$ for a subset of models to demonstrate that the findings are robust to multi-sample estimation, or to report bootstrap confidence intervals on the key regression and IF numbers.
+
+---
+
+### 6.5 No Analysis of Constraint Interactions: The Independence Assumption Is Untested
+
+**The assumption or constraint.** The paper evaluates instruction following by layering 1, 2, 3, 4, or 5 instructions onto a problem and measuring whether each instruction is individually satisfied. The task-level IF score multiplies these individual pass rates, implicitly assuming that instruction failures are independent. The paper notes (Section 4.3) that the observed exponential decay in task-level success is consistent with independence—the drop from one instruction to five roughly follows $p^5$ where $p$ is the single-instruction pass rate—but this consistency does not prove independence.
+
+**The consequence.** Instructions could interact in ways that make multi-instruction scenarios either harder or easier than the independence model predicts. For example, an instruction requiring short lines (style_3, max line length 79) might **conflict** with an instruction requiring comprehensive docstrings (doc_3, Google-style docstrings), because well-documented functions with descriptive parameter lists naturally produce longer lines. In this case, satisfying both instructions simultaneously is harder than the product of their individual pass rates would suggest—the failure events are positively correlated. Conversely, an instruction requiring fewer branches (logic_3) might **facilitate** an instruction requiring short lines, because simpler control flow leads to shorter individual lines. In this case, joint satisfaction is easier than the independence model predicts.
+
+The paper does not analyze which pairs of instructions tend to co-fail or co-succeed. The exponential decay pattern could mask substantial interaction effects that cancel out in the aggregate. If some instruction pairs are strongly conflicting, then the task-level IF score for problems that happen to include both instructions would systematically underestimate model capability, and the benchmark's difficulty would vary with which specific instructions are selected per problem—not just with how many.
+
+Beyond pairwise interactions, there could be **emergent difficulty**: the cognitive load of satisfying $k$ constraints simultaneously might exceed the sum of individual difficulties if the model's context window or attention mechanism becomes saturated with constraints. The paper's position-bias analysis (Section 4.4) hints at this—the U-shaped pattern suggests that mid-position instructions compete for limited model attention—but it treats position as the explanatory variable rather than testing whether certain instruction types are more susceptible to position effects than others.
+
+**What evidence exists in the paper.** The paper reports exponential decay (Figure 3b, Tables 3, 8, 10) and position bias (Figure 4, Tables 11–12) but does not compute co-occurrence statistics for instruction failures, test for pairwise interaction effects, or analyze whether specific instruction pairs exhibit above-chance co-failure rates. The instruction-level IF tables (Tables 7, 9) report average per-instruction pass rates aggregated across all problems and all positions, which destroys any information about which instructions tend to fail together on the same problem. The paper's design choice to treat instructions as independently selected and independently verified is methodologically clean but prevents discovery of interaction effects that matter for understanding *why* multi-instruction scenarios are hard.
+
+**Mitigation status.** Not addressed. The paper does not discuss instruction interactions, does not analyze failure co-occurrence, and does not test whether the exponential decay pattern deviates from independence for specific instruction subsets. This is a significant gap because interaction effects, if present, would inform both deployment (avoid pairing conflicting instructions in user prompts) and training (teach models to handle instruction pairs that are particularly conflict-prone). The paper's taxonomy, with its 30 instructions organized into five categories, is well-suited to testing interaction effects—the categories are designed to be distinct, so cross-category pairs (e.g., style + logic) are natural candidates for interaction analysis. The omission of such analysis leaves an important behavioral question unanswered.
+
+---
+
+### 6.6 The Composite Score Blends Two Incommensurable Metrics Without Justification
+
+**The assumption or constraint.** The correlation analysis in Section 4.5 constructs a composite score as a linear blend: $\alpha \cdot \text{IF} + (1 - \alpha) \cdot \text{Func}$, where IF is the instruction-level IF score (a fraction between 0 and 1 representing average per-instruction pass rate) and Func is the functional pass@1 (also a fraction between 0 and 1). The paper sweeps $\alpha$ from 0 to 1 and identifies the mixing ratio that maximizes correlation with LMArena Elo.
+
+**The consequence.** This linear blend treats IF and Func as commensurable quantities that can be mixed at arbitrary ratios, but they measure fundamentally different things on different scales. Func (pass@1 on the original, un-augmented benchmark) measures baseline functional competence on tasks with no IF requirements. IF (instruction-level score with one instruction in the single-turn setting) measures the ability to follow a non-functional constraint on a different set of tasks (the augmented versions). These metrics are not computed on the same problems—Func comes from the original benchmarks, IF comes from the augmented benchmarks—so the composite is blending scores from partially overlapping but distinct problem sets.
+
+More importantly, the linear blend implies that a 1-percentage-point improvement in IF is equivalent to a $(1-\alpha)/\alpha$ percentage-point improvement in Func in terms of human preference impact. At the optimal $\alpha = 0.4$ (BigVibeBench Pearson), this means a 1-point IF gain is worth a 1.5-point Func gain in predicting LMArena Elo. This is an empirical claim derived from fitting a correlation objective, but it lacks a substantive interpretation: what does it mean for a model to be 1 percentage point better at following instructions but 1.5 percentage points worse at baseline functionality, and why would humans value that tradeoff at that specific ratio? The paper does not provide a decision-theoretic grounding for why the composite should be linear or why the mixing weight should be interpreted as a preference parameter rather than a fitting artifact.
+
+Additionally, the composite score's optimal $\alpha$ varies across benchmark type, correlation type, and style-control setting (Figure 5 vs. Appendix Figure 15): $\alpha = 0.4$ (BigVibeBench Pearson), $\alpha = 0.7$ (BigVibeBench Spearman), $\alpha = 0.4$ (LiveVibeBench Pearson), $\alpha = 0.6$ (LiveVibeBench Spearman). This variance is partly an artifact of the correlation metric (Pearson is sensitive to linear relationships in absolute scores; Spearman is rank-based) and partly a genuine reflection of task-dependent preferences. But it means there is no single "right" composite score—the weight depends on what question you are asking and what benchmark you are using. A practitioner wanting a single scalar to rank models for general code generation would not know which $\alpha$ to choose.
+
+**What evidence exists in the paper.** The correlation analysis (Figure 5, Appendix Figure 15) is the sole source of evidence for the composite formulation. The paper does not test alternative blending functions (e.g., multiplicative, threshold-based, non-linear combinations) or provide an argument for why a linear mixture is the appropriate functional form. The paper does not report what the actual composite scores are for the evaluated models—the figures show correlation coefficients as a function of $\alpha$, but the reader cannot see whether the composite creates a sensible ranking (e.g., whether models with very high IF but mediocre functionality outrank models with excellent functionality but poor IF at the optimal $\alpha$). The analysis demonstrates that a mixture predicts preference better than either extreme, but it does not demonstrate that the linear blend is the right mixture or that the optimal $\alpha$ values are stable and interpretable.
+
+**Mitigation status.** Partially addressed through replication. The paper reports the correlation analysis under four configurations (two benchmarks × two style-control settings, Appendix Figure 15) and two correlation types, showing that the qualitative conclusion (a mixture outperforms either extreme) is robust. But the paper does not address the commensurability concern, the lack of decision-theoretic grounding, or the instability of the optimal $\alpha$ across settings. This limitation is inherent to the reductionist approach of combining two incommensurable dimensions into a single scalar, and it may not be fully resolvable—the takeaway may simply need to be "both dimensions matter, and their relative importance depends on context," which is the paper's stated conclusion in Section 4.5. The paper's framing of the composite as the best-predicting blend rather than a normative quality score is appropriate, but the practical question of which $\alpha$ to use for model selection remains open.
 
 ## 7. Implications and Future Directions
 - How this changes the field

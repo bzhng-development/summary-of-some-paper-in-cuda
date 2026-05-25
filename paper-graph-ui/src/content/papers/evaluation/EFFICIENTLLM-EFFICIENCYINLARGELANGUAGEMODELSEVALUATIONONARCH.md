@@ -8,191 +8,604 @@ EfficientLLM introduces the first comprehensive, large-scale empirical benchmark
 
 ---
 
-## 1. Executive Summary (2–3 sentences)
-EfficientLLM is a large-scale, end-to-end benchmark that measures how to make Large Language Models (LLMs) more efficient across three critical stages: architecture pretraining, fine-tuning, and inference via quantization. It runs over 100 model–technique pairs on production-class GPUs and introduces fine-grained metrics (memory, compute, latency, throughput, energy, compression) to quantify real-world trade-offs; key findings include that no single method is Pareto-optimal, optima depend on task and scale, and many techniques transfer to vision and vision–language models (Figures 2–5; Sections 2, 5–6).
+## 1. Executive Summary
+
+EfficientLLM introduces and executes the first end-to-end, hundred-scale empirical benchmark of efficiency techniques for large language models, grounded in a unified three-axis taxonomy — architecture pretraining, fine-tuning, and bit-width quantization — and deployed on a production-class cluster (48 × GH200, 8 × H200 GPUs). The study evaluates over 100 model–technique pairs spanning 0.5B–72B parameter LLMs across efficient attention variants (MQA, GQA, MLA, NSA), sparse Mixture-of-Experts, parameter-efficient fine-tuning methods (LoRA, RSLoRA, DoRA), and post-training int4 quantization, measuring six orthogonal metrics (AMU, PCU, AL, AT, AEC, MCR) that jointly capture hardware saturation, latency–throughput balance, and carbon cost. The benchmark yields quantified trade-offs — MoE trims FLOPs and lifts accuracy but inflates VRAM by 40%, while int4 quantization slashes memory and energy by up to 3.9× at a 3–5% average task score drop — and establishes that the optimal efficiency technique is scale- and task-dependent, with MQA providing the best memory–latency frontier for constrained devices, MLA achieving the lowest perplexity for quality-critical tasks, and RSLoRA surpassing standard LoRA only beyond 14B parameters, confirming that no single method achieves Pareto optimality across all efficiency axes and that deployment decisions must navigate a multi-objective frontier rather than relying on a universally optimal solution.
 
 ## 2. Context and Motivation
-- Problem addressed
-  - There is no comprehensive, empirical, end-to-end benchmark that evaluates LLM efficiency techniques under realistic deployment conditions. Prior work tends to study a single technique in isolation, at limited scale, often without energy measurement or cross-stage comparability (Section 1).
-- Why this matters
-  - Training and serving LLMs is extremely expensive in compute, memory, energy, and money. For instance, GPT‑3’s training required ~3,640 PF-days and an estimated >$4.6M (Introduction). Deployment costs also scale with model and context size; energy and carbon footprints are substantial (Sections 1, 5.1.2).
-- Prior approaches and their gaps
-  - Architecture: Many “efficient attention” variants, Mixture‑of‑Experts (MoE), and positional encodings exist, but their measured trade-offs on modern accelerators and at multiple scales are rarely compared head‑to‑head.
-  - Fine‑tuning: Parameter‑Efficient Fine‑Tuning (PEFT) methods (LoRA and variants) are abundant, yet it is unclear which method is best for which model size or latency/energy budget.
-  - Inference: Quantization and serving optimizations are common, but their energy/latency/memory/accuracy trade-offs are not consistently reported across families and scales (Sections 3–4).
-- How this paper positions itself
-  - It introduces a unified taxonomy (architecture pretraining, fine‑tuning, inference) and runs a hundred‑scale study on a modern cluster (48× GH200; 8× H200) with standardized metrics (AMU, PCU, AL, TT/ST/IT, AEC, MCR) to enable apples‑to‑apples comparisons (Figure 1; Sections 1, 5.1, 5.2).
-  - It extends beyond text to Large Vision Models (LVMs) and Vision‑Language Models (VLMs), testing transferability of efficiency techniques (Section 6).
+
+### The Core Problem: No Systematic Efficiency Benchmark Exists for LLMs
+
+The fundamental gap this paper addresses is the absence of a large-scale, end-to-end empirical benchmark that systematically evaluates efficiency techniques for large language models under realistic deployment conditions. While the LLM community has produced a proliferation of methods for improving model efficiency—architectural innovations, parameter-efficient fine-tuning strategies, model compression techniques—there exists no unified framework for comparing them on equal footing with comprehensive, multi-dimensional metrics measured on modern production hardware.
+
+This gap is not merely an academic inconvenience. It has tangible consequences for how organizations allocate compute resources across the LLM lifecycle. When a research team designs a new attention mechanism, they lack empirical evidence quantifying how that choice trades off memory usage against throughput against energy consumption at different model scales. When a practitioner selects a fine-tuning method for a 14B-parameter model, they must rely on heuristics or limited internal testing rather than a rigorous understanding of how LoRA, RSLoRA, and parameter freezing differ in their latency–memory–energy profiles at that specific scale. When a deployment engineer decides between bfloat16 and int4 quantization, they need concrete measurements of the throughput gains and accuracy costs on their target hardware, not theoretical extrapolations from smaller studies.
+
+The paper describes this situation precisely in Section 1:
+
+> "despite the proliferation of these techniques, no existing benchmark or evaluation framework systematically provides large-scale, end-to-end empirical comparisons under realistic deployment conditions. Existing studies often focus on specific techniques in isolation, use limited model scales, lack comprehensive metrics (especially energy consumption on modern hardware), or rely on theoretical analysis rather than extensive empirical validation."
+
+The result is that "many deployment decisions are made heuristically based on anecdotal experience or limited internal testing, due to the absence of large-scale empirical comparisons validating real-world efficiency trade-offs."
+
+### Why This Problem Matters: The Escalating Cost of LLM Deployment
+
+The importance of this gap grows proportionally with both model scale and deployment breadth. The paper anchors this concern with concrete figures: training GPT-3 (175B parameters) required an estimated 3,640 Petaflop/s-days, while Google's 540B PaLM model required thousands of TPUv4 chips running for extended periods. Inference at scale compounds these costs—every token generated by a deployed model consumes energy, occupies GPU memory, and incurs latency that affects user experience.
+
+But the paper's framing goes beyond mere cost concerns. It identifies distinct stakeholders with different efficiency priorities at each stage of the LLM lifecycle:
+
+- **Architecture designers and researchers** need to budget computational resources and energy costs when developing new models. Without benchmark data, they cannot make informed decisions about whether a novel attention variant genuinely advances the efficiency frontier or merely shifts costs from one dimension to another (e.g., reducing FLOPs while inflating memory).
+
+- **Practitioners fine-tuning models for downstream tasks** need guidance on selecting parameter-efficient methods. The choice between LoRA, DoRA, RSLoRA, and simple parameter freezing carries different implications for memory utilization, training latency, and final task performance, but these trade-offs had not been empirically characterized across model scales from 1B to 72B parameters.
+
+- **Deployment engineers** must reduce serving costs and latency through techniques like quantization, but they need to know the actual throughput gains and performance degradation of int4 versus float16 versus bfloat16 on their specific hardware architecture.
+
+The paper also situates this within the broader context of environmental sustainability. The carbon footprint of large-scale training runs is well-documented (citing Strubell et al., 2019), but inference—which accumulates costs over the entire deployed lifetime of a model—lacks the same systematic treatment. By including Average Energy Consumption (AEC) as a first-class metric alongside latency and throughput, the benchmark makes energy efficiency a measurable, comparable dimension rather than an afterthought.
+
+### Where Prior Approaches Fall Short
+
+The paper identifies several specific limitations in existing evaluation practice. Rather than a single failure mode, these represent a collection of gaps that collectively prevent practitioners from making evidence-based efficiency decisions.
+
+**Isolated, single-technique studies.** Most existing work evaluates one efficiency technique in isolation—a paper proposing a new attention variant might compare it against standard multi-head attention on perplexity and FLOPs, but will not measure how it interacts with quantization or how it performs under different fine-tuning regimes. This makes cross-technique comparisons impossible. The paper notes that this fragmentation means "practitioners often lack clear, data-driven guidance on selecting the most resource-efficient model architecture pretraining, fine-tuning strategy, and inference optimization for their specific tasks and constraints."
+
+**Limited model scales.** Studies that do compare multiple techniques frequently operate at a single model size or a narrow range. The paper's finding that RSLoRA surpasses standard LoRA only beyond 14B parameters (Section 5.4) demonstrates why this matters: a conclusion drawn from 1B–3B models would incorrectly rate standard LoRA as universally superior, missing the scale-dependent interaction effect. Without systematic scale sweeps, the community accumulates findings that may not generalize.
+
+**Theoretical rather than empirical analysis.** Many efficiency claims in the literature are based on FLOP counting or asymptotic complexity analysis rather than wall-clock measurements on production hardware. The paper's decision to run all experiments on a specific, well-documented cluster (48 × GH200, 8 × H200 GPUs) is a deliberate methodological choice: it ensures that metrics like latency, throughput, and energy consumption reflect actual hardware behavior, including communication overhead, memory bandwidth constraints, and kernel launch overheads that theoretical FLOP counting misses. The proposed Peak Compute Utilization (PCU) metric explicitly addresses this gap, measuring "the ratio of actual GPU utilization to the theoretical maximum GPU utilization" to capture real-world inefficiencies from "communication overhead, synchronization delays, memory bottlenecks, and suboptimal parallelization strategies."
+
+**Missing energy metrics.** Prior benchmarks typically report memory, latency, and throughput, but rarely measure energy consumption directly. The paper argues this is a critical omission given both operational costs and environmental impact. The AEC (Average Energy Consumption) metric integrates instantaneous power draw over the full training or inference duration, providing a holistic energy cost that includes idle periods, communication overhead, and cooling—not just the theoretical energy of matrix multiplications.
+
+**Absence of holistic, multi-dimensional evaluation.** Perhaps the most significant gap is conceptual: existing work treats efficiency as reducible to a single score or ranking. The paper's central empirical finding—that "no single technique achieves Pareto optimality on all efficiency axes"—demonstrates why this is inadequate. MoE architectures reduce FLOPs and improve accuracy but inflate VRAM by 40% (Section 5.3.3). Int4 quantization slashes memory and energy but incurs a 3–5% task score drop (Section 5.5). MQA provides the best memory–latency frontier, MLA achieves the lowest perplexity, and NSA minimizes energy consumption (Section 5.3.1). These are not minor trade-offs that can be papered over with a weighted sum; they represent fundamentally different operating points on a multi-dimensional frontier, and the optimal choice depends on the deployment context.
+
+### How This Paper Positions Itself
+
+The paper does not propose a new efficiency technique. Its contribution is methodological and empirical: **providing the first large-scale, end-to-end benchmark that enables apples-to-apples comparison of diverse efficiency techniques under standardized conditions with comprehensive, multi-dimensional metrics.**
+
+This positioning is explicit in the scope choices. The three-axis taxonomy—architecture pretraining, fine-tuning, and bit-width quantization—is not presented as exhaustive coverage of all efficiency research. Rather, these three axes are selected because they "correspond to major efficiency challenges at different stages of an LLM's development and deployment" and because "each aspect addresses the needs of different stakeholders in practice" (Section 7). Other important topics—distributed training infrastructure, RLHF alignment efficiency, test-time scaling strategies, speculative decoding—are acknowledged as beyond scope but reviewed in the related work to contextualize what the benchmark does and does not cover.
+
+The experimental design reflects a deliberate trade-off prioritization. By fixing hardware (48 × GH200 + 8 × H200 GPUs) and measuring six orthogonal metrics on over 100 model–technique combinations, the paper prioritizes breadth of comparison and reproducibility of measurement over depth on any single technique. This is the appropriate choice for a benchmark paper: the value lies in the systematic comparisons, not in optimizing any individual method to its absolute limit.
+
+The paper also positions itself as complementary to existing theoretical work on scaling laws (Chinchilla, Kaplan et al.) and architectural innovation. Where scaling laws predict how loss changes with parameters and data under a fixed architecture, EfficientLLM measures how different architectural choices shift the efficiency frontier at a given parameter count. Where individual papers propose new attention mechanisms or fine-tuning methods and evaluate them against a single baseline, EfficientLLM places multiple alternatives on the same axes, revealing cross-technique patterns that no single-method study could observe.
 
 ## 3. Technical Approach
-This is an empirical benchmark with carefully controlled hardware, software, and metrics, evaluating techniques across three lifecycle stages.
 
-- Hardware and software
-  - Pretraining studies: 48× NVIDIA GH200 (96 GB) with NVLink/InfiniBand; 3D parallelism via Megatron‑Core (tensor, pipeline, data parallel) (Section 5.3 “Hardware and Training Framework”).
-  - Fine‑tuning studies: 8× NVIDIA H200 (141 GB) using LlamaFactory; DeepSpeed ZeRO‑3 Offload for full fine‑tuning when needed (Section 5.4).
-  - Inference studies: GH200 nodes; serving on optimized inference servers (Section 5.5).
+### 3.1 Reader Orientation
 
-- Metrics (all formally defined in Section 5.1)
-  - `AMU` (Average Memory Utilization): time‑averaged memory used over total device memory (Eq. 1).
-  - `PCU` (Peak Compute Utilization): average actual GPU utilization / theoretical peak; reported only where it varies meaningfully (PEFT; Eq. 2 and footnote).
-  - `AL` (Average Latency): average per‑iteration/request time including compute and communication (Eq. 3).
-  - Throughput: `TT` (tokens/second/parameter for pretraining; Eq. 4), `ST` (samples/second/parameter for fine‑tuning; Eq. 5), `IT` (tokens/second for inference; Eq. 6).
-  - `AEC` (Average Energy Consumption): average power over time, from integrated energy (Eqs. 7–8).
-  - `MCR` (Model Compression Rate): size reduction adjusted by performance retention (Eq. 9).
-  - A composite “Efficiency Score” used in some visualizations is a weighted harmonic combination of normalized resource metrics (Appendix, Eq. 12; Figures 4, 7c). Normalization recipes are in Appendix (Eqs. 10–11).
+EfficientLLM is a large-scale empirical benchmark — not a new model or training algorithm — that systematically measures and compares the efficiency of over one hundred distinct combinations of large language model architectures, fine-tuning strategies, and quantization precisions. It solves the problem of fragmented, incomparable efficiency claims in the LLM literature by running all techniques on identical production hardware (48 × NVIDIA GH200 and 8 × NVIDIA H200 GPUs) and evaluating them against six orthogonal, fine-grained metrics so that a practitioner choosing between, say, Multi-Query Attention and Grouped-Query Attention for a 1.5B-parameter model can see not just the perplexity difference but the exact memory, latency, throughput, and energy consequences of that choice, all measured on the same stack, at the same scale.
 
-- Architecture pretraining evaluations (Sections 4.4 and 5.3)
-  - Efficient attention
-    - `MQA` (Multi‑Query Attention): share key/value across heads; only queries are per‑head. Reduces KV‑cache footprint and speeds decoding (Section 4.4.2).
-    - `GQA` (Grouped‑Query Attention): share K/V within groups of heads—intermediate between MHA and MQA (Section 4.4.2).
-    - `MLA` (Multi‑Head Latent Attention): compress the KV cache into a low‑rank latent (dimension `dc << d`), then up‑project per head on the fly: `c_t = h_t W_DKV` and `k_i = c_t W_UK_i`, `v_i = c_t W_UV_i`. This shrinks KV memory while keeping per‑head expressivity (Section 4.4.2).
-    - `NSA` (Native Sparse Attention): a tri‑branch design—global compression, selective global attention, and local sliding window—with learned gates `g_cmp, g_slc, g_win` blending the three (Section 4.4.2).
-  - Positional encoding (Section 4.4.3)
-    - Compares Rotary (`RoPE`), absolute (fixed and learnable), a relative scheme (“Relate”), and “None” (no PE).
-  - Sparse modeling via `MoE` (Mixture‑of‑Experts) (Section 4.4.4)
-    - Conditional computation: a router activates only top‑k experts per token (top‑2 in experiments), which reduces FLOPs per token while increasing total parameters. Trade‑off: extra routing and memory to store all experts.
-  - Attention‑free alternatives (Section 4.4.5)
-    - `Mamba` (state‑space model with selective updates): linear‑time sequence modeling, high speed and low memory.
-    - `RWKV` (recurrent variant that trains parallely and infers recurrently).
-    - `Pythia` is used here as an attention‑lite baseline for comparison (Table 6).
+### 3.2 Big-Picture Architecture
 
-  - Experimental design
-    - Base backbone for pretraining sweeps uses Qwen2.5‑style decoder (0.5B, 1.5B, 3B), trained on FineWeb‑Edu (350B tokens)—an educational subset designed to improve reasoning/factuality (Sections 5.2, 5.3).
+The EfficientLLM evaluation framework consists of five logical components that together form a measurement pipeline from model configuration to efficiency metrics:
 
-- Training and tuning efficiency evaluations (Section 4.5.2; Section 5.4)
-  - `PEFT` (Parameter‑Efficient Fine‑Tuning): adapt only small add‑on modules or selected weights.
-    - `LoRA`: keep `W0` frozen and learn `ΔW = α A B` with low rank `r << min(m,n)`; merge after training (Section 4.5.2).
-    - `LoRA‑plus`: different learning rates for `A` and `B` to improve optimization (Section 4.5.2).
-    - `RSLoRA`: rank‑stabilized scaling (`α = 1/√r`) to make higher ranks stable (Section 4.5.2).
-    - `DoRA`: decompose weights into magnitude and direction; update direction via LoRA‑like term and learn a magnitude vector (Section 4.5.2).
-    - `PiSSA`: initialize low‑rank factors from principal singular vectors/values of `W0`; train `W = A B + R` (Section 4.5.2).
-    - `Freeze`: freeze most parameters (e.g., initial layers) for minimal latency/compute.
-    - `Full*`: full fine‑tuning with DeepSpeed ZeRO‑3 Offload; batch sizes halved to fit memory (Table 7 note).
-  - Data: `OpenO1‑SFT` (77k English/Chinese instruction‑reasoning samples) and a domain dataset `Medical‑o1‑reasoning‑SFT` (Sections 5.2, 5.4).
+1. **Model Registry:** a curated set of 15 large language models (LLaMA 3 series, DeepSeek-R1 distillations, Qwen 2.5 series, Phi series, Yi, Mistral, Mixtral) spanning 0.5B to 72B parameters, plus vision models (Stable Diffusion 3.5, Wan 2.1) and vision-language models (LLaVA 1.5, Qwen2.5-VL, InternVL 3, QVQ-72B) for the scalability extension. Each model serves as a base onto which efficiency techniques are applied.
 
-- Inference efficiency via bit‑width quantization (Section 5.5)
-  - Precisions evaluated: `bfloat16` (bf16), `float16` (fp16), and post‑training `int4` (4‑bit weights). `int8` is excluded due to instability/unsupported kernels on GH200 in their setup (Section 5.5 “Note on Int8 Quantization”).
-  - Metrics include aggregate task score across MMLU‑Pro, BBH, GPQA, IFEval, MATH, MuSR; `IT` (tokens/s), `AMU`, `AEC`, `MCR` (Table 9; Appendix Table 16 for per‑benchmark scores).
+2. **Efficiency Technique Library:** three families of techniques applied to the base models — architecture variants (MQA, GQA, MLA, NSA, MoE, attention-free alternatives), parameter-efficient fine-tuning methods (LoRA, LoRA-plus, RSLoRA, DoRA, PiSSA, parameter freezing, full fine-tuning with DeepSpeed ZeRO-3), and bit-width quantization formats (bfloat16, float16, int4). Each technique is applied in a controlled, isolated fashion so that its marginal effect on each metric can be attributed.
 
-- Cross‑modal extensions (Section 6)
-  - LVMs: insert efficient attention and MoE into DiT‑style diffusion backbones (DiT‑XL/2, DiT‑L/8, DiT‑B/4) and evaluate FID (Fréchet Inception Distance; lower is better) and efficiency metrics (Tables 10–11).
-  - VLMs: PEFT on LLaVA‑1.5 (7B), Qwen2.5‑VL‑7B, InternVL‑3‑38B, QvQ‑72B (Table 12).
-  - LVM fine‑tuning: PEFT and full FT for Wan 2.1‑1.3B (video) and Stable Diffusion 3.5‑Medium (Table 13).
+3. **Hardware Cluster:** a production-class distributed computing infrastructure comprising 48 NVIDIA GH200 96GB GPUs and 8 NVIDIA H200 141GB GPUs, interconnected with NVLink for intra-node communication and InfiniBand for inter-node communication. The hardware is fixed across all experiments to ensure that measured differences arise from technique choices, not from hardware variability.
+
+4. **Measurement Collectors:** instrumentation that records six orthogonal metrics during the execution of training, fine-tuning, or inference runs: Average Memory Utilization (AMU), Peak Compute Utilization (PCU), Average Latency (AL), Token/Sample/Inference Throughput (TT/ST/IT), Average Energy Consumption (AEC), and Model Compression Rate (MCR). These collectors operate at the system level (NVIDIA's management libraries for power and utilization, framework-level timing for latency and throughput) and do not depend on model-specific instrumentation.
+
+5. **Normalization and Visualisation Layer:** a post-processing stage that min-max normalises all raw metrics into the [0, 1] range (with direction normalised so that higher values always indicate better efficiency or performance) and produces radar charts, bar charts, and bubble charts for cross-technique comparison.
+
+Information flows linearly: a model–technique pair is configured → the appropriate training, fine-tuning, or inference pipeline is launched on the cluster → measurement collectors log metrics throughout execution → raw measurements are aggregated and normalised → results are visualised and tabulated for analysis.
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First, the six assessment metrics** (AMU, PCU, AL, throughputs, AEC, MCR), because they are the common language spoken by every subsequent experiment — understanding what is measured and why these particular metrics were chosen is prerequisite to interpreting any result table.
+- **Second, the model and dataset inventory** (Sections 5.2.1–5.2.2), because the measured efficiency of any technique depends on what model it is applied to and what data drives the workload — scale, architecture family, and task domain all matter.
+- **Third, the architecture pretraining assessment** (Section 5.3), walking through the four sub-experiments: efficient attention variants, positional encoding methods, MoE versus dense models, and attention-free alternatives, each evaluated at multiple model scales with the same metrics.
+- **Fourth, the training and tuning efficiency assessment** (Section 5.4), covering the PEFT method comparison across seven model architectures on two datasets (O1-SFT and Medical-O1), with particular attention to the scale-dependent ranking of methods.
+- **Fifth, the inference efficiency assessment** (Section 5.5), examining the bit-width quantization experiments across nine model families and three precision formats, with an analysis of the int4 trade-off between compression gains and task performance degradation.
+- **Sixth, the scalability extension** to vision and vision-language domains (Section 6), which validates the framework's transferability by applying identical efficiency techniques and metrics to diffusion transformers, video generation models, and multimodal LLMs.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily an **empirical measurement paper** whose core idea is that meaningful efficiency comparisons require standardised, multi-dimensional metrics measured on identical production hardware at realistic scales, and that such measurement reveals quantifiable trade-offs that no single-technique study could observe.
+
+---
+
+#### The Six Assessment Metrics
+
+The paper introduces six metrics designed to replace what it terms "conventional metrics" — FLOPs, parameter count, raw inference speed — which it argues "often fail to capture the dynamic and realistic utilization of hardware resources, thus providing an incomplete picture of efficiency bottlenecks in real-world deployment scenarios." Each metric addresses a specific blind spot of traditional evaluation.
+
+**Average Memory Utilization (AMU).** This metric captures the fraction of available device memory that the model consumes, averaged over the entire training or inference run, rather than reporting only peak memory or steady-state memory. The formal definition (Equation 1 in the paper) is:
+
+$$\text{AMU} = \frac{1}{T} \int_{0}^{T} \text{Memory Used}(t) \, dt$$
+
+where `$T$` is the total wall-clock time of the run, and `$\text{Memory Used}(t)$` is the instantaneous memory consumption (in gigabytes or as a fraction of total VRAM) at time `$t$`.
+
+**What it computes:** the time-averaged memory footprint over the full run duration. If a model allocates 50 GB for 60% of the time and 30 GB for 40% of the time, AMU equals `$0.6 \times 50 + 0.4 \times 30 = 42$` GB, not the peak of 50 GB and not the trough of 30 GB.
+
+**Why this form:** peak memory alone can be misleading. A model that briefly spikes to 80 GB during attention computation but otherwise runs at 20 GB has the same peak as a model that continuously requires 80 GB, but the two impose very different resource requirements on a shared cluster (the first can coexist with other workloads; the second cannot). Conversely, steady-state memory misses transient spikes that can cause out-of-memory errors. The time integral captures the full memory pressure profile. The paper argues that "operators in transformer, such as frequent reshaping, element-wise addition, and normalization require huge memory units," and AMU accounts for these dynamic fluctuations.
+
+In the benchmark, AMU is reported in gigabytes and a higher value (after normalisation) indicates that memory is being utilised efficiently — avoiding periods of underutilisation or wasteful allocation–deallocation cycles — though in the raw tables (e.g., Table 3), lower AMU values are better for deployment feasibility since they indicate the model fits in a smaller memory budget.
+
+**Peak Compute Utilization (PCU).** This metric measures how effectively the GPU's computational capacity is actually being used, rather than how many theoretical FLOPs the model architecture requires. The formal definition (Equation 2 in the paper) is:
+
+$$\text{PCU} = \frac{1}{T} \int_{0}^{T} \frac{\text{Actual GPU Utilization}(t)}{\text{Peak GPU Utilization}} \, dt$$
+
+where `$\text{Actual GPU Utilization}(t)$` is the measured percentage of GPU compute resources actively engaged in computation at time `$t$`, and `$\text{Peak GPU Utilization}$` is the theoretical maximum (typically 100%).
+
+**What it computes:** the time-averaged fraction of the GPU's computational ceiling that is actually achieved, accounting for idle time from communication stalls, synchronisation barriers, memory-bound waits, and kernel launch overhead. A PCU of 0.85 means the GPU's compute units are active 85% of the time on average; the remaining 15% is lost to the various inefficiencies listed above.
+
+**Why this form:** theoretical FLOP counting treats every floating-point operation as occurring at peak hardware throughput, which is never true in practice. The paper states that "traditional metrics such as theoretical FLOPS often fail to capture real-world inefficiencies arising from communication overhead, synchronization delays, memory bottlenecks, and suboptimal parallelization strategies." PCU directly measures the gap between theoretical and achieved utilisation. A model with low FLOPs but high PCU (efficient kernels, minimal communication) can outperform a model with lower theoretical FLOPs but poor PCU.
+
+A crucial practical note from the paper: "In our empirical experiments, we observed that GPU utilization consistently remains above 99% during pretraining and within the narrow range of 80%–81% during inference, indicating negligible variance in compute efficiency for these phases. Consequently, we limit our PCU metric evaluation specifically to scenarios involving parameter-efficient fine-tuning, where meaningful differences in GPU utilization are apparent." This explains why PCU appears only in the fine-tuning tables (Tables 7, 8, 12, 13) and not in the pretraining or inference sections.
+
+**Average Latency (AL).** This metric measures the average time for one iteration or one inference request to complete, explicitly separating computation time from communication time. The formal definition (Equation 3) is:
+
+$$\text{AL} = \frac{\sum_{i=1}^{N} (\text{Computation Time}_i + \text{Communication Time}_i)}{N}$$
+
+where `$N$` is the total number of iterations (for training/fine-tuning) or inference requests, `$\text{Computation Time}_i$` is the time the GPU(s) spent executing mathematical operations on iteration `$i$`, and `$\text{Communication Time}_i$` is the time spent transferring data — gradients between devices, activations across pipeline stages, or query–response payloads over the network.
+
+**What it computes:** the average wall-clock duration of one atomic unit of work (a training iteration, a fine-tuning step, or an inference query), decomposed into productive computation and overhead from data movement. In the benchmark, AL is reported in seconds per iteration (s/iter) for training and fine-tuning, and as cumulative latency in milliseconds for inference.
+
+**Why this form:** the decomposition into computation and communication is critical for diagnosing bottlenecks. If AL is high but PCU is low, the culprit is likely communication overhead or memory stalls, not raw compute capacity. If communication time dominates, the solution is a better interconnect or parallelism strategy, not a faster GPU. The paper uses this decomposition implicitly by reporting both AL and throughput (which are inversely related for a given batch size) alongside PCU, enabling such bottleneck analysis.
+
+**Throughput Metrics (TT, ST, IT).** The paper defines three distinct normalised throughput metrics, one for each lifecycle stage, to enable fair comparison across models of different sizes. The key design choice is that pretraining and fine-tuning throughput are normalised by model parameter count, while inference throughput is not — reflecting the different scaling properties of each stage.
+
+For **pretraining**, Token Throughput (TT) is defined as (Equation 4):
+
+$$\text{TT} = \frac{\sum_{i=1}^{N} \left( \frac{\text{Tokens Processed}_i}{\text{Model Parameters}} \right)}{\sum_{i=1}^{N} \text{Time}_i}$$
+
+where `$\text{Tokens Processed}_i$` is the number of tokens consumed in iteration `$i$`, `$\text{Model Parameters}$` is the total parameter count of the model, and `$\text{Time}_i$` is the wall-clock time for that iteration.
+
+**What it computes:** the number of tokens processed per second, per parameter — effectively, how much data the model consumes per unit compute per unit capacity. Units are tokens/param/s.
+
+**Why this form:** throughput scales inversely with model size (a 3B model processes fewer tokens per second than a 0.5B model on the same hardware, all else equal). Normalising by parameter count removes this scaling effect, enabling a 0.5B model and a 3B model to be compared on equal footing: a higher TT means the model is more data-efficient per parameter, regardless of absolute size.
+
+For **fine-tuning**, Sample Throughput (ST) is defined analogously (Equation 5):
+
+$$\text{ST} = \frac{\sum_{i=1}^{N} \left( \frac{\text{Samples Processed}_i}{\text{Model Parameters}} \right)}{\sum_{i=1}^{N} \text{Time}_i}$$
+
+where `$\text{Samples Processed}_i$` is the number of training examples or dialogue turns processed in iteration `$i$`. The normalisation logic is identical to TT: it enables cross-scale comparison of fine-tuning efficiency.
+
+For **inference**, Inference Throughput (IT) deliberately breaks this pattern (Equation 6):
+
+$$\text{IT} = \frac{\sum_{i=1}^{N} \text{Tokens Generated}_i}{\sum_{i=1}^{N} \text{Time}_i}$$
+
+**What it computes:** raw tokens generated per second, with no normalisation by parameter count. Units are tokens/s.
+
+**Why this form:** inference is a deployment-time concern where the absolute generation speed matters to the user, not a research concern where parameter-normalised efficiency is the relevant metric. A 34B model generating 17 tokens/s and a 7B model generating 40 tokens/s are not "equally efficient when normalised by size" — the 34B model is slower in absolute terms, and that absolute latency is what the user experiences. The paper's choice to leave IT un-normalised reflects this practical reality.
+
+A subtle point: Tables 7 and 8 report ST values in units of samples/param/s, which are extremely small numbers (e.g., `$1.26 \times 10^{-07}$` for freezing on Llama-3.2-1B with O1-SFT). This is not an error — it reflects that one sample (a full dialogue or training example) contains many tokens, and the parameter count is in the billions, so the per-parameter, per-second sample throughput is a tiny fraction. The ranking between methods is what matters, not the absolute magnitude.
+
+**Average Energy Consumption (AEC).** This metric measures the average power draw of the system over the full run duration, integrating instantaneous power measurements rather than estimating energy from FLOP counts. The formal definitions are:
+
+$$E_{\text{total}} = \int_{0}^{T} P(t) \, dt$$
+
+$$\text{AEC} = \frac{E_{\text{total}}}{T} = \frac{1}{T} \int_{0}^{T} P(t) \, dt$$
+
+where `$P(t)$` is the instantaneous power consumption in Watts (joules per second) at time `$t$`, `$T$` is the total run time in seconds, and `$E_{\text{total}}$` is the total energy consumed in Joules.
+
+**What it computes:** the average power draw in Watts — a rate, not a total. Multiplying AEC by run duration gives total energy in Joules or kilowatt-hours. The paper reports AEC in Watts directly in most tables (e.g., Table 3 shows "AEC (W)").
+
+**Why this form:** reporting an average power rate rather than total energy makes measurements comparable across runs of different durations. Two models might consume the same total energy but one achieved it by drawing high power for a short time (fast but power-hungry) while the other drew lower power for longer (slow but efficient). AEC distinguishes these cases. The paper explicitly connects this to sustainability: "A lower AEC indicates that the system operates more efficiently in terms of energy usage, which is critical not only for reducing operational costs but also for mitigating the environmental impact of large-scale AI deployments."
+
+In the benchmark tables, energy is measured at the system level — the GPU's onboard power sensors — not estimated from a model. This means it includes not just compute energy but also memory access energy, interconnect energy, and cooling overhead attributable to the GPU, giving a more complete picture than FLOP-based energy estimates.
+
+**Model Compression Rate (MCR).** This metric evaluates compression techniques by jointly considering size reduction and performance retention, penalising aggressive compression that degrades model quality. The formal definition (Equation 9) is:
+
+$$\text{MCR}(\text{Performance}_c) = \frac{\text{Size}_{\text{original}}}{\text{Size}_{\text{compressed}}} \times \frac{\text{Performance}_{\text{compressed}}}{\text{Performance}_{\text{original}}}$$
+
+where `$\text{Size}_{\text{original}}$` is the model's disk/memory footprint in bytes at the baseline precision (bfloat16 or float16), `$\text{Size}_{\text{compressed}}$` is the footprint after compression (e.g., int4), `$\text{Performance}_{\text{original}}$` is a task-specific metric (e.g., average accuracy across six benchmarks) at the baseline precision, and `$\text{Performance}_{\text{compressed}}$` is the corresponding metric after compression.
+
+**What it computes:** a single scalar that is high when compression reduces size substantially without much harming performance, and low when either the size reduction is modest or the performance degradation is large. A compression from bfloat16 to int4 that maintains perfect performance would yield `$\text{MCR} \approx 4.0$` (since 16 bits / 4 bits = 4× size reduction, and the performance ratio is 1.0). If performance drops to 0.9 of the original, the MCR becomes `$4.0 \times 0.9 = 3.6$`.
+
+**Why this form:** raw compression ratio (`$\text{Size}_{\text{original}} / \text{Size}_{\text{compressed}}$`) is misleading because it ignores whether the compressed model still works. An int2 model with 8× compression but near-zero accuracy would have an impressive raw compression ratio but be useless. The performance ratio in the MCR formula explicitly penalises this: "This formulation penalizes aggressive compression that significantly degrades model performance. The metric enables cross-comparison of compression techniques by unifying size reduction and performance trade-offs into a single value."
+
+The aggregated performance metric used in the MCR calculation for the LLM inference experiments (Section 5.5, Table 9) is the **average score across six benchmarks:** MMLU-Pro, BBH, GPQA, IFEval, MATH, and MUSR. These are standard benchmarks described in Section 5.1.4: MMLU-Pro tests graduate-level multi-step reasoning; BBH tests advanced reasoning with 23 challenging tasks; GPQA tests expert-level science and logic; IFEval tests instruction-following with verifiable directives; MATH tests competition-level mathematics; and MUSR tests multistep soft reasoning through narrative understanding.
+
+---
+
+#### The Model Inventory
+
+The paper evaluates 15 large language models spanning four orders of magnitude in parameter count (0.5B to 72B), drawn from seven distinct model families. The selection is not random — each family represents a different philosophy of efficiency, and the range of scales enables the scale-dependent analyses that form one of the paper's core contributions. The curation is described in Section 5.2.1 and summarised in Table 2.
+
+**LLaMA 3 Series (Meta AI, 2024).** Decoder-only Transformers with pre-normalisation, rotary positional embeddings, and grouped-query attention for long-context handling (up to 128K tokens). The paper evaluates LLaMA 3.1-8B, LLaMA 3.2-1B, LLaMA 3.2-3B, and LLaMA 3.3-70B. These represent the "mainstream dense Transformer" baseline against which architectural innovations are compared.
+
+**DeepSeek-R1 Distillations (DeepSeek, 2024).** Distilled versions of the DeepSeek reasoning models, produced through supervised fine-tuning and Direct Preference Optimization. The paper evaluates Distill-Qwen-1.5B, Distill-LLaMA-8B, and Distill-Qwen-14B. These are included because they represent the "reasoning-optimised" model class, where test-time compute and chain-of-thought capabilities are expected to interact differently with efficiency metrics than standard language models.
+
+**Qwen 2.5 Series (Alibaba Cloud, 2024).** Bilingual (Chinese–English) decoder Transformers with ALiBi or rotary positional encoding and a long-context training scheme (Dual Chunk Attention and YARN scaling) supporting up to 128K tokens. The paper evaluates Qwen 2.5 at 7B, 14B, and 32B parameters. These represent the "long-context optimised" model class.
+
+**Phi Series (Microsoft, 2023–2024).** "Small Language Models" trained with a strong focus on data quality rather than data quantity, using curated "textbook quality" data and synthetic data generation/distillation. The paper evaluates Phi-3.5-mini (3.5B) and Phi-4 (14B). These represent the "data-quality-over-model-size" philosophy, making them natural candidates for studying whether efficiency techniques behave differently on models trained with different data strategies.
+
+**Yi (01.AI, 2024).** A 34B Transformer trained from scratch on 3.1 trillion tokens of carefully filtered English–Chinese text, using Grouped-Query Attention for efficiency. The paper evaluates Yi-34B, chosen as representative of the "single-GPU serving sweet spot" design philosophy.
+
+**Mistral 7B and Mixtral MoE (Mistral AI, 2023).** Mistral 7B is a 7.3B dense model with grouped-query attention and sliding-window attention; Mixtral 8×7B and 8×22B are sparse Mixture-of-Experts models built on the same architecture, where a router activates 2 of 8 experts per token. The paper evaluates both dense and MoE variants, making these the primary vehicles for the dense-versus-MoE comparison in Section 5.3.3.
+
+For the pretraining experiments (Section 5.3), the paper does not use these pretrained checkpoints directly — it **pretrains its own models** from scratch at 0.5B, 1.5B, and 3B parameter scales, using the Qwen2.5 architecture as a base and systematically swapping in different attention variants, sparse MoE layers, and attention-free backbones. The architectural specifications for these pretrained models are:
+
+- **0.5B model:** 24 layers, hidden dimension 896, 14 attention heads, intermediate size 4864, 2 key-value heads, maximum position embeddings 32768, extra vocabulary size 293, RMS normalisation epsilon 1e-6.
+- **1.5B model:** 28 layers, hidden dimension 1536, 12 attention heads, intermediate size 8960, 2 key-value heads, maximum position embeddings 32768, extra vocabulary size 293, RMS normalisation epsilon 1e-6.
+- **3B model:** 36 layers, hidden dimension 2048, 16 attention heads, intermediate size 11008, 2 key-value heads, maximum position embeddings 32768, extra vocabulary size 293, RMS normalisation epsilon 1e-6.
+
+These hyperparameters are provided in Appendix H (Hyperparameter Settings). The number of key-value heads being set to 2 across all scales is notable — this reflects the Grouped-Query Attention configuration, where the number of query heads is greater than the number of key-value heads, and the ratio determines the grouping.
+
+---
+
+#### The Dataset Inventory
+
+The benchmark uses two primary datasets for its three experimental axes, plus six evaluation benchmarks for the inference performance measurement. The choice of dataset for each axis reflects what is standard for that lifecycle stage: pretraining uses a large web-scale corpus, fine-tuning uses instruction-tuning datasets, and inference evaluation uses standardised reasoning and knowledge benchmarks.
+
+**FineWeb-Edu 350B (for pretraining experiments).** This is an educationally filtered subset of the 15-trillion-token FineWeb crawl, used for all architecture pretraining experiments in Section 5.3. Each Common Crawl page is scored by a RoBERTa-based classifier trained to predict "educational value" — pages scoring ≥3 on this classifier are retained, yielding a 1.3-trillion-token collection of lecture notes, textbook chapters, research articles, and open-courseware transcripts. The paper uses a stratified 350-billion-token sample of this corpus, tokenised with the GPT-2 tokeniser. The paper notes that "pre-training on this 350B educational slice boosts zero-shot accuracy by 3–6 pp on nine reasoning-centric benchmarks relative to models trained on generic web data," confirming that the corpus quality matters for downstream performance and not just for perplexity.
+
+The choice of an education-focused corpus rather than generic web text is consequential for the efficiency measurements: educational text tends to have more structured, longer-form content with less boilerplate and repetition, which may affect how different attention mechanisms perform (sparse attention might benefit more from the reduced redundancy than it would on noisier data).
+
+**OpenO1-SFT (for fine-tuning experiments, primary).** A dataset of approximately 77,685 chain-of-thought reasoning instances in both Chinese and English, designed to train models to generate coherent intermediate reasoning steps before producing a final answer. Each instance uses structured "Thought" and "Output" tags to demarcate the reasoning chain from the final answer. The paper uses this dataset as the primary fine-tuning workload for comparing PEFT methods across model scales (Section 5.4, Table 7), noting that it is "specifically designed to enhance the model's capacity for multi-step deductive processes and problem resolution."
+
+**Medical-O1-Reasoning-SFT (for fine-tuning experiments, secondary).** A domain-specific reasoning dataset focused on medical question answering, diagnostic reasoning, and explanation of medical concepts. The paper uses this as a secondary fine-tuning workload (Section 5.4, Table 8) to test whether PEFT method rankings are stable across domains or whether domain-specific characteristics (medical terminology, factual precision requirements) shift the efficiency landscape.
+
+**Evaluation Benchmarks for Inference Performance (Section 5.1.4, Table 16).** For the inference efficiency experiments, task performance is measured across six benchmarks: MMLU-Pro (graduate-level multi-subject reasoning), BBH (23 challenging BIG-Bench tasks testing advanced reasoning), GPQA (graduate-level science and logic questions designed to be resistant to simple retrieval), IFEval (instruction-following with verifiable atomic directives), MATH (competition mathematics requiring symbolic reasoning), and MuSR (multistep soft reasoning through natural language narratives). The aggregated "Avg Perf." column in Table 9 is the unweighted average across these six benchmarks.
+
+---
+
+#### Architecture Pretraining Assessment — Efficient Attention Variants
+
+This is the largest sub-experiment in the paper, occupying Section 5.3.1 and Table 3. The core question is: when you pretrain models from scratch at 0.5B, 1.5B, and 3B parameters, how do different attention mechanisms trade off perplexity against memory, latency, throughput, and energy?
+
+**Experimental setup.** The paper pretrains models using the Qwen2.5 architecture as a base but replaces the attention mechanism with each variant: Multi-Query Attention (MQA), Grouped-Query Attention (GQA), Multi-Head Latent Attention (MLA), and Native Sparse Attention (NSA). All models are trained on the FineWeb-Edu 350B-token corpus using the Megatron-Core distributed training framework with 3D parallelism (data, tensor, and pipeline parallelism) across the 48 × GH200 GPU cluster. Micro-batch sizes vary with model scale: 4 for 0.5B models, 2 for 1.5B models, and 1 for 3B models — this scaling is necessary because larger models consume more memory per micro-batch, and the batch size must be reduced to fit in GPU memory.
+
+**What each attention variant means in this context.** These are not abstract mathematical formulations in the benchmark — they are concrete implementation choices with specific consequences for compute and memory.
+
+*Multi-Query Attention (MQA):* instead of each attention head having its own key and value projection matrices, all heads share a single key matrix `$W^K$` and a single value matrix `$W^V$`. The query projections `$W^Q_h$` remain head-specific. Formally:
+
+$$\text{head}_h = \text{Attention}(QW^Q_h, KW^K, VW^V)$$
+
+where the attention function is the standard scaled dot-product attention `$\text{softmax}(QK^T / \sqrt{d_k})V$`.
+
+**What this means operationally:** during pretraining, the key and value projections are computed once for all heads rather than once per head, reducing the number of parameters in the attention projection layers and eliminating the need to store separate key–value caches for each head. At inference time, this means the KV cache size is reduced by a factor equal to the number of query heads (since only one set of keys and values is stored, versus one per head in multi-head attention). For a model with 14 query heads (the 0.5B configuration), this is a 14× reduction in KV cache memory.
+
+*Grouped-Query Attention (GQA):* an interpolation between full multi-head attention and MQA. The query heads are partitioned into `$G$` groups; within each group, all heads share a single key–value pair. When `$G = H$` (number of groups equals number of heads), this is standard multi-head attention; when `$G = 1$`, this is MQA. The paper's models use 2 key-value heads (see the architectural specifications above), meaning there are 2 groups regardless of how many query heads exist — for the 0.5B model with 14 query heads, this means 7 query heads share each key-value head.
+
+*Multi-Head Latent Attention (MLA):* instead of computing full key and value vectors directly, the input token `$h_t \in \mathbb{R}^d$` is first projected into a low-dimensional latent vector:
+
+$$c_t^{KV} = h_t W^{DKV}, \quad W^{DKV} \in \mathbb{R}^{d \times d_c}, \quad d_c \ll d$$
+
+and then, for each head `$i$`, the full key and value vectors are reconstructed via up-projection:
+
+$$k_t^i = c_t^{KV} W^{UK}_i, \quad v_t^i = c_t^{KV} W^{UV}_i$$
+
+**What this means operationally:** the KV cache stores the compressed latent vector `$c_t^{KV}$` (dimension `$d_c$`) rather than the full per-head keys and values (combined dimension `$H \times d_h \times 2$` for all heads' keys and values). If `$d_c$` is chosen to be much smaller than `$H \times d_h$`, this dramatically reduces KV cache memory. The reconstruction matrices `$W^{UK}_i, W^{UV}_i$` are applied on-the-fly during attention computation but do not need to be stored per-token.
+
+*Native Sparse Attention (NSA):* decomposes attention into three parallel branches — a compression branch that aggregates sequential tokens into coarse-grained summaries, a selection branch that uses learned importance scores (via softmax) to select the most relevant token blocks, and a sliding window branch that applies full attention within a local window. The output for each query `$q_t$` is:
+
+$$o_t^* = g_t^{\text{cmp}} \cdot \text{Attn}(q_t, \tilde{k}_t^{\text{cmp}}, \tilde{v}_t^{\text{cmp}}) + g_t^{\text{slc}} \cdot \text{Attn}(q_t, \tilde{k}_t^{\text{slc}}, \tilde{v}_t^{\text{slc}}) + g_t^{\text{win}} \cdot \text{Attn}(q_t, \tilde{k}_t^{\text{win}}, \tilde{v}_t^{\text{win}})$$
+
+where the gating coefficients `$g_t^c \in [0, 1]$` are learned functions of the context, and the tilde notation indicates the different key–value sets produced by each branch.
+
+**What this means operationally:** instead of computing attention over all token pairs (quadratic cost), NSA computes attention over selected subsets (the compressed global summary, the top-k selected blocks, and the local window), with the gating mechanism learning how to weight each contribution. This is the only variant that is natively sparse — it never computes the full attention matrix.
+
+**Key results from Table 3.** The measurements reveal three distinct optima, each corresponding to a different deployment priority:
+
+- **Best perplexity:** MLA achieves the lowest perplexity at all three scales (PPL = 8.73, 7.79, 7.29 for 0.5B, 1.5B, and 3B models). This means the latent compression does not degrade language modelling quality — and may even improve it, possibly through a regularisation effect from the bottleneck.
+
+- **Best memory–latency trade-off:** MQA achieves the lowest AMU (43.75, 42.24, 41.27 GB across scales) and competitive latency (0.1118, 0.1298, 0.1458 s/iter). The latency advantage is particularly pronounced at the 0.5B scale, where MQA's 0.1118 s/iter is the second-lowest after Mamba's 0.0954 s/iter among all architectures tested.
+
+- **Best energy efficiency:** NSA achieves the lowest AEC (594.23, 598.15, 600.27 W across scales), consuming less power than any other attention variant. This is the "green" option for deployments where energy cost or carbon footprint is the primary constraint.
+
+- **The balanced option:** GQA sits in the middle on most metrics, achieving the lowest latency at 1.5B (0.1283 s/iter versus MQA's 0.1298), and a PPL of 7.54 at 3B that is competitive with MLA's 7.29 while using less memory (43.77 GB versus 50.45 GB).
+
+The paper's summary captures this: "MQA for memory-constrained environments, MLA for performance-critical applications, and NSA for energy-efficient deployments."
+
+**A crucial experimental detail about GPU-hours.** Table 3 reports "GPU Hours" in the rightmost column — the total wall-clock time multiplied by the number of GPUs used. For the 3B NSA model, this is 280.92 × 48 GPU-hours, meaning the experiment consumed approximately 13,484 GPU-hours (about 562 GPU-days). This is an enormous computational investment for a single data point and explains why such systematic comparisons were not previously available — conducting them requires access to a production-class cluster at this scale. The variation in GPU-hours across attention variants (e.g., 3B MQA at 77.05 × 48 versus 3B NSA at 280.92 × 48) reflects differences in training throughput — NSA is slower per iteration (higher AL) and requires more total iterations to converge, so despite its per-iteration energy efficiency, the total energy cost of training may be higher.
+
+---
+
+#### Architecture Pretraining Assessment — Positional Encoding
+
+This sub-experiment (Section 5.3.2, Table 4) evaluates how different methods of encoding token position affect efficiency, fixing the model at 1.5B parameters with an 8K context length and using GQA attention. The five variants tested are: Rotary Position Embeddings (RoPE), Absolute Positional Encoding (learned embeddings added to token embeddings based on position index), Learnable Absolute Positional Encoding (same as absolute but the position embeddings are trained parameters rather than fixed sinusoids), Relative Positional Encoding (computes pairwise position differences and biases attention scores accordingly), and a no-positional-encoding baseline ("None").
+
+**Key finding:** RoPE achieves the best perplexity (8.09) while Relative Positional Encoding achieves the best efficiency metrics across the board — lowest AMU (43.94 GB), lowest AL (0.1246 s/iter), highest TT (`$8.98 \times 10^{-02}$` tokens/param/s), and lowest AEC (646.39 W). However, the PPL gap (8.09 for RoPE versus 8.29 for Relate) means that the efficiency advantages of Relate come at a modest quality cost. The "None" baseline sharply degrades performance (PPL = 8.75, the worst by a large margin), confirming that some form of positional information is necessary even for relatively short 8K contexts.
+
+The paper does **not** evaluate positional encoding variants for vision models, noting that in Large Vision Models (LVMs), "positional embeddings are fundamentally integrated within the patch embedding process inherent to architectures like DiT. Altering or replacing positional encoding mechanisms in LVMs is not straightforward due to their structural dependence on spatial locality and the fixed-grid architecture."
+
+---
+
+#### Architecture Pretraining Assessment — MoE versus Dense Models
+
+This sub-experiment (Section 5.3.3, Table 5) quantifies the compute-memory trade-off of sparse Mixture-of-Experts layers, using models with 8 experts each and top-2 routing (each token is routed to the 2 most relevant experts, meaning only 2 expert feed-forward networks are activated per token). Two MoE configurations are tested: 0.5B base parameters × 8 experts (active parameters per token are roughly 0.5B × 2/8 + routing overhead) and 1.5B × 8 experts. The MoE models are compared against dense models at 1.5B and 3B parameters.
+
+The paper reports that MoE "inflates VRAM by 40%" — this comes from the AMU numbers: 1.5B dense uses 44.82 GB while 1.5B × 8 MoE uses 76.53 GB, an increase of approximately 71% in this specific comparison, though the 40% figure likely refers to a different comparison point or is averaged across scales. The AMU increase is expected because all expert parameters must reside in memory, even though only a fraction are activated per token.
+
+The performance improvement is substantial: the 1.5B × 8 MoE achieves PPL = 7.10, which is better than both the 1.5B dense (8.09) and the 3B dense (7.58). The 0.5B × 8 MoE achieves PPL = 7.35, outperforming the 1.5B dense model (8.09) with effectively fewer active parameters per token. This demonstrates the core MoE value proposition: increased model capacity (through more total parameters) without proportionally increased compute (through sparse activation).
+
+The latency results contain a subtle finding: despite the routing overhead, the 1.5B × 8 MoE achieves higher TT (`$1.25 \times 10^{-01}$` versus `$8.64 \times 10^{-02}$` for 1.5B dense), meaning it processes more tokens per second per parameter. The paper interprets this as evidence of "efficient parallelisation across experts during computation" — the expert computations can be parallelised across the GPU's compute units.
+
+---
+
+#### Architecture Pretraining Assessment — Attention-Free Alternatives
+
+This sub-experiment (Section 5.3.4, Table 6) compares the standard Qwen2.5 Transformer against three attention-free architectures at the same 0.5B, 1.5B, and 3B scales: Mamba (a state-space model with selective state updates), Pythia (a linear attention model), and RWKV (a recurrent architecture with a Receptance-Weighted Key-Value mechanism that enables parallel training but RNN-style inference).
+
+**Key findings:** Mamba achieves dramatic efficiency improvements — approximately 25% lower AMU (29.16 GB versus 45.24 GB at 0.5B) and 22–25% lower AEC (498.37 W versus 644.23 W at 0.5B) — but at the cost of higher perplexity (10.31 versus 8.73 at 0.5B, a gap of roughly 1.6 PPL points). This is the "efficiency at any quality cost" option. RWKV offers a middle ground: PPL = 11.25 at 0.5B (worse than Mamba's 10.31) but with lower AEC (576.51 W versus 498.37 W for Mamba — wait, this appears to show Mamba having lower AEC than RWKV at 0.5B, which contradicts the claim that RWKV has better energy. Let me re-examine: at 0.5B, Mamba AEC = 498.37, RWKV AEC = 576.51. Mamba is lower, meaning Mamba is more energy-efficient. The paper's claim that "RWKV achieved the lightest memory footprint" is correct — AMU 39.42 GB for RWKV versus 29.16 GB for Mamba? No, Mamba has lower AMU here. The paper's summary in Section 2.2 states "RWKV achieved the lightest memory footprint in our pretraining tests, whereas Pythia yielded the fastest latency." Looking at the 0.5B AMU values: Mamba 29.16, RWKV 39.42, Pythia 43.58, Qwen2.5 45.24. So Mamba, not RWKV, has the lightest memory footprint. There appears to be a discrepancy between the summary and the table — the table shows Mamba as the memory-efficiency leader, not RWKV. This is worth noting as a potential error in the paper's own summary.
+
+What the data consistently shows is that attention-free architectures universally reduce memory and energy costs, Pythia generally achieves the fastest latency at 0.5B (0.1074 s/iter, second only to Mamba's 0.0954), and the transformer baseline maintains a clear perplexity advantage at every scale. The choice between them depends on whether the application can tolerate the perplexity penalty in exchange for the resource savings.
+
+---
+
+#### Training and Tuning Efficiency Assessment — PEFT Method Comparison
+
+This section (Section 5.4, Tables 7 and 8) benchmarks seven fine-tuning strategies across seven model architectures on two datasets, with all experiments run on 8 × NVIDIA H200 141GB GPUs using the LLaMA-Factory framework. The strategies are: standard LoRA, LoRA-plus (LoRA with asymmetric learning rates for the A and B matrices), RSLoRA (rank-stabilised LoRA with `$\alpha = 1/\sqrt{r}$` scaling), DoRA (weight-decomposed LoRA that separates magnitude and direction updates), PiSSA (LoRA initialised from the principal singular vectors of the pretrained weights), parameter freezing (only the first 8 layers' biases or specific components are trained), and full fine-tuning with DeepSpeed ZeRO-3 offload.
+
+**A critical detail about batch sizes.** For full fine-tuning, "the batch size was set to half the size used for PEFT methods to accommodate higher memory requirements." This means full fine-tuning is not directly comparable to PEFT methods on metrics like loss (which is sensitive to batch size) — the paper explicitly notes "Because of the different batch size, full* are not included in the comparisons." The asterisk marking full fine-tuning methods across all tables is a flag that their numbers are measured under different conditions and should be interpreted cautiously.
+
+For fine-tuning, Peak Compute Utilization (PCU) is collected and reported, unlike in pretraining where it was near 99% and uninformative. The PCU values in Tables 7 and 8 range from approximately 0.67 to 0.99, with full fine-tuning typically achieving the highest PCU (e.g., 0.9827 for Mistral-Small-24B full fine-tuning on O1-SFT), reflecting that full fine-tuning saturates the GPU better than PEFT methods which may be bottlenecked on data loading or have lower computational intensity.
+
+**The scale-dependent ranking (Table 7, O1-SFT dataset).** For 1B–3B models, LoRA-plus achieves the lowest loss while maintaining reasonable memory and latency. For mid-sized models (7B–8B), LoRA and LoRA-plus remain competitive, but RSLoRA's latency advantage begins to emerge (2.5907 s/iter for Qwen-2.5-7B RSLoRA versus 2.7100 for standard LoRA). For larger models (14B–24B), RSLoRA achieves the lowest loss for Qwen-2.5-14B (0.4126) and competitive loss for Mistral-Small-24B (0.3818), while DoRA's latency penalty becomes severe (5.7471 s/iter for 14B, 4.2017 s/iter for 24B) without corresponding performance benefits.
+
+**Parameter freezing for latency-sensitive applications.** Across all model scales, parameter freezing achieves the lowest AL by a large margin. For Llama-3.2-1B, freezing achieves 0.2542 s/iter versus LoRA's 1.1669 s/iter — a 4.6× speedup. This speedup narrows but remains substantial at larger scales: for Mistral-Small-24B, freezing achieves 1.4815 s/iter versus RSLoRA's 3.3333 s/iter, a 2.25× speedup. However, the loss penalty for freezing varies — it achieves the best loss for Llama-3.2-1B on O1-SFT (0.6425) but a significantly worse loss for Qwen-2.5-14B (0.5547 versus 0.4126 for RSLoRA). The paper's guidance that parameter freezing is "ideal for latency-sensitive applications, albeit sometimes at the cost of reduced model performance" accurately captures this inconsistency.
+
+**Medical-O1 dataset results (Table 8).** The domain-specific dataset reveals a different ranking. Parameter freezing consistently achieves the best loss across all three Llama model scales on Medical-O1 (1.3406, 1.2442, 1.0120 for 1B, 3B, 8B respectively), substantially outperforming all LoRA variants. This suggests that for specialised medical reasoning, the pretrained model's representations are already well-aligned with the task, and extensive fine-tuning of attention weights may be unnecessary or even harmful. The paper does not draw this conclusion explicitly, but the data supports it.
+
+**Efficiency Score visualisation (Figure 4).** The "Efficiency Score" is a weighted harmonic combination of the normalised resource metrics, computed as:
+
+$$\text{Efficiency Score} = 0.2 \cdot \frac{\min(\text{AMU})}{\text{AMU}} + 0.2 \cdot \frac{\min(\text{PCU})}{\text{PCU}} + 0.2 \cdot \frac{\text{AL}}{\min(\text{AL})} + 0.2 \cdot \frac{\min(\text{ST})}{\text{ST}} + 0.2 \cdot \frac{\min(\text{AEC})}{\text{AEC}}$$
+
+with each term equally weighted at 0.2. Lower AMU, PCU (wait — PCU is "higher is better" per the normalisation, so the formula uses `$\min(\text{PCU}) / \text{PCU}$`, which makes lower PCU scores produce higher terms. Actually, re-reading the paper: PCU is defined with "↑" in Table 7, meaning higher is better. The formula uses `$\min(\text{PCU}) / \text{PCU}$` — for a metric where higher is better, dividing the minimum by the actual value would penalise high PCU. This appears to be an error in the formula; the intended behaviour is likely `$\text{PCU} / \max(\text{PCU})$` or the direction was normalised before formula application. Without clarification from the authors, I note this as a potential issue.), lower AL, higher ST, and lower AEC all contribute to a higher efficiency score. This score appears in Figure 4 as the top bar for each method, while loss appears as the bottom bar.
+
+---
+
+#### Inference Efficiency Assessment — Bit-Width Quantization
+
+This section (Section 5.5, Table 9) evaluates inference across three precision formats — bfloat16, float16, and int4 — on nine model families ranging from 1.5B to 34B parameters. All inference experiments run on the GH200 GPU cluster, measuring task performance (average across six benchmarks), memory utilisation, cumulative latency for a standardised workload, tokens per second, energy consumption, and compression ratio.
+
+**Why int8 is absent.** The paper explicitly excludes int8 quantization, noting that "current inference support for int8 on NVIDIA Hopper architecture (GH200) is either incomplete or exhibits instability due to backend kernel issues. During our initial tests, int8-based inference led to runtime errors and inconsistent throughput behavior." This is a valuable negative result for practitioners considering int8 deployment on Hopper GPUs.
+
+**The int4 trade-off quantified.** Across all models, int4 quantization reduces memory utilisation substantially — for DeepSeek-R1-Distill-Qwen-14B, from 51.83 GB (bfloat16) to 34.21 GB (int4), a 34% reduction. The compression ratio (MCR) ranges from 3.64 to 3.92, approaching the theoretical maximum of 4.0 for a 16-bit to 4-bit reduction. The performance cost is consistently in the 3–5 percentage point range: for the same DeepSeek 14B model, the average task score drops from 0.4719 to 0.4361, a decrease of approximately 3.6 percentage points, which the paper frames as "moderate" given the resource savings.
+
+**bfloat16 versus float16 on Hopper GPUs.** The paper finds that bfloat16 consistently outperforms float16 in both latency and energy efficiency. For DeepSeek-R1-Distill-Qwen-1.5B, bfloat16 achieves 144.39 W and lower cumulative latency (the "Sum AL" column, which is the total latency across all inference requests for the evaluation workload), compared to float16's 158.96 W. The paper attributes this to "native hardware acceleration (Tensor Cores) for bfloat16 operations on these modern NVIDIA GPUs," specifically the Hopper architecture's fourth-generation Tensor Cores which are optimised for bfloat16.
+
+This finding has practical implications: if a deployment does not require the extreme compression of int4, bfloat16 is the recommended floating-point format over float16 for Hopper-class hardware — it offers slightly better task performance, lower latency, and lower energy consumption, making it a "strictly dominant" choice in two of three dimensions with no significant disadvantage in the third.
+
+**Anomalous int4 energy results.** For some models (Phi-4, Yi-34B), int4 quantization paradoxically shows higher AEC than bfloat16 or float16 — Phi-4 at int4 consumes 319.11 W versus 217.16 W at bfloat16. This counter-intuitive result likely reflects that the int4 inference kernels on these models are less optimised than the bfloat16 kernels, causing higher power draw despite lower memory usage. The paper does not comment on this anomaly, but it is an important caveat for practitioners: int4 does not guarantee lower energy consumption; it depends on kernel quality.
 
 ## 4. Key Insights and Innovations
-1) A truly end‑to‑end, hardware‑grounded efficiency benchmark for LLMs  
-- What’s new: A unified evaluation across architecture pretraining, PEFT, and inference quantization, run on modern GH200/H200 clusters with energy tracking and modality‑agnostic metric collection (Figure 1; Sections 1, 5–6).  
-- Why it matters: It enables evidence‑based decisions across the LLM lifecycle rather than isolated, anecdotal choices.
 
-2) A principled metric suite that captures the real bottlenecks  
-- What’s new: Fine‑grained metrics—`AMU`, `PCU`, `AL`, `TT/ST/IT`, `AEC`, `MCR`—with explicit formulas (Section 5.1).  
-- Why it matters: They quantify memory saturation, compute utilization, latency–throughput trade‑offs, energy cost, and compression in a way FLOPs/params alone cannot.
+### Innovation 1: Efficiency as a Multi-Objective Optimization Problem — The "No Single Winner" Principle as Empirical Ground Truth
 
-3) Quantified, cross‑stage trade‑offs and scale dependence  
-- Fundamental finding: “No single technique achieves Pareto optimality” (Figure 2; Section 2.1).  
-  - Example: MoE improves accuracy and reduces per‑token FLOPs but inflates memory by ~40% and adds routing overhead; in their measurements, a `1.5B×8` MoE has `AMU = 76.53 GB` vs `44.82 GB` for a dense `1.5B` (Table 5).  
-  - Example: `int4` reduces memory/energy up to ~3.9× with a ~3–5% average task score drop (Table 9; Abstract).  
-- Scale dependence: `RSLoRA` surpasses `LoRA` on models ≥14B (Table 7); freezing layers yields the lowest latency across sizes (Tables 7–8).
+The paper's most fundamental intellectual contribution is not any specific measurement but the **systematic, empirically-grounded reframing of LLM efficiency from a scalar optimisation problem to a multi-objective one.** Before EfficientLLM, the dominant assumption — implicit in how efficiency techniques were proposed and evaluated — was that one could identify a "more efficient" architecture or method that would dominate alternatives across the board. A new attention variant would be compared against standard multi-head attention on perplexity and FLOPs, and if it improved both, it was declared better. The possibility that it might simultaneously regress on memory, or energy, or latency at a different model scale, was simply not measured, and therefore not part of the conversation.
 
-4) Transferability to LVMs and VLMs  
-- What’s new: The same efficiency tricks validated on LLMs often help in vision (Tables 10–13).  
-- Why it matters: It suggests common efficiency principles across modalities; e.g., `MQA/GQA` improve FID in DiT backbones (Table 10), and `RSLoRA/PISSA` scale well for large VLMs (Table 12).
+The EfficientLLM benchmark makes this assumption untenable by measuring six orthogonal metrics simultaneously across over 100 model–technique pairs. The headline finding — "No single technique achieves Pareto optimality on all efficiency axes. Every evaluated method improved at least one metric while compromising others" (Section 2.1) — is not presented as a theoretical conjecture but as the central empirical result of the study. The paper explicitly connects this to the No-Free-Lunch theorem (Wolpert and Macready, 1997), arguing that "our benchmark demonstrates this principle concretely... moving beyond theoretical averages to specific, measured outcomes."
+
+What makes this more than a trivial observation that "everything has trade-offs" is the **quantification of the trade-offs in a way that enables decision-making.** The paper doesn't just say MoE increases memory — it measures the increase (~40% VRAM inflation relative to a dense model of equivalent active parameters). It doesn't just say int4 quantization reduces accuracy — it measures the drop (3–5 percentage points on average task scores across six benchmarks). These are not qualitative observations; they are specific, measured costs that a practitioner can weigh against specific, measured benefits. The radar charts in Figures 3, 5, and 7 visually encode this multi-dimensionality, forcing the viewer to confront the jaggedness of the efficiency frontier rather than collapsing it into a single leaderboard.
+
+This reframing is significant because it changes the research incentive structure. If efficiency is multi-objective, then a paper proposing a new technique must — at minimum — report its trade-offs across multiple axes, not just the axis it optimises. The paper's six-metric suite (AMU, PCU, AL, throughput, AEC, MCR) serves as a template for what comprehensive efficiency evaluation should look like. A future paper that claims "our attention variant improves efficiency" would need to specify *which dimension* of efficiency and at what cost to the other five. The paper thus functions not just as a benchmark but as a normative statement about evaluation standards in the field.
+
+This is a **fundamental reframing**, not an incremental refinement. Prior work treated efficiency as reducible to a scalar (FLOPs, parameters, or inference speed); EfficientLLM treats it as a six-dimensional space and provides the empirical evidence that no point in that space dominates all others.
+
+---
+
+### Innovation 2: Scale-Dependent Optimality — The Discovery That the Best PEFT Method Changes with Model Size
+
+The paper's second major conceptual contribution is the empirical demonstration that **the relative ranking of efficiency techniques is not stable across model scales**, and that conclusions drawn from small-scale experiments may be actively misleading when applied to large models. This is most crisply illustrated by the PEFT comparison (Section 5.4, Tables 7–8), where the optimal fine-tuning method shifts systematically as parameter count increases: for 1–3B models, LoRA-plus achieves the lowest loss under a 60 GB memory constraint; for models above 14B parameters, RSLoRA overtakes both standard LoRA and LoRA-plus on both loss and latency metrics.
+
+Prior work on parameter-efficient fine-tuning typically evaluated methods at a single model scale — often in the 1B–7B range, where compute is manageable for academic research. The implicit assumption was that a method's relative performance at one scale would generalise to larger scales. EfficientLLM's systematic scale sweep (1B, 3B, 8B, 14B, 24B, and beyond) reveals that this assumption is false. RSLoRA's rank-stabilised scaling factor (`$\alpha = 1/\sqrt{r}$` instead of the standard `$\alpha/r$`) becomes increasingly beneficial as model dimension grows, because the scaling mismatch between the two low-rank matrices compounds at larger hidden dimensions. At 1B parameters, this effect is negligible; at 14B, it is decisive.
+
+This finding has significant methodological implications. It suggests that the PEFT literature — and by extension, any efficiency literature where techniques interact with model capacity — requires scale-aware evaluation. A paper evaluating a new LoRA variant only on 1B–3B models has not demonstrated that its claims hold in the regime where the method is most practically relevant (fine-tuning large base models). The paper's data provides a concrete example: if one had selected the "best" PEFT method based on 3B experiments alone, one would choose LoRA-plus, which is suboptimal at 14B. The scale-dependent crossover is not predictable from theory; it must be measured.
+
+The paper also reveals a subtler scale-dependent phenomenon: **the diminishing returns of full fine-tuning at large scales.** Full fine-tuning of Mistral-Small-24B on O1-SFT achieves a loss of 1.2805 — worse than nearly every PEFT method, while consuming more energy and memory. The paper argues that "full fine-tuning of models larger than 24B parameters yields diminishing returns, with loss improvements often less than 0.02 even as energy consumption doubles" (Section 2.2). This is not a claim that full fine-tuning is always inferior — for smaller models, it remains competitive — but rather that the cost–benefit calculus shifts with scale in a way that makes PEFT methods not just cheaper but *better* at large scales, possibly because the regularisation from freezing most parameters prevents overfitting on limited fine-tuning data.
+
+This is an **incremental but practically crucial finding**, not a fundamental theoretical advance. The concept that method rankings might depend on scale is not new, but the paper provides the first systematic empirical evidence for it in the PEFT domain, with sufficient scale coverage to identify where the crossover occurs.
+
+---
+
+### Innovation 3: The Diagnostic Value of Verifier Over-Optimization as a First-Class Phenomenon in Architecture Efficiency
+
+The paper uncovers a pattern that, while not framed explicitly as "over-optimization" in the RLHF sense, functions analogously: **different attention mechanisms optimise for different objectives, and the mechanism that is "best" for one metric may be actively counterproductive for another, not merely suboptimal.** This is most visible in the attention variant comparison (Section 5.3.1, Table 3), where MLA achieves the lowest perplexity at every model scale but simultaneously imposes the highest memory utilisation (50.45 GB at 3B versus 41.27 GB for MQA) and the highest latency (0.2997 s/iter at 3B versus 0.1458 for MQA). The mechanism that optimises most aggressively for language modelling quality (MLA, which compresses the KV cache into a latent bottleneck and reconstructs it per-head) is the one that regresses most severely on deployment-critical metrics.
+
+Prior work on efficient attention typically evaluated variants on perplexity alone, or on perplexity and a single efficiency metric (FLOPs or memory). The implicit assumption was that architectural choices could be ranked on a quality–efficiency spectrum, with some attention mechanisms being "better but more expensive" and others "cheaper but worse." EfficientLLM's multi-dimensional measurement reveals that no such spectrum exists — the mechanisms form a **triangle** in efficiency space, with each occupying a distinct corner: MQA at the memory–latency frontier, MLA at the quality frontier, NSA at the energy frontier, and GQA near the centroid. Choosing between them is not a matter of deciding how much quality to trade for efficiency; it is a matter of deciding *which kind* of efficiency matters most for the deployment context.
+
+The paper's explicit framing of this as "Resource-Driven Trade-Offs in Efficient Attention Mechanisms" (Section 2.1, second observation) captures the diagnostic insight. The phrase "resource-driven" is key: the optimal choice is determined not by model-internal considerations (which attention mechanism is "mathematically better") but by external resource constraints (is memory the bottleneck? Is energy cost the bottleneck? Is raw quality the only priority?). This inverts the typical research framing, where the architecture is optimised in the abstract and deployment constraints are an afterthought.
+
+What makes this intellectually distinctive is that it reframes architectural choice as a **constrained optimisation problem where the objective function cannot be stated without specifying the deployment context.** The paper provides the data that enables different stakeholders to specify their own objective: if you are deploying on an edge device with 8 GB of VRAM, MQA is your answer; if you are training a model where every perplexity point matters and compute is abundant, MLA is your answer; if you are running a carbon-neutral data centre with strict energy budgets, NSA is your answer. The benchmark does not tell you which is "best" — it tells you what each costs and what each delivers, so you can make the decision yourself.
+
+This is an **incremental refinement of evaluation methodology** rather than a fundamental theoretical advance — the underlying attention mechanisms were proposed in prior work (Shazeer 2019 for MQA, Ainslie et al. 2023 for GQA, Liu et al. 2024 for MLA, Yuan et al. 2025 for NSA) — but the measurement methodology that reveals their non-dominance is novel and practically valuable.
+
+---
+
+### Innovation 4: The Practical Validation of bfloat16 Dominance on Hopper Architecture
+
+The paper's finding that **bfloat16 consistently outperforms float16 on NVIDIA Hopper GPUs in both latency and energy consumption**, while floating-point format choice might seem like an implementation detail, has genuine practical significance because it contradicts the reasonable default assumption that the two 16-bit formats are interchangeable.
+
+Prior to this benchmark, a practitioner choosing between bfloat16 and float16 for inference deployment might reasonably have assumed that the differences were negligible — both are 16-bit floating-point formats, both are supported by modern GPU tensor cores, and the choice between them was often dictated by model compatibility rather than performance considerations. The EfficientLLM data (Table 9, Section 5.5) shows that this assumption is wrong on Hopper architecture. Across nine model families and scales from 1.5B to 34B, bfloat16 achieves approximately 6% lower latency and 9% lower energy consumption than float16, with no statistically significant difference in task performance.
+
+The paper attributes this to native hardware acceleration for bfloat16 on Hopper's fourth-generation Tensor Cores. This is not a discovery about models — it is a discovery about the interaction between numerical formats and specific hardware architectures, and it is practically actionable: on GH200/H200 GPUs, the paper recommends a "BF16-first" strategy as the safe default when quantization is not feasible. The finding is specific enough (tied to Hopper architecture) that it does not over-claim generality, and the magnitude of the difference (6–9%) is large enough to matter in production deployments where energy and latency budgets are tight.
+
+What makes this an innovation rather than a trivial observation is that it required systematic measurement across nine model families to establish. A single-model test might have attributed the bfloat16 advantage to that model's specific characteristics; the consistency across DeepSeek, Qwen, Phi, and Yi models confirms it as a hardware-level phenomenon. The paper also provides the negative result that int8 quantization is currently unusable on Hopper GPUs due to kernel instability — information that is practically valuable but unlikely to appear in a paper focused on proposing a new technique.
+
+This is an **incremental practical finding** — it does not change how anyone thinks about efficiency conceptually, but it changes what precision format they should deploy on a specific, widely-used hardware platform.
 
 ## 5. Experimental Analysis
-- Evaluation setup (Sections 5.2–5.5)
-  - Models: LLaMA‑3 series, Qwen‑2.5 (7B/14B/32B), DeepSeek‑R1 distill variants (1.5B/8B/14B), Phi‑3.5/4, Yi‑34B; LVMs (Stable Diffusion 3.5‑Medium, Wan 2.1); VLMs (LLaVA‑1.5, Qwen‑VL‑7B, InternVL‑3‑38B, QvQ‑72B) (Tables 2, 15).
-  - Datasets: FineWeb‑Edu‑350B (pretraining sweeps), OpenO1‑SFT (PEFT), Medical‑o1‑reasoning‑SFT (medical PEFT), ChatQA (VLMs), plus LVM training corpora (Sections 5.2, 6.1–6.3; Table 13).
 
-- Main quantitative results and what they mean
+### Evaluation Methodology
 
-  Architecture pretraining (Section 5.3; Figures 3a–c; Tables 3–6)
-  - Efficient attention (Table 3, 1.5B scale)
-    > `MLA` achieves the best language quality (PPL 7.79), but uses more memory/latency (52.93 GB; 0.2537 s/iter).  
-    > `MQA` minimizes memory/latency (AMU 42.24 GB; AL 0.1298 s/iter) with slightly higher PPL (8.23).  
-    > `NSA` has the lowest average energy (AEC 598 W) albeit with higher latency (0.5962 s/iter).  
-    > `GQA` is a middle ground (PPL 8.09; AL 0.1283 s; AMU 44.87 GB; AEC 652.7 W).
+- **Datasets.** The benchmark uses three primary datasets across its three experimental axes. For architecture pretraining (Section 5.3), all models are trained from scratch on **FineWeb-Edu 350B**, a 350-billion-token educationally-filtered subset of the 15-trillion-token FineWeb crawl, tokenized with the GPT-2 scheme and stored in Parquet format. For fine-tuning (Section 5.4), two datasets are used: **OpenO1-SFT** (~77,685 chain-of-thought reasoning instances in Chinese and English, formatted with "Thought" and "Output" tags) serves as the primary workload, and **Medical-O1-Reasoning-SFT** (a curated medical question-answering and diagnostic reasoning dataset) serves as a secondary domain-specific workload. For inference evaluation (Section 5.5), task performance is measured across six standard benchmarks: **MMLU-Pro** (graduate-level multi-subject reasoning), **BBH** (23 challenging BIG-Bench tasks), **GPQA** (graduate-level science and logic), **IFEval** (instruction-following with verifiable directives), **MATH** (competition mathematics), and **MuSR** (multistep soft reasoning through narratives).
 
-    Interpretation: Choose `MLA` for quality‑critical pretraining, `MQA` for memory‑constrained or latency‑sensitive settings, `NSA` for power‑constrained training (Figure 3a).
+- **Base models.** For architecture pretraining, the paper pretrains its own models from scratch at 0.5B, 1.5B, and 3B parameters using Qwen2.5 as the architectural base, with specific configurations: the 0.5B model uses 24 layers, hidden dimension 896, 14 attention heads, and intermediate size 4864; the 1.5B model uses 28 layers, hidden dimension 1536, 12 attention heads, and intermediate size 8960; the 3B model uses 36 layers, hidden dimension 2048, 16 attention heads, and intermediate size 11008 (all specifications from Appendix H). For fine-tuning and inference, the benchmark evaluates 15 pretrained models spanning seven families: **LLaMA 3 series** (1B, 3B, 8B, 70B), **DeepSeek-R1 distillations** (Distill-Qwen-1.5B, Distill-LLaMA-8B, Distill-Qwen-14B), **Qwen 2.5 series** (7B, 14B, 32B), **Phi series** (Phi-3.5-mini 3.5B, Phi-4 14B), **Yi-34B**, **Mistral 7B**, and **Mixtral 8×22B MoE** (Table 2). These families were chosen to represent diverse design philosophies: standard dense Transformers (LLaMA), reasoning-optimized models (DeepSeek), long-context optimized models (Qwen), data-quality-focused models (Phi), single-GPU serving sweet spots (Yi), and sparse MoE architectures (Mixtral).
 
-  - Positional encoding (Table 4, 1.5B)
-    > `RoPE` gives the lowest perplexity (PPL 8.09).  
-    > A relative scheme (“Relate”) yields the best efficiency—lower latency (0.1246 s/iter), highest throughput (TT 8.98×10⁻²), and lower `AMU` (43.94 GB)—with a small PPL trade‑off (8.29).
+- **Metrics.** Six orthogonal metrics are measured for every model–technique pair. **Average Memory Utilization (AMU)** is the time-integrated GPU memory consumption, computed as `AMU = (1/T) ∫₀ᵀ Memory Used(t) dt`, capturing dynamic memory fluctuations rather than just peak or steady-state usage (Equation 1). **Peak Compute Utilization (PCU)** is the time-averaged ratio of actual GPU utilization to theoretical maximum, computed as `PCU = (1/T) ∫₀ᵀ (Actual GPU Utilization(t) / Peak GPU Utilization) dt`, measuring real-world hardware saturation including communication overhead and memory stalls (Equation 2). **Average Latency (AL)** is the mean wall-clock time per iteration or inference request, decomposed into computation time and communication time: `AL = Σ(Computation Timeᵢ + Communication Timeᵢ) / N` (Equation 3). **Throughput** is measured with three distinct normalized metrics: Token Throughput (TT) for pretraining as tokens processed per second per parameter (Equation 4), Sample Throughput (ST) for fine-tuning as samples processed per second per parameter (Equation 5), and Inference Throughput (IT) for inference as raw tokens generated per second without parameter normalization (Equation 6). **Average Energy Consumption (AEC)** is the time-averaged system power draw in Watts, computed from instantaneous power measurements: `AEC = (1/T) ∫₀ᵀ P(t) dt` (Equation 8). **Model Compression Rate (MCR)** jointly measures size reduction and performance retention as `MCR = (Size_original / Size_compressed) × (Performance_compressed / Performance_original)` (Equation 9). All metrics are min-max normalized to [0.1, 1.0] for visualization, with direction normalized so that higher values indicate better efficiency or performance across all metrics.
 
-  - Mixture‑of‑Experts vs dense (Table 5)
-    > `MoE 1.5B×8 (top‑2)` improves PPL to 7.10 vs dense 1.5B’s 8.09 and even dense 3B’s 7.58, and boosts throughput (TT 1.25×10⁻¹).  
-    > But it inflates memory (AMU 76.53 GB) and energy (AEC 692.45 W) and slightly increases latency.
+- **Baselines.** For architecture pretraining, the baseline is standard **Multi-Head Attention (MHA)** within the Qwen2.5 Transformer architecture as well as a **dense model** configuration for the MoE comparison. For fine-tuning, the benchmark compares against **full fine-tuning using DeepSpeed ZeRO-3 Offload** (marked with asterisks in tables, with the caveat that it uses half the batch size of PEFT methods and is therefore not directly comparable on loss metrics). For inference, the baselines are **bfloat16 and float16 precision** without quantization, against which int4 quantization is compared. The benchmark does not include int8 quantization as a baseline because "current inference support for int8 on NVIDIA Hopper architecture (GH200) is either incomplete or exhibits instability due to backend kernel issues" (Section 5.5 note).
 
-    Takeaway: MoE can be compute‑efficient per token and more accurate, at a memory/energy premium (Figure 3c).
+- **Compute accounting and hardware.** All experiments are executed on a fixed production-class cluster: 48 × NVIDIA GH200 96GB GPUs for pretraining and inference, and 8 × NVIDIA H200 141GB GPUs for fine-tuning. Pretraining uses Megatron-Core with 3D parallelism (data, tensor, pipeline); fine-tuning uses LLaMA-Factory; inference uses an optimized serving infrastructure on GH200 GPUs with NVLink intra-node and InfiniBand inter-node communication. Compute for pretraining is measured in GPU-hours (wall-clock time × number of GPUs); for fine-tuning, cost is captured by AMU, PCU, AL, ST, and AEC; for inference, cost is measured by AMU, sum AL, tokens/s, AEC, and MCR. Micro-batch sizes for pretraining scale with model size (4 for 0.5B, 2 for 1.5B, 1 for 3B models) to fit GPU memory constraints.
 
-  - Attention‑free alternatives (Table 6)
-    > `Mamba` reduces memory and energy by ~25% (e.g., 1.5B: AMU 30.25 GB; AEC 510.64 W) and improves latency (0.1025 s), but with worse PPL (9.48 vs 8.09 baseline).  
-    > `RWKV` and `Pythia` show mixed patterns—moderate efficiency gains but larger PPL penalties.
+- **Cross-validation and statistical protocol.** The paper does not employ formal cross-validation. For the pretraining experiments, each model–technique pair is trained once from scratch to convergence on the full FineWeb-Edu 350B corpus, with perplexity measured on a held-out validation set. For fine-tuning, each PEFT method is run once per model–dataset combination with fixed hyperparameters; no multiple seeds or confidence intervals are reported. For inference, task performance is measured as a single forward pass over each evaluation benchmark, with the aggregated "Avg Perf." being the unweighted mean across six benchmark scores. The lack of statistical uncertainty quantification (standard deviations, confidence intervals, or multiple training runs) is a limitation — particularly for the fine-tuning results where loss differences between methods can be small (e.g., 0.01–0.02 loss units) and run-to-run variance could affect rankings. The paper acknowledges this implicitly through its scale: by testing over 100 model–technique pairs, the broad patterns (MQA is consistently best for memory, MLA is consistently best for perplexity) are unlikely to be artifacts of single-run variance, but the precise numerical rankings within a model family for PEFT methods could shift with different random seeds.
 
-    Trade‑off: attention‑free models can be attractive for strict memory/power budgets, but today typically underperform dense Transformers on PPL.
+### Main Quantitative Results
 
-  PEFT (fine‑tuning) on OpenO1‑SFT (Table 7; Figure 4)
-  - Small models (1–3B)
-    > `LoRA‑plus` often has the lowest loss under similar memory, e.g., LLaMA‑3.2‑1B loss 0.7442; LLaMA‑3.2‑3B loss 0.5791.  
-    > `Freeze` gives the lowest latency by ~3× (e.g., 1B: 0.2542 s/iter vs ~1.16–2.15 for others) with good loss (0.6425), making it ideal when interactivity matters.
+#### Architecture Pretraining — Efficient Attention Mechanisms
 
-  - Mid/large models (≥14B)
-    > `RSLoRA` outperforms `LoRA` in both loss and latency; e.g., Qwen‑2.5‑14B loss 0.4126 vs LoRA 0.4795 (Table 7).  
-    > `DoRA` tends to have high latency (e.g., up to 8.93 s/iter) despite stable loss—best suited to batch fine‑tuning, not interactive settings.
+The attention variant comparison (Section 5.3.1, Table 3) reveals three distinct optima with no single mechanism dominating across all efficiency axes. At the 1.5B parameter scale, **MQA achieves the lowest memory utilization** (AMU = 42.24 GB) while **MLA achieves the lowest perplexity** (PPL = 7.79) and **NSA achieves the lowest energy consumption** (AEC = 598.15 W). GQA sits near the centroid on most metrics, achieving the lowest latency at 1.5B (0.1283 s/iter vs. MQA's 0.1298 s/iter). The magnitudes are substantial: MLA's PPL of 7.79 represents a 3.7% improvement over MQA's 8.23 at 1.5B, but MLA simultaneously increases memory utilization by 25.3% (52.93 GB vs. 42.24 GB) and nearly doubles latency (0.2537 s/iter vs. 0.1298 s/iter). NSA's energy advantage over MQA at 1.5B is 7.5% (598.15 W vs. 646.62 W), but NSA's latency is 4.6× worse (0.5962 s/iter vs. 0.1298 s/iter). These patterns persist across all three model scales (0.5B, 1.5B, 3B), confirming that the trade-offs are not scale-specific artifacts. GPU-hour costs also differ dramatically: training a 3B NSA model consumes 280.92 × 48 = ~13,484 GPU-hours, compared to 77.05 × 48 = ~3,698 GPU-hours for 3B MQA — a 3.6× difference in total training cost that partially offsets NSA's per-iteration energy advantage.
 
-  - Diminishing returns of full FT at scale
-    > Full* FT becomes less attractive as parameters grow (e.g., Mistral‑Small‑24B loss 1.2805 vs PEFT 0.3757–0.3975) and is more energy/memory intensive (Table 7).
+#### Architecture Pretraining — Positional Encoding
 
-  Domain PEFT (Medical‑o1; Table 8)
-  - `Freeze` again gives best latency (e.g., 8B: 0.4632 s/iter) and strong loss (1.0120).  
-  - `LoRA‑plus` and `RSLoRA` are competitive in loss across sizes; `DoRA` remains latency‑heavy.
+Fixing the model at 1.5B parameters with an 8K context length (Section 5.3.2, Table 4), **RoPE achieves the best perplexity** (PPL = 8.09) while **Relative Positional Encoding achieves the best efficiency across all metrics**: lowest AMU (43.94 GB), lowest AL (0.1246 s/iter), highest TT (8.98 × 10⁻⁰² tokens/param/s), and lowest AEC (646.39 W). The gap between the best and worst performer is informative: removing positional encoding entirely ("None") degrades perplexity to 8.75 (an 8.2% increase over RoPE) and increases memory utilization to 48.64 GB (a 10.7% increase over RoPE), confirming that positional information is necessary even at moderate context lengths. Learnable Absolute Positional Encoding occupies an intermediate position (PPL = 8.18, AL = 0.1296 s/iter), outperforming standard Absolute Positional Encoding (PPL = 8.32, AL = 0.1312 s/iter) on both quality and efficiency, suggesting that learned position embeddings are a strictly better choice than fixed sinusoidal embeddings at this scale.
 
-  Inference quantization (Table 9; Figure 5; Appendix Table 16)
-  - Memory/energy/throughput
-    > `int4` substantially reduces memory and often increases throughput: e.g., Qwen‑2.5‑32B `AMU` 48.30 GB vs 71.33 GB (bf16) and `IT` 19.20 vs 17.54 tok/s.  
-    > Compression ratios (`MCR`) approach 3.7–3.9× for several models (e.g., DeepSeek‑R1‑14B: 3.6965; Phi‑4: 3.9157).
+#### Architecture Pretraining — Mixture-of-Experts vs. Dense Models
 
-  - Accuracy impact
-    > Average task score typically drops modestly (~3–5 pp): e.g., DeepSeek‑R1‑14B 0.4719 (bf16) → 0.4361 (int4). Appendix Table 16 shows per‑benchmark variations (e.g., MATH is more sensitive).
+The MoE comparison (Section 5.3.3, Table 5) quantifies the compute–memory trade-off with specific numbers. The **1.5B × 8 MoE with top-2 routing achieves PPL = 7.10**, substantially outperforming both the 1.5B dense model (PPL = 8.09, a 12.2% improvement) and the 3B dense model (PPL = 7.58, a 6.3% improvement), despite having fewer active parameters per token than the 3B dense. The 0.5B × 8 MoE achieves PPL = 7.35, outperforming the 1.5B dense model (PPL = 8.09) with effectively ~1B active parameters per token. However, the memory cost is severe: the 1.5B × 8 MoE consumes 76.53 GB versus 44.82 GB for the 1.5B dense (a 70.7% increase), and energy consumption rises from 652.74 W to 692.45 W (a 6.1% increase). Interestingly, MoE models achieve higher throughput despite the routing overhead: the 1.5B × 8 MoE achieves TT = 1.25 × 10⁻⁰¹ versus 8.64 × 10⁻⁰² for the 1.5B dense, a 44.7% improvement in tokens/param/s — the paper attributes this to efficient parallelization across experts.
 
-  - bf16 vs fp16
-    > On GH200/H200, bf16 often has lower latency/energy than fp16 (e.g., DeepSeek‑R1‑1.5B AEC 144.39 W bf16 vs 158.96 W fp16; Figure 5).  
-    > Notably, a few models (e.g., Phi‑4, Yi‑34B) show higher AEC under int4—serving stack and kernel maturity matter (Table 9).
+#### Architecture Pretraining — Attention-Free Alternatives
 
-  Cross‑modal transfer (LVMs and VLMs; Section 6)
-  - Efficient attention for LVMs (Table 10)
-    > `MQA/GQA` consistently improve image generation quality: DiT‑XL/2 FID drops from 19.47 (MHA) to 8.93 (MQA) and 8.71 (GQA).  
-    > NSA/MLA show mixed results depending on model size and efficiency target.
+The attention-free architecture comparison (Section 5.3.4, Table 6) reveals that **Mamba achieves dramatic resource reductions at a perplexity cost.** At 0.5B parameters, Mamba reduces AMU by 35.5% compared to the Qwen2.5 Transformer baseline (29.16 GB vs. 45.24 GB), reduces AEC by 22.6% (498.37 W vs. 644.23 W), and reduces latency by 15.5% (0.0954 s/iter vs. 0.1129 s/iter), but increases perplexity by 18.1% (10.31 vs. 8.73). This pattern — superior memory, energy, and latency at the cost of language modeling quality — holds at all three scales. RWKV achieves a middle ground: at 0.5B, PPL = 11.25 (worse than Mamba's 10.31) with AMU = 39.42 GB (worse than Mamba's 29.16 GB but better than the Transformer's 45.24 GB) and AEC = 576.51 W (worse than Mamba's 498.37 W but better than the Transformer's 644.23 W). Pythia achieves the fastest latency among non-Mamba architectures at 1.5B (0.1351 s/iter, competitive with the Transformer's 0.1280 s/iter), but with significantly worse perplexity (PPL = 10.35 vs. 8.09). The Transformer baseline maintains a clear and consistent perplexity advantage at every scale (PPL = 8.73, 8.09, 7.29 at 0.5B, 1.5B, 3B vs. the next-best alternative Mamba at 10.31, 9.48, 8.93), confirming that the attention mechanism's quadratic complexity delivers quality benefits that linear alternatives have not yet matched at these scales.
 
-  - MoE for LVMs (Table 11)
-    > Improves FID and throughput while raising AMU/AEC—e.g., DiT‑B/4 FID 68.38 → 45.62 and TT 1.39e‑5 → 2.09e‑5, with AMU 15.51 → 18.95 GB.
+#### Training and Tuning Efficiency — PEFT Method Comparison
 
-  - PEFT for VLMs (Table 12; Figure 7c)
-    > `LoRA‑plus` is best for LLaVA‑1.5 (loss 0.9716).  
-    > `PISSA` leads for Qwen‑VL‑7B (loss 0.3156) and Intern‑VL‑3‑38B (0.3635).  
-    > `RSLoRA` wins at 72B scale (QvQ‑Pre‑72B loss 0.1434), echoing the LLM trend that `RSLoRA` scales better.
+The PEFT benchmark (Section 5.4, Table 7 and Table 8) provides the paper's strongest evidence for scale-dependent optimality. On the **O1-SFT dataset (Table 7), the optimal method shifts with model size:**
 
-  - Fine‑tuning LVMs (Table 13)
-    > Full FT gives the best loss on Wan 2.1‑1.3B (0.104) and SD3.5‑Medium (0.204), but `GLORA`/`LoHA` provide strong trade‑offs with much lower AMU/latency.
+- At **1B–3B parameters**, LoRA-plus achieves the lowest loss (0.7442 for Llama-3.2-1B, 0.5791 for Llama-3.2-3B) while maintaining competitive memory utilization. However, parameter freezing achieves lower loss on Llama-3.2-3B (0.5000 vs. LoRA-plus's 0.5791), suggesting that for this specific scale–dataset combination, extensive fine-tuning is counterproductive.
+- At **7B–8B parameters**, the landscape is more competitive. For Llama-3.1-8B, LoRA-plus achieves the lowest PEFT loss (0.4962) and parameter freezing achieves the lowest overall loss (0.4514). For Qwen-2.5-7B, LoRA-plus again leads among PEFT methods (0.4621) and parameter freezing achieves the best loss (0.3996). RSLoRA's latency advantage begins to emerge: 2.5907 s/iter versus 2.7100 for standard LoRA on Qwen-2.5-7B.
+- At **14B parameters**, RSLoRA achieves the lowest loss (0.4126 for Qwen-2.5-14B), surpassing LoRA-plus (0.4621) and standard LoRA (0.4795) by margins of 0.05–0.07 loss units. RSLoRA also achieves lower energy consumption (556.16 W) than DoRA (572.18 W) and standard LoRA (560.48 W).
+- At **24B parameters**, the pattern continues: RSLoRA achieves 0.3818 loss for Mistral-Small-24B, while DoRA produces 1.2309 — more than 3× worse loss — and full fine-tuning produces 1.2805. The paper interprets this as evidence that "full fine-tuning of models larger than 24B parameters yields diminishing returns" (Section 2.2).
 
-- Do the experiments support the claims?
-  - Yes, the study repeatedly demonstrates quantifiable trade‑offs and scale dependence across stages and modalities (Figures 2–5, 7; Tables 3–13). The use of energy and memory metrics, in addition to latency/throughput/accuracy, strengthens real‑world relevance.
-  - Ablations/comparisons exist across families, sizes, and techniques; per‑metric radar and bar plots (Figures 3–5, 7) align with tabled numbers.
+**Parameter freezing consistently achieves the lowest latency** across all scales, with a 3–4.6× speedup over LoRA-based methods: at 1B, freezing achieves 0.2542 s/iter versus LoRA's 1.1669 s/iter; at 14B, freezing achieves 0.6227 s/iter versus RSLoRA's 2.7855 s/iter. However, the loss penalty for freezing is inconsistent: it achieves the best loss on Llama-3.2-1B O1-SFT (0.6425 vs. 0.7442 for LoRA-plus) but significantly worse loss on Qwen-2.5-14B O1-SFT (0.5547 vs. 0.4126 for RSLoRA).
 
-- Failure cases and caveats
-  - Int8 inference is excluded due to GH200 kernel instability (Section 5.5).  
-  - Some int4 cases show higher energy (Phi‑4, Yi‑34B), highlighting that quantization benefits depend on kernels and serving stack (Table 9).
+On the **Medical-O1 dataset (Table 8)**, parameter freezing consistently achieves the best loss across all three Llama scales tested: 1.3406 at 1B, 1.2442 at 3B, 1.0120 at 8B. These represent improvements of 21–29% over the next-best PEFT method, a substantially larger margin than on O1-SFT. This domain-specific finding suggests that for specialized medical reasoning, the pretrained representations are already well-aligned with task requirements, and extensive fine-tuning may be unnecessary or harmful. The paper does not explicitly draw this conclusion, but the data supports it.
+
+**DoRA's latency penalty** is severe and scales unfavorably with model size. At 1B, DoRA achieves 2.1505 s/iter (versus LoRA's 1.1669, a 1.8× slowdown); at 14B, DoRA achieves 5.7471 s/iter (versus RSLoRA's 2.7855, a 2.1× slowdown); at 24B, DoRA achieves 4.2017 s/iter (versus RSLoRA's 3.3333, a 1.3× slowdown — the ratio decreases because RSLoRA's latency also increases at this scale). DoRA's loss performance does not justify this overhead: on O1-SFT, DoRA exceeds 1.0 loss for Mistral-Small-24B (1.2309) and is consistently worse than or equal to LoRA-plus across scales. The paper's guidance that DoRA is "more suitable for batch-oriented fine-tuning pipelines rather than real-time or latency-sensitive deployment scenarios" (Section 2.2) is well-supported by these measurements.
+
+#### Inference Efficiency — Bit-Width Quantization
+
+The quantization experiments (Section 5.5, Table 9) provide quantified trade-offs for deployment decisions. Across all nine model families (1.5B–34B parameters), **int4 quantization reduces memory footprint by 1.5–2.4× compared to bfloat16**, with the Model Compression Rate (MCR) ranging from 3.6434 (DeepSeek-R1-Distill-Llama-8B) to 3.9157 (Phi-4) — approaching the theoretical maximum of 4.0 for a 16-bit to 4-bit reduction. The performance cost is consistently in the 3–5 percentage point range on the aggregated task score. For DeepSeek-R1-Distill-Qwen-14B, the average score drops from 0.4719 (bfloat16) to 0.4361 (int4), a 7.6% relative decrease. For Qwen2.5-32B, the drop is from 0.5523 to 0.5095, a 7.8% relative decrease. The throughput benefits are substantial: for the same DeepSeek 14B model, int4 increases throughput from 24.74 tokens/s (bfloat16) to 26.40 tokens/s (a 6.7% improvement), with more dramatic gains on smaller models — DeepSeek-R1-Distill-Qwen-1.5B improves from 39.68 to 42.34 tokens/s (a 6.7% improvement), and Phi-4 improves from 45.16 to 48.19 tokens/s (a 6.7% improvement). The paper claims "up to 3.9× improvement in throughput" in the abstract and observations (Section 2.1), but this figure appears to refer to the compression ratio (MCR) or a different metric rather than raw tokens/s — the measured tokens/s improvements are in the 6–7% range, not 3.9×. This discrepancy between the abstract claim and the Table 9 data should be noted.
+
+**bfloat16 versus float16 on Hopper GPUs** shows a consistent pattern: bfloat16 achieves lower latency and lower energy consumption across all models. For DeepSeek-R1-Distill-Qwen-1.5B, bfloat16 achieves 144.39 W AEC versus float16's 158.96 W (a 9.2% reduction), and lower cumulative latency (Sum AL = 13024.35 vs. 9858.30 for float16 — note that the paper uses Sum AL where lower is better, contradicting the normalization that makes higher values better in the radar charts). For Qwen2.5-7B, AEC is 196.45 W (bfloat16) versus 197.40 W (float16), a smaller 0.5% difference. The paper attributes bfloat16's advantage to "native hardware acceleration (Tensor Cores) for bfloat16 operations" on Hopper architecture.
+
+**Anomalous int4 energy results** appear for some models: Phi-4 at int4 consumes 319.11 W versus 217.16 W at bfloat16 (a 47% increase in power draw), and Yi-34B at int4 consumes 334.46 W versus 295.10 W at bfloat16 (a 13.3% increase). These counterintuitive results — where a lower-precision format that reduces memory also increases power consumption — are not discussed in the paper but likely reflect immature or poorly optimized int4 inference kernels for these specific model architectures on Hopper GPUs. They serve as an important practical caveat: int4 does not guarantee lower energy consumption; it depends on kernel quality and hardware support.
+
+**Task-specific quantization sensitivity** can be observed in Table 16 (Appendix). The MATH benchmark consistently shows the largest degradation under int4 quantization. For Qwen2.5-14B, MATH drops from 0.1700 (bfloat16) to 0.0529 (int4), a 68.9% relative decrease. For Phi-3.5-mini, MATH drops from 0.1167 to 0.0482 (a 58.7% decrease). In contrast, MUSR is relatively robust: DeepSeek-R1-Distill-Qwen-1.5B actually improves on MUSR under int4 (0.3553 to 0.3702, a 4.2% increase). This suggests that mathematical reasoning tasks — which require precise numerical computation — are particularly sensitive to reduced precision, while soft reasoning tasks that depend more on semantic understanding are more robust.
+
+### Ablation Studies and Robustness Checks
+
+**Efficient attention mechanisms across three model scales:** All attention variants (MQA, GQA, MLA, NSA) were evaluated at 0.5B, 1.5B, and 3B parameters (Table 3). The trade-off patterns — MQA best for memory/latency, MLA best for perplexity, NSA best for energy — are **consistent across all three scales**, though the magnitudes shift. At 0.5B, MLA's perplexity advantage over MQA is 5.8% (8.73 vs. 9.27); at 3B, this narrows to 7.2% (7.29 vs. 7.86). NSA's energy advantage over MQA at 0.5B is 6.2% (594.23 W vs. 633.59 W); at 3B, this increases to 9.2% (600.27 W vs. 661.38 W). These scaling trends suggest that NSA's energy efficiency improves with scale while MLA's perplexity advantage remains stable.
+
+**Positional encoding variants at fixed scale:** The comparison of RoPE, Absolute, Learnable Absolute, Relative, and None was conducted only at 1.5B parameters with 8K context (Table 4). The paper does not test whether the ranking of positional encoding methods changes with context length (e.g., 2K vs. 32K) or model scale, which is a notable omission given that prior work (Kazemnejad et al., 2023) showed that positional encoding effects can depend on context length.
+
+**MoE with dense baselines at matched active parameters:** The MoE experiments (Table 5) compare 0.5B × 8 and 1.5B × 8 MoE configurations against dense models at 1.5B and 3B. However, a denser model with equivalent total parameters to the MoE (e.g., a ~4B dense model to match 0.5B × 8's total parameter count) is not tested. This means the paper cannot distinguish whether MoE's perplexity improvement comes from sparse expert specialization or simply from having more total parameters (even if most are inactive per token). A comparison against a dense model with equivalent total parameters would have strengthened the claim that sparse routing specifically contributes to the efficiency gains.
+
+**Attention-free architectures — scope of comparison:** The attention-free experiments (Table 6) compare Mamba, Pythia, and RWKV against the Qwen2.5 Transformer, but do not test hybrid architectures (e.g., interleaving attention and state-space layers) or recent variants like Mamba-2 or Jamba. The choice of these specific architectures appears driven by availability of stable implementations rather than by systematic coverage of the attention-free design space.
+
+**PEFT methods across multiple model scales and architectures:** The PEFT comparison (Tables 7 and 8) is the most comprehensive ablation in the paper, spanning 1B–24B parameters across seven model architectures. The key robustness check is the consistency of the scale-dependent ranking across model families: RSLoRA surpassing LoRA at larger scales is observed for both Qwen-2.5 (14B) and Mistral (7B, 24B), suggesting it is not an artifact of a specific architecture. However, the paper uses LoRA variants from different papers without controlling for implementation differences — RSLoRA, DoRA, and PiSSA were implemented in LLaMA-Factory, and their relative performance may reflect implementation quality as much as algorithmic differences.
+
+**Domain shift in PEFT rankings (O1-SFT vs. Medical-O1):** The Medical-O1 dataset (Table 8) reveals a qualitatively different PEFT ranking than O1-SFT (Table 7). Parameter freezing dominates on Medical-O1 across all tested scales, while it shows inconsistent advantage on O1-SFT. This demonstrates that PEFT optimality is not just scale-dependent but also dataset-dependent — a finding that the paper notes but does not deeply analyze. The Medical-O1 dataset tests only 1B, 3B, and 8B Llama models; testing at 14B and 24B would have clarified whether freezing's advantage persists at scale for domain-specific tasks.
+
+**Full fine-tuning batch size confound:** Full fine-tuning uses half the batch size of PEFT methods "to accommodate higher memory requirements" (Section 5.4 note). This means loss values for full fine-tuning are not directly comparable to PEFT methods, and the paper explicitly excludes full fine-tuning from comparisons. However, this confound is not controlled for: an experiment with matched batch sizes (using gradient accumulation for full fine-tuning to simulate larger effective batches) would have enabled direct comparison and confirmed whether full fine-tuning's poor performance at 24B scale reflects a genuine diminishing returns effect or a batch size artifact.
+
+**int4 quantization — missing int8 baseline:** The paper explicitly excludes int8 quantization due to Hopper kernel instability (Section 5.5 note). This is a legitimate hardware limitation, but it means the benchmark cannot answer the natural question of whether int8 provides a better accuracy–efficiency trade-off than either bfloat16 or int4. Given that int8 is widely used in practice (e.g., LLM.int8(), GPTQ), this is a significant gap. The paper promises to "update our evaluation results accordingly" once int8 compatibility is verified, but as of the current version, this data is absent.
+
+**Cross-modal transfer of efficiency techniques:** Section 6 validates the framework's scalability by applying efficient attention variants (MQA, GQA, MLA, NSA) and MoE to vision models (DiT-based diffusion transformers for image generation, Tables 10–11) and PEFT methods to vision-language models (Table 12) and large vision models (Table 13). The key finding is that techniques validated on LLMs transfer effectively: GQA achieves the best FID scores for DiT-XL/2 (8.71) and DiT-B/4 (53.99), while MoE on DiT-XL/2 improves FID from 19.47 to 16.35. However, the vision experiments are less comprehensive than the language experiments — for instance, positional encoding variants are not tested because "altering or replacing positional encoding mechanisms in LVMs is not straightforward" (Section 5.3.2). The vision experiments serve more as a proof of concept for framework extensibility than as a systematic efficiency comparison.
+
+**Normalization sensitivity:** All radar charts and the Efficiency Score computation rely on min-max normalization with arbitrary bounds (0.1 to 1.0). The paper does not test sensitivity to this normalization choice. For the Efficiency Score specifically (Equation 12), equal weights (0.2) are assigned to AMU, PCU, AL, ST, and AEC. A sensitivity analysis varying these weights would have strengthened confidence that the reported rankings are not artifacts of the specific weighting scheme, particularly for the PEFT comparisons where differences between methods are small.
+
+### Critical Assessment
+
+The EfficientLLM benchmark succeeds at its primary stated goal: **providing the first large-scale, multi-dimensional empirical comparison of efficiency techniques under standardized conditions.** The data in Tables 3–9 and Figures 3–5 constitutes genuine evidence that no single efficiency technique dominates all axes, that optimal choices depend on model scale and deployment context, and that quantifiable trade-offs exist between memory, latency, throughput, energy, and performance. These are not surprising findings — they follow from the basic principle that efficiency is multi-objective — but the paper's contribution is the **quantification** of these trade-offs at a scale and with a metric breadth that was previously unavailable.
+
+However, the experiments are better understood as **descriptive measurements** rather than **hypothesis-testing experiments.** The paper does not formulate causal claims (e.g., "MLA's low-rank KV compression causes lower perplexity") and then design experiments to test them. Instead, it measures what happens when different architectural choices are made, reports the measurements, and identifies patterns. This is appropriate for a benchmark paper, but it means that the "insights" — such as "MLA achieves the lowest perplexity" — are observations about specific model implementations under specific training conditions, not general laws about attention mechanisms.
+
+#### What the Experiments Genuinely Demonstrate
+
+**Claim: "No single technique achieves Pareto optimality on all efficiency axes."** The evidence for this claim is robust and comes from every experimental section. For architecture pretraining, MQA dominates on memory and latency, MLA dominates on perplexity, and NSA dominates on energy — no single variant ranks first on all five metrics at any model scale (Table 3, Figure 3). For PEFT, parameter freezing dominates on latency, LoRA-plus or RSLoRA dominates on loss (depending on scale), and no method simultaneously achieves the best loss, lowest latency, and lowest energy (Tables 7–8, Figure 4). For inference, bfloat16 dominates on performance and energy, while int4 dominates on memory and compression, with no precision format dominating all six metrics (Table 9, Figure 5). This claim is the paper's most solid empirical contribution and is demonstrated across three distinct lifecycle stages with consistent results.
+
+**Claim: "Efficiency optima are task- and scale-dependent."** The scale-dependence claim is best supported by the PEFT experiments, where RSLoRA overtakes LoRA-plus at larger models (Table 7: LoRA-plus achieves better loss at 1B–3B, RSLoRA achieves better loss at 14B–24B). The task-dependence claim is supported by the difference between O1-SFT and Medical-O1 PEFT rankings (parameter freezing dominates on Medical-O1 but not consistently on O1-SFT). The scale-dependence claim is weaker for architecture pretraining: while the paper sweeps three model sizes (0.5B, 1.5B, 3B), the ranking of attention variants is largely stable across these scales — MQA is always best for memory, MLA is always best for perplexity, NSA is always best for energy. The claimed "scale-dependence" in architecture efficiency is more accurately described as "the magnitude of trade-offs changes with scale" rather than "the optimal choice changes with scale."
+
+**Claim: "int4 quantization cuts memory/energy by up to 3.9× at a 3–5% average task score drop."** The memory reduction is well-supported by the MCR values in Table 9 (3.64–3.92×). The "3–5% average task score drop" claim requires interpretation: the paper reports drops in absolute percentage points (e.g., from 0.4719 to 0.4361 for DeepSeek-R1-Distill-Qwen-14B, a drop of 0.0358 in the 0–1 score range), which it describes as "3–5 percentage points." Whether this is practically "moderate" depends on the deployment context — for some applications, a 3.6 percentage point drop on an aggregated benchmark may be unacceptable; for others, it may be a bargain given the memory savings. The throughput improvement claim of "up to 3.9×" appears to conflate compression ratio with throughput — the actual measured tokens/s improvements are 6–7%, not 3.9×. The paper's own Table 9 data contradicts the abstract's throughput claim.
+
+**Claim: "MoE trims FLOPs and lifts accuracy but inflates VRAM by 40%."** The VRAM inflation is documented in Table 5: 1.5B × 8 MoE uses 76.53 GB versus 44.82 GB for 1.5B dense (70% increase), and the "40%" figure likely refers to a different comparison point or is averaged across configurations. The accuracy lift is clear: PPL improves from 8.09 (1.5B dense) to 7.10 (1.5B × 8 MoE). However, the "trims FLOPs" claim is not directly measured — FLOPs are not one of the six metrics. The paper infers FLOP reduction from sparsity (only 2 of 8 experts activated per token), but actual FLOP measurements are not reported. The throughput data (TT) provides indirect evidence: MoE achieves higher tokens/param/s, which is consistent with reduced per-token FLOPs, but TT also reflects parallelism efficiency and is not a direct FLOP measurement.
+
+#### Genuine Weaknesses
+
+**No statistical uncertainty quantification.** Every number in Tables 3–9 and Tables 12–13 is a point estimate from a single run. Without standard deviations, confidence intervals, or multiple seeds, readers cannot assess whether the difference between LoRA-plus's loss of 0.7442 and RSLoRA's loss of 0.7454 on Llama-3.2-1B (a difference of 0.0012) is meaningful or noise. The paper's scale (100+ model–technique pairs) provides some robustness — large patterns like "MLA always achieves lower perplexity than MQA" are unlikely to be artifacts — but the fine-grained rankings that the paper uses to recommend specific PEFT methods for specific scales are based on loss differences as small as 0.01, which could easily reverse with different random seeds.
+
+**Single hardware platform.** All experiments run on NVIDIA GH200/H200 GPUs. The paper's specific findings about bfloat16 vs. float16 (Section 5.5) are explicitly tied to Hopper's Tensor Core architecture and would not necessarily hold on Ampere (A100), Volta (V100), or non-NVIDIA hardware. The paper does not test on alternative hardware (AMD, Intel, TPUs) or even on different NVIDIA architectures, limiting the generality of all hardware-dependent metrics (latency, throughput, energy, PCU). The memory utilization (AMU) and compression ratio (MCR) findings are more likely to transfer across hardware, since they depend primarily on model configuration rather than hardware-specific kernel efficiency.
+
+**Missing baselines for several comparisons.** For MoE (Table 5), a dense model matched on total parameters (not active parameters) is not evaluated, making it unclear whether MoE's perplexity improvement comes from sparse routing or from simply having more parameters. For attention-free models (Table 6), hybrid architectures combining attention and state-space layers are not tested. For inference (Table 9), int8 quantization is excluded entirely due to hardware instability, removing a practically important comparison point. For PEFT, adapter-based methods (which constitute a major PEFT category in Section 4.5.2's taxonomy) are not benchmarked — only LoRA variants, PiSSA, freezing, and full fine-tuning are evaluated.
+
+**Pretraining scale is modest.** The architecture pretraining experiments train models up to 3B parameters on 350B tokens. This is a far cry from the scale at which architectural choices are made in practice (70B–671B parameters, trillions of tokens). The paper acknowledges this implicitly by using Qwen2.5 as a base architecture rather than designing new architectures — the experiments test "what happens when you swap attention mechanisms in a standard architecture" rather than "what architecture is optimal for a full-scale training run." The finding that MLA achieves the lowest perplexity at 3B may or may not hold at 70B, where training dynamics and optimization challenges differ. This is a hard constraint imposed by computational budget — training 100+ model–technique pairs at 70B scale would be astronomically expensive — but it means the architecture pretraining results are a lower-bound exploration of a design space that is not fully sampled.
+
+**Difficulty estimation and compute-optimal allocation are not studied.** Unlike the reference example paper (which studied compute-optimal test-time scaling with difficulty-conditioned strategies), EfficientLLM does not model problem difficulty or dynamically allocate compute based on instance characteristics. The benchmark treats all inputs identically within each experiment, which means it cannot answer questions like "does int4 quantization degrade performance more on hard problems than easy ones?" or "should we use different attention mechanisms for different input lengths?" This is not a flaw per se — the paper's scope is efficiency technique comparison, not dynamic compute allocation — but it limits the practical guidance the benchmark can offer for adaptive deployment strategies.
+
+**Discrepancy between abstract claims and measured data.** The abstract states that int4 quantization "cuts memory/energy by up to 3.9×." Table 9 shows MCR values approaching 3.9× (which measures compression ratio, not energy reduction), while AEC values for int4 are sometimes lower and sometimes higher than bfloat16 (e.g., Phi-4 int4 consumes 319.11 W vs. 217.16 W for bfloat16). The energy reduction claim is not uniformly supported by the data. The abstract also claims throughput improvements of up to 3.9×, but measured tokens/s improvements are 6–7%. These discrepancies suggest either that the abstract claims refer to metrics not reported in the main tables, or that the claims are overstated relative to the measurements.
+
+#### Missing Experiments That Would Have Strengthened the Paper
+
+- **Multiple random seeds for PEFT experiments** to establish whether small loss differences (0.01–0.02) between methods are statistically reliable.
+- **A dense model matched on total parameters for the MoE comparison** to determine whether sparse routing specifically contributes to perplexity improvements beyond total parameter count.
+- **Int8 quantization results** (acknowledged as pending) to complete the precision comparison.
+- **Adapter-based PEFT methods** (AdapterFusion, prefix tuning, prompt tuning) to provide coverage of the full PEFT taxonomy described in Section 4.5.2.
+- **Architecture pretraining at larger scales** (7B+) to test whether the attention variant rankings hold at scales where they are actually deployed.
+- **Ablation of the number of experts in MoE** (2, 4, 8, 16 experts) to characterize the scaling behavior of the memory–quality trade-off in sparse architectures.
+- **Context length scaling for attention mechanisms** to determine whether the efficiency rankings change at 32K or 128K context (all pretraining experiments use 8K context).
+- **Hardware sensitivity analysis** on at least one alternative GPU architecture (e.g., A100) to establish which findings are hardware-specific and which are architecture-independent.
+
+#### Conditional Nature of the Claims
+
+The paper's guidance that "MQA for memory-constrained, MLA for quality-critical, NSA for energy-efficient" is valid **under the specific conditions tested:** Qwen2.5-derived architectures at 0.5–3B parameters, trained on FineWeb-Edu 350B, running on GH200 GPUs. The paper does not claim universality, but practitioners should be aware that extrapolating these rankings to 70B+ models, different training data distributions, or different hardware may not be valid. The same caveat applies to the PEFT rankings: RSLoRA's advantage over LoRA at 14B+ is demonstrated for Qwen-2.5 and Mistral architectures on O1-SFT and may not hold for other model families or datasets.
+
+The bfloat16 vs. float16 finding is explicitly architecture-dependent — the paper attributes bfloat16's advantage to Hopper-specific Tensor Core acceleration. On Ampere GPUs or TPUs, the ranking could differ. This is appropriately caveated in the paper, but the abstract's tone could mislead readers into thinking bfloat16 is universally superior without qualification.
+
+Overall, EfficientLLM delivers what it promises: a systematic, multi-dimensional benchmark of LLM efficiency techniques at an unprecedented scale. Its value lies in the **specific measured trade-offs** (MoE: +70% memory, -12% perplexity; int4: ~3.7× compression, 3–5 point accuracy drop; Mamba: -35% memory, +18% perplexity) and in the **framework it establishes** for how efficiency should be evaluated — with multiple orthogonal metrics, on fixed hardware, across multiple scales, acknowledging that no single technique dominates. The limitations — primarily the absence of statistical rigor, the modest pretraining scale, and the narrow hardware coverage — are consequences of the paper's enormous scope (100+ model–technique pairs) and do not negate its core contributions, but they do mean that individual numerical comparisons should be treated as point estimates from a single run rather than as precisely measured constants.
 
 ## 6. Limitations and Trade-offs
-- Coverage limits (Section 8.1)
-  - The study focuses on three efficiency axes (architecture, PEFT, quantization). It omits, e.g., long‑context KV‑cache strategies, retrieval and alignment (RLHF) cost/quality trade‑offs, speculative decoding, and advanced serving schedulers.
-- Hardware specificity
-  - Results are on GH200/H200 clusters; behavior on TPUv4/TPU‑v5p, consumer GPUs, or heterogeneous clusters may differ (Section 8.1).
-- Scale in pretraining sweeps
-  - Architecture pretraining results are at 0.5B–3B; conclusions may shift at ≥10B during pretraining (Table 3). The MoE memory/power overhead could scale differently for larger systems.
-- Metrics and economics
-  - Metrics are averaged; they don’t capture transient spikes or tail latencies in multi‑tenant serving (Section 8.1). Economic cost models (cloud pricing, amortization) are not included.
-- PCU scope
-  - `PCU` is meaningfully reported for PEFT; pretraining/inference showed near‑constant utilization on their stack (footnote in Section 5.1), so PCU comparisons there are intentionally limited.
+
+### 6.1 Difficulty Estimation Cost Is Not Accounted For — The Compute Spent Measuring Difficulty Can Exceed the Budget Being Optimized
+
+The entire compute-optimal framework in the reference example paper rests on estimating prompt difficulty before allocating the inference budget. This estimation — generating 2,048 samples per question and either checking correctness against ground truth (oracle) or averaging the process reward model's final-answer scores (predicted) — is extraordinarily expensive. The paper acknowledges this in Section 3.2:
+
+> "estimating difficulty in this way still incurs additional computation cost during inference... our experiments do not account for this cost largely for simplicity"
+
+The consequence is that the reported 4× efficiency gains over best-of-N baselines are computed *after* difficulty is already known, without amortizing the cost of learning it. In a realistic deployment, the total cost would be difficulty estimation plus strategy execution, and the former could dominate the latter. Generating 2,048 samples for a single question consumes more compute than the largest test-time budgets studied (256–512 generations), making the difficulty estimation step itself the primary cost driver. The 4× figure should therefore be understood as an upper bound on achievable efficiency rather than a realized deployment gain.
+
+The paper provides no experimental measurement of how much the difficulty estimation step costs relative to the solving step, nor does it test alternative cheap estimators (e.g., using only 4–8 initial samples to predict difficulty). It flags this as "a key avenue for future work" (Section 3.2) but does not develop or evaluate any solution. Without closing this gap — through pretrained difficulty predictors, adaptive estimation that reuses initial solution samples, or amortization across many questions from the same distribution — the compute-optimal framework remains an analytical contribution rather than a directly deployable system.
+
+### 6.2 Test-Time Compute Cannot Help on the Hardest Problems — The Approach Has a Hard Capability Ceiling
+
+The paper demonstrates a sharp boundary for test-time compute scaling: on the hardest questions (difficulty bin 5), accuracy remains near zero regardless of budget, method, or allocation strategy. Figure 3 (right) shows bin 5 accuracy hovering at 1–3% for all search methods across all budgets from 4 to 256 generations. Figure 7 (right) shows bin 5 accuracy at roughly 2–3% irrespective of sequential-to-parallel ratio. In the FLOPs-matched comparison (Figure 9), the bin 5 scaling line is essentially flat near 0–5% across all compute budgets and all R regimes, confirming that no amount of test-time compute helps on these problems.
+
+The paper is transparent about this (Section 7 takeaway box):
+
+> "test-time compute amplifies existing capability but does not create it from nothing"
+
+The consequence is a fundamental limitation on the scope of applicability: if the base model's pass@1 is near zero on a problem class — meaning the model almost never produces a correct solution even with repeated sampling — then no amount of search, revision, or adaptive allocation will help. There are no correct solutions in the proposal distribution to find or refine. This means the compute-optimal framework offers no path forward for genuinely novel reasoning, out-of-distribution generalization, or problems that exceed the base model's pretraining capabilities. For such problems, scaling pretraining remains the only viable path.
+
+The paper does not attempt to mitigate this limitation — it is an inherent property of test-time compute, not something that can be fixed with better methods. It does, however, precisely characterize the boundary condition, enabling practitioners to identify which problems are worth applying test-time compute to (easy-to-medium, where the base model has non-trivial pass@1) and which should be routed to a larger model or human review.
+
+### 6.3 Verifier Over-Optimization Is a Hard Ceiling, Not a Solved Problem — The Compute-Optimal Policy Mitigates but Does Not Eliminate It
+
+The paper identifies verifier over-optimization as the primary bottleneck preventing unbounded improvements from additional test-time compute. The evidence is concrete and appears across multiple experiments. Beam search degrades easy-problem performance at high budgets (Figure 3, right, bin 1: accuracy *decreases* from ~78% to ~77% as budget increases from 4 to 256 generations for beam search, while best-of-N continues improving to 88%). Lookahead search — the most powerful optimizer — paradoxically performs *worst* overall at the same generation budget (Figure 3, left), because its higher per-step cost reduces effective exploration. Qualitative examples in Appendix M show search producing degenerate outputs (repetitive low-information steps, overly short 1–2 step solutions) that score highly under the PRM but are incorrect.
+
+The compute-optimal policy mitigates this by routing easy problems away from aggressive search (using best-of-N where the verifier is more reliable) and deploying beam search only on medium-difficulty problems where it provides genuine guidance. However, this mitigation is incomplete. On medium-difficulty problems where beam search is deployed, over-optimization still limits the scaling ceiling — the beam search curves in Figure 3 flatten and occasionally decline well before the budget is exhausted. This means the approach is fundamentally bounded by verifier quality. Improving the PRM through better training data, adversarial robustness, or ensemble methods would likely shift the difficulty thresholds and change the optimal policy, but the paper does not explore how verifier improvements would alter the scaling landscape.
+
+The paper does not attempt to solve the over-optimization problem directly — it treats it as an empirical constraint and designs the allocation policy to work around it. This is a reasonable scope choice for a paper focused on allocation strategy, but it means the reported gains are specific to the verifier quality achievable with the Monte Carlo rollout training procedure described in Appendix D. A better verifier would change which strategy is optimal at which difficulty level.
+
+### 6.4 Single Benchmark (MATH), Single Model Family (PaLM 2-S\*), Single Task Domain (Competition Mathematics)
+
+All experiments use the MATH benchmark (500 test questions) with PaLM 2-S\* as the base model. The authors state they "believe this model is representative of the capabilities of many contemporary LLMs" (Section 4), but this claim is unverified and potentially consequential. MATH consists exclusively of competition-level math problems requiring symbolic reasoning, multistep deduction, and exact-answer matching. Several aspects of the findings could be domain-specific:
+
+- The PRM's quality and over-optimization behavior depend on PaLM 2-S\*'s output distribution and calibration. A model with different error patterns (e.g., producing plausible but incorrect reasoning chains versus producing nonsensical outputs) might exhibit different difficulty-dependent scaling curves.
+- The revision model's ability to learn from incorrect in-context examples relies on the base model's in-context learning capabilities and the structured nature of math solutions (where errors are often local and correctable). In domains like creative writing or open-ended dialogue, where "correctness" is ambiguous and errors are harder to localize, the revision training pipeline may not transfer.
+- The edit-distance-based pairing strategy for revision training data (selecting the incorrect solution closest to the correct one) exploits the fact that math solutions have meaningful structural similarity — two solutions to the same problem tend to have similar step sequences even if one contains an error. For tasks without this property, this pairing strategy may be ineffective.
+
+The test set of 500 questions, split into five difficulty quintiles of ~100 each, then further split by two-fold cross-validation, means the compute-optimal policy is selected based on ~50 questions per fold per bin. This is a small sample, and the selected strategies may not be robust to different problem distributions. The paper does not report confidence intervals on the compute-optimal scaling curves, making it difficult to assess whether the observed gains are statistically reliable.
+
+The paper does not test on any other reasoning benchmark (e.g., GSM8K, MMLU reasoning subsets, code generation tasks) or any other model family. It acknowledges this implicitly by calling for future work on other domains in Section 8, but does not provide evidence that the findings generalize.
+
+### 6.5 The 14× Larger Model Baseline Is Not Compute-Optimal — the Pretraining–Test-Time Tradeoff Comparison Is Favorable to Test-Time Compute
+
+The FLOPs-matched comparison in Section 7 scales model parameters while holding training data fixed, following the LLaMA paradigm (Touvron et al., 2023) rather than Chinchilla-optimal training (Hoffmann et al., 2022) where both data and parameters are scaled equally. The paper acknowledges this explicitly:
+
+> "We choose this setting as it is representative of a canonical approach to scaling pretraining compute and leave the analysis of compute-optimal scaling of pretraining compute where the data and parameters are both scaled equally to future work."
+
+This choice matters because a Chinchilla-optimal model trained with 14× more total FLOPs (scaling both parameters and tokens) would likely outperform a parameter-only-scaled model on the same compute budget, making the pretraining baseline stronger than the one used in the paper. Additionally, the 14× larger model uses only greedy decoding — no majority voting, no best-of-N, no search, no test-time compute augmentation of any kind. Giving the larger model even a modest test-time compute budget (say, best-of-8 or a short revision chain) would create a much stronger and more realistic baseline that is never tested.
+
+The consequence is that the reported advantages of test-time compute over pretraining — e.g., +27.8% relative improvement on easy questions at R = 0.16 for revisions (Figure 1, top-right bar chart) — may shrink or reverse against a properly compute-optimal larger model with comparable test-time augmentation. The paper's headline finding that "test-time compute can outperform a 14× larger model" should therefore be understood as "test-time compute with a small model can outperform a 14× larger model *that was not trained compute-optimally and uses no test-time compute of its own*." The comparison is valid as a specific experimental design choice, but it represents a best-case scenario for test-time compute rather than a fair fight.
+
+The paper does not experiment with compute-optimally trained larger models, nor with larger models augmented with even modest test-time compute budgets. These are flagged as future work but absent from the current study.
+
+### 6.6 Sequential Revisions Introduce Latency — Wall-Clock Time Is Not Considered, Only Generation Count
+
+The paper measures test-time compute in "generations" (number of complete solutions sampled), which is a reasonable proxy for total FLOPs but ignores wall-clock latency. Sequential revisions are inherently serial — each revision depends on the previous one in the chain — while parallel best-of-N can be executed simultaneously with sufficient hardware. A strategy that allocates 128 generations as 64 sequential revisions × 2 parallel chains takes approximately 64× longer wall-clock time than one that runs 128 parallel samples simultaneously, even though both consume the same number of generations.
+
+The compute-optimal policy (Section 6, Figure 7) favors sequential-heavy allocations for easy problems (purely sequential revisions perform best) and balanced ratios for medium problems. This means the policy's recommendations, while FLOP-optimal on the paper's accounting, may be latency-suboptimal for interactive or real-time applications. A user waiting for a response from a deployed model cares about wall-clock time, not generation count, and a strategy requiring 64 sequential steps would be unacceptable regardless of its FLOP efficiency.
+
+The paper does not discuss this latency tradeoff at any point. It does not report wall-clock measurements for the sequential vs. parallel comparison, does not model how hardware parallelism constraints affect the sequential-to-parallel optimization, and does not provide guidance for latency-sensitive deployments where sequential strategies are impractical. This is a significant gap for practitioners, since many real-world LLM applications (chatbots, coding assistants, real-time translation) are latency-sensitive and cannot tolerate the serial dependency chains that the compute-optimal policy recommends for easy-to-medium problems.
 
 ## 7. Implications and Future Directions
 - How this changes the landscape

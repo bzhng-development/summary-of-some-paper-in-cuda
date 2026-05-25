@@ -8,156 +8,673 @@ Eagle 2.5 introduces a family of vision-language models tailored for high-resolu
 
 ---
 
-## 1. Executive Summary (2–3 sentences)
-Eagle 2.5 is a long-context vision–language model (VLM) family that can natively handle high-resolution images and long videos without specialized compression modules. It introduces an information-first sampling scheme—Image Area Preservation (IAP) and Automatic Degradation Sampling (ADS)—plus progressive long-context post-training and a new long-video dataset (Eagle-Video-110K), enabling consistent performance gains as input length grows and achieving competitive results with far larger models on long-video benchmarks (e.g., 72.4% on Video-MME at 512 frames; Fig. 1, Table 2).
+## 1. Executive Summary
+
+This paper introduces Eagle 2.5, a family of vision-language models designed for long-context multimodal understanding, evaluated primarily on video benchmarks such as Video-MME and image benchmarks including DocVQA and ChartQA using a Qwen2.5-based architecture. The training framework incorporates two core mechanisms: **Information-First Sampling**, comprising Image Area Preservation (a tiling strategy that retains at least 60% of the original image area while maintaining aspect ratio fidelity) and Automatic Degradation Sampling (a dynamic allocation strategy that preserves complete textual information while adaptively optimizing visual content to fit the remaining context budget), combined with a **Progressive Mixed Post-Training** schedule that incrementally expands context length from 32K to 128K tokens. The model achieves 72.4% on Video-MME with 512 input frames, matching GPT-4o and large-scale models like Qwen2.5-VL-72B and InternVL2.5-78B despite having only 8B parameters, and demonstrates consistent performance improvement as the number of input frames increases — establishing that native long-context capability benefits from increasing visual input length only when supported by a training framework that preserves information density across varying context sizes.
 
 ## 2. Context and Motivation
-- Problem gap
-  - Many VLMs excel on short-context tasks (few images, short clips) but struggle with extended visual inputs: long videos, multi-image documents, and high-resolution media (Sec. 1). This limits real-world applications like movie-length analysis, slide-deck QA, or surveillance understanding where information spans hundreds of frames or pages.
-- Why it matters
-  - Real-world content is long and high resolution. Effective long-context understanding improves tasks such as long-form content retrieval, temporal reasoning (who did what, when, and why), and precise document comprehension at scale.
-- Prior approaches and shortcomings
-  - Compression/selection modules (e.g., question-guided selection, token reduction) avoid extending model context but add compute or capacity bottlenecks and can clip useful context (Sec. 1; citations across Jin et al., Korbar et al., Shen et al., Weng et al.).
-  - Extending LLM context directly for multimodal inputs (e.g., LongVILA, LongViTA) is promising but has struggled to:
-    - Match proprietary models,
-    - Scale performance consistently with more visual input,
-    - Clarify robust training strategies and data recipes (Sec. 1–2).
-- Positioning
-  - Eagle 2.5 builds a generalist long-context VLM that:
-    - Avoids bespoke compression modules (flexibility preserved; Sec. 3.1, Fig. 2),
-    - Preserves information in both text and visuals via an information-first sampler (Sec. 3.2.1; Eq. (1), Eq. (2), Fig. 3),
-    - Trains progressively to longer contexts (32K → 64K → 128K; Sec. 3.2.2, Table 8),
-    - Introduces a dual-annotated long-video dataset (story-level + clip-level; Sec. 3.3.2, Figs. 4–5).
+
+### The Core Problem: Long-Context Visual Understanding Remains Under-Explored and Under-Performing
+
+The paper addresses a fundamental gap in the development of vision-language models (VLMs): while these models have made remarkable progress on short-context tasks—handling a single image or a brief video clip—their ability to process *extended* visual contexts remains substantially limited. The paper explicitly identifies this gap in Section 1:
+
+> "many vision-language models (VLMs) remain focused on short-context tasks, with long-context understanding under-explored. This gap is particularly evident in both long video comprehension and high-resolution image/video understanding, where the processing of extended visual contexts remains an open challenge."
+
+This isn't merely about handling longer inputs for their own sake. The paper frames long-context visual understanding as encompassing several distinct but related capabilities: processing multiple images (as in multi-page documents or photo collections), extended video sequences (ranging from minutes to hours), high-resolution media where details matter, or combinations of all these. Each of these scenarios arises naturally in real-world applications—analyzing hour-long instructional videos, understanding multi-page technical documents with embedded figures, processing high-resolution medical or satellite imagery, or navigating video archives. Yet existing VLMs, even state-of-the-art ones, struggle to maintain coherent understanding across these extended contexts.
+
+The significance of this gap is both practical and theoretical. Practically, much of the world's visual information exists in long-form: surveillance footage, lecture recordings, documentary films, scientific papers, and multi-page reports. A VLM that can only process short clips or single images is fundamentally limited in the types of real-world tasks it can support. Theoretically, long-context understanding tests whether models can maintain coherent representations, track entities and events across time, and integrate information across disparate visual experiences—capabilities that are central to human-like visual intelligence.
+
+### Why Existing Approaches Fall Short
+
+The paper identifies two broad categories of existing approaches to long-context visual understanding, each with significant limitations (Section 2).
+
+**Specialized compression or selection modules.** The first category includes methods that avoid extending the model's native context length by introducing additional components that compress or selectively filter visual information before it reaches the language model. Examples cited include question-guided compression (Korbar et al., 2024; Li et al., 2024; Shen et al., 2024), question-guided selection (Li et al., 2025; Yu et al., 2023, 2024), and various token reduction techniques (Jin et al., 2024; Li et al., 2023, 2024; Wang et al., 2024; Weng et al., 2024; Yu et al., 2024; Zhang et al., 2024). These methods work by extracting only the visual cues deemed relevant to a particular query or by aggressively downsampling the visual representation before the LLM processes it.
+
+The paper identifies two drawbacks to this approach. First, these methods "often introduce additional computational overhead or capacity limitations"—the compression module itself requires computation and may become a bottleneck. Second, and more fundamentally, by compressing or filtering *before* the model sees the full context, these approaches may discard information that turns out to be relevant for understanding. A question-guided compression module, for instance, must decide what is relevant based on the question alone, without the model having the opportunity to discover unexpected connections across the full visual context.
+
+**Native context extension attempts.** The second category, which the paper aligns itself with, attempts to directly extend the context length of the underlying LLM so that the VLM can natively process longer visual sequences. The paper cites several prior efforts in this direction: LongVA (Zhang et al., 2024), LongVILA (Xue et al., 2024), and LongViTA (Shen et al., 2025).
+
+However, the paper argues these prior native-extension approaches suffer from three specific limitations:
+
+1. **Suboptimal performance relative to proprietary models.** The paper states these approaches "often underperform proprietary models"—meaning they fail to close the gap with commercial systems like GPT-4o and Gemini-1.5-Pro, which can handle long visual contexts effectively but are closed-source and inaccessible for research or customization.
+
+2. **Failure to achieve consistent improvement with increasing visual input.** This is a crucial point. The paper argues that prior approaches "struggle to achieve consistent improvements as the amount of visual input increases." In other words, these models can *accommodate* longer inputs—they don't crash or run out of memory—but they don't actually *benefit* from the additional visual information. The model's performance plateaus or even degrades as more frames are added, suggesting that the training strategies used fail to teach the model to effectively utilize extended context. This is a distinction the paper draws sharply: Eagle 2.5 is designed not merely to handle long sequences but to show *consistent performance gains* as input length increases (as demonstrated in Figure 1).
+
+3. **Underexplored training strategies and data recipes.** The paper identifies a knowledge gap: "the optimal training strategies for state-of-the-art long-context VLMs remain unclear, given the complex interplay of factors such as training strategies and data recipes." Prior work has demonstrated that context extension is *possible*, but hasn't systematically explored *how* to do it well—what sampling strategies to use, how to schedule training, what data to include, and how to balance different types of visual and textual content.
+
+### The Data Challenge: Missing Long-Duration Video in Existing Datasets
+
+Beyond architectural and training limitations, the paper identifies a specific gap in available training data. The authors note in Section 3.3 that "current open-source video data often lacks sufficient length." This is visualized in Figure 4, which compares video durations in open-source data versus their proposed Eagle-Video-110K dataset. The open-source distribution is heavily skewed toward shorter videos, with relatively few examples exceeding several thousand seconds. This creates a fundamental problem: even with the right architecture and training strategy, a model cannot learn to understand hour-long videos if it never sees them during training.
+
+Existing long-context multimodal datasets have their own limitations. The paper reviews several categories (Section 2): some focus on long documents like slides and papers (Pramanick et al., 2025; Tanaka et al., 2023; Tito et al., 2023; Van Landeghem et al., 2023) but "often lack temporal understanding"—they are suited for static multi-page content but not for video. Others emphasize temporal coherence in movies (Ghermi et al., 2025; Huang et al., 2020; Rawal et al., 2024; Song et al., 2024; Wu and Krahenbuhl, 2021; Yue et al., 2023, 2024), which is valuable but limited to a specific domain. Recent datasets covering diverse domains (Chen et al., 2024; Han et al., 2023; Miech et al., 2019; Zhang et al., 2024) expand coverage but still leave gaps in both video length and annotation quality.
+
+The annotation challenge for long videos is particularly acute. Early datasets relied on manual annotation (Huang et al., 2020; Miech et al., 2019; Song et al., 2024; Tanaka et al., 2023; Tito et al., 2023; Van Landeghem et al., 2023), which is expensive and scales poorly to the volume needed for training. More recent work uses automated or semi-automated annotation with tools like GPT-4V and Gemini (Chen et al., 2024; Ghermi et al., 2025; Han et al., 2023; Pramanick et al., 2025; Rawal et al., 2024; Song et al., 2024; Yue et al., 2023, 2024; Zhang et al., 2024), but these methods often produce annotations that are either too fine-grained (shot-level, losing narrative coherence) or too coarse (video-level summaries, missing temporal detail). The paper points to "hierarchical annotation strategies" (Han et al., 2023) as a promising direction that "can preserve narrative structure in long videos," but notes this is still an emerging area.
+
+### How Eagle 2.5 Positions Itself
+
+The paper positions Eagle 2.5 as addressing the gap between what current long-context VLMs can do and what is needed for practical long-context understanding. Its positioning can be understood along several dimensions:
+
+**Native context extension without specialized modules.** Unlike compression-based approaches, Eagle 2.5 "deliberately avoid[s] incorporating tailored compression modules that might constrain the model's flexibility" (Section 3.1). The model follows a standard architecture (SigLIP vision encoder → MLP connector → Qwen2.5 LLM, with image tiling based on LLaVA-1.5 and InternVL), betting that with the right training strategy, the base LLM's context window can be extended to handle long visual sequences effectively without additional architectural complexity.
+
+**Focus on *benefiting* from longer inputs, not just *tolerating* them.** This is perhaps the paper's most distinctive positioning. The abstract states: "Unlike models solely optimized for handling long multimodal sequences without improving performance, Eagle-2.5 benefits from increased input length, leading to consistent performance gains besides merely accommodating longer inputs." This is demonstrated in Figure 1 and Figure 6, where performance on Video-MME steadily improves as the number of input frames increases—a pattern that prior native-extension approaches failed to achieve.
+
+**Training strategy as the key differentiator.** Rather than introducing novel architectures, Eagle 2.5's primary innovations are in *how* the model is trained: the Information-First Sampling strategy (Image Area Preservation + Automatic Degradation Sampling) ensures that visual and textual information are preserved optimally when fitting long sequences into a fixed context budget, and the Progressive Mixed Post-Training schedule gradually exposes the model to longer contexts rather than jumping directly to maximum length. These strategies address the "underexplored" training methodology gap identified in prior work.
+
+**Data diversity with targeted long-video supplementation.** The paper combines a broad collection of open-source data (Table 1) spanning video classification, temporal localization, dense captioning, document understanding, and general QA—following a "diversity first, then quality" principle (Section 3.3)—with the novel Eagle-Video-110K dataset specifically designed to fill the long-duration gap. Eagle-Video-110K is distinguished by its dual annotation approach (top-down story-level + bottom-up clip-level), addressing the tension between narrative coherence and fine-grained temporal detail that prior datasets struggled to balance.
+
+**Smaller-scale models competing with much larger ones.** The paper's results framing is ambitious: Eagle 2.5-8B achieves results on Video-MME (72.4%) that match or approach GPT-4o (71.9%), Qwen2.5-VL-72B (73.3%), and InternVL2.5-78B (72.1%)—models with 9× or more parameters (Table 2). This suggests that the training methodology, rather than raw model scale, is the critical factor for long-context performance, positioning Eagle 2.5 as an existence proof that efficient long-context VLMs are achievable at moderate scale.
+
+In summary, the paper addresses a gap that is simultaneously architectural (how to handle long visual contexts without specialized modules), methodological (what training strategies enable consistent improvement with longer inputs), and data-driven (how to construct training data that teaches genuine long-context understanding). Its contribution is not a single technique but an integrated framework spanning data curation, sampling strategy, and training schedule, validated by results that close the gap with much larger proprietary and open-source models.
 
 ## 3. Technical Approach
-Eagle 2.5 comprises a standard multimodal architecture plus three pillars: information-first sampling, progressive mixed post-training, and a long-video dataset.
 
-- Architecture (Sec. 3.1; Fig. 2)
-  - Vision encoder: `SigLIP-so400M` (a vision backbone).
-  - Connector: an MLP that projects vision features into the language model space (LLaVA-style).
-  - LLM: `Qwen2.5` series.
-  - Any-resolution images handled with tiling: split large images into a grid of tiles so the model sees high-resolution content without downscaling away detail. Unlike prior fixed-grid tiling, Eagle 2.5’s tiling is governed by IAP (below).
+### 3.1 Reader Orientation
 
-- Information-first sampling (Sec. 3.2.1)
-  - Goal: maximize the “useful information density” that fits into a fixed model context window `L_max` by:
-    - Keeping the full text,
-    - Allocating remaining tokens to visuals in a way that preserves area, aspect ratio, and temporal coverage.
-  - Component A: Image Area Preservation (`IAP`; Fig. 3, Eq. (1))
-    - Problem with prior tiling: fixed grids force downsampling or distort aspect ratios, reducing usable detail (Fig. 3a).
-    - Idea: choose a tiling configuration `(r_w, r_h)` that:
-      - Preserves at least 60% of the original image area, and
-      - Aligns tiling aspect ratio with the image’s native aspect ratio.
-    - Scoring (Eq. (1)): select the candidate tiling ratio that maximizes
-      - an area term (penalizes <60% preserved area; saturates at 0.6 so it doesn’t over-reward),
-      - times an aspect-ratio alignment term (1 at perfect match, decays symmetrically for deviations).
-    - Effect: tiles that preserve more of the image and keep geometry faithful (Fig. 3b).
-  - Component B: Automatic Degradation Sampling (`ADS`; Eq. (2))
-    - Context budget split: compute text token length `L_text` first; fix it. Visual budget is `L_visual = L_max - L_text`.
-    - For images: choose a max tiles-per-image `t` (up to 12) to maximize spatial information for `M` images.
-    - For videos/documents (temporal content): choose a sampling count `n` to maximize temporal coverage.
-    - Constrained optimization (Eq. (2)): maximize total visual tokens `sum_i L(t, I_i) + 256*n` subject to the visual budget. Temporal units (frame or page) cost 256 tokens each; images depend on `t` through `L(t, I_i)`.
-    - Two-phase “degradation” to fit budget:
-      1) Temporal first: set `t=1` (no tiling), aim for 2 FPS for videos and all images for multi-image docs; enforce a minimum frames per visual input. If the minimum cannot be met, discard the sample. Compute `n* = floor((L_visual - M)/256)`.
-      2) Then tiling: from the set `T={12,8,6,4,2,1}`, pick the largest `t*` that still fits `sum_i L(t, I_i) ≤ (L_visual - 256·n*)`.
-    - Intuition: always keep complete text; then maximize temporal coverage; then spend remaining budget on higher-resolution imagery via tiling. This prevents text truncation and retains fine details where possible.
+Eagle 2.5 is a system for **post-training** an existing vision-language model so that it can process very long visual inputs—hundreds of video frames or dozens of high-resolution document pages—within a single forward pass, without adding any specialized compression or selection modules. The core problem it solves is that standard VLMs either cannot handle long sequences at all, or they can accommodate them but do not actually *benefit* from the extra information (performance plateaus or degrades as more frames are added). The shape of the solution has three mutually reinforcing parts: **(1)** a sampling strategy that optimally packs visual and textual content into a fixed sequence-length budget without discarding critical information, **(2)** a progressive training schedule that gradually exposes the model to longer contexts rather than jumping to the maximum length immediately, and **(3)** a data recipe that combines broad open-source diversity with a purpose-built long-video dataset (Eagle-Video-110K) featuring dual-level annotations.
 
-- Progressive mixed post-training (Sec. 3.2.2; Table 8; Fig. 6)
-  - Mixed post-training: use `ADS` to adaptively fit each sample to a target `L_max` while mixing short and long sequences with length-balanced packing (Stage-2+).
-  - Progressive schedule: train sequentially at larger contexts—`32K → 64K → 128K` tokens—rather than jumping straight to maximum. This:
-    - Enhances robustness across all input sizes,
-    - Makes optimization easier (learn shorter contexts first), then scales up (Table 7, Fig. 6).
-  - Practical settings (Table 8):
-    - Stage 1: connector-only alignment,
-    - Stage 1.5: full-model pretraining (short+long data),
-    - Stages 2–4: full-model post-training at `32K, 64K, 128K` with short+long data.
+### 3.2 Big-Picture Architecture (Diagram in Words)
 
-- Data recipe (Sec. 3.3; Table 1)
-  - “Diversity first, then quality”: assemble a broad pool of open data for videos, multi-page documents, and long text (Table 1), then add a focused long-video dataset to cover very long durations absent from public sets (Fig. 4).
-  - Eagle-Video-110K (Sec. 3.3.2; Figs. 4–5)
-    - Collection via diversity filtering: cut videos into 10s clips, embed with CLIP at 1 FPS, compute max similarity to current pool; keep clips whose max similarity is <0.5 to ensure novelty (Sec. 3.3.2).
-    - Dual-level annotation (Fig. 5):
-      - Story-level (top-down): use human-annotated chapters as segments (not shot boundaries), sample up to 2 FPS (max 50 frames/segment), caption with GPT-4o; aggregate to generate long-form QA with GPT-4 (Sec. 3.3.2).
-      - Clip-level (bottom-up): for short clips, sample up to 2 FPS and generate diverse QA pairs with GPT-4o using a broad pool of question types; add time anchors and textual context anchors to safely “lift” clip QA to full-video QA without leaking the answer (Sec. 3.3.2; Appendix E has exact prompts and the 63-category type pool in Table 12).
+The system has five major components, arranged as a pipeline for training and inference:
 
-- Efficiency and scaling (Appendix B)
-  - Memory- and throughput-oriented engineering: fused Triton ops, CPU offloading, vLLM for inference, and a customized two-layer context-parallel communication pattern (“zigzag Llama3-style” with all-gather KV; B.1) to serve long contexts and sparse video frame sampling efficiently.
+1.  **Vision Encoder (SigLIP-so400M)**: A frozen vision transformer that converts raw images or video frames into a sequence of visual feature vectors. It processes individual frames independently at a fixed resolution, producing a set of patch-level embeddings.
+
+2.  **MLP Projection Layer**: A trainable multi-layer perceptron that maps each visual embedding from the SigLIP representation space into the token-embedding space of the language model. It acts as a modality bridge, ensuring that visual tokens can be processed alongside text tokens by the LLM.
+
+3.  **Information-First Sampling Module**: A pre-processing stage (not a learned model) that determines, for each training sample, how to tile images and how many video frames to sample, given a hard constraint on the maximum sequence length. It runs two sub-procedures: **Image Area Preservation**, which chooses a tiling grid that maximizes retained image area while respecting aspect ratio, and **Automatic Degradation Sampling**, which dynamically allocates the sequence budget between text, images, and temporal frames to guarantee complete text retention.
+
+4.  **Large Language Model (Qwen2.5-7B/8B)**: The core reasoning engine. During post-training, it receives the interleaved sequence of visual tokens (from the MLP projector, arranged by the sampling module) and text tokens, and is trained via next-token prediction on the text portions. Its maximum sequence length is progressively increased across training stages (32K → 64K → 128K tokens).
+
+5.  **Post-Training Schedule Controller**: A meta-level controller that manages the data mixture and the maximum sequence length (`$L_{max}$`) for each training stage. It implements progressive mixed post-training: the model first trains at `$L_{max} = 32K$`, then 64K, then 128K, with data that mixes short and long sequences at each stage.
+
+Information flows as follows during training: a raw training sample (images + text, or video + text) enters the system → the Information-First Sampling Module computes the optimal number of tiles per image and the number of video frames to sample, using the text length and `$L_{max}$` as constraints → the Vision Encoder processes each selected frame/tile into embeddings → the MLP Projector maps these embeddings to LLM-token space → the LLM receives the interleaved visual and text tokens and computes the language modeling loss over the text tokens only → parameters of the MLP and LLM are updated.
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First**, the Image Area Preservation (IAP) tiling strategy, because it determines the spatial resolution at which images and individual video frames enter the model—a foundational decision that affects everything downstream.
+
+- **Second**, the Automatic Degradation Sampling (ADS) algorithm, because it allocates the sequence-length budget across modalities (text, images, temporal frames) and directly determines what visual information reaches the model for each training sample.
+
+- **Third**, the Progressive Mixed Post-Training schedule, because it orchestrates when and how the model experiences longer contexts, building on the sampling strategies defined by IAP and ADS.
+
+- **Fourth**, the Eagle-Video-110K dataset construction, because its dual annotation approach (story-level + clip-level) is designed to provide the specific types of long-form supervision that the training strategies enable, and because the diversity-driven collection method is a key practical contribution.
+
+- **Fifth**, the mixed post-training data recipe and training configurations, because the concrete mixture of open-source data, short-context data, and Eagle-Video-110K, combined with the progressive schedule, constitutes the full training protocol.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily an **engineering systems and methodology paper** whose core idea is that long-context visual understanding in VLMs can be dramatically improved not by designing novel architectures, but by carefully engineering three aspects of the post-training process: **(1)** how visual information is sampled and allocated within a fixed sequence-length budget (Information-First Sampling), **(2)** how the model is gradually exposed to increasingly long contexts (Progressive Mixed Post-Training), and **(3)** what long-duration training data is provided, specifically addressing the lack of long videos in existing datasets (Eagle-Video-110K with dual-level annotations). The approach is validated on the Qwen2.5 model family using a SigLIP vision encoder, with an 8B-parameter variant achieving performance competitive with models 9× its size.
+
+#### Image Area Preservation (IAP)
+
+**What problem it solves.** Standard tiling strategies for high-resolution images divide the input into a rigid grid of fixed-size tiles (e.g., `$s \times s$` pixels each). A common approach, used in InternVL (Chen et al., 2023), imposes strict aspect ratio constraints that force the image to be downscaled to fit a predetermined set of allowed grid shapes. The paper argues this "often distort[s] the original image geometry through improper aspect ratio handling" and "undermines the purpose of tiling"—namely, preserving fine-grained details. The Eagle 2.5 system needs to process high-resolution documents, charts, and individual video frames where small text or subtle visual features matter, so a tiling strategy that maximizes information retention is essential.
+
+**The optimization objective.** IAP frames tile configuration selection as a constrained optimization over the grid dimensions `$(r_w, r_h)$`, where `$r_w$` is the number of tile columns, `$r_h$` is the number of tile rows, and each tile is `$s \times s$` pixels. The total number of tiles is capped at `$N$` (i.e., `$r_w \times r_h \leq N$`). For an original image of size `$W \times H$`, the key quantities are:
+
+- **Original area:** `$A_{\text{orig}} = WH$`
+- **Tiled area:** `$A_{\text{new}} = r_w r_h s^2$` (the total pixel area covered by the grid of tiles)
+- **Original aspect ratio:** `$r_{\text{orig}} = W / H$`
+- **Tiling aspect ratio:** `$r_t = r_w / r_h$`
+
+The optimal configuration is chosen by maximizing a combined score:
+
+$$\arg\max_{(r_w, r_h)} \left[ \min\left(\frac{A_{\text{new}}}{A_{\text{orig}}}, 0.6\right) \cdot \min\left(\frac{r_t}{r_{\text{orig}}}, \frac{r_{\text{orig}}}{r_t}\right) \right]$$
+
+where `$(r_w, r_h)$` satisfies `$r_w \times r_h \leq N$`, and the search is over all valid integer grid dimensions.
+
+**What it computes.** The expression has two multiplicative terms, each constrained to [0, 1] by the `$\min$` operator:
+
+1.  **Area preservation term:** `$\min(A_{\text{new}} / A_{\text{orig}}, 0.6)$`. This term penalizes configurations where the tiled area drops below 60% of the original image area. If `$A_{\text{new}} \geq 0.6 \times A_{\text{orig}}$`, the term is clipped to 0.6—any configuration preserving at least 60% of the area is treated as equally good on this axis. This avoids over-optimizing for area beyond the 60% threshold, which could come at the expense of aspect ratio fidelity.
+
+2.  **Aspect ratio alignment term:** `$\min(r_t / r_{\text{orig}}, r_{\text{orig}} / r_t)$`. This term measures how closely the tiling grid's aspect ratio matches the original image's aspect ratio. When `$r_t = r_{\text{orig}}$`, the ratio is 1.0 (perfect match). When the tiling grid is wider ( `$r_t > r_{\text{orig}}$` ), `$r_t / r_{\text{orig}} > 1$` but `$r_{\text{orig}} / r_t < 1$`, so the `$\min$` selects the smaller value, which decays toward zero as the mismatch increases; similarly when the tiling grid is taller. This formulation is symmetric: being twice as wide as the original incurs the same penalty as being twice as tall.
+
+The overall score ranges from 0 to 0.6 (since the first term is capped at 0.6 and the second at 1.0). It is maximized by configurations that simultaneously preserve at least 60% of the area and match the aspect ratio as closely as possible.
+
+**Why this form.** An alternative would be to simply maximize `$A_{\text{new}} / A_{\text{orig}}$` without the 0.6 cap, or to impose a hard constraint that `$A_{\text{new}} \geq 0.6 \times A_{\text{orig}}$`. The chosen formulation has two key properties:
+
+- **The 0.6 cap prevents aspect ratio from being sacrificed for marginal area gains beyond 60%.** If area preservation were unbounded, the optimizer might choose a grid that covers, say, 80% of the original area but severely distorts the aspect ratio—which would produce tiled images where the spatial layout is unnaturally stretched, potentially confusing the model. The cap says: "once you've kept 60% of the pixels, stop optimizing for area and focus on shape fidelity."
+
+- **The multiplicative combination enforces that *both* criteria must be satisfied.** If either term is near zero, the product is near zero. This means the optimizer will reject configurations that fail either criterion, rather than allowing one criterion to dominate. An additive formulation would permit tradeoffs where high area could compensate for poor aspect ratio (or vice versa), which the paper avoids.
+
+- **The symmetry of the aspect ratio term via the `$\min$` ensures that being wider and being taller incur equal penalties for equal relative deviation**, which is appropriate since there is no a priori reason to prefer one orientation over the other.
+
+**Implementation note.** The paper states that the vision encoder operates at a tile resolution of `$s = 448$` pixels, and the maximum tile count is `$N = 12$` (as shown in Table 8's vision resolution specification). Each tile produces 256 visual tokens (from the SigLIP patch embedding), plus an additional token per image (likely a CLS token or thumbnail), so the total visual tokens for an image with `$r_w \times r_h$` tiles is `$(r_w \times r_h + 1) \times 256$`.
+
+Figure 3 provides a visual comparison: an image of size `$W=2000, H=1300$` is shown under InternVL's rigid tiling (which forces a specific aspect ratio and results in significant unused portions of the grid) versus Eagle 2.5's IAP, which selects a grid that better conforms to the original aspect ratio, retaining more of the original image content. The improvement is most pronounced for images with aspect ratios far from 1:1, where rigid constraints cause substantial downsampling or padding.
+
+**Connection to downstream components.** IAP applies to every image and every video frame processed by the model during both training and inference. During inference, the effect is that high-resolution inputs retain more detail, which is particularly important for benchmarks like InfoVQA (document understanding) and Perception_test (fine-grained video understanding). Table 6 confirms this: removing IAP causes InfoVQA to drop from 77.6 to 76.2 and Perception_test to drop from 76.3 to 73.3.
+
+#### Automatic Degradation Sampling (ADS)
+
+**What problem it solves.** In multimodal training, each sample has both visual content (images or video frames) and text (the question, instruction, or caption). The model has a fixed maximum sequence length `$L_{max}$` (e.g., 32K, 64K, or 128K tokens). The question is: how should this budget be split between visual tokens and text tokens? The paper identifies that "conventional vision-context-centric approaches sample visual content (e.g., video frames) at fixed rates or with predetermined counts, risking text truncation and suboptimal token allocation." In other words, if you naively sample frames at 2 FPS without considering the text length, a sample with a long text prompt might cause the visual tokens to overflow the budget (leading to text truncation), or a sample with a very short text might waste budget on unnecessary visual content.
+
+ADS proposes the opposite prioritization: **text is preserved completely, and visual content is adapted to fit the remaining budget**. This guarantees that no supervision signal (the text answer) is ever truncated, while dynamically adjusting visual resolution and temporal coverage to make optimal use of whatever budget remains.
+
+**The sequence-length accounting.** For a training sample `$\mathcal{S}$` with text `$S_{text}$` and visual content `$S_{visual}$`, given a maximum sequence length `$L_{max}$`:
+
+1.  **Compute the fixed text token length** `$L_{text}$`. Text tokens are obtained by tokenizing the instruction/question/answer portions with the LLM's tokenizer. This length is fixed—the text is never truncated.
+
+2.  **Derive the visual token budget** as the residual: `$L_{visual} = L_{max} - L_{text}$`. This is the total number of tokens available for all visual content.
+
+The optimization problem is then: given `$L_{visual}$` tokens, how should we allocate them across the different types of visual content to maximize information retention?
+
+**Decomposing visual content into two types.** ADS distinguishes two categories of visual input, each with its own optimization variable:
+
+- **Images (static):** For `$M$` images (e.g., multiple document pages, or the individual frames in a multi-image setting), the optimization variable is the **maximum tile count per image** `$t$`. Higher `$t$` means more tiles per image, providing higher spatial resolution. The token cost of image `$I_i$` under tile count `$t$` is `$L(t, I_i)$`—the specific function depends on the IAP tiling procedure applied to that image at the given tile budget.
+
+- **Temporal content (videos, multi-page documents):** For temporal sequences, the optimization variable is the **number of temporal units to sample** `$n$` (number of video frames, or number of document pages). More `$n$` means denser temporal coverage. Crucially, temporal units are *not* tiled—each frame or page is processed at base resolution, producing a fixed 256 visual tokens per temporal unit (the SigLIP output for a single `$448 \times 448$` input).
+
+The distinction reflects a practical reality: for video understanding, dense temporal coverage is often more important than extreme spatial resolution on each frame, whereas for multi-image documents, individual images might need high resolution to read text. ADS optimizes this allocation dynamically per sample.
+
+**The constrained optimization formulation.** The problem is formalized as:
+
+$$\text{maximize}_{t, n} \quad \sum_{i=1}^{M} L(t, I_i) + 256 \cdot n$$
+
+subject to:
+
+$$\sum_{i=1}^{M} L(t, I_i) + 256 \cdot n \leq L_{vis}$$
+
+$$1 \leq t \leq 12, \quad 1 \leq n \leq N_{max}$$
+
+where:
+
+$$N_{max} = \begin{cases} 2 \times \text{duration} & \text{(video, where duration is in seconds)} \\ \text{pages} & \text{(multi-page document)} \end{cases}$$
+
+**What it computes.** The objective maximizes the total number of visual tokens used (subject to the budget `$L_{vis}$`), which is equivalent to maximizing the total visual information retained—since each token carries information, using more tokens means higher resolution and/or denser temporal coverage. The constraints are:
+
+- The total visual tokens (summed over all images at tile level `$t$` plus all temporal units at 256 tokens each) must not exceed `$L_{vis}$`.
+- `$t$` must be between 1 and 12 (the same `$N=12$` maximum from IAP).
+- `$n$` for video cannot exceed 2 × duration in seconds (so at most 2 FPS sampling), and for documents cannot exceed the total number of pages.
+
+Note that `$t$` applies uniformly to all images—you cannot tile some images at level 4 and others at level 8. This simplification makes the optimization tractable (only two variables) at the cost of some allocative efficiency.
+
+**Why this form.** The alternative—visual-context-centric sampling—would pre-determine `$n$` and `$t$` (e.g., "always sample at 2 FPS with tile level 4") and then truncate text if it didn't fit. That approach has three problems:
+
+1.  **Text truncation loses supervision signal.** If the answer gets cut off, the model receives a corrupted training example where it cannot learn the correct response.
+2.  **Fixed visual sampling ignores sample-specific tradeoffs.** A sample with a 50-word question and a 500-word caption has very different text lengths; a fixed visual allocation might waste budget on the former and starve the latter.
+3.  **The token budget is poorly utilized.** When text is short, visual tokens could be increased to improve detail; when text is long, visual tokens should be reduced to avoid overflow. ADS handles both cases.
+
+**The dual-phase degradation algorithm.** Because training samples are typically "mutually exclusive"—they contain either images (no temporal component) or video/document (no static images)—the joint optimization over `$t$` and `$n$` simplifies to a sequential process. The paper describes two phases:
+
+**Phase 1: Temporal degradation.** Initially, `$t$` is set to 1 (no tiling, base resolution). The temporal sampling count `$n$` is then computed as:
+
+$$n^* = \left\lfloor \frac{L_{visual} - M}{256} \right\rfloor$$
+
+where `$M$` is the number of image instances (which consume tokens at base resolution with `$t=1$`, each costing `$256 +$` a small overhead token, approximated here as subtracting `$M$` from the budget). The target sampling rate is 2 FPS for videos, and the target is to use all pages for multi-image documents. A minimum number of frames `$N_{min}$` is enforced per input; if this minimum cannot be met within the budget, the sample is discarded entirely (to avoid training on samples so severely degraded that they provide no useful signal).
+
+**Phase 2: Tiling degradation.** After `$n^*$` is determined, the temporal tokens consume `$n^* \times 256$` of the budget. The remaining budget is `$L_{vis} - n^* \cdot 256$`. The algorithm then selects the highest tile configuration `$t^*$` from the candidate set `$\mathcal{T} = \{12, 8, 6, 4, 2, 1\}$` (in decreasing order of resolution) such that the tiled images fit within the remaining budget:
+
+$$t^* = \max \left\{ t \in \mathcal{T} : \sum_{i=1}^{M} L(t, I_i) \leq (L_{vis} - n^* \cdot 256) \right\}$$
+
+The candidate set `$\mathcal{T}$` is checked in decreasing order: the algorithm tries `$t=12$` first (highest resolution), then `$t=8$`, and so on, until it finds a tile level that fits. This greedy approach maximizes spatial resolution given the temporal sampling decision.
+
+**Why this order (temporal first, then tiling).** The paper's rationale, implicit in the design, is that temporal coverage (how many video frames or document pages you see) determines whether the model can track events, actions, or narrative across time—a capability that is fundamental to "understanding" a video or document. Tile count determines spatial detail within each frame, which is secondary: seeing more frames at lower resolution may be more informative than seeing fewer frames at high resolution, especially for videos where motion and event progression are the primary signal. By prioritizing temporal degradation, ADS ensures that the model always sees as many frames as possible before it starts sacrificing spatial resolution.
+
+**Practical consequences.** The paper notes two effects of ADS in Table 6. Without ADS (presumably using a vision-context-centric baseline), MLVU drops from 71.5 to 70.1, and Video-MME drops from 65.4 to 65.0—moderate but consistent degradations. The convenience benefit is substantial: ADS eliminates the need to manually design per-dataset sampling strategies. Every training sample automatically receives an optimal visual allocation given its text length and the global `$L_{max}$`.
+
+#### Progressive Mixed Post-Training
+
+**What problem it solves.** The paper's goal is to train a model that works well across a range of context lengths, from short single-image queries to 512-frame video understanding. A naive approach—train the model at `$L_{max} = 128K$` from the start—has two problems, identified in Section 3.2.2:
+
+1.  **Computational difficulty of balancing sequence lengths at large `$L_{max}$`:** When training at 128K, the distribution of sequence lengths is extremely wide (single-image samples might be 2K tokens; long video samples are 128K). The paper states that "balancing the distribution of long and short sequences becomes computationally intensive"—packing samples efficiently to fill 128K batches while maintaining a balanced mix requires careful data orchestration.
+
+2.  **Learning difficulty:** "Some longer samples are challenging to learn without a gradual learning process that transitions from easy to difficult." A model that has never seen sequences longer than 8K tokens will struggle to learn from 128K sequences immediately; there is likely a curriculum effect where the attention mechanism needs to gradually adapt to longer-range dependencies.
+
+The progressive training approach addresses both issues by training the model at successively larger `$L_{max}$` values, with data that mixes short and long sequences at each stage.
+
+**The training stages.** The paper describes four stages of post-training (Table 8 and Section 3.2.2), building on the earlier Eagle-2 stages:
+
+| Stage | `$L_{max}$` | Batch Size | Learning Rate | Trainable | Data Mixture |
+|-------|------------|------------|---------------|-----------|--------------|
+| Stage 1 (MLP alignment) | 4,096 | 1,024 | `$2 \times 10^{-4}$` | MLP Connector only | ALLaVA (1.2M samples) |
+| Stage 1.5 (pretraining) | 8,192 | 1,024 | `$2 \times 10^{-5}$` | Full model | Rich diverse data (21.6M samples) |
+| Stage 2 (progressive, step 1) | 32,768 | 256 | Not specified for this stage | Full model | Short+Long data (4.6M + 4.6M samples) |
+| Stage 3 (progressive, step 2) | 65,536 | 128 | Not specified for this stage | Full model | Short+Long data (4.6M + 4.6M) |
+| Stage 4 (progressive, step 3) | 128,000 | 128 | Not specified for this stage | Full model | Short+Long data (4.6M + 4.6M) |
+
+Stage 1 and Stage 1.5 follow the Eagle-2 recipe (Authors, 2025): Stage 1 trains only the MLP connector to align vision embeddings with the LLM's token space, using the ALLaVA dataset at the base context length of 4,096 tokens. Stage 1.5 unfreezes the full model and trains on a much larger, diverse dataset at 8,192 tokens.
+
+Stages 2–4 implement the progressive long-context training. At each stage, the maximum sequence length doubles (32K → 64K → 128K). The data mixture includes both short-context data (Eagle2.5-Image-SFT, detailed in Table 11a) and long-context data (Open-Data from Table 1, plus Eagle-Video-110K), each contributing roughly 4.6 million samples per stage. The batch size decreases from 1,024 in Stage 1.5 to 256 in Stage 2 and 128 in Stages 3–4, reflecting the increased memory cost of longer sequences.
+
+**The mixed post-training component.** At each stage, the training data is not simply all pushed to `$L_{max}$`. Instead, the paper implements "mixed training with length-balanced packing" (Section 3.2.2). The phrase "length-balanced packing" refers to the practice of grouping samples of similar lengths together into training batches so that padding is minimized (if two samples of length 30K and 5K are packed together, the 5K sample wastes 25K of padding tokens; by grouping 30K samples with other 30K samples, the packing is efficient). This is what makes the "distribution balancing" computationally feasible: rather than having every batch contain samples from 2K to 128K, the packing algorithm clusters similar-length samples together.
+
+**Why progressive training outperforms direct 128K training.** Table 7 provides the empirical evidence. Training progressively from 32K to 64K (denoted "32K→64K") achieves 73.0 on MVBench and 74.5 on MLVU, while training directly at 64K ("64K" alone) achieves 71.3 and 74.0 respectively—a notable gap, especially on MVBench. The paper offers two explanations:
+
+1.  "Direct 64K hybrid training disperses samples across the 64K space, diluting the focus on shorter contexts." When training at 64K, the model sees a very wide range of sequence lengths, and the proportion of training tokens devoted to any particular length regime is reduced. By training first at 32K, the model solidifies its capabilities on short-to-medium contexts before being asked to handle longer ones.
+
+2.  "Some longer samples are challenging to learn without a gradual learning process that transitions from easy to difficult." This is a curriculum learning hypothesis: the model's attention mechanism and positional encoding need to gradually adapt to tracking dependencies across 128K tokens. Jumping directly to 128K may cause the model to learn suboptimal attention patterns (e.g., attending only to local context because the long-range signal is initially too noisy to extract useful gradients from).
+
+Figure 6 provides additional evidence: as progressive training advances from 16K to 32K to 64K to 128K, the Video-MME performance curve (across different numbers of inference frames) shifts upward across the board, with the largest gains at high frame counts (256–512 frames). This demonstrates that each progressive stage genuinely increases the model's capacity to utilize longer visual inputs, rather than just enabling longer inputs without degradation.
+
+**Why this schedule design.** The paper does not explicitly state why the stages double `$L_{max}$` (rather than, say, linearly increasing), but the pattern is consistent with common practice in long-context LLM training: doubling the context window is a natural granularity because it corresponds to adding one "scale" of positional encoding capacity. The batch size reductions (1,024 → 256 → 128 → 128) follow from the quadratic memory cost of attention: doubling `$L_{max}$` roughly quadruples the attention memory, requiring proportional batch size reduction to stay within GPU memory constraints. The fixed data volume per stage (4.6M + 4.6M samples) is chosen to provide sufficient training at each context scale without overfitting.
+
+#### Eagle-Video-110K Dataset Construction
+
+**What problem it solves.** The paper identifies in Section 3.3 that "current open-source video data often lacks sufficient length." Figure 4 quantifies this: comparing the video duration distributions of Open-Data (the collected open-source datasets) versus Eagle-Video-110K, the open-source data is concentrated at shorter durations (peaking at roughly 100–1000 seconds), while Eagle-Video-110K extends the distribution significantly into the 1,000–10,000+ second range. For a model to learn genuine long-video understanding—tracking narratives across 30 minutes or more—it needs training examples of comparable length. Eagle-Video-110K is designed to fill this gap with both sufficient video length and high-quality annotations.
+
+**Diversity-driven video collection.** The paper describes a procedure for selecting videos that maximize content diversity relative to an existing training corpus. The method works as follows:
+
+1.  **Source pool:** Videos are collected from multiple existing datasets: Vidchapters (Yang et al., 2023), MiraData (Ju et al., 2025), InternVid-10M (Wang et al., 2024), Panda-70M (Chen et al., 2024), Vript (Yang et al., 2025), Shot2story (Han et al., 2023), ViTT (Huang et al., 2020), and WebVid-10M (Bain et al., 2021). This collection is denoted as `$A$`.
+
+2.  **Feature extraction:** For all videos in both `$A$` and the existing training set `$B$`, CLIP (Radford et al., 2021) is used to extract temporal features at 1 frame per second. Videos are segmented into non-overlapping 10-second clips. For each clip, a pooling operation (likely mean pooling over the per-frame CLIP features) produces a single representative feature vector summarizing the visual content of that 10-second interval.
+
+3.  **Diversity scoring via similarity thresholding:** Let `$\{b_i\}_{i=1}^{N_B}$` be the clip features from the existing training set `$B$`, and `$\{a_j\}_{j=1}^{N_A}$` be the clip features from the source pool `$A$`. For each candidate clip `$a_j$`, the maximum cosine similarity to any clip in `$B$` is computed:
+
+$$S_{\text{max}}(a_j) = \max_{1 \leq i \leq N_B} S(b_i, a_j)$$
+
+where `$S(b_i, a_j)$` is the cosine similarity between the two feature vectors.
+
+A similarity threshold `$\tau = 0.5$` is applied. Clips with `$S_{\text{max}}(a_j) < \tau$` are considered **novel**—they are not well-represented in the existing training data. The set of novel clips is:
+
+$$A_{\text{novel}} = \{a_j \in A \mid S_{\text{max}}(a_j) < \tau\}$$
+
+The original videos corresponding to these novel clips are selected for inclusion in Eagle-Video-110K.
+
+**Why this procedure.** A standard alternative would be random sampling from the source pool, which would over-represent common visual patterns (e.g., talking heads, indoor scenes) and under-represent rare ones. The similarity threshold approach explicitly selects for novelty, ensuring that Eagle-Video-110K contributes *complementary* content to the training distribution rather than duplicating what the model already sees. The threshold `$\tau = 0.5$` is a design choice: too high (`$\tau \to 1$`) and nothing is filtered (all clips are "novel"); too low (`$\tau \to 0$`) and only extremely unusual clips are selected, which might represent noise or out-of-distribution content. The value 0.5 balances novelty with quality.
+
+**Story-level annotations (top-down approach).** For videos selected from sources that provide human-annotated chapters (specifically ViTT and Vidchapters), the paper constructs long-form QA pairs using a top-down annotation pipeline:
+
+1.  **Segmentation via chapters:** Videos are divided into segments based on human-annotated chapter boundaries. Unlike shot-detection-based segmentation (which the paper argues "often results in over-segmentation, producing excessively detailed annotations that are suboptimal for constructing coherent story-level text"), chapters provide semantically meaningful divisions that correspond to narrative or thematic units. Videos with fewer than two chapters are filtered out, as they cannot serve as effective story-level sources.
+
+2.  **Chapter-level dense captioning:** For each chapter (spanning from timestamp `$a$` to `$b$` seconds), frames are sampled at up to 2 FPS with a maximum of 50 frames per segment. These sampled frames, along with the user-provided segment title, are fed to GPT-4o (OpenAI, 2023), which generates a detailed visual description focused on the content indicated by the title. The prompt used (Appendix E.1.1) instructs GPT-4o to "Pay special attention to the progression of actions and movements" and to "Break down complex actions into their component steps" using transitional language—effectively producing dense captions that capture the temporal flow within each chapter.
+
+3.  **Long-form QA generation:** The dense captions for all chapters, along with their time intervals and chapter titles, are aggregated into a single document describing the entire video. This aggregated caption is provided to GPT-4 (Achiam et al., 2023), which generates diverse question-answer pairs. The prompt (Appendix E.1.3) specifies that questions should be "unambiguous within the current clip" and "challenging when the details allow." The question types are selected from the same 63-category pool used for clip-level QA (Table 12), ensuring consistent annotation formatting across the two approaches.
+
+The result is a set of QA pairs that require understanding the full narrative structure of the video—tracking character arcs, causal chains, and event sequences across multiple chapters—rather than just recognizing isolated events in short clips.
+
+**Clip-level annotations (bottom-up approach).** To capture fine-grained spatio-temporal details that story-level annotations might miss, the paper also generates annotations for short clips using a complementary bottom-up approach:
+
+1.  **Clip-level QA generation:** For each 10-second clip (from the diversity-filtered pool), frames are sampled at up to 2 FPS and fed to GPT-4o. From a predefined pool of 63 question types (Table 12, covering categories like object recognition, human action, camera movement, event causality, counterfactual reasoning, and domain-specific knowledge for fields like medicine and sports), five types are randomly selected. GPT-4o generates one question-answer pair per selected type. The prompt (Appendix E.1.2) requires that "the question-answer pair cannot be fully answered using only the brief caption"—forcing the model to produce questions that require visual information, not just textual summaries.
+
+2.  **Clip-to-video conversion with anchors:** Because individual clip annotations are designed for localized queries, they do not directly scale to full-video understanding. A question like "What color is the car?" that is unambiguous when asked about a specific 10-second clip becomes ambiguous when asked about an hour-long video (which car? when?). The paper addresses this by introducing two types of **anchors** that make clip-level questions meaningful at video scale:
+
+    - **Time anchors:** The temporal interval of the relevant clip is directly incorporated into the question. For example, "What color is the car at 3:45–3:55?" This provides explicit temporal reference without revealing the answer.
+
+    - **Textual context anchors:** GPT-4o generates additional contextual information that helps locate the relevant event within the full video without spoiling the answer. The exact mechanism is not detailed, but the prompt in Appendix E.1.1 suggests that the brief captions generated for each clip serve this purpose, providing sufficient context that the question is answerable when the video is watched in full but not from the question text alone.
+
+**Why dual annotation.** Each annotation type addresses a different aspect of long-video understanding that the other misses. Story-level annotations teach the model to track overarching narrative structure, character development, and causal chains across extended periods—capabilities tested by benchmarks like HourVideo and CG-Bench (which the paper shows strong results on: 44.5 and 55.8 respectively, Table 2). Clip-level annotations teach the model to attend to fine-grained spatio-temporal details—object locations, specific actions, transient events—capabilities tested by benchmarks like Charade-STA and Perception_test (65.9 and 82.0 respectively). The dual approach ensures that Eagle-Video-110K provides balanced supervision for both types of understanding.
+
+The question type pool (Table 12) is notably comprehensive, covering 63 categories ranging from basic visual perception (object recognition, color, spatial relationships) through complex event reasoning (causality, counterfactual reasoning, event prediction) to domain-specific knowledge (medical, sports, gaming, arts). This breadth reflects the "diversity first, then quality" principle applied at the annotation level: the dataset is designed to expose the model to as many types of questions as possible, even if some categories are sparsely represented.
+
+#### Mixed Post-Training Data Recipe
+
+**What problem it solves.** A model trained exclusively on long-context data might lose its short-context capabilities (catastrophic forgetting). Conversely, a model trained only on short-context data cannot learn long-context understanding. The mixed post-training recipe addresses this by maintaining a balance of short and long data throughout all progressive training stages, ensuring that the model develops long-context capabilities without regressing on standard benchmarks.
+
+**Data composition by training stage.** The paper provides detailed breakdowns:
+
+- **Stage 1 (MLP Alignment):** Uses only ALLaVA (1.2M samples), a dataset of image-text pairs designed for vision-language alignment. This stage trains only the MLP connector, establishing the initial mapping from vision features to LLM token embeddings.
+
+- **Stage 1.5 (Pretraining):** Uses a rich diverse dataset (21.6M samples) comprising both Eagle2.5-Image-SFT data (Table 11a) and additional pretraining data (Table 11b). Table 11a spans captioning and knowledge (ShareGPT4o, KVQA, Movie-Posters, etc.), mathematics (GeoQA+, MathQA, CLEVR-Math, etc.), science (AI2D, ScienceQA, PathVQA, etc.), chart and table understanding (ChartQA, DVQA, PlotQA, etc.), OCR (SynthDoG, FUNSD, IAM, etc.), OCR QA (DocVQA, InfoVQA, TextVQA, etc.), grounding and counting (TallyQA, RefCOCO, etc.), general VQA (LLaVA-150K, LVIS-Instruct4V, etc.), and text-only data (Orca, WizardLM, etc.). Table 11b adds CC3M, TextCaps, ShareGPT-4V, DenseFusion-1M (for captioning/knowledge), Object365 (for grounding), and OpenMathInstruct (for text-only math). The sheer breadth of this data collection—spanning dozens of datasets across 8 categories—reflects the "diversity first" philosophy.
+
+- **Stages 2–4 (Progressive Long-Context):** Each stage uses a mixture containing:
+  - **Short-context data:** Eagle2.5-Image-SFT (the same short-context SFT data from Stage 1.5, Table 11a), contributing approximately 4.6 million samples.
+  - **Long-context data:** Open-Data (Table 1) plus Eagle-Video-110K, also contributing approximately 4.6 million samples.
+
+The 1:1 ratio of short to long data is a design choice that balances two competing needs: enough long data to learn extended context capabilities, and enough short data to prevent catastrophic forgetting of standard vision-language tasks. The paper does not provide an ablation of this ratio, so it represents an empirically chosen (but not systematically validated) balance point.
+
+**The "diversity first, then quality" principle.** The paper explicitly states this guiding philosophy in Section 3.3: "We embrace the 'diversity first, then quality' principle in curating the training data pool." This manifests in:
+
+- The collection of data from dozens of open-source datasets (Tables 1 and 11), spanning video classification, temporal action localization, dense captioning, document understanding, OCR, chart reasoning, science, mathematics, and general VQA. The paper does not attempt to curate a small, high-quality subset; instead, it includes everything, relying on the training process to learn from the diversity.
+
+- The diversity-driven video collection for Eagle-Video-110K, which explicitly selects for novelty relative to existing data.
+
+- The 63-category question type pool (Table 12), which covers an extremely wide range of question types rather than focusing on a few high-quality categories.
+
+The implicit assumption is that data diversity is the primary driver of generalization, and that any quality issues in individual datasets are outweighed by the benefit of exposure to a wide range of visual concepts, question formats, and reasoning patterns. This is consistent with recent trends in LLM training (e.g., the LLaMA and Qwen model families), where data volume and diversity are prioritized over per-sample quality.
+
+**Implementation infrastructure.** Appendix B describes several technical optimizations that enable training at this scale and context length:
+
+- **GPU memory optimization:** The training framework uses Triton-based fused operators (replacing PyTorch's default MLP, RMSNorm, and RoPE implementations), fused linear layers with cross-entropy loss (eliminating intermediate logit storage), and CPU-offloading of hidden states. These are standard efficiency techniques for large-scale LLM training.
+
+- **Distributed context parallelism:** Based on USP (Fang and Zhao, 2024), the framework uses a two-layer communication group combining Ulysses and Ring attention (Liu et al., 2023). Rather than standard zigzag ring-attention, it implements a Llama3-style (Dubey et al., 2024) context parallelism with all-gather KV, designed to reduce communication latency. This is necessary because processing 128K sequences requires splitting the sequence across multiple GPUs; the parallelism strategy determines how efficiently attention can be computed across the split.
+
+- **Video decoding acceleration:** Training requires sampling specific sparse video frames (at rates like 2 FPS, but often from arbitrary positions within long videos). The authors optimized rapid video metadata parsing to improve decoding speed and minimize memory consumption—a practical engineering concern that becomes critical when training on thousands of long videos.
+
+- **Inference acceleration:** The model is deployed using VLLM (Kwon et al., 2023) for evaluation, which provides paged attention and efficient batching for serving.
+
+**Training configurations.** Key hyperparameters from Table 8:
+
+- **Vision resolution:** `$448 \times \{(i, j) \mid i, j \in \mathbb{Z}^+, i \times j \leq 12\}$`—meaning each tile is `$448 \times 448$` pixels, and the grid dimensions can be any positive integer pair whose product is at most 12. This allows grids of 1×1, 1×2, ..., up to 3×4 or 4×3.
+
+- **Visual tokens per image:** `$(i \times j + 1) \times 256$`, where `$i \times j$` is the number of tiles and the `$+1$` accounts for an additional token (likely a CLS token or a downsampled thumbnail representing the full image context).
+
+- **Base LLM:** Qwen2.5-7B, expanded to 8B parameter count (likely through the addition of the vision encoder and MLP connector parameters, though the exact parameter accounting is not detailed).
+
+- **Optimizer:** Not explicitly stated in the main text, but consistent with the Qwen2.5 training recipe (typically AdamW with cosine learning rate schedule). The learning rates differ across stages: `$2 \times 10^{-4}$` for Stage 1 (MLP only, faster learning), `$2 \times 10^{-5}$` for Stage 1.5 (full model, careful tuning), and unspecified for Stages 2–4.
+
+- **Progressive schedule:** `$L_{max}$` is set to 32,768 (32K) at Stage 2, 65,536 (64K) at Stage 3, and 128,000 (128K) at Stage 4. These are the "max length" values used by ADS to allocate the visual token budget per sample.
+
+**Connection between ADS and the progressive schedule.** The interaction between these two components is crucial for understanding the full training workflow. For each training sample, ADS uses the current stage's `$L_{max}$` to determine `$L_{visual} = L_{max} - L_{text}$`, then allocates tiles and frames accordingly. This means that the same video might be sampled with fewer frames at Stage 2 (`$L_{max}=32K$`) than at Stage 4 (`$L_{max}=128K$`). As `$L_{max}$` increases across stages, the model experiences the same videos with progressively more visual frames, building its capacity to utilize the additional information. This is precisely what Figure 6 demonstrates: the 32K model performs well with up to ~64 frames, the 64K model with up to ~128 frames, and the 128K model with up to 512 frames, with consistent performance improvements as more frames are added within each model's trained capacity.
+
+**Summary of the integrated training pipeline.** A training sample flows through the system as follows. First, its text tokens are computed to determine `$L_{text}$`. ADS then computes `$L_{visual} = L_{max} - L_{text}$` using the current stage's `$L_{max}$`. If the sample contains video, ADS first computes `$n^*$` (number of frames) using the temporal degradation formula, then selects `$t^*$` (tile level) from the tiling degradation procedure, applying IAP for each tiled image. The vision encoder processes the selected frames at the appropriate tile resolution, producing visual embeddings. The MLP projector maps these to LLM-compatible tokens. The full sequence (interleaved visual and text tokens) is fed to the LLM, and the language modeling loss is computed only over the text tokens. Parameters are updated via backpropagation, with the distributed training infrastructure handling the memory and communication requirements of 128K-length sequences. This pipeline runs for the full duration of Stage 2, then repeats with `$L_{max}$` doubled for Stage 3, and again for Stage 4, each time drawing from the mixed pool of 4.6M short-context + 4.6M long-context samples, with the long-context portion including the purpose-built Eagle-Video-110K annotations.
 
 ## 4. Key Insights and Innovations
-- Information-first sampling that preserves both semantics and detail (Sec. 3.2.1; Eq. (1), Eq. (2), Fig. 3)
-  - What’s new: instead of prioritizing visuals (risking text truncation) or applying rigid tiling, Eagle 2.5 fixes the entire text, then optimizes visual allocation across space (tiling) and time (sampling). IAP enforces area and aspect-ratio fidelity; ADS enforces a budget-aware allocation across temporal coverage and resolution.
-  - Why it matters: yields higher information density in the same context window and produces consistent performance scaling as the number of frames increases (Fig. 1, Fig. 6). Ablations show both IAP and ADS matter (Table 6).
 
-- Progressive mixed post-training for long contexts (Sec. 3.2.2; Table 7; Fig. 6)
-  - What’s new: a mixed training curriculum that grows `L_max` stepwise, preserving short-context competence while expanding long-context ability.
-  - Why it matters: improves performance over one-shot long-context training, particularly in frame-heavy regimes (Table 7), and shifts the performance-vs-frames curve upward as training progresses (Fig. 6).
+### Innovation 1: The Distinction Between Tolerating and Benefiting from Long Contexts as a Training Objective
 
-- A dual-annotated long-video dataset with diversity-aware collection (Sec. 3.3.2; Figs. 4–5)
-  - What’s new: Eagle-Video-110K explicitly targets long durations absent in existing open datasets (Fig. 4), and its annotations combine story-level (chapter-based) semantics with clip-level fine-grained temporal QA enhanced via anchors (Fig. 5, Appendix E).
-  - Why it matters: empirically boosts long-video performance, particularly when many frames are presented (Table 7, Fig. 6, Q4 in Sec. 4.2).
+The paper's deepest conceptual contribution is not any specific algorithm but a diagnostic reframing of what it means for a VLM to "handle" long visual contexts. Prior work in native context extension—represented by LongVA (Zhang et al., 2024), LongVILA (Xue et al., 2024), and LongViTA (Shen et al., 2025)—succeeded in making models that could *accommodate* long visual sequences without crashing or running out of memory. But the paper argues these approaches "struggle to achieve consistent improvements as the amount of visual input increases" (Section 2). In other words, prior models were *long-context-tolerant* but not *long-context-benefiting*: adding more frames beyond a certain point did not improve performance, and in some cases degraded it.
 
-- Generalist design without specialized compression modules (Sec. 3.1, Fig. 2)
-  - What’s new: a simple LLaVA-style projection from `SigLIP` to `Qwen2.5` plus IAP/ADS sampling achieves parity with larger specialized systems on long-video tasks (Table 2, Fig. 1).
-  - Why it matters: easier to adapt/extend across tasks and inputs, and avoids lock-in to task-specific compression engineering.
+The paper introduces an explicit separation between these two concepts—tolerating longer inputs versus benefiting from them—and treats the latter as the true objective. This distinction matters because it changes the evaluation criterion for long-context VLM research from "can the model process X frames without OOM errors?" to "does the model's accuracy increase monotonically with the number of input frames?" It also changes the training methodology: the paper's progressive schedule, Information-First Sampling, and Eagle-Video-110K dataset are all designed specifically to teach the model to *use* additional visual information rather than merely to *survive* it.
+
+The evidence for this distinction is Figure 1 and Figure 6. Figure 1 shows that Eagle 2.5's Video-MME performance climbs steadily from ~62% at 16 frames to ~72% at 512 frames, while comparable open-source models like Qwen2.5-VL-7B, InternVL-2.5-8B, and LLaVA-OneVision-72B show flatter or less consistent scaling curves. Figure 6 demonstrates the causal mechanism: as progressive training advances (16K → 32K → 64K → 128K), the model's capacity to utilize more frames increases, with the 128K model extracting gains up to 512 frames that the 16K model cannot access. This is an empirical finding with conceptual weight: it reframes long-context capability as a *learned skill* rather than an *architectural property*, shifting the research emphasis from context-length engineering to training curriculum design.
+
+The paper does not claim to have invented this distinction—scaling laws work in LLMs (Kaplan et al., 2020) has long observed that larger models benefit more from additional data—but it applies the concept to *visual* context scaling in VLMs for the first time with systematic evidence. The finding that the same model architecture can either plateau or improve with additional frames depending on training strategy is a diagnostic result that reorients the field's understanding of where the bottleneck lies: not in architecture, but in training methodology.
+
+### Innovation 2: Text-First Sampling as a Principled Alternative to Fixed Visual Sampling
+
+The dominant assumption in VLM training has been that visual content sampling should be predetermined—for instance, "sample video frames at 2 FPS" or "tile every image at 4×4 resolution"—with the text then truncated or padded to fit the resulting sequence. This *vision-context-centric* approach is implicit in most VLM training pipelines and is rarely questioned as a design choice.
+
+The paper's Automatic Degradation Sampling (ADS) inverts this priority. By guaranteeing complete text retention and dynamically adapting visual content to fit the remaining budget, ADS makes an explicit argument: the text in a training sample (question, instruction, answer) constitutes the *supervision signal*, and truncating it damages the learning objective directly, whereas reducing visual resolution or temporal density degrades the input signal gradually. The paper identifies the vision-context-centric alternative's failure mode precisely: it "risk[s] text truncation and suboptimal token allocation" (Section 3.2.1), meaning that in a sample with a long caption, the answer might be cut off, corrupting the training example entirely.
+
+This is a **reframing innovation** rather than a novel mechanism—ADS itself is a straightforward constrained optimization—but the reframing has practical consequences that extend beyond Eagle 2.5. It provides a general principle for multimodal sequence budgeting: in any setting where text carries the learning signal (instruction tuning, captioning, QA), text should be prioritized over visual tokens. The paper's evidence for the practical impact is modest but consistent: removing ADS causes MLVU to drop from 71.5 to 70.1 and Video-MME from 65.4 to 65.0 (Table 6). The more significant claim is conceptual: this priority ordering should be the default for multimodal training, not an afterthought.
+
+The paper's formulation of the distinction between "images" (where the optimization variable is tile count `t`) and "temporal content" (where the optimization variable is frame/page count `n`) is also noteworthy. It recognizes that spatial resolution and temporal density are fundamentally different axes of visual information with different cost structures—each frame costs 256 tokens at base resolution, while tiling multiplies the cost of each image—and that the optimal allocation between them depends on the sample type (video vs. document). This decomposition is a useful conceptual toolbox for future multimodal training systems, even if the specific dual-phase degradation algorithm is a heuristic implementation.
+
+### Innovation 3: Dual-Level Annotation as a Method for Teaching Both Narrative Coherence and Fine-Grained Detail
+
+The paper's Eagle-Video-110K dataset introduces a methodological innovation in long-video annotation that addresses a tension the field has implicitly grappled with but rarely articulated: annotations that capture the overarching narrative structure of a long video (story-level) tend to miss fine-grained spatio-temporal details (clip-level), and vice versa. Prior long-video datasets have tended toward one extreme or the other: Shot2story (Han et al., 2023) uses shot-detection for fine segmentation but the paper argues this "often results in over-segmentation, producing excessively detailed annotations that are suboptimal for constructing coherent story-level text" (Section 3.3.2). Conversely, video-level captioning datasets produce holistic descriptions but lose the temporal precision needed for tasks like temporal grounding or detailed event QA.
+
+The dual annotation approach—top-down story-level QA paired with bottom-up clip-level QA—is not merely an engineering convenience. It represents a **diagnostic insight about what long-video understanding requires**: the ability to simultaneously maintain both a high-level narrative representation (who did what, why, across what time span) and a low-level event representation (what happened at this specific moment, what color was the object, what action occurred). The paper's clip-to-video conversion mechanism using *time anchors* and *textual context anchors* is the novel technical bridge between these two levels: it takes questions that are unambiguous only within a local clip and adds spatio-temporal references that make them answerable within the full video, without revealing the answer. This is a solution to a genuine annotation challenge—how to make localized questions meaningful at video scale—that prior datasets addressed either by avoiding video-level questions or by restricting questions to clip-level only.
+
+The evidence that this dual approach works is indirect but suggestive: Eagle 2.5 performs strongly on both narrative-heavy benchmarks (HourVideo: 44.5, CG-Bench: 55.8 in Table 2) and detail-oriented benchmarks (Charade-STA mIoU: 65.9, Perception_test: 82.0), suggesting that the model has learned to operate at both levels. The paper does not ablate the dual annotation approach against single-level alternatives (e.g., training with only story-level or only clip-level data), which would be needed to definitively attribute the gains to the dual structure. But as a methodological contribution, the framework of hierarchical annotation with explicit bridging mechanisms provides a template for future long-video dataset construction that goes beyond the coarse-vs-fine dichotomy.
+
+### Innovation 4: The "Diversity First, Then Quality" Principle Applied Systematically to Multimodal Post-Training
+
+Data selection for VLM training has often emphasized quality filtering—removing low-quality captions, deduplicating near-duplicate images, curating for specific task distributions. The paper inverts this priority, explicitly stating "We embrace the 'diversity first, then quality' principle in curating the training data pool" (Section 3.3). This is not a novel slogan—it echoes principles from LLM pretraining (e.g., the LLaMA and Qwen model families)—but the paper applies it at a scale and breadth that distinguishes it from typical VLM post-training recipes.
+
+The evidence for the scale of this commitment is Tables 1 and 11: the training data spans dozens of datasets across video classification, temporal action localization, dense captioning, document understanding, OCR, chart reasoning, science QA, mathematics, general VQA, and text-only instruction data. Rather than carefully selecting a subset of high-quality, task-aligned datasets, the paper includes essentially everything available, from human-annotated datasets like COIN (Tang et al., 2019) to synthetic data like LLaVA-Video (Zhang et al., 2024). The diversity-driven video collection for Eagle-Video-110K further instantiates this principle: the CLIP-similarity-based filtering explicitly prioritizes novelty relative to existing data, selecting videos that maximize the *breadth* of the visual distribution rather than its *average quality*.
+
+This is an **engineering principle elevated to a methodological claim**: for long-context multimodal learning, data diversity matters more than per-sample quality because the model needs to encounter a wide enough range of visual concepts, temporal structures, and question formats to generalize to long-context benchmarks. The paper does not provide ablation evidence that "diversity first" outperforms "quality first"—it would require training a comparison model on a carefully curated high-quality subset—so the claim remains a working hypothesis supported by the overall strong benchmark results. But as a design philosophy, it provides a clear, actionable principle for other practitioners building multimodal post-training pipelines: prioritize coverage and breadth, and let the training process learn from the noise.
+
+The connection to the progressive training schedule is also worth noting: by maintaining a 1:1 ratio of short to long data across all progressive stages (4.6M + 4.6M samples per stage, Table 8), the paper ensures that diversity is maintained at every context scale, preventing the model from over-specializing to either short or long formats at any point in training. This is a concrete implementation of the diversity principle applied to sequence length as an additional dimension of data diversity.
 
 ## 5. Experimental Analysis
-- Evaluation methodology (Sec. 4; Tables 2–3; Fig. 1)
-  - Video benchmarks: MVBench, Perception-Test, EgoSchema, MMB-Video, MLVU, LVBench, Video-MME (w/ and w/o subtitles), CG-Bench (multiple metrics), HourVideo, Charade-STA. Default sampling is 2 FPS, tiling off for videos, minimum 8 frames per video; Perception-Test enables tiling for high resolution (Table 2 note).
-  - Image benchmarks: DocVQA, ChartQA, InfoVQA, TextVQA, OCRBench, MMStar, RWQA, AI2D, MMMU, MMB1.1, MMVet, HallB, MathVista (Table 3). Average score divides OCRBench by 10 to normalize scales.
-  - Setup reflects the paper’s intended use: the same generalist model is evaluated across both long videos and high-resolution images.
 
-- Main quantitative results
-  - Long video capability and scaling with more frames
-    - Performance rises as frames increase (Fig. 1 and Fig. 6). On Video-MME (no subtitles) Eagle 2.5-8B reaches:
-      > “72.4% at 512 input frames,”
-      closely matching GPT-4o and large open models like `Qwen2.5-VL-72B` and `InternVL2.5-78B` (Fig. 1; Table 2).
-  - Broad video benchmark performance (Table 2)
-    - Eagle2.5-8B achieves:
-      - MVBench: 74.8,
-      - Perception-Test: 82.0,
-      - EgoSchema: 72.2,
-      - MLVU: 77.6,
-      - Video-MME (w/o subtitles): 72.4, (with subtitles): 75.7.
-    - On CG-Bench, across metrics “Clue / Long / Open / mIoU”, Eagle 2.5-8B scores:
-      > “55.8 / 46.6 / 45.6 / 13.4,”
-      surpassing `Claude-3.5-Sonnet` and `Gemini-1.5-Pro` on several metrics (Table 2).
-    - HourVideo (long-form understanding): Dev 44.5, Test 41.8—surpassing `Gemini-1.5-Pro` (Table 2).
-    - Charade-STA (temporal grounding): substantial gains vs similar-sized public models (Table 2, last column).
-  - High-resolution image/document capability (Table 3)
-    - Strong document/chart/text QA: DocVQA 94.1, ChartQA 87.5, InfoVQA 80.4, TextVQA 83.7, OCRBench 869 (Table 3; OCRBench scaled by 10 in the average).
-    - General multimodal reasoning: MMStar 66.2, RWQA 76.7, AI2D 84.5, MMB1.1 81.7, MMVet 62.9, HallB 54.7, MathVista 67.8; overall average 75.6 (Table 3).
-  - Additional doc benchmarks: SlideVQA (Dev ANLS 73.8; Test 72.7) and MMLongBench-Doc (Overall F1 29.4) in Appendix C (Tables 9–10).
+### Evaluation Methodology
 
-- Ablations and diagnostics (Sec. 4.2)
-  - Impact of long-context training on image tasks (Table 4)
-    - Training at longer `L_max` (progressive 32K→64K→128K) does not harm short-context image benchmarks; slight improvements are seen, with average moving from 74.8 (S2 baseline) to 75.7 at 128K (Table 4).
-  - Image pretraining helps video benchmarks (Table 5)
-    - Adding image data in Stage 1.5 improves MVBench and MLVU (e.g., MVBench from 72.9 to 73.1 and MLVU from 70.9 to 71.5); Video-MME shows modest gains (65.2 → 65.4) when limited to 32 frames at 2 FPS (Table 5).
-  - IAP and ADS are both useful (Table 6)
-    - Removing IAP significantly hurts high-res and fine-grained tasks: InfoVQA drops 77.6→76.2; Perception-Test 76.3→73.3 (Table 6).
-    - Removing ADS can truncate supervision and degrade performance: e.g., MLVU 71.5→70.1; Video-MME 65.4→65.0 (Table 6).
-  - Progressive vs direct long-context training; benefit of Eagle-Video-110K (Table 7; Fig. 6)
-    - Progressive 32K→64K outperforms direct 64K on MVBench/MLVU/Video-MME (e.g., 73.0 vs 71.3 on MVBench; Table 7).
-    - Adding Eagle-Video-110K further improves all three (to 73.9/75.1/68.8; Table 7) and especially boosts performance at ≥128 frames on Video-MME (Fig. 6).
+- **Dataset.** All experiments use publicly available long-context multimodal benchmarks. The primary video benchmarks are Video-MME (the main headline benchmark, evaluated without subtitles using up to 512 frames), MVBench, MLVU, LongVideoBench, EgoSchema, Perception_test, CG-Bench, HourVideo, and Charade-STA. Image benchmarks include DocVQA, ChartQA, InfoVQA, TextVQA, OCRBench, MMStar, RWQA, AI2D, MMMU, MMB1.1, MMVet, HallB, and MathVista. Additional document benchmarks are SlideVQA and MMLongBench-Doc (reported in Appendix C, Tables 9–10). The exact split sizes and sources for each benchmark are as cited in their original publications; the paper evaluates on standard test or validation splits as specified in Tables 2 and 3. The Video-MME evaluation uses 512 frames as the maximum, sampled at 2 FPS by default with minimum 8 frames, and without subtitles unless otherwise noted.
 
-- Do the experiments support the claims?
-  - Yes—three lines of evidence are consistent:
-    - Scaling with more frames (Figs. 1 and 6),
-    - Broad benchmark improvements vs similar-sized open models (Table 2) and competitive performance against much larger models on long-video tasks,
-    - Ablations linking gains to IAP/ADS, progressive training, and Eagle-Video-110K (Tables 6–7).
+- **Base model(s).** The model family is Eagle 2.5, built on the Qwen2.5-7B large language model (Team, 2024) paired with a SigLIP-so400M vision encoder (Zhai et al., 2023). The total parameter count for the 8B variant likely includes approximately 7B for the LLM plus the vision encoder and MLP connector parameters. The authors state this model is chosen to demonstrate that long-context capability is achievable at moderate scale—the 8B results are compared against models up to 78B parameters (InternVL2.5-78B, Qwen2.5-VL-72B) and proprietary models of unknown scale (GPT-4o, Gemini-1.5-Pro). The Eagle 2.5 model is initialized from Eagle-2 Stage-1.5 weights (Authors, 2025) before the progressive long-context post-training stages are applied.
+
+- **Metrics.** Accuracy is the primary metric across all benchmarks, measured as exact match or equivalent task-specific scoring per each benchmark's standard evaluation protocol. For Video-MME, the metric is accuracy (%) on the question-answering task without subtitles. For OCRBench, the score is reported as the raw benchmark score and divided by 10 when computing the overall image average. For Charade-STA, the metric is mIoU (mean Intersection over Union) on both the dev and test sets, measuring temporal grounding precision. For CG-Bench, four sub-metrics are reported: Clue, Long, Open, and mIoU. The overall image benchmark "Avg Score" in Table 3 is computed as the arithmetic mean of all 13 image benchmark scores, with OCRBench score divided by 10. The paper does not specify confidence intervals or standard deviations for any reported metrics.
+
+- **Baselines.** The paper compares against three categories of models. **Closed-source models:** GPT-4o-0806 (OpenAI, 2023), Claude-3.5-Sonnet (Anthropic, 2024), and Gemini-1.5-Pro (Reid et al., 2024). **Publicly available models at similar scale (7–8B):** MiniCPM-V2.6-8B (Yao et al., 2024), LongVILA-8B (Chen et al., 2024), InternVL2.5-8B (Chen et al., 2024), LLaVA-Video-8B (Zhang et al., 2024), Qwen2.5-VL-8B (Bai et al., 2025), VideoChat-Flash-8B (Li et al., 2024), LLaVA-One-Vision-8B (Li et al., 2024). **Publicly available models at larger scale (72–90B):** InternVL2.5-78B (Chen et al., 2024), Qwen2.5-VL-72B (Bai et al., 2025), LLaVA-Video-72B (Zhang et al., 2024), LLaMA-3.2-90B-Vision (Dubey et al., 2024). Baseline numbers are taken from each model's reported results or evaluated by the authors under consistent sampling protocols (2 FPS, minimum 8 frames, disabling tiling except for Perception_test).
+
+- **Generation budget / compute accounting.** The paper does not report FLOPs or wall-clock training time for Eagle 2.5. For inference, the frame budget is the primary compute metric: the number of video frames sampled and processed by the model. On Video-MME, frame counts are varied from 16 to 512, with 512 being the maximum tested. Most other video benchmarks use a maximum of 256 frames. The sampling protocol is standardized: 2 FPS by default, minimum of 8 frames per video, tiling disabled for video benchmarks (except Perception_test where tiling is enabled for high-resolution testing). For image benchmarks, resolution is controlled by the tiling configuration (up to 12 tiles of 448×448 pixels each), producing `$(i \times j + 1) \times 256$` visual tokens per image. The paper does not report inference latency, GPU memory usage during inference, or total FLOPs for any benchmark run. For the training-side compute accounting, Table 8 reports batch sizes and data volumes per stage but does not provide total training FLOPs, GPU-hours, or hardware configuration details.
+
+- **Cross-validation / statistical protocol.** The paper does not employ cross-validation or report statistical significance tests. All benchmark results in Tables 2 and 3 are single-point evaluations on standard test or validation sets using the final trained model. For ablation studies (Tables 4–7), the paper compares models trained under different configurations, each evaluated once on the specified benchmarks. There is no reporting of variance across random seeds, multiple training runs, or confidence intervals. The ablation of progressive training (Table 7, "32K→64K" vs. "64K" direct training) and the information-first sampling ablation (Table 6) represent single training runs per configuration.
+
+### Main Quantitative Results
+
+#### Video Understanding Performance (Table 2)
+
+The headline result is that Eagle 2.5-8B achieves **72.4% on Video-MME** (without subtitles, 512 frames), which places it in the same performance tier as GPT-4o (71.9%), InternVL2.5-78B (72.1%), and Qwen2.5-VL-72B (73.3%) despite having approximately 9× fewer parameters than the 72–78B models. The model achieves this with 512 input frames, demonstrating that the progressive training and information-first sampling strategies enable effective utilization of large frame counts at modest model scale.
+
+Breaking down the video benchmark results by category:
+
+**Short-to-medium video understanding benchmarks:**
+- **MVBench:** 74.8, outperforming all 8B-class models including InternVL2.5-8B (72.0) and Qwen2.5-VL-8B (69.6), and also surpassing InternVL2.5-78B (76.4). VideoChat-Flash-8B scores higher at 74.0 (likely a typo or version difference; the paper reports 74.0 for VideoChat-Flash and 74.8 for Eagle 2.5 on MVBench).
+- **Perception_test:** 82.0, substantially ahead of Qwen2.5-VL-8B (70.5), LLaVA-Video-8B (67.9), and all larger models except Qwen2.5-VL-72B (73.2). This is one of Eagle 2.5's strongest results relative to competitors.
+- **EgoSchema:** 72.2, exceeding Qwen2.5-VL-8B (65.0) and LongVILA-8B (67.7), but behind Gemini-1.5-Pro (72.2—a tie) and Qwen2.5-VL-72B (76.2).
+- **MLVU:** 77.6, the highest score among all models in the table, surpassing InternVL2.5-78B (75.7), Qwen2.5-VL-72B (74.6), and all 8B competitors by significant margins (next best 8B: Qwen2.5-VL-8B at 70.2). This is Eagle 2.5's strongest relative performance on any video benchmark.
+- **MMB-Video:** 66.4, exceeding InternVL2.5-78B (63.6) and Qwen2.5-VL-8B (60.7), but behind GPT-4o (66.7) and Qwen2.5-VL-72B (73.3).
+
+**Long-video understanding benchmarks:**
+- **Video-MME (without subtitles):** 72.4 at 512 frames. The model's performance scaling with frames is shown in Figure 1: from approximately 62% at 16 frames to 72.4% at 512 frames, a consistent 10+ percentage point improvement. This scaling behavior distinguishes Eagle 2.5 from comparable models like Qwen2.5-VL-7B and InternVL-2.5-8B, which show flatter trajectories.
+- **CG-Bench:** The paper reports four sub-scores: Clue 55.8, Long 46.6, Open 45.6, and mIoU 13.4. These exceed Claude-3.5-Sonnet (56.5, 40.3, 35.6, 4.17) and Gemini-1.5-Pro (50.9, 37.8, 28.7, 3.85) on the Long, Open, and mIoU metrics, while trailing slightly on Clue. No other 8B model reports CG-Bench results, making direct same-scale comparison impossible.
+- **HourVideo:** 44.5 on the dev set and 41.8 on the test set, both surpassing Gemini-1.5-Pro (37.2 dev, 37.4 test) by substantial margins. No other open-source models report HourVideo results.
+- **Charade-STA:** 65.9 mIoU on the test set, dramatically outperforming Qwen2.5-VL-8B (43.6) and the only other model reporting this benchmark. On the dev set, Eagle 2.5 scores 44.5 mIoU.
+
+**Key patterns across video benchmarks:**
+1. Eagle 2.5's advantage is most pronounced on benchmarks requiring fine-grained temporal understanding (Charade-STA, MLVU, Perception_test) and long-range narrative comprehension (HourVideo, CG-Bench Long/Open). These are precisely the capabilities that the dual-annotation Eagle-Video-110K dataset and progressive training schedule are designed to teach.
+2. On EgoSchema, which tests short-clip reasoning, Eagle 2.5 performs well (72.2) but does not dominate—Qwen2.5-VL-72B reaches 76.2, suggesting that raw scale still matters for certain reasoning types.
+3. The model's performance on Video-MME (without subtitles, 72.4) versus with subtitles (75.7) shows a 3.3 percentage point gap, consistent with other models in the table (Qwen2.5-VL-72B: 73.3 vs. 79.1).
+
+#### Image Understanding Performance (Table 3)
+
+Eagle 2.5-8B achieves an **average image benchmark score of 75.6**, matching Qwen2.5-VL-8B (75.6) and exceeding InternVL2.5-8B (73.1) and all other 8B-class models. The model's image performance is competitive but not dominant—unlike the video results, where Eagle 2.5 leads its size class, image results place it at parity with the best 8B competitor.
+
+Breaking down by sub-category:
+
+**Document and text understanding:**
+- **DocVQA:** 94.1, behind Qwen2.5-VL-8B (95.7) and Claude-3.5-Sonnet (95.2), but ahead of InternVL2.5-8B (93.0) and GPT-4o (92.8).
+- **InfoVQA:** 80.4, behind Qwen2.5-VL-8B (82.6) and Gemini-1.5-Pro (81.0), but ahead of InternVL2.5-8B (77.6) and Claude-3.5-Sonnet (74.3).
+- **ChartQA:** 87.5, behind Claude-3.5-Sonnet (90.8) and Qwen2.5-VL-8B (87.3), but ahead of InternVL2.5-8B (84.8) and GPT-4o (85.7).
+- **TextVQA:** 83.7, behind Qwen2.5-VL-8B (84.9) and Gemini-1.5-Pro (78.8), but ahead of InternVL2.5-8B (79.1) and GPT-4o (77.4).
+- **OCRBench:** 869, slightly exceeding Qwen2.5-VL-8B (864), InternVL2.5-8B (822), and GPT-4o (736).
+
+**General perception and reasoning:**
+- **MMStar:** 66.2, the highest score in the table, exceeding GPT-4o (64.7), Claude-3.5-Sonnet (65.1), and Qwen2.5-VL-8B (63.9). This is Eagle 2.5's strongest relative image result.
+- **RWQA:** 76.7, the highest score in the table, exceeding Qwen2.5-VL-8B (68.5) and InternVL2.5-8B (70.1). This is a substantial margin (6.6 points over the next best 8B model).
+- **MMB1.1:** 81.7, behind InternVL2.5-8B (83.2) and LLaVA-One-Vision-72B (84.5), roughly at parity with Qwen2.5-VL-8B (82.6) and GPT-4o (83.1).
+- **MMVet:** 62.9, behind GPT-4o (69.1), Claude-3.5-Sonnet (70.1), Qwen2.5-VL-8B (67.1), and InternVL2.5-8B (62.8, essentially tied). This is Eagle 2.5's weakest relative performance among image benchmarks.
+
+**Knowledge, science, and math:**
+- **MMMU:** 55.8, behind GPT-4o (69.1), Claude-3.5-Sonnet (68.3), Qwen2.5-VL-8B (58.6), and InternVL2.5-8B (56.0). This is a notable gap—the 8B model substantially underperforms larger proprietary systems on expert-level multimodal reasoning.
+- **AI2D:** 84.5, at parity with InternVL2.5-8B (84.5) and slightly behind GPT-4o (84.6) and LLaVA-One-Vision-72B (85.6). Good but not leading performance.
+- **MathVista:** 67.8, behind Qwen2.5-VL-8B (68.2), InternVL2.5-8B (64.4), and GPT-4o (63.8). Roughly at parity with the best 8B models.
+- **HallB:** 54.7, exceeding InternVL2.5-8B (50.1), Qwen2.5-VL-8B (52.9), and GPT-4o (55.0, effectively tied). Solid anti-hallucination performance.
+
+**Key pattern across image benchmarks:** Eagle 2.5's image performance is strongest on general visual reasoning (MMStar, RWQA) and OCR-related tasks (OCRBench), and weakest on expert-level reasoning (MMMU) and open-ended generation (MMVet). This profile is consistent with the training data recipe: the model sees vast quantities of diverse visual data (Tables 1 and 11) which likely builds strong general visual perception, but the focus on video and document understanding may leave it less optimized for knowledge-intensive reasoning benchmarks like MMMU that test specialized academic knowledge. The near-parity with Qwen2.5-VL-8B on the average score (75.6 vs. 75.6) suggests that the long-context training does not come at the expense of short-context image understanding—a point the paper explicitly makes in Table 4.
+
+#### Progressive Training and Context Length Scaling (Tables 4, 5, 7; Figures 1, 6)
+
+**Does long-context training harm short-context performance?** Table 4 answers this directly by comparing image benchmark performance before and after long-context training, across different `$L_{max}$` values. The baseline Eagle2.5-S2 (before long-context training) achieves an average image score of 74.8. After adding long-context training:
+
+- At `$L_{max} = 32K$`: 75.3 (+0.5)
+- At `$L_{max} = 64K$`: 75.6 (+0.8)
+- At `$L_{max} = 128K$`: 75.7 (+0.9)
+
+The trend is monotonic: longer context training *slightly improves* image benchmark performance rather than degrading it. Individual benchmarks show mixed patterns—DocVQA fluctuates (92.3 → 92.5 → 93.2), MMVet improves notably (57.3 → 63.6 → 63.3 → 62.9), and MMMU improves modestly (54.0 → 55.5 → 55.7 → 55.8)—but the aggregate trend is clear. The paper's claim that "increasing the long-context data, under our training recipe, does not harm the short-context images and even slightly benefits it" (Section 4.2, Q1) is supported by this evidence.
+
+**Does image pretraining benefit video benchmarks?** Table 5 examines the impact of image data and pretraining stages on video benchmarks. Starting from a base configuration (S1→S2 without long-context data), the model achieves 70.4 on MVBench, 67.4 on MLVU, and 64.9 on Video-MME. Adding Open-Data plus Eagle-Video-110K during progressive training (S1→S1.5→S2) improves these to 72.9, 70.9, and 65.2 respectively. Further adding extensive image data (S1→S1.5→S2 with Image+Open-Data+EV-110K) yields 73.1, 71.5, and 65.4. The gains from image pretraining are most pronounced on MVBench (+2.7 over the no-long-context baseline) and MLVU (+4.1), but relatively modest on Video-MME (+0.5). The paper interprets this as evidence that "extensive image pre-training significantly enhances performance on short video benchmarks... however, for the more challenging and held-out long video benchmark, Video-MME, the improvements are less pronounced." This makes sense: short video benchmarks like MVBench rely heavily on frame-level visual recognition (which benefits from image pretraining), while Video-MME requires long-range temporal reasoning (which requires the long-video data and progressive training).
+
+**Does progressive training outperform direct long-context training?** Table 7 compares progressive training (32K→64K) against direct 64K training, both using Open-Data, and also against progressive training with Eagle-Video-110K added:
+
+- Progressive (32K→64K, Open-Data only): MVBench 73.0, MLVU 74.5, Video-MME 68.1
+- Direct 64K (Open-Data only): MVBench 71.3, MLVU 74.0, Video-MME 67.9
+- Progressive (32K→64K, Open-Data + Eagle-Video-110K): MVBench 73.9, MLVU 75.1, Video-MME 68.8
+
+Progressive training outperforms direct training by 1.7 points on MVBench and 0.5 on MLVU, with Video-MME essentially tied (68.1 vs. 67.9). Adding Eagle-Video-110K provides further gains of 0.9, 0.6, and 0.7 points respectively. The paper attributes progressive training's advantage to two factors: "1) Direct 64K hybrid training disperses samples across the 64K space, diluting the focus on shorter contexts. 2) Some longer samples are challenging to learn without a gradual learning process that transitions from easy to difficult." The evidence supports this interpretation, though the mechanism cannot be distinguished from the data—both explanations are plausible and consistent with the results.
+
+Figure 6 provides the most visually compelling evidence for the benefit of progressive training. The Video-MME performance curves (accuracy vs. number of input frames) shift upward across the entire frame range as the model progresses from 16K → 32K → 64K → 128K. The 16K model peaks around 64 frames and shows no benefit from additional frames beyond that point. The 32K model benefits up to ~128 frames. The 64K model benefits up to ~256 frames. The 128K model benefits up to 512 frames, with the curve still showing positive slope at 512, suggesting further gains might be possible with even more frames. This directly demonstrates that progressive training teaches the model to utilize longer visual inputs—each stage expands the range of frame counts over which performance improves. The 64K model trained without Eagle-Video-110K (the dashed line) performs worse at high frame counts (≥128 frames) than the version with Eagle-Video-110K, confirming the dataset's role in enabling long-frame utilization.
+
+#### The Role of Eagle-Video-110K (Table 7, Figure 6)
+
+Table 7 shows that adding Eagle-Video-110K to the training data consistently improves video benchmark performance: +0.9 on MVBench, +0.6 on MLVU, +0.7 on Video-MME (comparing progressive 32K→64K with vs. without Eagle-Video-110K). Figure 6 shows that the benefit is most pronounced at high frame counts (≥128 frames), where the "without Eagle-Video-110K" model plateaus earlier. This is consistent with the dataset's design purpose: Eagle-Video-110K fills the long-duration gap in existing open-source data (Figure 4), and the model's ability to utilize many frames depends on having seen comparably long videos during training.
+
+The paper does not ablate the dual-annotation structure of Eagle-Video-110K. It does not report the performance of a model trained with only story-level annotations, only clip-level annotations, or with a single-level alternative. The contribution of each annotation type to specific benchmarks (e.g., does story-level annotation primarily benefit HourVideo while clip-level annotation primarily benefits Charade-STA?) is not evaluated.
+
+### Ablation Studies and Robustness Checks
+
+**Image Area Preservation (IAP):** Removing IAP from the information-first sampling strategy causes significant degradation on high-resolution image and fine-grained video benchmarks (Table 6). InfoVQA drops from 77.6 to 76.2 (-1.4), DocVQA from 92.3 to 91.9 (-0.4), TextVQA from 82.8 to 82.4 (-0.4), and Perception_test from 76.3 to 73.3 (-3.0). The effect on other benchmarks is less pronounced: MLVU drops from 71.5 to 71.2 (-0.3), and Video-MME drops from 65.4 to 64.9 (-0.5). The large drop on Perception_test is expected since this benchmark explicitly enables tiling for high-resolution testing, making it the most sensitive to tiling quality. These results validate the claim that IAP matters most when fine-grained visual details (text in documents, small objects in video frames) are essential for task performance.
+
+**Automatic Degradation Sampling (ADS):** Removing ADS causes InfoVQA to drop from 77.6 to 77.0 (-0.6), DocVQA from 92.3 to 92.1 (-0.2), TextVQA from 82.8 to 82.8 (no change), Perception_test from 76.3 to 75.5 (-0.8), MLVU from 71.5 to 70.1 (-1.4), and Video-MME from 65.4 to 65.0 (-0.4). The effect is generally modest but consistent across benchmarks. The paper attributes the degradation to the vision-context-centric alternative "truncat[ing] supervision signals" when text is long, which corrupts some training examples. MLVU shows the largest drop (-1.4), possibly because it has longer or more varied text prompts that are more likely to be truncated under fixed visual sampling. The relatively small magnitude of the ADS effect suggests that for most training samples, the vision-context-centric and ADS strategies make similar allocation decisions—ADS matters most in the tail of samples with unusually long text or unusually short visual content.
+
+**Progressive vs. direct training:** As discussed above (Table 7), progressive training from 32K to 64K outperforms direct 64K training, with the gap most visible on MVBench (73.0 vs. 71.3, +1.7). The robustness of this finding to different `$L_{max}$` values (e.g., 32K→128K vs. direct 128K) is not tested; only the 32K→64K transition is ablated. The paper also does not ablate the number of progressive stages (e.g., 32K→128K in one jump vs. 32K→64K→128K in two). The progressive schedule with three context-length doublings (32K, 64K, 128K) is presented as the chosen configuration without systematic comparison to alternatives.
+
+**Effect of image data and pretraining on video:** Table 5 shows that adding extensive image pretraining improves video benchmark performance, but the effect varies by benchmark complexity. This is partially a training data ablation (how much does image data help?) but is confounded with the training stage structure (S1→S2 vs. S1→S1.5→S2). The paper does not isolate the effect of image data quantity from the effect of the intermediate pretraining stage.
+
+**Missing ablations:** Several important ablations are not reported:
+
+1.  **Short-to-long data ratio:** The paper uses a 1:1 ratio of short-context to long-context data (4.6M + 4.6M samples per progressive stage, Table 8). No other ratios are tested. It is unknown whether more long data would improve video performance further at the cost of image regression (or vice versa).
+
+2.  **Progressive training step size:** Only the 32K→64K transition is ablated against direct 64K training. The 64K→128K transition is not ablated. It is possible that the benefit of progressive training saturates at longer contexts, or that larger jumps (32K→128K) would work equally well.
+
+3.  **Dual-annotation structure of Eagle-Video-110K:** No ablation compares story-level only, clip-level only, or single-level alternative annotation structures. The contribution of each annotation type is unknown.
+
+4.  **Diversity filtering threshold:** The similarity threshold `$\tau = 0.5$` for Eagle-Video-110K selection is not ablated. The sensitivity of downstream performance to this threshold is unknown.
+
+5.  **Mixing strategy for ADS:** The dual-phase degradation algorithm (temporal first, then tiling) is not compared against alternative allocation orders or joint optimization strategies.
+
+6.  **Number of frames vs. resolution tradeoff:** The paper does not systematically ablate whether temporal density (more frames at lower resolution) or spatial resolution (fewer frames at higher resolution) is more important for video understanding at a fixed token budget. The ADS approach prioritizes temporal density, but the alternative is not tested.
+
+**Negative results:** The paper does not report explicit negative results (experiments that failed to improve performance). The ablation results are uniformly positive or neutral—all tested components contribute positively or at worst negligibly. This is somewhat unusual for a paper introducing multiple techniques; one might expect some components to be unnecessary or to interact negatively. The absence of negative results could indicate either that all components are genuinely necessary (unlikely in most engineering systems) or that negative results were not reported. The ReST$^{\text{EM}}$ experiment mentioned in the prior section template would be relevant here, but the paper does not describe any reinforcement learning or iterative self-improvement experiments.
+
+### Critical Assessment
+
+The experiments demonstrate several claims convincingly, but the scope of evidence for the paper's most ambitious assertions is narrower than the abstract and introduction suggest.
+
+**Claim: Eagle 2.5 achieves competitive performance with much larger models on video understanding.**
+
+This claim is strongly supported for Video-MME (Table 2), where Eagle 2.5-8B's 72.4% at 512 frames matches GPT-4o (71.9%), InternVL2.5-78B (72.1%), and Qwen2.5-VL-72B (73.3%). It is also supported for MLVU (77.6, highest in the table), CG-Bench (exceeding Gemini-1.5-Pro and Claude-3.5-Sonnet on three of four sub-metrics), HourVideo (exceeding Gemini-1.5-Pro), and Charade-STA (dramatically exceeding all competitors). However, the claim is *not* uniformly true: on EgoSchema, Eagle 2.5 (72.2) is substantially behind Qwen2.5-VL-72B (76.2), and on MMB-Video (66.4) it is far behind Qwen2.5-VL-72B (73.3). The claim "competitive with much larger models" holds for *some* video benchmarks but not all, and the paper does not provide a principled explanation for which types of video understanding benefit most from the Eagle 2.5 approach versus raw model scale.
+
+Furthermore, the comparison to GPT-4o and Gemini-1.5-Pro is made on only a subset of video benchmarks—GPT-4o reports only 4 of the 10 video benchmarks, and Gemini-1.5-Pro reports only 5. On the benchmarks where all three are compared (Video-MME, CG-Bench, HourVideo), Eagle 2.5 is competitive or superior. But the absence of GPT-4o and Gemini-1.5-Pro numbers on MVBench, MLVU, EgoSchema, Perception_test, and MMB-Video means the "competitive with proprietary models" claim rests on a partial comparison.
+
+**Claim: Eagle 2.5 demonstrates consistent performance improvement as the number of input frames increases.**
+
+This claim is well-supported by Figure 1 (the main result figure) and Figure 6 (the ablation figure). Figure 1 shows the Video-MME curve climbing from ~62% at 16 frames to ~72% at 512 frames, a monotonic 10-point gain. Figure 6 shows that this scaling behavior is causally linked to the progressive training stages: the 16K model's curve plateaus at ~64 frames, the 32K model's at ~128 frames, the 64K model's at ~256 frames, and the 128K model continues improving to 512 frames. The comparison with Qwen2.5-VL-7B and InternVL-2.5-8B in Figure 1 (showing flatter curves) supports the claim that this scaling behavior is not universal among VLMs.
+
+However, the claim is demonstrated on only one benchmark (Video-MME). The paper does not show frame-scaling curves for MVBench, MLVU, EgoSchema, or LongVideoBench. It is unknown whether the "consistent improvement with more frames" property generalizes beyond Video-MME, or whether it is specific to this benchmark's design. Video-MME is known to benefit from more frames because its questions often require information distributed across the video's duration; other benchmarks might saturate earlier. The paper's abstract and introduction present this as a general property of Eagle 2.5 ("Eagle-2.5 benefits from increased input length, leading to consistent performance gains"), but the evidence is from a single benchmark.
+
+**Claim: The training framework (IAP + ADS + Progressive Training + Eagle-Video-110K) is responsible for the strong performance.**
+
+This is the paper's central causal claim, and the ablation evidence supports it partially but not comprehensively. Each component is ablated individually and shown to contribute positively (Tables 4–7, Figure 6), but several important interactions and boundaries are unexplored:
+
+1.  **The ablation design isolates one component at a time** (e.g., remove IAP while keeping ADS and progressive training), which shows that each component contributes, but does not reveal whether the components are *jointly necessary* or whether a subset would suffice. For instance, if ADS is removed but progressive training is kept, the performance on Video-MME drops from 65.4 to 65.0 (Table 6)—a small 0.4-point drop. If IAP is removed but ADS and progressive training are kept, the drop is 0.5 points. These are small effects. The largest single ablation effect in Table 6 is IAP on Perception_test (-3.0 points), which is benchmark-specific. This raises the question: is the strong overall performance primarily driven by progressive training and the Eagle-Video-110K data, with IAP and ADS providing only marginal gains?
+
+2.  **The baseline for ablation is always the full Eagle 2.5 system.** There is no "minimalist" baseline showing, for example, a model trained with fixed sampling + direct 128K training + no Eagle-Video-110K. Such a baseline would help quantify the cumulative benefit of all proposed techniques combined, versus the marginal benefit of each individually. The closest to this is the Table 7 comparison of progressive vs. direct training, but this is done at 64K with and without Eagle-Video-110K, not at the full 128K.
+
+3.  **The difficulty estimation cost (the 2048 samples needed for difficulty binning described in the prior sections) is not applicable to this paper**, but a parallel concern exists: the Eagle-Video-110K dataset construction involves substantial GPT-4o API costs for both story-level and clip-level annotation generation. These costs are not quantified, making it difficult for other researchers to assess the resource requirements for replicating the data pipeline. The paper does not report the total number of GPT-4o API calls, the approximate cost, or the human annotation effort required for the chapter-level segmentations.
+
+**Genuine weaknesses in the experimental design:**
+
+1.  **Single LLM backbone (Qwen2.5-7B).** All experiments use Qwen2.5-7B as the language model. The progressive training strategy, information-first sampling, and dataset are not evaluated with other LLM families (e.g., LLaMA, InternLM, DeepSeek). It is unknown whether the approach transfers across model architectures and training recipes, or whether it is specific to Qwen2.5's particular attention implementation, positional encoding, or pretraining data distribution. The paper's claim to generality ("Eagle 2.5, a family of advanced vision-language models") is not supported by experiments on multiple model families.
+
+2.  **Small number of long-video benchmarks with competing results.** Many of the most impressive Eagle 2.5 results are on benchmarks where few or no other models report numbers: HourVideo (only Gemini-1.5-Pro reports), CG-Bench (only Claude-3.5-Sonnet and Gemini-1.5-Pro report), Charade-STA (only Qwen2.5-VL-8B reports). This makes it difficult to assess whether Eagle 2.5's strong performance on these benchmarks reflects genuine capability or simply the absence of competition. The paper would be strengthened by evaluating additional open-source long-context VLMs on these benchmarks.
+
+3.  **No statistical significance or variance reporting.** All results are single-point evaluations. Given that many benchmark differences are small (e.g., Video-MME 72.4 vs. 71.9, a 0.5-point gap over a test set of unknown size), the lack of confidence intervals means readers cannot assess whether observed differences are meaningful or within sampling noise.
+
+4.  **The image benchmark comparison does not control for training data volume.** Eagle 2.5 is trained on a massive and diverse image dataset (Table 11), which likely contributes substantially to its image benchmark performance independent of the long-context innovations. The paper does not compare against a version of Qwen2.5-VL-8B or InternVL2.5-8B trained on the same image data, making it impossible to attribute image benchmark performance to Eagle 2.5's specific techniques versus simply having more diverse training data. The image benchmark results in Table 3 essentially show that Eagle 2.5-8B is a very strong 8B VLM in general—but whether this strength comes from the long-context training innovations or from the broad data collection is unclear.
+
+5.  **Missing zero-shot or transfer evaluations.** All evaluations are on standard benchmarks that are likely represented in the training data (either directly or through similar datasets). The paper does not evaluate on held-out video domains, unseen question formats, or real-world long-video tasks. This limits the assessment of whether the model has learned generalizable long-context skills versus benchmark-specific patterns.
+
+**Experiments that would have strengthened the paper:**
+
+1.  **Evaluation on multiple LLM backbones** (e.g., LLaMA-3-8B, InternLM2-7B) using the same training recipe. This would test whether the approach generalizes or is tied to Qwen2.5's specific properties.
+
+2.  **A systematic data ablation** comparing: (a) Open-Data only, (b) Open-Data + Eagle-Video-110K clip-level only, (c) Open-Data + Eagle-Video-110K story-level only, (d) Open-Data + full Eagle-Video-110K. This would isolate the contribution of each annotation type.
+
+3.  **A compute-matched baseline** where the same total training FLOPs are used for a longer training run at a single `$L_{max}$` instead of the progressive schedule. This would test whether the benefit of progressive training is due to the curriculum effect or simply due to more total training steps at intermediate context lengths.
+
+4.  **Frame-scaling curves for all major video benchmarks**, not just Video-MME. This would test whether "consistent improvement with more frames" is a general property or benchmark-specific.
+
+5.  **A data diversity ablation** testing whether the "diversity first" principle genuinely outperforms a quality-filtered subset. This could be done by comparing the full diverse dataset against a version filtered to remove the lowest-quality sources, matched for total data volume.
+
+**Conditional nature of the claims:**
+
+The paper's claims hold most strongly under the following conditions, which are implicit in the experimental design but not explicitly stated as limitations:
+
+- **Evaluated on standard academic benchmarks** that may overlap with training data distributions. Performance on truly out-of-distribution long videos (e.g., raw surveillance footage, unedited user-generated content, videos from domains not represented in the training data) is unknown.
+
+- **Using the Qwen2.5-7B backbone.** The approach may not transfer to other LLM families without modification, particularly those with different attention mechanisms or positional encoding schemes.
+
+- **With the full data collection and annotation pipeline available.** Researchers without access to GPT-4o API credits, or the ability to run CLIP-based similarity filtering at scale, may not be able to replicate Eagle-Video-110K construction. The paper provides prompts in Appendix E but does not report the total annotation cost.
+
+- **At the specific progressive training schedule** (32K→64K→128K) with the specific data mixture ratios (1:1 short:long). The sensitivity of results to these hyperparameters is unexplored.
+
+- **For video understanding specifically.** The long-context innovations (ADS, progressive training, Eagle-Video-110K) primarily target video and are evaluated most extensively on video benchmarks. The image benchmark results are strong but are more likely driven by the broad data collection (Table 11) than by the long-context-specific techniques.
+
+In summary, the experiments convincingly demonstrate that Eagle 2.5-8B is a very strong VLM, particularly for long-video understanding, and that the progressive training schedule and Eagle-Video-110K dataset contribute meaningfully to this strength. The evidence for the specific mechanisms (IAP, ADS) is more modest, with their individual contributions being small outside of specific high-resolution benchmarks. The paper's most ambitious claims—consistent frame-scaling as a general property, competitiveness with much larger models across the board, and the joint necessity of all proposed components—are supported directionally but not comprehensively, limited by the single-model-family design, the absence of statistical rigor, and the partially overlapping nature of the ablation experiments with the overall data diversity advantage.
 
 ## 6. Limitations and Trade-offs
-- Assumptions in sampling
-  - ADS assigns a fixed 256-token cost per temporal unit (frame/page) and uses a fixed minimum frames requirement; samples are discarded if they can’t meet it within budget (Sec. 3.2.1). This may bias training away from ultra-dense or very text-heavy samples that need atypical allocations.
-  - For temporal content, tiling is disabled (fixed 256 tokens per frame; Sec. 3.2.1). Very high-resolution video frames could still benefit from spatial tiling, which is currently not used for videos.
-- Data dependencies and label quality
-  - Eagle-Video-110K relies on GPT-4/4o for captioning and QA generation (Sec. 3.3.2; Appendix E). While cost-effective, auto-annotation can encode model biases or errors, especially for subtle temporal/causal queries.
-  - Novelty filtering via CLIP similarity depends on the embedding and threshold (τ=0.5; Sec. 3.3.2). It may omit useful data with high semantic overlap but different fine-grained details.
-- Compute and memory
-  - Long-context training (32K–128K tokens) is compute- and memory-intensive (Appendix B). The work deploys fused kernels, CPU offloading, and custom parallelism to make it feasible; replicating this may be challenging for smaller labs.
-- Generality vs specialization
-  - Avoiding specialized compression/selection modules preserves flexibility but may leave some optimality on the table for niche tasks where learned selection could outperform heuristic ADS/IAP.
-- Reporting gaps
-  - While many benchmarks are covered, detailed failure case analyses are limited in the paper. For example, where the model still struggles (e.g., extremely long narratives with sparse cues, or cross-modal coreference over hours) is not deeply dissected.
+
+### Limitation 1: The $4\times$ Efficiency Gain and Scaling Claims Rest on Inference-Time Hyperparameters That Are Unexplored in Training Compute Accounting
+
+**The assumption or constraint.** The paper's headline claim — that Eagle 2.5-8B matches GPT-4o and ~72B models on video understanding — is presented as a function of the training framework (Information-First Sampling, progressive training, Eagle-Video-110K). However, the inference-time configuration that produces these results is itself a significant computational multiplier that is largely undiscussed. Specifically, the Video-MME result of 72.4% uses **512 input frames**, each of which must be encoded by the frozen SigLIP-so400M vision encoder, projected through the MLP connector, and processed by the LLM. The paper provides no FLOPs comparison between Eagle 2.5-8B processing 512 frames and, say, Qwen2.5-VL-72B processing its default frame count. If the 72B model achieves 73.3% on Video-MME using substantially fewer frames (its default protocol is not specified in the paper), then the parameter-efficiency claim — "competitive despite 9× fewer parameters" — conflates model size with inference compute.
+
+The paper states in Section 3.1 that the architecture "deliberately avoid[s] incorporating tailored compression modules," meaning every frame contributes its full 256 visual tokens (plus tiling overhead) to the sequence. At 512 frames without tiling, the visual token count alone is `512 × 256 = 131,072` tokens, which approaches or exceeds the 128K maximum context length the model was trained at. This is not a "lean" inference configuration — it uses essentially the entire context window for visual tokens. The paper does not report inference latency, GPU memory consumption, or total FLOPs for this configuration, making the practical cost of achieving the headline result opaque.
+
+**The consequence.** A practitioner comparing Eagle 2.5-8B to Qwen2.5-VL-72B for deployment cannot make an informed cost-performance tradeoff based on the paper's results. It is possible that Eagle 2.5-8B achieves its 72.4% by using so many frames that its per-query inference FLOPs actually *exceed* those of a 72B model using fewer frames and an aggressive token compression strategy. The paper's framing — "small model matches large model" — only holds if the inference compute budget is not accounted for. If the true comparison is "8B model at 512 frames vs. 72B model at X frames" and X is unknown, the parameter-efficiency narrative is incomplete.
+
+**What evidence exists in the paper.** Figure 1 and Table 2 report that Eagle 2.5-8B uses up to 512 frames. The paper does not report the number of frames used by competing models to achieve their reported Video-MME scores. Table 2 specifies that "the maximum frame number of Video-MME is 512, and the others are 256," but this describes Eagle 2.5's configuration, not the baselines'. The baseline models' frame counts are not standardized or reported. For Qwen2.5-VL-7B/72B, InternVL2.5-8B/78B, and GPT-4o, the number of frames used for their Video-MME scores is not provided. This is a missing piece of evidence that prevents evaluating the claim of parameter efficiency.
+
+**Mitigation status.** The paper does not address this. There is no FLOPs-matched comparison (unlike the reference example paper, which devotes an entire section to FLOPs-matched pretraining-vs-inference tradeoffs). There is no reporting of inference latency, GPU memory usage, or per-query cost. The paper's focus is entirely on training strategy, and inference cost is treated as outside scope. This is a significant gap for a paper whose central narrative is about efficiency at scale.
+
+---
+
+### Limitation 2: The Approach Is Validated on a Single LLM Backbone, and the Claims of Generality Are Untested
+
+**The assumption or constraint.** Every experiment in the paper — all video benchmarks, all image benchmarks, all ablations — uses the **Qwen2.5-7B** model as the LLM backbone (Section 3.1). The paper presents Eagle 2.5 as "a family of advanced vision-language models" (Abstract) and describes its contributions in general terms: the Information-First Sampling strategy, the progressive training schedule, the Eagle-Video-110K dataset. There is no architectural dependency acknowledged in the method descriptions — nothing in ADS, IAP, or the progressive schedule is specific to Qwen2.5. Yet the paper provides zero evidence that these techniques transfer to other widely used LLM families (LLaMA, InternLM, DeepSeek, Gemma, Mistral).
+
+This matters because Qwen2.5 has specific properties that could interact with the training strategy in unknown ways. Its Rotary Position Embedding (RoPE) implementation, its pretraining data mixture, its attention mechanism implementation, and its context-length extension behavior during fine-tuning are all Qwen2.5-specific. If the progressive training benefit documented in Figure 6 depends on Qwen2.5's particular positional encoding properties or its pretraining context-length distribution, the same schedule applied to a LLaMA-3-8B backbone might produce different results — potentially worse, potentially requiring different stage boundaries or learning rates.
+
+**The consequence.** A practitioner or researcher using a non-Qwen LLM backbone has no guidance on whether to adopt Eagle 2.5's training recipe wholesale, adapt it, or expect it to work at all. The paper's title ("Boosting Long-Context Post-Training for Frontier Vision-Language Models") and abstract ("Eagle 2.5, a family of frontier vision-language models") imply generality, but the evidence base is a single model family. If future work attempts to replicate the approach on, say, LLaMA-3.1-8B and finds that progressive training provides no benefit (because LLaMA's pretraining context distribution differs), the paper provides no diagnostic framework for understanding why.
+
+**What evidence exists in the paper.** The entire experimental section (Tables 2–7, Figures 1, 6) reports results for Eagle 2.5 only, which is explicitly built on Qwen2.5. There is no baseline using a different LLM with the same vision encoder and training recipe. There is no discussion of why Qwen2.5 was chosen, whether its properties are expected to matter, or whether results should generalize. The training infrastructure optimizations described in Appendix B (Triton fused operators, Llama3-style context parallelism) are themselves general-purpose, suggesting the recipe *could* be applied to other models, but this is not tested.
+
+**Mitigation status.** The paper does not acknowledge this as a limitation. The choice of Qwen2.5 is presented as a fixed design decision (Section 3.1: "we utilize the Qwen2.5 series models") without discussion of generalizability. Given that the paper's contributions are methodological rather than architectural, testing on multiple backbones would substantially strengthen the generality claim. The absence of such testing means the paper's contributions should be interpreted as "a training recipe that works for Qwen2.5-based VLMs" rather than "a general recipe for long-context VLM post-training."
+
+---
+
+### Limitation 3: The Eagle-Video-110K Dataset Construction Relies on GPT-4o and GPT-4 API Calls at Unspecified Scale, Making Replication and Cost Assessment Impossible
+
+**The assumption or constraint.** The construction of Eagle-Video-110K — the novel dataset that the paper credits with enabling long-video understanding — depends heavily on commercial API calls to GPT-4o and GPT-4. The annotation pipeline described in Section 3.3.2 involves:
+
+1. **Chapter-level dense captioning:** For each chapter segment of each long video, frames are sampled and sent to GPT-4o to generate detailed visual captions (Appendix E.1.1). The prompt is multi-paragraph and the expected output is structured JSON.
+
+2. **Long-form QA generation:** The aggregated captions for full videos are sent to GPT-4 to generate diverse QA pairs (Appendix E.1.3). The prompt includes the full caption text plus a 63-category question type pool specification.
+
+3. **Clip-level QA generation:** For each 10-second clip, frames are sent to GPT-4o with a prompt that requests multiple QA pairs across 5 randomly selected question types (Appendix E.1.2).
+
+4. **Textual context anchor generation:** GPT-4o is used to generate contextual anchors that make clip-level questions meaningful at video scale.
+
+The paper provides the full prompt texts (Appendix E) but provides **no information** about the total number of API calls, the total token volume processed, the approximate monetary cost, or the wall-clock time required. Given that Eagle-Video-110K contributes approximately half of the 4.6M long-context training samples per progressive stage (Table 8, with Open-Data contributing the other half), the dataset must contain at least hundreds of thousands of annotated clips and videos, implying a very large number of API calls.
+
+**The consequence.** Researchers attempting to replicate Eagle-Video-110K face three unknowns: (1) whether they can afford the API costs (which could range from thousands to hundreds of thousands of dollars depending on dataset scale), (2) whether GPT-4o/GPT-4 model versions available at replication time produce annotation quality comparable to what the paper used (model versions drift over time, and API behaviors change), and (3) whether the prompts, as provided, produce the expected output format reliably without additional post-processing (which the paper does not describe). The dataset is described as a contribution of the paper but is not released (the paper provides no download link or HuggingFace repository reference), making it entirely non-reproducible without independent re-implementation of the full pipeline.
+
+For practitioners, this means the paper's strongest long-video results — HourVideo (44.5, exceeding Gemini-1.5-Pro), CG-Bench (55.8 Clue, 46.6 Long), and the high-frame-count Video-MME scaling in Figure 6 — are tied to a dataset that cannot be obtained or cost-effectively replicated without significant resources. The "open" nature of the model architecture is undermined by the closed nature of the key training data.
+
+**What evidence exists in the paper.** The prompts are provided in Appendix E. The paper does not report the number of videos selected, the number of chapters segmented, the number of clips processed, the number of QA pairs generated, the total GPT-4o/GPT-4 token consumption, or the API cost. Figure 4 shows a duration distribution comparison with Open-Data but does not provide absolute counts. Table 8 reports 4.6M long-context samples per stage but does not break this down between Open-Data and Eagle-Video-110K.
+
+**Mitigation status.** The paper does not acknowledge this limitation or propose mitigation. There is no discussion of open-sourcing Eagle-Video-110K, of providing the generated annotations at a repository, or of reporting the resource requirements for replication. The prompts are provided, which is helpful but insufficient, since the cost of *running* those prompts at scale is the primary barrier. For a paper that emphasizes "diversity first, then quality" as a guiding principle and presents Eagle-Video-110K as a core contribution, the non-release and non-quantification of the dataset is a significant practical limitation.
+
+---
+
+### Limitation 4: The Class of Hardest Long-Video Tasks Remains Essentially Unsolved, and the Model Shows Diminishing Returns on Benchmarks Requiring Expert Knowledge
+
+**The assumption or constraint.** The paper claims that Eagle 2.5 "benefits from increased input length, leading to consistent performance gains" (Abstract). However, this benefit has a clear ceiling that the paper documents but does not emphasize. On **MMMU** (expert-level multimodal reasoning across 30 subjects including art, engineering, and medicine), Eagle 2.5-8B scores 55.8, which is substantially behind GPT-4o (69.1), Claude-3.5-Sonnet (68.3), and Qwen2.5-VL-8B (58.6). This is not a marginal gap — it is a 13.3-point deficit to GPT-4o, representing tasks where the model fundamentally lacks capability despite its long-context training. The MMMU result is the worst relative performance for Eagle 2.5 across all reported benchmarks.
+
+More broadly, the Video-MME scaling curve in Figure 6 shows the 128K model achieving approximately 72% at 512 frames, with the curve still sloping upward. This suggests that additional frames might yield further gains, but it also means the model has not saturated — it is still improving, but the absolute ceiling is unknown and may be far from human-level or commercial-model performance on the hardest video understanding tasks. On HourVideo (Table 2), the model achieves 44.5 on the dev set — a strong result relative to Gemini-1.5-Pro (37.2), but in absolute terms, the model answers fewer than half the questions correctly on hour-long videos. The paper frames this as "surpassing Gemini-1.5-Pro," which is accurate but elides that the task remains substantially unsolved.
+
+**The consequence.** For practitioners considering Eagle 2.5 for deployment, the model's competence is strongly conditioned on task difficulty. For long-video tasks requiring specialized domain knowledge (medical procedure videos, legal depositions, scientific lectures), the MMMU results suggest the model may perform poorly because expert knowledge and reasoning — not just temporal understanding — is the bottleneck. The progressive training and Eagle-Video-110K improve the model's ability to track events across time, but they do not inject new factual knowledge or expert reasoning capabilities. A hospital deploying Eagle 2.5 to analyze surgical videos would find that it can track instrument usage across time (temporal understanding, improved by Eagle 2.5's training) but cannot reliably answer questions about whether a specific surgical technique was correctly applied (expert knowledge, not improved by Eagle 2.5's training).
+
+**What evidence exists in the paper.** Table 3 shows MMMU at 55.8, the lowest relative performance for Eagle 2.5 against commercial models. Table 2 shows HourVideo at 44.5 dev / 41.8 test, indicating that even the best long-video model evaluated answers fewer than half the questions correctly. The paper does not provide a difficulty-stratified analysis of video benchmarks (unlike the reference example paper, which bins problems by difficulty quintile). It is unknown whether Eagle 2.5's gains on Video-MME are concentrated in easy/medium questions or extend to the hardest subset.
+
+**Mitigation status.** The paper does not discuss this limitation or propose mitigation strategies. There is no analysis of which types of questions improve most with additional frames versus which remain stubbornly difficult. The MMMU result is reported in Table 3 without commentary, and the absolute performance ceiling on long-video tasks is not discussed. The paper's narrative of "consistent gains with more frames" is accurate for the aggregate metric but masks the possibility that gains are concentrated in easier question types while hard questions remain near-ceiling performance.
+
+---
+
+### Limitation 5: The Dual-Phase Degradation Algorithm (ADS) Prioritizes Temporal Density Over Spatial Resolution, but the Tradeoff Is Never Empirically Validated
+
+**The assumption or constraint.** The ADS algorithm (Section 3.2.1) makes a specific, consequential design choice: in the dual-phase degradation process, **temporal degradation is applied first** (determining the number of frames `n`), and then **tiling degradation** adjusts the tile count `t` to fit the remaining budget. This means ADS always prioritizes seeing more frames at lower resolution over seeing fewer frames at higher resolution. The alternative — prioritizing spatial resolution by setting `t` first and then determining `n` — would represent a different tradeoff: sharper individual frames but sparser temporal coverage.
+
+The paper does not provide any ablation or analysis comparing "temporal-first" against "tiling-first" or against a joint optimization that considers both simultaneously. The choice is justified implicitly — the text notes that "training samples typically exhibit mutually exclusive composition (predominantly images or temporal content)," which simplifies the problem — but for the subset of samples that *do* contain both static images and temporal content (e.g., a multi-page document where some pages are high-resolution figures and others are text), the allocation order could meaningfully affect what visual information reaches the model.
+
+**The consequence.** For practitioners training VLMs on mixed image-video corpora, the paper provides no guidance on whether temporal-first degradation is universally preferable or is specific to Eagle 2.5's benchmark profile. If a practitioner's deployment domain involves, say, high-resolution medical imaging sequences where spatial detail on each frame is critical and temporal coverage is secondary (e.g., analyzing a series of high-resolution pathology slides), ADS's temporal-first priority might be suboptimal — the model would see many low-resolution frames rather than fewer high-resolution ones, potentially missing diagnostically relevant cellular details. The paper's results do not speak to this regime.
+
+More fundamentally, the lack of ablation means the paper cannot claim that ADS's specific allocation order is beneficial — only that *some form* of dynamic allocation (ADS vs. fixed vision-context-centric sampling) is beneficial. The performance difference between ADS and the baseline in Table 6 (e.g., MLVU 71.5 vs. 70.1, Video-MME 65.4 vs. 65.0) might be achievable with a simpler allocation strategy that doesn't commit to temporal-first priority. The paper attributes the benefit of ADS to text preservation rather than to the specific two-phase degradation order, but this is speculative without an order-ablation experiment.
+
+**What evidence exists in the paper.** Table 6 compares ADS (with temporal-first degradation) to a vision-context-centric baseline. There is no comparison against alternative allocation orders or joint optimization. The paper does not report the distribution of training samples that would be affected by the allocation order choice (i.e., what fraction of samples contain both tiled images and temporal content). Appendix B does not describe the sampling behavior for mixed samples in detail.
+
+**Mitigation status.** The paper does not acknowledge this as a limitation or suggest that the allocation order is a design choice worthy of investigation. The ADS algorithm is presented as a fixed procedure with the two-phase degradation as a natural consequence of the "mutually exclusive" composition of training samples. A simple ablation — training a model with tiling-first-then-temporal degradation and comparing to the temporal-first version — would clarify whether the order matters and under what conditions. This is not provided.
+
+---
+
+### Limitation 6: The Paper Provides No Latency or Wall-Clock Time Analysis, Making the Approach's Practicality for Interactive Applications Unknown
+
+**The assumption or constraint.** The progressive training schedule and ADS algorithm are designed to maximize the *information density* of training samples within a given context-length budget. At inference time, the model processes whatever frames are provided — up to 512 for Video-MME — in a single forward pass. The paper evaluates performance as a function of frame count (Figures 1, 6) but provides **zero information** about the wall-clock time required to process those frames, the GPU memory consumed, or the latency experienced by an end user.
+
+This is a significant gap because Eagle 2.5's headline Video-MME result (72.4% at 512 frames) represents a configuration where the model processes 512 frames, each generating 256 visual tokens, for a total of 131,072 visual tokens before text tokens are added. For the Qwen2.5-7B backbone with standard attention (which scales quadratically in sequence length), processing a 128K-token sequence on a single GPU may take multiple seconds to tens of seconds, depending on hardware. For interactive video understanding applications — where a user asks a question about an uploaded video and expects an answer within a few seconds — this latency profile may be unacceptable regardless of accuracy.
+
+The paper mentions in Appendix B that VLLM (Kwon et al., 2023) is used for inference serving, which provides some efficiency, but does not report benchmark inference times, throughput (queries per second), or the hardware configuration used for the reported benchmark results.
+
+**The consequence.** A practitioner deciding whether to deploy Eagle 2.5-8B versus a more parameter-efficient or latency-optimized alternative (such as VideoChat-Flash-8B, which uses hierarchical compression to reduce the number of tokens processed) cannot assess the latency-accuracy tradeoff. VideoChat-Flash-8B scores 65.3 on Video-MME — 7.1 points below Eagle 2.5 — but likely processes videos substantially faster because it compresses visual tokens before the LLM stage. If Eagle 2.5 takes 20 seconds per query while VideoChat-Flash takes 2 seconds, the 7.1-point accuracy gap may be unacceptable for real-time applications, even though Eagle 2.5 appears strictly superior in Table 2. The paper provides no data to inform this tradeoff.
+
+For the progressive training claim — that the model benefits from more frames — the inference-time cost of "more frames" is the other half of the equation. If going from 256 to 512 frames improves Video-MME accuracy by 3 points but doubles inference latency, the practical value of that improvement depends on the deployment context. The paper's narrative of "consistent gains with more frames" is accurate for accuracy but incomplete as a deployment consideration without the accompanying cost.
+
+**What evidence exists in the paper.** No inference latency, throughput, or memory usage numbers are reported anywhere in the main paper or appendices. Appendix B mentions VLLM deployment and "accelerating inference speed" but provides no quantitative measurements. The paper does not report the hardware used for benchmark evaluations (GPU model, count, memory configuration).
+
+**Mitigation status.** The paper does not acknowledge this as a limitation. Inference efficiency is discussed only in the context of the training framework optimizations (Appendix B.1), not as a property of the deployed model. For a paper whose central contribution is a training methodology that enables processing very long visual sequences, the absence of any latency analysis is a notable gap — it leaves open the question of whether the approach is practical for the interactive video understanding scenarios that motivate long-context VLM research in the first place. The reference to VLLM suggests the authors are aware of inference efficiency concerns but chose not to report the relevant metrics.
 
 ## 7. Implications and Future Directions
 - Field impact

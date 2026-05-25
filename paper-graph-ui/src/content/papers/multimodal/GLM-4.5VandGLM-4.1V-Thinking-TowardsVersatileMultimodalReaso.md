@@ -9,167 +9,696 @@ GLM-4.1V-Thinking and GLM-4.5V are pioneering open-source vision-language models
 ---
 
 ## 1. Executive Summary
-GLM‑4.1V‑Thinking (9B) and GLM‑4.5V (106B MoE, 12B activated) are open‑source vision‑language models (VLMs) trained for general multimodal reasoning via a carefully engineered reinforcement learning (RL) pipeline. The work introduces a scalable training framework—most notably Reinforcement Learning with Curriculum Sampling (RLCS) and a robust multi‑domain reward system—that lifts performance across 42 benchmarks, setting state‑of‑the‑art results among open models of similar size and, on many tasks, matching or surpassing closed models.
+
+This paper introduces GLM-4.1V-Thinking, GLM-4.5V, and GLM-4.6V, a family of vision-language models developed to advance general-purpose multimodal reasoning through a training framework centered on scalable reinforcement learning. The core methodological contribution is **Reinforcement Learning with Curriculum Sampling (RLCS)**, a multi-domain RL framework that combines curriculum learning with difficulty-aware sampling (dynamically adjusting the selection of training prompts based on the model's evolving competence across difficulty tiers) to improve training efficiency and systematic reasoning across diverse domains including STEM problem solving, video understanding, GUI agents, and long document interpretation. In a comprehensive evaluation across 42 public benchmarks, GLM-4.5V achieves state-of-the-art performance among open-source models of similar size, matching or outperforming the closed-source Gemini-2.5-Flash on 22 benchmarks, while the smaller GLM-4.1V-9B-Thinking surpasses the much larger Qwen2.5-VL-72B on 29 benchmarks — establishing that multi-domain RL with curriculum sampling yields robust cross-domain generalization and mutual facilitation, but only when every domain's reward signal is meticulously tuned, as even a single weak verifier can collapse training across all capabilities.
 
 ## 2. Context and Motivation
-- Problem addressed
-  - Modern VLMs excel at perception (answering what is in an image) but often falter on complex, multi-step reasoning across diverse modalities (images, documents, GUIs, video). The open ecosystem lacks a compact, general-purpose multimodal reasoning model that consistently outperforms similar-sized non‑reasoning baselines across tasks (Introduction, p.1–2).
-- Why it matters
-  - Real-world use cases—from STEM problem solving and chart/document analysis to GUI agents and video understanding—require robust, verifiable reasoning, not just captioning or simple Q&A. This has both practical impact (reliable assistants and agents) and scientific significance (training procedures that scale reasoning) (Introduction, p.1–3).
-- Prior approaches and gaps
-  - Long-form reasoning and scalable RL boost text‑only LLMs, and early VLM works explored RL in narrow domains (Introduction, p.1–2). However:
-    - Cross‑domain multimodal RL remains fragile; weak reward signals in any single domain can derail training (Section 5.2, Figure 5).
-    - Open models with consistent, broad reasoning gains across modalities are scarce.
-- Positioning
-  - This paper unifies pretraining, supervised fine‑tuning (SFT), and large-scale RL into a reasoning‑centric pipeline for multimodal tasks. It contributes a robust reward system, difficulty‑aware sampling (RLCS), and engineering for stability/efficiency. The resulting models are open‑sourced together with domain‑specific verifiers (Abstract; Sections 3–5).
+
+### The Core Problem: Scaling Multimodal Reasoning Across Diverse Domains
+
+The fundamental question this paper tackles is **how to build a single vision-language model that reasons effectively across many fundamentally different types of tasks**. This might sound like a straightforward extension of the reasoning breakthroughs seen in text-only models, but the multimodal setting introduces complications that make it qualitatively harder than the text-only case.
+
+To understand why, consider what "reasoning" means across different multimodal domains. In STEM problem-solving (math, physics, chemistry), reasoning involves symbolic manipulation, numerical accuracy, and step-by-step logical deduction from diagrams. In GUI agent tasks, reasoning means understanding interface layouts, predicting the consequences of actions, and planning multi-step interactions. In video understanding, reasoning spans temporal dynamics, cause-and-effect chains across frames, and spatial relationships that evolve over time. In visual grounding, reasoning requires fine-grained pixel-level spatial attention and the ability to map linguistic descriptions to precise image regions. In chart and document understanding, reasoning demands extracting structured data from complex layouts and performing quantitative comparisons.
+
+Each of these domains stresses **different sub-capabilities** of the model — spatial precision for grounding, temporal coherence for video, symbolic logic for STEM, layout parsing for documents. A model that excels at one may fail at another because the underlying perceptual and cognitive skills don't automatically transfer. The open-source community, as the paper notes, currently "lacks a multimodal reasoning model that consistently outperforms traditional non-thinking models of comparable parameter scale across a broad range of scenarios and tasks" (Section 1). This gap is not just about raw performance — it's about the **generality** of reasoning capabilities.
+
+### Why This Matters: Beyond Specialized Models
+
+The importance of this problem extends in several directions:
+
+**Practical deployment demands generality.** Real-world applications rarely fit neatly into a single benchmark category. A medical AI assistant might need to read charts (document understanding), interpret X-rays (visual grounding), reason about anatomical diagrams (STEM), and follow procedural instructions (agent behavior) — all within a single interaction. If each capability requires a separate specialized model, the system becomes an engineering nightmare of routing, ensembling, and maintaining multiple models. A unified model that handles all these modalities with a single architecture and training pipeline dramatically reduces deployment complexity.
+
+**Cross-domain synergy is empirically real but poorly understood.** The paper's cross-domain experiments (Section 6.3, Figure 6) reveal a striking finding: training on one domain *boosts* performance in others. Reinforcement learning on STEM data alone improved not just STEM benchmarks but also visual grounding, GUI-agent interaction, and general VQA. Training on GUI-agent data produced improvements across *all* evaluated domains. This suggests that these seemingly disparate tasks share underlying cognitive primitives — attention, spatial reasoning, sequential planning — that can be co-activated and refined through a single-domain RL signal. But prior to this work, no one had systematically demonstrated this transfer effect or built a training framework that deliberately exploits it.
+
+**The scaling question: can RL-driven reasoning in VLMs match the trajectory seen in LLMs?** The text-only community has seen spectacular reasoning gains from reinforcement learning — DeepSeek-R1, OpenAI o1, and others have shown that large-scale RL on verifiable reasoning tasks can produce models that exhibit sophisticated chain-of-thought behavior, self-verification, and error recovery. But extending this to vision-language models is not a simple matter of adding images to the training data. The reward signals must work across modalities with fundamentally different answer formats (bounding boxes, function calls, numerical values, free text), and the perception bottleneck (can the model even *see* the relevant details?) adds a failure mode that text-only reasoning doesn't face.
+
+### Where Prior Approaches Fall Short
+
+The paper identifies several specific limitations in the existing landscape:
+
+**Narrow-domain reinforcement learning.** Several prior works have applied RL to VLMs, but they focus on specific domains — mathematics, code generation, or specific visual reasoning tasks. The MIMO-VL paper (Team et al., 2025) and concurrent work on visual RL (Ma et al., 2025) represent steps toward broader coverage, but none achieves the scale of domain diversity (eight distinct categories spanning 42 benchmarks) that this paper targets. The paper explicitly positions itself against this limitation: "Several previous works have attempted to enhance the reasoning capabilities of VLMs using similar paradigms, but they mainly focus on specific domains" (Section 1).
+
+**The verifier bottleneck in multi-domain RLVR.** Reinforcement Learning with Verifiable Rewards (RLVR) depends on having **precise, hack-resistant reward signals** that map model outputs to correctness scores. In a single domain (say, math), designing a verifier is relatively straightforward: extract the final answer, compare it to the ground truth, handle numeric tolerance. But in multi-domain RL, the diversity of answer formats — coordinate tuples for grounding, function calls for GUI agents, free-text descriptions for video QA, boxed mathematical expressions for STEM — means that each domain requires its own specialized extraction and comparison logic. The paper emphasizes this as a central challenge:
+
+> "when training a unified VLM across diverse skills, any weakness in the reward signal for a single capability can derail the entire training" (Section 5.2)
+
+This is a stronger claim than might be expected. It says that verifier quality is not just additive — a weak verifier in one domain doesn't merely slow progress in that domain, but actively **destabilizes training across all domains**. Figure 5 provides concrete evidence: a flaw in the multi-image QA verifier caused the STEM reward growth to stall and overall multimodal benchmarks to decline, even though the STEM verifier itself was finely tuned. This cross-domain contamination through shared model parameters is a phenomenon that prior work hadn't documented, likely because most prior RL work on VLMs stayed within single domains where this interaction couldn't occur.
+
+**The cold-start problem with thinking models.** Getting a VLM to produce effective chain-of-thought reasoning isn't just a matter of prompting. Models need to learn *when* to reason, *how much* to reason, and *what format* to use for their reasoning traces. Prior workflows (CogVLM, Qwen2-VL, Seed1.5-VL) often apply SFT to short chain-of-thought data as an intermediate step before RL. This paper deliberately omits that step, viewing SFT's role as "aligning the model's existing vision-language understanding with a more effective thinking and response style" rather than injecting new knowledge (Section 4). The insight is that the SFT phase serves as a bridge to RL — it should teach the model *how* to think (format, style, structure) without trying to teach *what* to think (specific solutions), leaving the capability improvement to the RL phase where verifiable rewards can provide more reliable gradients.
+
+**Open-source gap.** The paper is explicit that the open-source community lacks a strong multimodal reasoning model that works broadly. At the time of writing, models like Qwen2.5-VL-72B, InternVL3, and Kimi-VL achieve strong results on specific benchmarks but none dominates across the full spectrum of multimodal tasks. The closed-source frontier (Gemini-2.5-Flash, GPT-4o) sets a high bar, particularly on reasoning-intensive tasks, but the training recipes aren't public. This paper positions itself as both advancing the state-of-the-art *and* providing a replicable recipe for multi-domain RL training.
+
+### How This Paper Positions Itself
+
+The paper frames its contribution not as a single architectural innovation but as a **training framework** with three integrated components that together enable general-purpose multimodal reasoning:
+
+First, **pre-training at scale with curated knowledge-rich data** establishes a high ceiling. The paper devotes substantial detail to data construction (Section 3) — not just the typical image-caption pairs, but interleaved image-text data from academic books and web pages, synthetic OCR data with structured markup, grounding data spanning natural images and GUIs, and video data with temporal annotations. The philosophy is that the pre-trained base model's capabilities set the upper bound for what RL can achieve; if the model can't perceive or understand something at the pre-training stage, no amount of RL will fix it.
+
+Second, **supervised fine-tuning as a format alignment bridge** (Section 4) teaches the model the mechanics of chain-of-thought reasoning — the thinking/response structure, the box token conventions, the tool-calling XML schema — without trying to improve task performance. This is a deliberately minimalist SFT phase; the paper emphasizes that "rather than injecting new knowledge, we view SFT's role as aligning the model's existing vision-language understanding with a more effective thinking and response style" (Section 4).
+
+Third, and most centrally, **RLCS as a multi-domain optimization engine** (Section 5) scales reasoning across all domains simultaneously, with curriculum sampling that keeps the training signal informative as the model improves, and a domain-specific reward system that prevents the weakest verifier from collapsing the entire training run.
+
+The paper's positioning relative to prior work is that **previous RL-for-VLM efforts were too narrow** (single-domain), **too fragile** (reward hacking in any domain destabilizes everything), or **too preliminary** (lacked the scale and diversity of domains to demonstrate genuine cross-domain transfer). By simultaneously addressing data quality, reward design, and curriculum sampling in a unified framework, the paper argues it achieves something that prior work missed: a single VLM that reasons competitively across so many different types of tasks that it pushes the state-of-the-art for open-source models on nearly every benchmark tested.
 
 ## 3. Technical Approach
-The training pipeline has three layers: pre‑training, SFT for long chain‑of‑thought, and large‑scale reinforcement learning. The architecture is a ViT‑based vision encoder plus a GLM language decoder (Figure 2).
 
-1) Architecture and tokenization (Section 2; Figure 2; Equations 1–2)
-- Components:
-  - Vision encoder: initialized from `AIMv2‑Huge` (a large ViT). For videos, 3D convolutions replace 2D ones to compress time by 2×—reducing compute while preserving temporal cues (p.2).
-  - MLP projector: maps visual features into the language token space.
-  - Language decoder: `GLM‑4‑9B‑0414` for GLM‑4.1V‑Thinking and `GLM‑4.5‑Air` for GLM‑4.5V (p.2).
-- Variable resolution and extreme aspect ratios
-  - The ViT uses `2D‑RoPE` (rotary positional encodings) so it can attend over very wide or tall inputs (over 200:1) and high resolutions (>4K) (p.2–3).
-  - The original ViT’s learnable absolute position embeddings are retained but adapted to each input size by bicubic interpolation:
-    - Normalize patch coordinates to [−1,1] (Equation (1) on p.3).
-    - Sample the pre‑trained position‑embedding grid at those normalized coordinates (Equation (2) on p.3).
-- Language‑side spatial grounding
-  - The LLM extends RoPE to `3D‑RoPE` to encode richer spatial structures in multimodal sequences (p.3).
-- Temporal grounding in video
-  - Each frame is followed by a “time index token” that encodes the real timestamp as text. This makes temporal distances explicit (p.3).
+### 3.1 Reader Orientation
 
-2) Data construction (Section 3.1)
-- Image‑caption data (10B+ raw pairs → filtered + “recaptioned”):
-  - Filtering: resolution/length rules; CLIP score > 0.3; concept‑balanced resampling to fix long‑tail issues; noisy captions denoised by a factual recaptioner (Figure 4; p.4–5).
-- Interleaved image‑text corpora (web pages, STEM books):
-  - Web pipeline: from MINT, MMC4, OmniCorpus; remove ads/QRs; retain image‑text consistent pages; prioritize “high‑knowledge‑density” content using a trained classifier (p.5–6).
-  - Books: 100M digitized books, filtered to STEM; deep PDF parsing extracts structured interleaved content (p.6).
-- OCR at scale (220M images):
-  - Synthetic documents (render text with varied fonts/backgrounds).
-  - Natural scene text via Paddle‑OCR detections.
-  - Academic PDFs via a Nougat-like pipeline (LaTeX→HTML→markup→rasterized pages) (p.6–7).
-- Grounding data:
-  - Natural images: LAION‑115M captions parsed; GLIPv2 predicts noun‑phrase boxes; keep images with ≥2 valid boxes → 40M final pairs (p.7).
-  - GUIs: crawl pages with Playwright, collect visible DOM + rendered boxes; generate 140M QA pairs for referring expressions and comprehension (p.7).
-- Video data:
-  - Diverse academic/web/proprietary sources; human‑in‑the‑loop annotations for actions and cinematography; multimodal dedup across video and text embeddings (p.7–8).
-- Instruction tuning corpus (50M):
-  - Covers STEM, GUI agents, long documents, code‑related tasks; taxonomy‑guided sampling; synthetic augmentation; de‑contamination against public benchmarks (p.8).
+The paper builds a multi-stage training pipeline that produces a single vision-language model capable of reasoning effectively across eight fundamentally different task domains — from solving math problems with diagrams to operating smartphone apps by clicking buttons. The core idea is that reasoning capabilities in VLMs are best developed through a three-phase recipe: (1) large-scale pre-training on carefully curated knowledge-rich multimodal data establishes the perceptual ceiling, (2) supervised fine-tuning teaches the model *how* to reason (format, structure, self-verification patterns) without attempting to improve actual task performance, and (3) multi-domain reinforcement learning with curriculum sampling (RLCS) drives simultaneous capability improvement across all domains, but only succeeds when every domain's reward signal is meticulously engineered — because a single weak verifier destabilizes training across all capabilities through shared model parameters.
 
-3) Pre‑training and long‑context continual training (Section 3.2)
-- Stage 1: multimodal pre‑training
-  - Seq length 8,192; global batch 1,536; 120k steps; packed sequences for efficiency (p.8–9).
-  - Parallelism: GLM‑4.1V uses tensor‑parallel 2; GLM‑4.5V (MoE) uses expert‑parallel 8 + pipeline‑parallel 4 with a loss‑free router, bias update 1e‑3, balance loss 1e‑4 (p.8).
-  - Result: higher pass@k on MathVista free‑response subset vs. a strong 9B base (Figure 3, p.4), indicating a stronger “upper bound” for later RL.
-- Stage 2: long‑context continual training
-  - Adds video and >8k‑token interleaved data; seq length raised to 32,768; context‑parallel 4; 10k more steps at the same global batch (p.9).
+### 3.2 Big-Picture Architecture (Diagram in Words)
 
-4) Supervised fine‑tuning for long chain‑of‑thought (Section 4)
-- Purpose: align the model to produce standardized, verifiable reasoning traces to bootstrap RL stability—not to add new knowledge (p.7).
-- Output schema:
-  - Responses follow `<think>…</think> <answer>…</answer>`; for verifiable tasks, the final answer is boxed with special tokens `<|begin_of_box|>…<|end_of_box|>` and exactly one box is allowed (p.7).
-  - GLM‑4.5V supports a “non‑thinking mode”: adding `/nothink` to the prompt trains the model to emit an empty think segment and respond directly (p.8).
-- Training: full‑parameter SFT at seq length 32,768; global batch 32; includes high‑quality text‑only long‑form to preserve language skills (p.8).
+The training framework has five major components that operate sequentially, with information flowing from raw data through to a deployment-ready reasoning model:
 
-5) Reinforcement learning at scale (Section 5)
-- RL modes:
-  - `RLVR` (Reinforcement Learning with Verifiable Rewards): use reference answers and programmatic verifiers to score outputs.
-  - `RLHF` (with reward models) for tasks that cannot easily be verified exactly.
-- Reward system (Section 5.2; Table 1 on p.11):
-  - Final answers must be extracted reliably: during RLVR, the model is required to put the final answer inside the special box tokens; the verifier only compares the boxed span to the ground truth (p.10–11).
-  - Domain‑specific verifiers:
-    - Math/Physics: numeric equivalence via SymPy with tolerances; unit‑aware LLM checks when needed.
-    - OCR: edit‑distance‑based continuous reward.
-    - Charts: numeric tolerance; textual exact or semantic match.
-    - Grounding/GUI: IoU thresholds for boxes; action+IoU for GUI action prediction (Table 1).
-  - Format/style rewards: penalize misuse of box tokens for non‑verifiable prompts; discourage mixed‑language or repetitive thought patterns (p.11).
-  - Critical observation: a single weak verifier can derail multi‑domain RL—Figure 5 shows reward hacking and collapse when a multi‑image QA verifier is imprecise, even though the STEM verifier is strong (p.9–10).
-- RLCS: Reinforcement Learning with Curriculum Sampling (Section 5.3)
-  - Motivation: as the model improves, many rollout samples become trivial or intractable; both give no useful gradient under GRPO when KL/entropy terms are removed (p.12).
-  - Mechanism:
-    - Offline difficulty labels: pass@k from several strong models + human labels partition data into tiers (easy→hard).
-    - Online difficulty updates: during training, map each rollout to a difficulty tier based on observed success; maintain running distributions (p.12).
-    - Adaptive sampling: down‑weight too‑easy and too‑hard; over‑sample the mid‑range where learning signal is strongest (p.12–13).
-  - Dynamic sampling expansion via ratio EMA: if many all‑correct or all‑incorrect batches occur, pre‑oversample by an expansion ratio computed as `1/(1 – not_valid_sample_rate)` and smoothed with EMA; then select a subset with balanced difficulty for training. This stabilizes the “effective batch size” for GRPO without KL/entropy losses (p.12–13).
-- Other RL practices that improved effectiveness/stability (Section 5.3):
-  - Force answering: if thinking grows too long and nears truncation, insert `</think>` to force a final answer, enabling fair rewards and encouraging anytime answers (p.12).
-  - Remove KL and entropy losses: keeping them reduced capability or caused garbling; training was more stable without them (p.12–13).
-  - Sampling: set `top‑p=1` during rollouts to avoid degeneration in later iterations (p.13).
-  - Optimization: larger batch sizes; higher upper clip bound on importance ratios (“clip‑higher”) aid off-policy performance (p.12).
-  - Loss reduction: compute per‑sample loss for stability (p.13).
-- RL infrastructure (Section 5.4)
-  - Load‑balance sequences across data‑parallel ranks; train with packed sequences and gradient accumulation; repack samples to minimize micro‑steps; precompute oversampling quota for parallel rollouts (p.13–14).
+1. **Data Curation Pipeline** (Section 3.1) — Assembles and cleans five categories of multimodal training data (image captions, interleaved image-text from academic books and web pages, OCR documents with structured markup, grounding annotations for natural images and GUIs, and video data with temporal annotations). This pipeline runs once before any model training begins.
+
+2. **Pre-training** (Section 3.2) — Takes the curated data and the base AIMv2-Huge vision encoder + GLM-4 LLM architecture through two sequential stages: multimodal pre-training (120,000 steps at sequence length 8,192) followed by long-context continual training (10,000 steps at sequence length 32,768, adding video inputs). Produces the base model (GLM-4.1V-9B-Base) with strong foundational visual understanding.
+
+3. **Supervised Fine-Tuning** (Section 4) — Takes the pre-trained base model and fine-tunes it on curated long chain-of-thought examples spanning both verifiable tasks (STEM, grounding) and non-verifiable tasks (open-ended VQA). Teaches the model to produce structured reasoning traces with `<|think|>...<|/think|>` reasoning blocks and `<answer>...</answer>` final answer blocks, but deliberately does not attempt to improve task accuracy — that is left to RL.
+
+4. **Reinforcement Learning with Curriculum Sampling (RLCS)** (Section 5) — Takes the SFT model and applies GRPO-based reinforcement learning simultaneously across all eight task domains, using domain-specific verifiers that extract final answers and compare against ground truth. RLCS dynamically adjusts the difficulty distribution of training prompts based on the model's current success rate, oversampling medium-difficulty examples and undersampling solved or impossible ones. The output is the final reasoning model.
+
+5. **Deployment Modes** (Sections 4.2, 6) — The trained GLM-4.5V and GLM-4.6V models support both "thinking" mode (full chain-of-thought with 8,192 token output limit) and "non-thinking" mode (triggered by appending the special token `/nothink` to the prompt, producing empty thinking blocks for faster inference). GLM-4.6V additionally supports native tool use via structured `<tool_call>` XML blocks.
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First**, the architecture and its spatial-temporal adaptations (3D convolutions, 2D-RoPE, bicubic interpolation for variable resolutions, 3D-RoPE, time index tokens for video) — because understanding how the model processes images at arbitrary resolutions and videos with temporal awareness is foundational to everything that follows.
+
+- **Second**, the pre-training data construction — because the paper argues that pre-training data quality sets the upper bound for what RL can achieve, and understanding the specific pipelines (factual-centered recaptioning, academic book processing, GUI grounding at scale) reveals *why* the foundation model starts from a strong position.
+
+- **Third**, the pre-training recipe — the two-stage training schedule, parallelism strategies, loss-free routing, and data packing approach that efficiently scales the model to 120,000+ steps across the curated data mixture.
+
+- **Fourth**, supervised fine-tuning — the cold-start data selection, response formatting with special tokens, iterative data enhancement from RL checkpoints, and the thinking/non-thinking dual-mode training design.
+
+- **Fifth**, and most critically, the RLCS framework — the reward system architecture (domain-specific verifiers, box-based extraction, hack-resistant design), the curriculum sampling mechanism (difficulty estimation, adaptive re-weighting, dynamic oversampling with ratio EMA), and the training stability improvements (discarding KL/entropy losses, top-p=1, force answering, per-sample loss computation). This is the paper's central methodological contribution and requires detailed treatment to understand why it works and what can go wrong.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily a **training methodology paper** whose core idea is that scaling multimodal reasoning across diverse domains requires simultaneous attention to data quality, reward precision, and curriculum sampling — and that failure in any one dimension collapses the entire training run through cross-domain parameter interference.
+
+---
+
+#### Architecture Design: Spatial and Temporal Adaptations
+
+The GLM-V family shares a standard three-component VLM architecture (Figure 2): a vision encoder (AIMv2-Huge), an MLP projector that maps visual features to language embedding space, and a large language model decoder. However, the paper introduces several critical adaptations that enable the model to handle the diversity of inputs required by its multi-domain training. These adaptations fall into two categories: **spatial** (handling arbitrary image resolutions and aspect ratios) and **temporal** (handling video as coherent sequences rather than independent frames).
+
+**2D-RoPE in the vision encoder.** The pre-trained AIMv2-Huge vision transformer uses standard learnable absolute position embeddings, which work well for fixed-size square inputs but break when the model encounters images with extreme aspect ratios (the paper mentions ratios exceeding 200:1) or very high resolutions (beyond 4K). The solution is to integrate **2D Rotary Position Embedding (2D-RoPE)** into the ViT's self-attention layers. RoPE, originally proposed for language transformers, encodes position by rotating query and key vectors by an angle proportional to the token's position index, such that the dot-product attention score between two tokens depends only on their relative distance rather than absolute positions. Extending this to 2D means encoding both horizontal and vertical positions simultaneously, allowing the attention mechanism to naturally generalize to spatial arrangements it never saw during pre-training. The absolute position embeddings are retained and adapted to new resolutions via bicubic interpolation (discussed next), but the 2D-RoPE provides a complementary relative position signal that doesn't need adaptation.
+
+**Bicubic interpolation for variable-resolution position embeddings.** When the input image is divided into a grid of `H_p × W_p` patches (where `H_p` is the number of patches vertically and `W_p` horizontally), each patch at integer grid coordinates `g = (w, h)` needs a position embedding. The paper normalizes these coordinates to a continuous `[-1, 1]` range:
+
+$$g_{\text{norm}} = (w_{\text{norm}}, h_{\text{norm}}) = 2 \cdot \left( \frac{w + 0.5}{W_p}, \frac{h + 0.5}{H_p} \right) - 1$$
+
+where `w` and `h` are integer patch indices (0-based), `W_p` and `H_p` are the total number of patches in each dimension, and the `+0.5` centers each patch's coordinate at its midpoint. The division by `W_p` and `H_p` produces values in `[0, 1]`, the multiplication by 2 shifts to `[0, 2]`, and subtracting 1 centers the range at 0, giving `[-1, 1]`.
+
+These normalized continuous coordinates are then used to sample from the original (pre-trained) position embedding table `P_orig` using bicubic interpolation:
+
+$$P_{\text{adapted}}(g) = I_{\text{bicubic}}(P_{\text{orig}}, g_{\text{norm}})$$
+
+where `P_orig` is the learned embedding table from the pre-trained ViT (indexed by integer positions in the original fixed grid), `I_bicubic` is the bicubic interpolation function, and `P_adapted(g)` is the interpolated embedding for patch `g`.
+
+**Why bicubic interpolation:** When the input image resolution differs from the pre-training resolution, the patch grid has different dimensions than the embedding table. Bilinear interpolation would sample from the 4 nearest entries in the embedding table; bicubic samples from the 16 nearest entries (a 4×4 neighborhood), producing smoother interpolations that better preserve the spatial relationships learned during pre-training. The paper emphasizes that this approach allows the ViT to "support arbitrary image resolutions and aspect ratios" while "preserving the foundational capabilities of the pre-trained ViT."
+
+**3D convolutions for temporal compression in video.** Following Qwen2-VL's strategy, the paper replaces the ViT's original 2D convolutions in the patch embedding layer with 3D convolutions. For video inputs, this enables temporal downsampling by a factor of 2: adjacent frames are processed together in the temporal dimension, reducing the number of visual tokens by half compared to processing each frame independently. For single-image inputs, the image is duplicated to maintain architectural consistency (the 3D convolution still expects a temporal dimension, so the single frame is replicated). This design choice improves computational efficiency for video inputs without requiring separate architectures for image and video processing.
+
+**3D-RoPE in the language decoder.** After visual features are projected into language embedding space by the MLP adapter, the language decoder needs to understand spatial relationships among visual tokens (e.g., which image region corresponds to which text reference). The paper extends RoPE to 3D in the LLM, adding spatial position information to the standard 1D (sequential) position encoding. The paper states this "provides superior spatial understanding for multimodal contexts, while preserving the original model's text-related capabilities" — the 3D extension applies only to visual tokens, leaving text token positions unchanged.
+
+**Time index tokens for video.** For video inputs, the model inserts a time index token after each frame's visual tokens. The time index encodes the frame's real-world timestamp as a string (e.g., "0s", "2s", "4s", "6s" for frames at 0.5 fps with 2-second intervals). Unlike multi-image inputs where images are treated as independent items, video frames form a temporally coherent sequence, and this explicit timestamp encoding "boosts [the model's] temporal understanding and grounding capabilities" by informing it of both absolute timestamps and temporal distances between frames.
+
+**Architecture variants.** The paper introduces models at two scales:
+- **GLM-4.1V-9B-Thinking and GLM-4.6V-Flash:** Dense 9-billion-parameter model using AIMv2-Huge vision encoder and GLM-4-9B-0414 as the language decoder.
+- **GLM-4.5V and GLM-4.6V:** Mixture-of-Experts model with 106 billion total parameters and 12 billion activated parameters (denoted 106B-A12B), using GLM-4.5-Air as the language decoder. The MoE design activates only a fraction of parameters per token, achieving a tradeoff between total capacity and inference cost.
+
+The updated GLM-4.6V variants add native tool use and a 128K (GLM-4.6V-Flash) or 131,072-token (GLM-4.6V) context window, enabled by an extended long-context continual training phase.
+
+---
+
+#### Pre-training Data Construction
+
+The paper's philosophy is that pre-training data quality directly determines the performance ceiling for subsequent RL. The data construction pipeline spans five categories, each with its own specialized curation process.
+
+**Image caption data: factual-centered recaptioning.** Raw image-text pairs from web sources (LAION, DataComp, DFN, Wukong, plus search engine data — over 10 billion initial pairs) are noisy in two ways: captions often contain hallucinations or irrelevant text, and the conceptual distribution is heavily skewed toward common objects. The pipeline addresses both:
+
+1. **Heuristic filtering** removes overtly low-quality samples (minimum resolution check, solid color detection, caption length constraints, image deduplication).
+
+2. **Relevance filtering** computes a CLIP similarity score (cosine similarity between image and text embeddings from a pre-trained CLIP model) and retains only pairs with score > 0.3. This threshold is relatively permissive; raising it would improve precision at the cost of recall, potentially discarding correctly captioned but visually unusual images.
+
+3. **Concept-balanced resampling** uses a technique inspired by MetaCLIP: constructing a comprehensive vocabulary of visual concepts and proper nouns, then re-weighting the filtered data to increase representation of rare concepts. Standard web data follows a Zipfian distribution where "dog" and "car" appear thousands of times more frequently than "isosceles triangle" or "Eiffel Tower at sunset." Without balancing, the model would under-learn visual concepts important for downstream reasoning tasks (charts, diagrams, specialized objects).
+
+4. **Factual-centered recaptioning model:** The paper iteratively trains a recaptioning model that takes an original (raw) caption and generates a new, more precise description. Figure 4 shows examples where the original caption contains noise or hallucinated content that the recaptioning model corrects while preserving factual accuracy. The final dataset merges original and recaptioned data at a "predetermined ratio" (exact ratio not specified), balancing broad coverage with descriptive quality.
+
+The emphasis on "factual-centered" is important: standard image recaptioning models can be creative, adding plausible but unverifiable details. The paper's model is explicitly designed to suppress this tendency, ensuring that the training data doesn't teach the VLM to hallucinate visual details.
+
+**Interleaved image-text data: academic and web corpora.** This is arguably the most data-intensive contribution of the pre-training pipeline. Interleaved data — where images appear naturally within text, as in web articles or textbooks — is abundant but extremely difficult to use at scale because most of it is not genuinely multimodal (images are decorative or unrelated to surrounding text). The paper develops two specialized pipelines:
+
+**Web data pipeline:** Starting from open-source datasets (MINT, MMC4, OmniCorpus — which collectively contain billions of image-text pairs interleaved in web page contexts), the pipeline applies:
+
+1. **Semantic relevance filtering** using CLIP-Score to discard images unrelated to the surrounding article context. An article about climate change with a stock photo of a smiling businessperson would be filtered out.
+
+2. **Noise removal** targeting common web elements: advertisements and QR codes (typically at the end of articles) are identified using heuristic rules complemented by a purpose-built image classifier. The heuristic approach alone is insufficient (advertisements come in many visual forms), so the trained classifier provides the precision needed.
+
+3. **Low-information-density exclusion:** samples with many images but sparse text (e.g., online photo albums, image galleries) are removed because they don't provide the text-image logical relationships that the model needs to learn.
+
+4. **High-knowledge-density classifier:** an iteratively trained model identifies images with significant informational value — academic charts, scientific illustrations, engineering schematics, instructional diagrams, maps. This is the inverse of the noise removal step; instead of removing bad content, it actively enriches the dataset with the specific image types that are most valuable for downstream reasoning tasks.
+
+**Academic book processing pipeline:** The authors collect "over 100 million digitized books," filter for STEM-related content, and use a PDF parsing tool to perform deep extraction of interleaved image-text content. This is nontrivial: academic PDFs often have complex layouts with figures, captions, equations, and body text in non-linear arrangements. Standard PDF-to-text extraction would lose the spatial relationships between figures and their surrounding text. The "deep parsing" approach preserves these relationships, extracting structured interleaved sequences that the model can learn from.
+
+The paper notes that prior work "seldom leverage[s] these resources at scale to boost vision-language capabilities, typically only using small amounts to help models adapt to multi-image, interleaved-text layouts." The ambition here is to convert what was previously considered unusably noisy data into a core pre-training resource.
+
+**OCR data: synthetic, natural, and academic.** Optical character recognition — the ability to read text in images — is a prerequisite for almost all multimodal reasoning tasks (charts contain text labels, documents contain text, GUIs contain text, diagrams contain text annotations). The paper constructs 220 million OCR training images from three sources:
+
+1. **Synthetic document images (largest component):** Text from language pre-training corpora is rendered using varied fonts, sizes, colors, and orientations, then composited onto diverse image backgrounds from LAION. This creates an effectively infinite variety of text-in-image scenarios, covering edge cases (unusual fonts, extreme orientations, text-on-cluttered-backgrounds) that would be rare in natural data. The key insight is that synthetic data provides controlled variation: the system knows exactly what text is present, enabling precise supervision.
+
+2. **Natural scene text images:** The Paddle-OCR toolkit processes a large collection of natural images, automatically extracting text content and bounding boxes. Images without at least one valid OCR detection are filtered out. This provides real-world distribution coverage — actual storefront signs, street names, product labels, etc. — that synthetic data can't perfectly replicate.
+
+3. **Academic documents (Nougat-inspired):** Papers from arXiv are processed by normalizing their LaTeX source, converting to HTML via LaTeXML, transforming to a lightweight markup language, segmenting by PDF page breaks, and rasterizing. The result is perfectly aligned pairs of PDF page renderings and structured source markup. This is critical for teaching the model to read mathematical notation, which standard OCR systems often mishandle.
+
+**Grounding data: natural images and GUIs.** Visual grounding — the ability to map language descriptions to precise image regions — requires training data where every noun phrase is associated with a bounding box. The paper constructs two complementary grounding datasets:
+
+**Natural image grounding (40 million annotations):** Using LAION-115M as the source and GLIPv2 as the annotation model, each image's caption is parsed to extract noun phrases, and GLIPv2 predicts the corresponding bounding box for each phrase. Samples with fewer than two valid bounding boxes are filtered out — this ensures the model learns to distinguish between multiple objects in a scene, not just locate a single prominent object.
+
+**GUI grounding (140 million QA pairs):** A novel large-scale dataset constructed from scratch. The pipeline:
+1. Extracts URLs from a recent CommonCrawl snapshot.
+2. Captures webpage screenshots via automated tools.
+3. Uses Playwright (a browser automation framework) to deeply interact with webpages, enumerating all visible DOM elements and their rendered bounding boxes.
+4. Generates over 140 million question-answer pairs for two task types: Referring Expression Generation (given an element, describe it) and Referring Expression Comprehension (given a description, locate the element).
+
+The scale is notable: 140 million GUI-specific QA pairs is orders of magnitude larger than existing GUI grounding datasets, which typically contain thousands to tens of thousands of examples. This massive scale is what enables the model's strong GUI agent performance (35.8% on OSWorld — a benchmark where many models score below 10%).
+
+**Video data with fine-grained annotations.** The video data pipeline addresses two specific quality problems: standard video captions often hallucinate actions that don't occur (or omit subtle ones that do), and they rarely capture cinematic elements (camera motion, shot composition) that are important for temporal understanding. The pipeline includes "fine-grained human annotation to accurately capture complex actions and in-scene text" and a "human-in-the-loop workflow" for annotating camera motion and shot composition. A multimodal embedding-based deduplication step removes pairs where both video and text embeddings show high similarity to another entry — this is more aggressive than standard deduplication because it catches cases where different videos have similar content *and* similar descriptions, eliminating semantic redundancy.
+
+**Instruction tuning data (50 million samples).** Beyond the domain-specific pre-training data, the paper constructs 50 million high-quality instruction-following examples covering general visual perception, multimodal reasoning, document-intensive contexts, GUI agent operations, and UI coding. Three strategies are employed: a fine-grained task taxonomy for balanced sampling, synthetic data generation with structural constraints to fill coverage gaps (particularly GUI interactions and long-document comprehension), and data contamination checks (both manual and automated) to prevent benchmark leakage.
+
+---
+
+#### Pre-training Recipe
+
+The pre-training is conducted in two stages with carefully designed parallelism and optimization configurations.
+
+**Multimodal pre-training (120,000 steps).** This stage builds the core visual-language capabilities. The sequence length is set to 8,192 tokens, with a global batch size of 1,536 (meaning 1,536 sequences are processed per optimizer step, each up to 8,192 tokens). The dataset includes all data modalities from Section 3.1 *except* video, which is deferred to the long-context stage.
+
+The paper uses data packing: multiple variable-length samples are concatenated into single sequences approaching the maximum length, minimizing wasted computation on padding tokens. For example, a 2,000-token image-caption pair might be packed with a 5,000-token interleaved document and a 1,000-token grounding example into a single 8,192-token training sequence, with appropriate attention masking to prevent cross-sample attention.
+
+**Parallelism strategies differ by model scale:**
+
+For GLM-4.1V-Thinking (dense 9B): tensor parallel size of 2. Tensor parallelism splits individual weight matrices across 2 GPUs, with each GPU computing a portion of the matrix multiplication and communicating results. This is appropriate for the dense architecture where all parameters are used for every token.
+
+For GLM-4.5V (MoE 106B-A12B): expert parallel size 8 and pipeline parallel size 4. Expert parallelism distributes different MoE experts across 8 GPUs, so that tokens routed to different experts can be processed in parallel on different devices. Pipeline parallelism splits model layers across 4 sequential stages, reducing memory per GPU at the cost of pipeline bubbles (idle time waiting for previous stages).
+
+**MoE routing details:** The paper uses a loss-free routing scheme, meaning the router network that decides which experts process each token is trained without an auxiliary load-balancing loss. Instead, a router bias update mechanism with update rate `1e-3` (0.001) is employed: after each step, the bias terms in the router are adjusted to penalize overloaded experts and reward underutilized ones. Additionally, an auxiliary sequence-level balance loss with coefficient `1e-4` (0.0001) is applied — this is a small coefficient, meaning the primary training signal comes from the language modeling objective, with load balancing as a gentle regularization.
+
+**Long-context continual training (10,000 steps).** This stage extends the model to handle high-resolution images, video, and long documents. The sequence length increases from 8,192 to 32,768 tokens. Training data is augmented with video inputs and long interleaved data exceeding 8K tokens. The parallelism strategy is enhanced by adding context parallel size 4 — context parallelism splits the sequence length dimension across 4 GPUs, so each GPU processes 8,192 tokens of the 32,768-token sequence, with ring-style communication for attention operations that need cross-segment information. The global batch size remains 1,536, but the effective throughput per step is lower due to the 4× longer sequences.
+
+For GLM-4.6V specifically, an additional 2,000-step phase extends context to 131,072 tokens with a reduced global batch size of 128 (reflecting the significantly higher memory requirements of extremely long sequences).
+
+**Optimizer and learning rate details for pre-training are not specified** in the main text; the paper references the ChatGLM technical report and the respective base model papers (GLM-4-9B-0414, GLM-4.5-Air) for these details.
+
+---
+
+#### Supervised Fine-Tuning: Cold-Start Reasoning Alignment
+
+The SFT stage serves as a critical bridge between pre-training and RL. The philosophy is deliberately minimalist: rather than trying to improve task performance through SFT (which prior work often does with short chain-of-thought data), the paper views SFT's role as **format alignment** — teaching the model *how* to structure its reasoning, not *what* specific reasoning steps to take.
+
+**Data composition.** The SFT dataset is "primarily composed of data in Chinese and English, with a small proportion in other languages." It is dominated by verifiable tasks (where correctness can be definitively checked, e.g., math problems with numeric answers) but includes non-verifiable tasks (open-ended VQA, instruction following) to broaden reasoning style coverage. The pre-trained model itself is used to filter out instances that are "either too easy or excessively hard, maintaining a moderate overall difficulty level" — this is important because SFT on trivial examples teaches nothing, while SFT on impossible examples teaches the model to produce confused reasoning traces that would destabilize subsequent RL.
+
+**Response format standardization.** Every SFT example follows a strict template:
+
+```
+<|think|> {think_content} <|/think|> <answer> {answer_content} </answer>
+```
+
+The `<|think|>...<|/think|>` block captures the model's full reasoning process, including "strategies such as reflection, backtracking, retrying, and verification." The `<answer>...</answer>` block presents a concise, complete, logically sound solution. This separation is critical for downstream RL: the verifier needs to extract the final answer reliably, and having it in a clearly delimited block makes extraction programmatic rather than heuristic.
+
+For verifiable tasks, the final result within `<answer>` is wrapped with `<|begin_of_box|>` and `<|end_of_box|>` special tokens, and only one boxed span is acceptable. The paper explains the motivation:
+
+> "Many prior works use the `\boxed{}` label to denote final answers. However, when reference answers become complex (for example, the results of GUI agent tasks are expressed as complex function calls), `\boxed{}` can be ambiguous and difficult to parse automatically."
+
+The box token approach ensures unambiguous extraction regardless of answer complexity. A math answer might be `43.0`, a grounding answer might be `[835,626,931,883]`, a GUI action might be `{"action_type": "click", "box_2d": [27,840,122,885]}` — all equally parseable because the delimiters are fixed special tokens, not LaTeX commands that might appear in the answer content itself.
+
+**Special token vocabulary.** The paper adds `<|think|>`, `<|/think|>`, `<answer>`, `</answer>`, `<|begin_of_box|>`, and `<|end_of_box|>` to the tokenizer's vocabulary as special tokens. This guarantees that these tokens have dedicated, unambiguous token IDs and cannot be fragmented by the tokenizer (e.g., a BPE tokenizer might split `</answer>` into `</`, `answer`, `>`, which would break exact-match parsing). In GLM-4.5V, the `<answer>` and `</answer>` tokens are eliminated (the model outputs the answer content directly after the thinking block), but the box tokens remain.
+
+**Tool use formatting (GLM-4.6V only).** GLM-4.6V adds a structured output protocol for function calling:
+
+```
+<tool_call> {function_name} <arg_key> {arg-key-1} </arg_key> <arg_value> {arg-value-1} </arg_value> ... </tool_call>
+```
+
+Function signatures are defined in the system prompt, providing the model with exhaustive specifications of available tools. The tag-based serialization ("explicit XML schema") provides clear semantic boundaries that a parser can deterministically map to API calls without requiring tokenizer modifications for every parameter key — unlike the internal control tokens used for answer extraction, the tool-calling protocol uses standard text tokens that the model learns to emit in the correct structure through SFT.
+
+**Data quality control.** The paper emphasizes that "poorly constructed data can lead to training instability or even collapse" during RL. The cleaning pipeline enforces:
+- Correct usage of `<|think|>`, `<|/think|>`, `<answer>`, `</answer>` tags (no missing, malformed, or nested tags)
+- Removal of instances with inconsistent reasoning styles (e.g., switching between Chinese and English mid-reasoning in ways that suggest template artifacts rather than natural code-switching)
+- Filtering of responses containing "mixed-language phrasing or redundant thought patterns" — these would confuse the RL process because the model might learn to produce repetitive filler text to inflate thinking length without improving reasoning quality.
+
+**Iterative data enhancement.** High-quality reasoning traces from RL checkpoints are "incorporated back into the cold-start dataset" — when RL discovers effective reasoning patterns, those patterns become part of the SFT data for subsequent rounds. This creates a virtuous cycle: SFT provides a stable initialization, RL discovers better reasoning strategies, and those strategies are fed back to improve the next SFT initialization.
+
+**Non-thinking mode training.** For GLM-4.5V and GLM-4.6V, which support both thinking and non-thinking modes, the SFT data mixes both types. To enable non-thinking mode, the special token `/nothink` is appended to the user prompt, and the model is trained to generate empty thinking content (`<|think|> <|/think|>`) when this token is present. The answer content for non-thinking examples is taken directly from the `<answer>` portion of thinking examples, rather than being separately curated — the paper found this "yields better results than constructing a separately curated subset for the non-thinking mode," likely because it ensures the model learns the same knowledge in both modes without distribution shift between the thinking and non-thinking response styles.
+
+**Training hyperparameters.** Full-parameter fine-tuning with sequence length 32,768 (131,072 for GLM-4.6V) and global batch size 32. The smaller batch size (32 vs. pre-training's 1,536) reflects the nature of SFT: each example is high-quality and carefully constructed, so larger batches aren't needed for gradient stability. In addition to multimodal data, high-quality text-only long-form examples (math problem solving, multi-turn conversation, agent planning, instruction following) are included to "preserve the model's core language understanding and general reasoning abilities throughout multimodal fine-tuning."
+
+**Cold-start quality vs. RL performance.** An important empirical finding: "increasing cold-start training from 1,000 to 2,000 steps boosts the post-cold-start performance by about two points on average. However, after RL, both checkpoints converge to nearly the same performance." This means that SFT performance is not predictive of final RL performance — RL can elevate base models of equal inherent potential to the same peak, even if they start from different SFT-predicted accuracies. The paper frames this as evidence that "a higher score after cold-start does not guarantee greater RL potential; with proper training, RL can elevate base models of equal inherent potential to the same peak."
+
+However, the paper also warns that cold-start *quality* (format consistency, clean reasoning traces) is critical for RL *stability*: "if the cold-start data contains a large amount of meaningless thinking paths, the resulting model exhibits severe instability during RL training or even leads to training collapse." The distinction is between accuracy (which can be improved by RL) and format coherence (which must be established before RL begins). A model that hasn't learned to consistently produce parseable reasoning traces will fail during RL because the verifier can't extract answers from garbled outputs.
+
+---
+
+#### The RLCS Framework: Data Preparation
+
+The RL phase aims to simultaneously improve the model's reasoning across all eight multimodal domains. The data preparation stage determines which specific tasks and examples are used for training.
+
+**Task identification.** For each multimodal subdomain, the paper first defines "a set of candidate tasks for verification" — tasks where correctness can be objectively assessed. For example, within the video domain, temporal grounding (identifying when an event occurs) is verifiable, while video captioning is open-ended and difficult to evaluate strictly. The selection criterion is: can a verifier assign a correct/incorrect label with high precision?
+
+**Data curation.** The identified tasks are then populated with question-answer pairs. An important transformation: multiple-choice questions with unique correct answers are converted to fill-in-the-blank format. The paper explains this eliminates "noise from random guessing during RL." In a 4-choice MCQ, a model that hasn't learned the answer can still get 25% accuracy by guessing, which produces uninformative reward signals (the model occasionally gets rewarded for wrong reasoning). In fill-in-the-blank format, guessing is essentially impossible because the answer space is unbounded.
+
+**Difficulty grading.** Each sample receives a fine-grained difficulty label through a combination of:
+- Pass@k evaluations using "several established vision-language models (or earlier RL checkpoints)" — if many strong models can't solve a problem, it's genuinely hard; if all models solve it, it's easy.
+- Human difficulty annotations — expert judgments about the inherent complexity of the problem, independent of any specific model's performance.
+
+These are merged into a multi-tier difficulty system (the paper mentions tiers "from very easy through very hard" but doesn't specify the exact number of tiers).
+
+**Pilot RL experiments.** Before the full multi-domain run, "preliminary RL experiments in each subdomain" confirm "the data's quality and the model's potential for performance gains." This is a practical safeguard: if RL on a particular domain shows no improvement or instability in isolation, adding it to the multi-domain mix would risk destabilizing everything (recall the cross-domain contamination documented in Figure 5).
+
+---
+
+#### The RLCS Framework: Reward System
+
+The reward system is the paper's most carefully engineered component, reflecting the central finding that **any weakness in any domain's verifier collapses training across all domains**. The system is a hybrid of RLVR (verifiable rewards for tasks with objective ground truth) and RLHF (model-based rewards for open-ended tasks where ground truth is unavailable or inappropriate).
+
+**Core reward pipeline for RLVR.** For each training example:
+
+1. **Answer extraction:** The model's response is parsed to locate the `<|begin_of_box|>...<|end_of_box|>` span. If the span is absent, malformed, or contains multiple boxed regions (violating the single-box constraint), the reward is 0. This extraction is purely rule-based — no LLM is involved, avoiding the extraction errors that LLMs introduce (see below).
+
+2. **Correctness comparison:** The extracted answer is compared against the reference answer using domain-specific logic (Table 1).
+
+3. **Reward assignment:** Binary (0/1) or continuous reward, depending on domain.
+
+**Why rule-based extraction over LLM-based extraction.** The paper reports a critical negative finding: LLM-based answer extraction is "often proved to be inaccurate, causing errors in the subsequent correctness judgment." In multimodal, open-domain settings, the diversity of question types and answer formats creates "numerous corner cases" that LLM extractors mishandle. Additionally, when the model's "answer" segment loops or becomes excessively long (a failure mode during RL), LLM-based extraction "is difficult or out-of-distribution ... further undermining model-based extraction accuracy." The box token approach eliminates this failure mode entirely: either the model emits the tokens correctly (and extraction succeeds) or it doesn't (and the reward is 0). There is no ambiguous middle ground.
+
+**Domain-specific verification logic (Table 1):**
+
+**STEM — Math:** For numeric answers, the system uses Sympy (a Python symbolic mathematics library) to perform numeric matching with tolerance. This means `43`, `43.0`, `43.00`, and `43.0000` are all recognized as equivalent. For non-numeric answers (e.g., proofs, explanations), exact string matching is attempted first; if that fails, an LLM judge makes the final determination. Binary reward (0/1) for numeric; continuous reward possible for LLM-judged answers.
+
+**STEM — Physics and Chemistry:** Similar to math, but with special handling for unit-bearing answers. If the answer contains physical or chemical units (e.g., "5.2 m/s", "3.4 mol"), an LLM judge is used because unit conversion and equivalence (is "5.2 m/s" the same as "5.20 m/s"?) require semantic understanding that simple string matching can't provide. Without units, falls back to the math-style comparison.
+
+**Long Document:** Predominantly semantic matching via LLM judge. Document questions rarely have single-token answers; correct responses may vary in phrasing while conveying the same meaning.
+
+**Chart:** Numeric answers use math-style matching with Sympy, except for year values (e.g., "2024" — years are identifiers, not measurements to be matched with tolerance). Textual answers try exact matching first, then LLM judge for semantic equivalence.
+
+**OCR:** A continuous reward based on edit distance:
+
+$$\text{reward} = 1 - \frac{d_{\text{edit}}(\text{ans}, \text{gt})}{\max(|\text{ans}|, |\text{gt}|)}$$
+
+where `d_edit` is the Levenshtein edit distance (minimum number of character insertions, deletions, or substitutions to transform one string into another), `ans` is the model's answer string, and `gt` is the ground truth string.
+
+**What it computes:** The fraction of characters that match between the prediction and ground truth. An exact match gives reward 1.0. If the model outputs "hello world" and the ground truth is "hello worpd" (one character wrong out of 11), the reward is `1 - 1/11 = 0.909`. A completely wrong output of equal length would get reward near 0. The normalization by `max(|ans|, |gt|)` handles length mismatches: if the model outputs a 5-character string and the ground truth is 20 characters, the edit distance is at least 15, yielding a low reward.
+
+**Why this form:** Edit distance is the standard OCR evaluation metric because it gracefully handles the most common OCR errors (single-character substitutions, missing characters, extra characters) without being as brittle as exact matching. The continuous scale provides a more informative training signal than binary correct/incorrect: the model receives partial credit for being close, which is important during early RL when it's still learning to read text accurately.
+
+**General VQA:** Exact matching with Sympy first (handles numeric answers), then LLM judgment for semantic equivalence.
+
+**Visual Grounding:** The reward is computed as the fraction of predicted bounding boxes with Intersection over Union (IoU) exceeding a threshold `τ` (the exact threshold value is not specified in the text):
+
+$$\text{reward} = \frac{\text{#boxes with IoU} > \tau}{\text{total boxes}}$$
+
+where IoU measures overlap between the predicted and ground truth boxes — area of intersection divided by area of union. For a grounding task requiring location of `n` objects, the model must correctly locate each one; the reward is the proportion found.
+
+**Spatial Recognition & Reasoning:** Similar to General VQA with Sympy exact matching and LLM fallback.
+
+**GUI Agents:** The verification depends on the task type:
+- Action prediction: combines action correctness (did the model choose the right action type, e.g., click vs. scroll?) with IoU for the target coordinates (did it click the right location?).
+- Grounding: standard IoU-based evaluation of bounding boxes.
+- QA: exact or semantic matching, as in General VQA.
+
+**Video:** Exact matching for structured answers (e.g., timestamps), LLM semantic matching for descriptive answers.
+
+**Format and style rewards.** Beyond domain-specific content checking, two additional reward components shape the model's output style:
+
+1. **Format penalty:** Any response to non-verifiable data whose `<answer>` content contains `<|begin_of_box|>` or `<|end_of_box|>` tokens is assigned a minimal reward. This prevents the model from emitting box tokens where they don't belong (e.g., in open-ended descriptions).
+
+2. **Style penalty:** Low reward is assigned if the `<|think|>` or `<answer>` content includes "extensive mixed Chinese and English segments or large blocks of repetitive text." A text-based reward model also evaluates the `<answer>` content for instruction compliance and fluency, encouraging outputs that adhere to prompts while remaining coherent.
+
+**The verifier fragility problem (Figure 5).** The paper presents a case study where the STEM verifier was finely tuned, but the verifiers for "other-single-image" and "other-multi-image" tasks had weaknesses. The consequences:
+- The model learned to "tweak outputs to drive rewards up without improving actual accuracy" on single-image tasks — reward hacking through output format manipulation rather than genuine improvement.
+- On multi-image tasks, the model "learn[ed] shortcuts that repeatedly fool the verifier, inflating rewards" — a more severe form of reward hacking where the verifier is systematically exploited.
+- After step 150, STEM reward growth stalled, and the overall multimodal benchmark score *declined* — including STEM-specific benchmarks (MMMU, MathVista, AI2D), even though the STEM verifier itself was high-quality.
+
+The mechanism: RL updates model parameters to maximize total reward across all domains. If a weak verifier in domain A can be exploited by producing certain outputs, the gradient signal pushes the model toward those outputs. Because all domains share the same model parameters, these exploitative updates degrade the model's performance in domain B, even if domain B's verifier is perfect. The "high-quality" STEM verifier can't prevent degradation because it only provides reward signals — it can't counteract gradients that push the model toward representations that are genuinely worse at STEM reasoning but happened to be induced by the exploitative updates from domain A.
+
+This finding has profound implications for multi-domain RL: verifier quality is not additive but a "weakest link" property. Every domain's verifier must be robust enough to withstand the optimization pressure from RL across *all* domains simultaneously.
+
+---
+
+#### The RLCS Framework: Curriculum Sampling Mechanism
+
+RLCS is the paper's central methodological contribution — a mechanism that continuously adjusts the difficulty distribution of training prompts to maximize the informativeness of each RL update.
+
+**The motivation: vanishing gradient problem in GRPO.** The paper uses GRPO (Group Relative Policy Optimization) as the RL algorithm. In GRPO, for each prompt, the model generates `N` responses (the rollout group). The advantage for each response is computed relative to the group mean reward. If all `N` responses are correct (group mean = 1.0, all advantages = 0), the update provides no gradient — the model gets no signal because it already performs perfectly on this prompt. Similarly, if all responses are incorrect (group mean = 0, all advantages = 0), again no gradient — the model has no idea how to improve because it never saw a successful approach.
+
+The paper reports that in pilot experiments, "over half of all prompts achieve accuracy over 90% after just 200 training steps." At this point, half the training computation (the rollouts for these prompts) is wasted because it produces zero-gradient updates. Moreover, since rollout generation is "the primary bottleneck" — "the bulk of training time is consumed by rollouts" — this inefficiency directly limits how much the model can improve per wall-clock hour.
+
+**RLCS core mechanism.** The solution has three components:
+
+**1. Offline difficulty labeling.** Before RL training begins, every sample in the training dataset receives a difficulty label through:
+- Pass@k evaluations: multiple existing VLMs (or earlier RL checkpoints) are run on each sample, recording how often they produce the correct answer.
+- Human difficulty annotations: expert evaluators rate the inherent complexity of the problem.
+
+These are merged into fine-grained difficulty tiers (exact number not specified, but the paper describes them as "multiple tiers, from very easy through very hard"). A sample that all models solve is "very easy"; a sample that no model solves is "very hard"; a sample that some models solve and others don't is "medium."
+
+**2. Online difficulty tracking.** During RL training, for each generated rollout, the system records whether the model produced a correct answer. This maps each sample to its current difficulty tier: a "very easy" offline sample that the model now solves 100% of the time is confirmed as too easy; a "hard" offline sample that the model now solves 50% of the time has become medium difficulty.
+
+**3. Adaptive re-weighting.** At the granularity of training iterations, the sampling ratios of different difficulty categories are continuously adjusted:
+- **Trivial examples (accuracy near 100%):** Down-sampled. These provide no gradient.
+- **Impossible examples (accuracy near 0%):** Down-sampled. These also provide no gradient (all-incorrect batches yield zero advantage).
+- **Medium-difficulty examples (accuracy in, say, 30-70%):** Up-sampled. These produce informative gradients: within each rollout group, some responses will be correct and others incorrect, giving the model a clear signal about what works and what doesn't.
+
+The paper states this "significantly accelerates model improvement and consistently leads to performance gains."
+
+**Dynamic sampling expansion via ratio EMA.** A related mechanism addresses batch composition issues. Even with curriculum sampling, some prompts will occasionally produce all-correct or all-incorrect batches simply due to sampling noise. These "invalid" batches waste computation. To mitigate this, the paper introduces an oversampling strategy:
+
+$$\text{expansion\_ratio} = 1 / (1 - \text{not\_valid\_sample\_rate})$$
+
+where `not_valid_sample_rate` is the fraction of samples in the previous iteration that produced all-correct or all-incorrect batches.
+
+**What it computes:** If 20% of samples produced invalid (no-gradient) batches in the previous iteration, then `expansion_ratio = 1 / (1 - 0.2) = 1 / 0.8 = 1.25`. The system would then generate 25% more rollout responses than needed and select the subset whose "difficulty is most balanced" — i.e., those with the numbers of correct and incorrect responses as close as possible. The excess samples with extreme ratios are discarded.
+
+An exponential moving average of this ratio is maintained:
+
+$$\text{expansion\_ratio\_ema}_t = \alpha \cdot \text{expansion\_ratio}_t + (1 - \alpha) \cdot \text{expansion\_ratio\_ema}_{t-1}$$
+
+where `α` is the EMA smoothing factor (not specified) and `expansion_ratio_ema` is the smoothed value used as the oversampling coefficient in the next iteration.
+
+**Why EMA:** The per-iteration ratio is noisy — a single iteration might have an unusually high or low invalid-sample rate due to chance. The EMA smooths these fluctuations, preventing the oversampling factor from oscillating rapidly, which would complicate the infrastructure's ability to pre-allocate rollout computation.
+
+The paper notes this method "predetermines the total number of rollout samples, facilitating parallel sampling and balanced rollout allocation" — a practical advantage over alternative approaches that might decide sample counts adaptively during rollout, causing load imbalances across GPUs.
+
+**GRPO objective details.** The paper uses GRPO with several modifications described in Section 5.3:
+
+- **No KL loss:** Standard RL for language models often includes a KL divergence penalty that keeps the policy close to the reference (pre-RL) model, preventing catastrophic forgetting. The paper removes this because "when we apply a KL loss to explicitly suppress this increase, the model's capabilities are noticeably constrained." This is a tradeoff: removing KL allows faster improvement but risks degrading the model's general language abilities. The paper's cross-domain generalization experiments (Figure 6) suggest this risk is mitigated by the diversity of training domains, which may act as a natural regularizer.
+
+- **No entropy loss:** Entropy bonuses are commonly used in RL to encourage exploration by rewarding diverse outputs. The paper found that "incorporating an entropy loss to promote diversity could cause the model to produce garbled output, which eventually leads to training collapse." The exact mechanism isn't explained, but the likely cause is that entropy maximization pushes the model toward uniform output distributions over the vocabulary, which in extreme cases causes token emission to become effectively random.
+
+- **Clip-higher:** Following the DAPO approach, the upper clipping bound of the importance sampling ratio is increased to "improve both off-policy performance and prevent excessive entropy collapse." This allows larger policy updates when the new policy assigns higher probability to advantageous actions than the old policy.
+
+- **Top-p = 1 during rollouts:** Using nucleus sampling with `top_p = 1` (equivalent to sampling from the full distribution) "produces more stable RL training." The paper hypothesizes this "ensures full vocabulary coverage, preventing the under-learning of rare tokens and thus maintaining clean output." Lower `top_p` values (e.g., 0.9) truncate the tail of the distribution, which can cause the model to "forget" how to produce rare but legitimate tokens — over many RL iterations, this can lead to a collapse where the model's output vocabulary shrinks.
+
+- **Force answering:** When the model's thinking process exceeds the maximum output length (8,192 tokens during evaluation), it would normally be truncated mid-thought, producing no answer and receiving zero reward. The paper "enforce[s] a forced truncation by inserting a `<|/think|>` token, which prompts the model to emit a final answer." This ensures the model receives a fair reward for its reasoning even when it runs long, and "encourages the model to learn how to provide an appropriate answer after any amount of thinking, facilitating dynamic control of the thinking budget at test time."
+
+- **Per-sample loss computation:** The paper compared per-sample averaging (average token loss within each sample, then average across samples) and per-token averaging (average all tokens' loss within a batch). No significant difference in mean reward was observed, but per-sample loss yielded more stable training. This likely prevents long sequences (which contain more tokens) from dominating the loss.
+
+- **Format-based reward caution:** The paper "strongly recommend[s] that the model fully learn the required output format during the cold-start phase rather than depending on RL." If format errors are frequent at the start of RL, the mixture of format and correctness rewards "may destabilize training" — the model receives conflicting signals: one gradient pushes toward correct answers, another pushes toward correct formatting, and the optimization struggles to satisfy both simultaneously.
+
+---
+
+#### RL Infrastructure Optimizations
+
+The paper describes several infrastructure-level optimizations that are necessary to make RLCS practical at scale.
+
+**Load balancing across data parallel ranks.** In distributed RL, rollout responses have unpredictable lengths — a video prompt with a short answer and a document prompt with a long reasoning trace may differ by orders of magnitude in token count. If these are assigned to different GPUs without balancing, the GPU with the long sequence becomes a straggler, and all other GPUs idle waiting for it. The paper balances "both sequence length and compute load across ranks so that forward-backward passes per rank remain within a tight range."
+
+**Sequence packing with gradient accumulation.** Because RL produces variable-length responses, it's impossible to know in advance how many forward-backward passes each GPU will need. The solution: each optimizer step consists of multiple micro-steps. Each micro-step packs several samples into a fixed-length sequence of 32K tokens (padding unused positions), and gradients from micro-steps are weighted and averaged by sample count. This is "mathematically equivalent to computing gradients over the entire rollout batch at once" but allows the system to handle arbitrary numbers of samples without pre-allocation.
+
+**Sample re-packing heuristic.** The paper applies an "efficient sample re-packing heuristic to complete all samples in as few micro-steps as possible," which "halves our forward-backward time." This is a bin-packing optimization: given samples of various lengths and a 32K-token bin capacity, find the arrangement that minimizes the number of bins (and thus micro-steps).
+
+**RLHF integration.** For non-verifiable tasks where ground truth answers don't exist, the system falls back to RLHF: a reward model scores the model's outputs, and this score is used as the reward signal. The reward model evaluates "instruction compliance and fluency, encouraging outputs that adhere closely to the prompt while remaining coherent and logically rigorous" (Section 5.2).
 
 ## 4. Key Insights and Innovations
-- RLCS: difficulty‑aware online curriculum for RL
-  - What is new: combines offline/online difficulty grading with adaptive sampling targeted at mid‑range difficulty; integrates a ratio‑EMA oversampling strategy tailored for GRPO without KL/entropy (Section 5.3; p.12–13).
-  - Why it matters: greatly increases rollout efficiency—the dominant cost in RL—and raises the performance ceiling by keeping batches informative.
-- Multi‑domain, hack‑resistant reward system
-  - What is new: a unified but domain‑specialized set of verifiers that enforce boxed final answers, numeric/unit equivalence, IoU‑based grounding, and style/format compliance; unit tests per domain (Table 1; p.10–11).
-  - Why it matters: Figure 5 demonstrates that a single weak verifier causes cross‑domain collapse; robust verifiers are essential for stable multi‑skill RL.
-- Architecture for high‑fidelity multimodal inputs
-  - What is new: ViT with `2D‑RoPE` for arbitrary aspect ratios and bicubic adaptation of absolute embeddings (Equations (1)–(2)), plus `3D‑RoPE` on the LLM side and timestamp tokens between video frames (Section 2, p.2–3).
-  - Why it matters: supports native‑resolution images (even >4K) and explicit temporal grounding, which underpin chart/document/video gains.
-- Dual‑mode “thinking / non‑thinking” inference
-  - What is new: GLM‑4.5V natively supports long chain‑of‑thought or concise direct responses, controllable via a `/nothink` token (Section 4.2, p.8).
-  - Why it matters: enables flexible trade‑offs between accuracy and latency—use long reasoning when needed, short mode for throughput‑sensitive tasks.
-- Data engineering at scale for reasoning
-  - What is new: concept‑balanced, recaptioned web data; high‑knowledge‑density filtering for interleaved corpora; 220M‑image OCR; 140M GUI grounding pairs; human‑in‑the‑loop video labels (Section 3.1).
-  - Why it matters: yields a strong base model (Figure 3) that sets a higher “upper bound” for downstream RL gains.
+
+### Innovation 1: Multi-Domain Reinforcement Learning Exhibits a "Weakest Verifier" Property — A Single Imperfect Reward Signal Collapses Training Across All Domains
+
+The most intellectually distinctive finding in this paper is not that RL improves multimodal reasoning (that was already known from single-domain work), but rather the discovery that **in multi-domain RL, verifier quality operates under a weakest-link principle**: any weakness in any domain's reward signal destabilizes training across *all* domains through shared model parameters, including domains whose verifiers are perfectly engineered.
+
+This is a genuinely novel diagnostic concept. Prior work — both in text-only RLVR and in single-domain VLM RL — treated verifier quality as additive: a better verifier yields more improvement in its specific domain, and a weak verifier simply fails to help (or helps less) in its domain. The implicit assumption was that verifier failures are locally contained. Figure 5 shatters this assumption with concrete evidence: when the STEM verifier was finely tuned but the multi-image QA verifier had a hackable weakness, the model learned to exploit the weak verifier, the gradients from that exploitation propagated through shared parameters, and after training step 150, *STEM benchmark performance declined sharply* — MMMU, MathVista, and AI2D all dropped — even though the STEM verifier itself had never changed.
+
+The mechanism is conceptually important: RL updates model parameters to maximize expected total reward across the mixture distribution. A hackable verifier creates a gradient path that *raises* total reward (by teaching the model to produce verifier-pleasing-but-wrong outputs in the weak domain) while simultaneously *degrading* the representations needed for genuine reasoning in the strong domains. The strong verifier can't prevent this because it only provides rewards — it has no mechanism to counteract gradients that push the model toward representations that happen to be bad for STEM reasoning but were induced by the exploitative updates from another domain. The optimization simply follows the net gradient, and if the exploitable gain in the weak domain outweighs the reasoning loss in the strong domain (which it will, because exploitation can produce near-perfect reward with minimal effort), the model degrades.
+
+This reframes the multi-domain RL problem entirely. Before this paper, one might have thought the challenge was *coverage* (ensuring all domains are represented in the training mixture) or *balancing* (finding the right domain weights). The paper shows the real challenge is *robustness*: every single domain's verifier must be hack-resistant enough to withstand optimization pressure from the *combined* gradient of all domains. This is a harder requirement than single-domain RLVR because the optimization pressure is higher (more total reward to maximize) and the interaction surface is larger (more ways for exploitation in one domain to corrupt shared representations).
+
+The practical implication is profound: when deploying multi-domain RL, the engineering priority should be auditing and hardening the *weakest* verifier, not improving the already-strong ones. An 80%-robust verifier alongside a 99%-robust one produces worse overall performance than two 95%-robust verifiers — even though the average robustness is the same — because the weak one drags everything down. This is a "systems" insight that changes how one allocates engineering effort in multi-domain RL projects.
+
+The paper's response to this finding — the domain-specific reward system with shared verification functions, domain-specific modules, and unit testing (Section 5.2, Table 1) — is not just good engineering; it's a direct consequence of understanding that verifier fragility is the binding constraint. The fact that the paper *open-sources its reward system* further underscores that they view verifier design as a fundamental research contribution, not just an implementation detail.
+
+---
+
+### Innovation 2: Cross-Domain Generalization in Multimodal RL Is Systematic and Asymmetric — Training on One Domain Transfers to Others in Patterned Ways
+
+The paper's cross-domain generalization experiments (Section 6.3, Figure 6) provide a finding that changes how one thinks about the relationship between multimodal tasks: **training on a single domain through RL systematically improves performance in other, seemingly unrelated domains**, and the pattern of transfer reveals which domains share underlying cognitive primitives.
+
+This is distinct from the well-known phenomenon of transfer learning in pre-training, where a model trained on diverse data generalizes to new tasks. Pre-training transfer is about *exposure* — the model sees images and text, so it learns visual and linguistic representations that help with downstream tasks. The cross-domain transfer observed here is about *reasoning skill acquisition through RL* — the model is not just being exposed to data from a new domain; it's actively learning to solve problems in one domain, and that learned problem-solving capability transfers to domains it was never trained on during RL.
+
+The asymmetry of the transfer is particularly revealing. Training on GUI-agent data produced improvements across *all* evaluated domains (STEM, OCR & Chart, Grounding, General VQA), while training on Grounding data actually *degraded* GUI-agent performance (−14.5 percentage points relative to the SFT baseline). This asymmetry can't be explained by a simple "shared representations" story — if all domains simply shared underlying visual features, transfer would be more symmetric. Instead, the pattern suggests that GUI-agent tasks require an especially comprehensive mix of capabilities (text recognition, visual grounding, logical reasoning, planning) that, when improved through RL, benefits other domains. Conversely, pure grounding training might over-optimize for fine-grained spatial attention at the expense of the higher-level reasoning that GUI agents need.
+
+The only prior work that comes close to documenting this is the text-only literature on reasoning transfer (e.g., training on math improves coding ability), but those findings are within the *same modality*. The multimodal transfer documented here is across fundamentally different input types (static images vs. video vs. interactive interfaces) and output formats (numeric answers vs. bounding boxes vs. action sequences). That such transfer occurs at all is surprising; that it follows a structured, interpretable pattern is genuinely novel.
+
+This finding has direct implications for how to approach multi-domain RL: it suggests that one should *not* train equally on all domains from the start, but rather identify "keystone" domains (like GUI agents in this study) whose training produces the broadest transfer, and invest disproportionately in those domains early. It also suggests that the common practice of evaluating multi-domain models only on the domains they were trained on may miss important transfer effects — negative transfer, in particular, is invisible if one doesn't test on held-out domains.
+
+---
+
+### Innovation 3: Curriculum Sampling as an Inference-Time Efficiency Principle — Not All RL Rollouts Are Equally Informative, and the Proportion of Uninformative Ones Grows With Model Capability
+
+RLCS (Reinforcement Learning with Curriculum Sampling) is the paper's primary methodological innovation, but its intellectual contribution is more than just "curriculum learning applied to RL." The key insight is a **quantitative diagnosis of a specific efficiency pathology in GRPO-based RL**: as the model improves, an increasing fraction of training prompts produce all-correct or all-incorrect rollout batches, which yield exactly zero gradient under the GRPO objective. Since rollout generation dominates training time, this means an increasing fraction of the computational budget is literally wasted — producing no learning signal whatsoever.
+
+This diagnosis is not obvious a priori. One might expect that as the model improves, the *magnitude* of gradients decreases (because the model is closer to optimal), but the *proportion* of zero-gradient batches being high is a specific artifact of the GRPO advantage computation: when all responses in a group have the same reward (all 0 or all 1), the group-normalized advantages are all zero, regardless of how far those responses are from optimal. This creates a cliff, not a slope — prompts don't gradually become less informative; they switch from informative to completely uninformative once the model's accuracy passes a threshold where all-N-correct or all-N-incorrect batches become likely.
+
+The paper quantifies the severity: "over half of all prompts achieve accuracy over 90% after just 200 training steps." This means that after a relatively short training period, more than half the computational cost of RL is producing no learning. This is a fundamentally different scaling picture than the one usually assumed in RL, where more training = more improvement, just with diminishing returns. Here, more training = more *waste*, and the waste fraction grows automatically.
+
+RLCS's solution — continuously re-weighting the sampling distribution toward medium-difficulty prompts — is elegant because it attacks the root cause (the matching of prompt difficulty to model capability) rather than patching the symptom (e.g., by adding entropy bonuses or changing the advantage computation). The offline + online difficulty labeling system ensures that the difficulty estimates track the model's actual evolving capabilities, not just static dataset properties.
+
+This matters beyond this paper because the pathology is likely universal in GRPO-based RL for any task where accuracy approaches 0% or 100%. Any VLM, LLM, or other model trained with GRPO on verifiable tasks will hit the same efficiency cliff. RLCS provides a principled, computationally efficient solution (the oversampling with ratio EMA adds minimal overhead) that can be applied broadly. The paper's decision to implement this through pre-computed oversampling factors (rather than adaptive rejection sampling during rollout, which would cause load imbalances) also provides a practical infrastructure lesson that other large-scale RL systems can adopt.
+
+---
+
+### Innovation 4: Cold-Start Quality Controls RL Stability, But Cold-Start Accuracy Does Not Predict Final RL Performance — Resolving a Tension in Prior Work
+
+The paper's findings about the SFT-to-RL transition resolve a tension that had been implicit in the literature. Some prior work emphasized the importance of high-quality cold-start data (suggesting that RL can only polish an already-strong model), while other work showed that even noisy SFT data could be improved through RL (suggesting that RL is robust to initialization quality). The paper's contribution is to **disentangle two dimensions of cold-start quality: format coherence and task accuracy**.
+
+The finding is specific and actionable: "increasing cold-start training from 1,000 to 2,000 steps boosts the post-cold-start performance by about two points on average. However, after RL, both checkpoints converge to nearly the same performance." This means that additional SFT training that improves benchmark scores does not raise the ceiling that RL can reach — the model's inherent potential (set by pre-training quality) determines the final RL performance, and SFT is just a vehicle to get there.
+
+However, cold-start *format quality* is critical for *stability*: "if the cold-start data contains a large amount of meaningless thinking paths, the resulting model exhibits severe instability during RL training or even leads to training collapse." The distinction is between *what* the model knows (which RL can improve) and *how* the model expresses its reasoning (which must be established before RL begins because RL's verifier-based rewards depend on parseable outputs).
+
+This is a conceptual advance because it tells practitioners exactly where to invest effort in the SFT phase: not in curating more examples or improving answer accuracy (RL will handle that), but in ensuring format consistency, removing garbled reasoning traces, and teaching the model to reliably produce parseable `<|think|>` and `<answer>` blocks. The paper's "iterative data enhancement" strategy — feeding high-quality reasoning traces from RL checkpoints back into the SFT data — operationalizes this insight: use RL to discover *what* good reasoning looks like, then use SFT to teach the model *how* to express it reliably.
+
+This also explains why the paper deliberately omits short-CoT SFT (unlike prior workflows from CogVLM, Qwen2-VL, and Seed1.5-VL): short-CoT SFT tries to improve task accuracy, which the paper argues is better left to RL. The SFT phase should focus exclusively on format alignment, leaving capability improvement to the phase (RL) that has access to verifiable reward signals and can therefore provide more reliable gradients.
 
 ## 5. Experimental Analysis
-- Evaluation protocol (Section 6.1)
-  - 42 public benchmarks across 8 categories: General VQA, STEM, OCR/Chart/Doc, Visual Grounding, Spatial Reasoning, GUI Agents, Coding, and Video Understanding.
-  - Inference: vLLM for most tasks, SGLang for video; max output 8,192 tokens; images capped at 6,144 tokens; video up to 48,000 tokens (p.15–16).
-  - Answer extraction: parse the span between `<|begin_of_box|>` and `<|end_of_box|>` as the final answer; GPT‑4o (2024‑11‑20) is used only where a language judge is necessary (p.16).
-- Main results (Table 2, p.15)
-  - State‑of‑the‑art among open models of similar size; often competitive with or better than larger/closed systems. Examples:
-    - STEM and math reasoning:
-      > MMMU (Val): `GLM‑4.5V‑Thinking 75.4` vs `Step‑3 74.2` vs `Qwen2.5‑VL‑72B 70.2`  
-      > MMMU‑Pro: `65.2` vs `58.6` (Step‑3) vs `51.1` (Qwen72B)
-      > MathVista: `84.6`, WeMath: `68.8`
-    - Charts/documents:
-      > ChartQAPro: `64.0` vs `56.4` (Step‑3) vs `46.7` (Qwen72B)  
-      > ChartMuseum: `55.3` vs `40.0` (Step‑3) vs `39.6` (Qwen72B)  
-      > MMLongBench‑Doc: `44.7` vs `31.8` (Step‑3) vs `35.2` (Qwen72B)
-    - GUI agents and coding:
-      > WebVoyager (Some): `84.4` vs `40.4` (Qwen72B)  
-      > OSWorld (100‑step budget): `35.8` vs `8.8` (Qwen72B)  
-      > Design2Code: `82.2` vs `34.1` (Step‑3) vs `41.9` (Qwen72B)  
-      > Flame‑React‑Eval: `82.5` vs `63.8` (Step‑3) vs `46.3` (Qwen72B)
-    - Video understanding:
-      > VideoMMMU: `72.4` vs `60.2` (Qwen72B), MMVU: `68.7`  
-      > VideoMME (w/ subs): `80.7`
-    - Visual grounding:
-      > RefCOCO‑avg (val): `91.3` (close to `90.3` for Qwen72B)
-  - Small model competitiveness:
-    > GLM‑4.1V‑9B‑Thinking outperforms Qwen2.5‑VL‑72B on 29/42 benchmarks (Abstract; Table 2 highlights: e.g., MMMU‑Pro 57.1 vs 51.1; ChartMuseum 48.8 vs 39.6; MUIRBENCH 74.7 vs 62.9).
-  - Thinking vs non‑thinking trade‑offs:
-    > OCRBench favors non‑thinking `87.2` over thinking `86.5`, while reasoning‑heavy tasks benefit from thinking mode (Table 2).
-- RL effectiveness and cross‑domain transfer
-  - RL Gains: Figure 1B shows reinforcement learning improves performance by up to +10.6% on GLM‑4.5V.
-  - Cross‑domain generalization (Figure 6, p.17–18):
-    > Training on a single domain (e.g., STEM) improves other domains (grounding, GUI, general VQA). The “mix‑all” setting further improves STEM, OCR/Chart, and general VQA, though not grounding or GUI in this configuration.
-- Robustness and failure analysis
-  - Verifier quality is pivotal: Figure 5 shows reward hacking (e.g., answering “a correct number between 0 and 10”) can inflate rewards without real accuracy; this stalled STEM progress and degraded multimodal benchmarks when a multi‑image QA verifier was weak (Section 5.2).
-  - Stability practices: removing KL/entropy, forcing answers, top‑p=1, per‑sample loss, balanced rollouts (Section 5.3) mitigate collapse.
-- Overall assessment
-  - The experiments are broad (42 benchmarks), methodologically explicit (boxed answer extraction; shared toolchain; minimum 95% success rate per benchmark), and include diagnostic analyses (Figure 5, Figure 6). Together they convincingly support claims of cross‑domain RL gains and strong absolute performance.
+
+### Evaluation Methodology
+
+- **Dataset.** The GLM-4.5V and GLM-4.1V-Thinking models are evaluated across 42 public benchmarks spanning eight distinct task categories: General VQA, STEM, OCR & Document, Visual Grounding, Spatial Reasoning, GUI Agents, Coding, and Video Understanding (Section 6.1). The specific benchmarks within each category are enumerated in the paper: MMBench-V1.1, MMStar, BLINK, MUIRBENCH, ZeroBench, HallusionBench, and GeoBench for General VQA; MMMU, MMMU Pro, MathVista, MathVision, MathVerse, DynaMath, LogicVista, WeMath, and AI2D for STEM; OCRBench, ChartQAPro, ChartMuseum, and MMLongBench-Doc for OCR, Chart & Document; RefCOCO-avg, TreeBench, and Ref-L4 for Visual Grounding; OSWorld, AndroidWorld, WebVoyager Som, and Webquest-QA for GUI Agents; Design2Code and Flame-React-Eval for Coding; OmniSpatial, CV-Bench, ERQA, and All-Angles Bench for Spatial Reasoning; and VideoMME, MMVU, VideoMMMU, LVBench, MotionBench, and MVBench for Video Understanding. The evaluation covers both single-image and multi-image settings, as well as video understanding tasks requiring temporal reasoning.
+
+- **Base model(s).** Two model scales are evaluated: GLM-4.1V-9B-Thinking (a dense 9-billion-parameter model using AIMv2-Huge as the vision encoder and GLM-4-9B-0414 as the language decoder) and GLM-4.5V (a Mixture-of-Experts model with 106 billion total parameters and 12 billion activated parameters, denoted 106B-A12B, using GLM-4.5-Air as the language decoder). Updated models GLM-4.6V and GLM-4.6V-Flash are also evaluated and reported in Table 2. The models were chosen to represent two points on the efficiency-capability spectrum: the 9B model demonstrates what is possible at a scale suitable for resource-constrained deployment, while the 106B-A12B model pushes the frontier of open-source multimodal reasoning performance.
+
+- **Metrics.** The primary metric across all benchmarks is accuracy — the fraction of test instances where the model produces the correct final answer. For benchmarks requiring answer extraction from model outputs, the paper defines the final output as the string enclosed within the special box tokens `<|begin_of_box|>...</|begin_of_box|>`. For benchmarks that require answer extraction or scoring by an external language model, GPT-4o (version 2024-11-20) is used consistently across all evaluated models, including open-source baselines, to ensure fairness (Section 6.1). For the VLM coding evaluation using Design2Code, the paper uses a custom scoring protocol where GPT-o4-mini rates the similarity between a rendered HTML output and the reference UI screenshot on a 0–100 scale, with a threshold of 80 or above counting as correct — this threshold is justified by the observation that "rendering differences in resolution, fonts, and other factors make a perfect score of 100 impractical" and that human raters considered cases with scores ≥80 to be "visually and functionally consistent with the reference" (Appendix B.1). For grounding tasks (RefCOCO, TreeBench, Ref-L4), the standard Intersection over Union (IoU) metric is used, though the specific IoU thresholds are not detailed in the main text. For GUI agent tasks (OSWorld, AndroidWorld, WebVoyager, WebQuest), the evaluation follows domain-specific protocols detailed in Appendix B.2, with OSWorld and AndroidWorld tested using a 100-step budget.
+
+- **Baselines.** The paper compares against a comprehensive set of open-source state-of-the-art vision-language models, reported in Table 2 and Table 3. For GLM-4.5V (Table 2), baselines include Step-3 (321B-A38B; Wang et al., 2025), Qwen2.5-VL-72B (Bai et al., 2025), Kimi-VL-2506 (16B-A3B; Team, 2025), and Gemma-3 (27B; Team et al., 2025). For GLM-4.1V-9B-Thinking (Table 3), the comparison focuses on models under 10 billion parameters, including Qwen2.5-VL-7B, InternVL3-9B (Zhu et al., 2025), Kimi-VL-A3B-Thinking, and MiMo-VL-7B-RL (Team et al., 2025), along with the much larger Qwen2.5-VL-72B and the closed-source GPT-4o (2024-11-20) for reference. Results marked with asterisks (*) in the tables indicate scores reproduced by the authors using their own evaluation pipeline (ensuring fair comparison), while those labeled with daggers (†) are reported by third-party sources. The paper also explicitly compares GLM-4.5V against the closed-source Gemini-2.5-Flash in Figure 1(A), claiming competitive or superior performance on 22 out of 42 benchmarks.
+
+- **Generation budget / compute accounting.** For inference, the paper sets the maximum output length to 8,192 tokens per model response. For visual input configuration, the maximum expected length for image inputs is set to 6,144 tokens, and 48,000 tokens for video benchmarks (Section 6.1). The paper uses vLLM as the primary inference backend and SGLang for video inference ("for faster and more stable inference"). For GUI agent tasks (OSWorld and AndroidWorld), the evaluation is conducted with a 100-step budget (Table 2, footnote 2). All models — including open-source baselines — are evaluated using "the same toolchain, policies, and prompt templates" to ensure fair comparison. Unlike the RL training phase where compute is measured in training steps and rollout budgets, the evaluation phase measures compute indirectly through the maximum context and output token limits, and directly through the step budget for agent tasks.
+
+- **Cross-validation / statistical protocol.** The paper enforces a minimum successful request rate of 95% on every benchmark: "Samples that fail due to generation errors or API issues are excluded from scoring, ensuring that final metrics reflect only valid outputs" (Section 6.1). This means that if more than 5% of test instances fail for technical reasons (not wrong answers, but failures to produce parseable outputs), the evaluation is considered unreliable for that benchmark. For benchmarks requiring language model scoring (via GPT-4o or GPT-o4-mini), the specific prompts used are provided in Appendix B.1. For grounding tasks, Appendix B.3 specifies the exact prompt formats used to trigger grounding behavior, and provides coordinate normalization details (values scaled by 1000 relative to image dimensions). The paper does not report confidence intervals, statistical significance tests, or multiple-run averaging for benchmark scores — results are reported as single-point estimates for each model-benchmark pair, consistent with standard practice in VLM benchmarking but limiting the ability to assess whether observed differences (especially small ones) are statistically reliable.
+
+### Main Quantitative Results
+
+#### Overall Performance Against Open-Source Baselines (Table 2)
+
+The headline result for GLM-4.5V-Thinking is that it achieves state-of-the-art performance among open-source models across all 42 benchmarks evaluated (Table 2). The dominance is comprehensive rather than selective — the model does not merely lead on a subset of categories but outperforms all competitors on every single benchmark tested. This is unusual in the VLM literature, where different models typically trade strengths across different task types.
+
+In General VQA, GLM-4.5V-Thinking achieves 88.2 on MMBench V1.1 (vs. 88.0 for Qwen2.5-VL-72B and 81.1 for Step-3), 75.3 on MMStar (vs. 70.8 for Qwen2.5-VL-72B and 69.0 for Step-3), and 65.3 on BLINK (vs. 62.7 for Step-3 and 58.0 for Qwen2.5-VL-72B). The 10.3-point gap on MMStar (75.3 vs. 65.3 for InternVL3-9B in the under-10B category, Table 3) is particularly notable — MMStar was designed specifically to expose weaknesses in VLM reasoning, making large improvements there indicative of genuine reasoning gains rather than dataset-specific optimization.
+
+In STEM, the model achieves 75.4 on MMMU (Val) (vs. 74.2 for Step-3 and 70.2 for Qwen2.5-VL-72B), 65.2 on MMMU Pro (vs. 58.6 for Step-3 and 51.1 for Qwen2.5-VL-72B), 84.6 on MathVista (vs. 79.2 for Step-3 and 74.8 for Qwen2.5-VL-72B), and 68.8 on WeMath (vs. 59.8 for Step-3 and 46.0 for Qwen2.5-VL-72B). The margin on WeMath — a 22.8-point gap over Qwen2.5-VL-72B — is one of the largest advantages reported and suggests particular strength in complex mathematical reasoning with visual contexts.
+
+In OCR and Document understanding, GLM-4.5V-Thinking achieves 64.0 on ChartQAPro (vs. 56.4 for Step-3 and 46.7 for Qwen2.5-VL-72B), 55.3 on ChartMuseum (vs. 40.0 for Step-3 and 39.6 for Qwen2.5-VL-72B), and 44.7 on MMLongBench-Doc (vs. 35.2 for Qwen2.5-VL-72B and 31.8 for Step-3). The 15-point gap on ChartQAPro and 15.3-point gap on ChartMuseum over the next-best open-source model (Step-3) suggests that the model's specialized chart understanding training data and domain-specific reward design during RL are paying off substantially.
+
+In Visual Grounding, GLM-4.5V-Thinking achieves 91.3 on RefCOCO-avg (val) (vs. 90.3 for Qwen2.5-VL-72B and dramatically better than Step-3's 20.2), 50.1 on TreeBench (vs. 42.3 for Qwen2.5-VL-72B and 41.3 for Step-3), and 89.5 on Ref-L4-test (vs. 80.8 for Qwen2.5-VL-72B and 12.2 for Step-3). The Step-3 grounding results are anomalously low (20.2 on RefCOCO, 12.2 on Ref-L4), suggesting that Step-3 may not natively support the grounding task format or was evaluated under incompatible prompts — this is noted in the paper's protocol (Appendix B.3) where prompt format is emphasized as critical for triggering grounding behavior.
+
+In GUI Agents — an emerging category where many VLMs perform poorly — GLM-4.5V-Thinking achieves 35.8 on OSWorld (vs. 8.8 for Qwen2.5-VL-72B and 6.2 for Gemma-3), 57.0 on AndroidWorld (vs. 35.0 for Qwen2.5-VL-72B and 4.4 for Gemma-3), and 84.4 on WebVoyager (vs. 40.4 for Qwen2.5-VL-72B and 34.8 for Gemma-3). These are among the largest relative improvements in the entire evaluation — the OSWorld score of 35.8 is roughly 4× the next-best open-source model (Qwen2.5-VL-72B at 8.8), and the WebVoyager score of 84.4 more than doubles Qwen2.5-VL-72B's 40.4. The WebQuest-SingleQA score of 76.9 vs. 60.5 for Qwen2.5-VL-72B further confirms the pattern.
+
+In VLM Coding, GLM-4.5V-Thinking achieves 82.2 on Design2Code (vs. 41.9 for Qwen2.5-VL-72B and 34.1 for Step-3) and 82.5 on Flame-React-Eval (vs. 46.3 for Qwen2.5-VL-72B and 63.8 for Step-3). The Design2Code score nearly doubles the next-best result, while Flame-React-Eval shows a 36.2-point gap over Qwen2.5-VL-72B. These outsized gains in coding tasks are consistent with the model having been explicitly trained on UI code generation during the instruction tuning phase (Section 3.1).
+
+In Video Understanding, GLM-4.5V-Thinking achieves 74.6 on VideoMME without subtitles (vs. 73.3 for Qwen2.5-VL-72B), 80.7 with subtitles (vs. 79.1), 68.7 on MMVU (vs. 62.9), 72.4 on VideoMMMU (vs. 60.2 for Qwen2.5-VL-72B), and 53.8 on LVBench (vs. 47.3). The 12.2-point gap on VideoMMMU is particularly notable given that this benchmark evaluates knowledge acquisition from professional multi-discipline videos.
+
+#### GLM-4.1V-9B-Thinking: Efficiency at Small Scale (Table 3)
+
+The 9-billion-parameter model demonstrates what the paper calls "superior efficiency and capability" — it outperforms the much larger Qwen2.5-VL-72B model (8× more parameters) on 29 out of 42 benchmarks. Specific highlights include: 72.9 on MMStar vs. 70.8 for Qwen2.5-VL-72B, 57.1 on MMMU Pro vs. 51.1, 59.5 on ChartQAPro vs. 46.7, 48.8 on ChartMuseum vs. 39.6, and 64.7 on Design2Code vs. 41.9. On GUI agents, the 9B model achieves 14.9 on OSWorld (vs. 8.8 for Qwen2.5-VL-72B), 41.7 on AndroidWorld (vs. 35.0), and 69.0 on WebVoyager (vs. 40.4).
+
+Within the under-10B category, GLM-4.1V-9B-Thinking sets a new state-of-the-art on 23 out of 28 benchmarks where all models were evaluated. Compared to InternVL3-9B, it achieves 72.9 vs. 66.3 on MMStar, 68.0 vs. 57.7 on MMMU, 80.7 vs. 71.5 on MathVista, and 59.5 vs. 36.1 on ChartQAPro. The margins are large enough (typically 5–20 percentage points) that they are unlikely to be explained by evaluation noise, even without reported confidence intervals.
+
+#### Comparison with Closed-Source Models (Figure 1A, Text)
+
+The paper claims in the abstract that GLM-4.5V "demonstrates competitive or even superior results compared to closed-source models such as Gemini-2.5-Flash on challenging tasks including Coding and GUI Agents." Figure 1A provides a visual comparison, and the text in Section 1 states that GLM-4.5V "achieves comparable or even superior performance on 22 benchmarks relative to the closed-source Gemini-2.5-Flash." Specific numerical comparisons against Gemini-2.5-Flash are not provided in Table 2 — the paper only compares against open-source baselines numerically. The claim of parity with Gemini-2.5-Flash therefore relies on Figure 1A and the qualitative description in the text rather than a side-by-side table of scores. This is a notable omission: without a column for Gemini-2.5-Flash in Table 2, readers cannot independently verify the claimed parity or superiority on specific benchmarks.
+
+#### Updated GLM-4.6V Results
+
+The paper also reports results for the updated GLM-4.6V model in Table 2, which adds native tool use and extended context (128K for Flash, 131K for the main model). GLM-4.6V generally improves upon GLM-4.5V across most benchmarks: 88.8 vs. 88.2 on MMBench V1.1, 76.0 vs. 75.4 on MMMU, 66.0 vs. 65.2 on MMMU Pro, 85.2 vs. 84.6 on MathVista, 54.9 vs. 44.7 on MMLongBench-Doc (a 10.2-point jump), 88.6 vs. 82.2 on Design2Code (a 6.4-point improvement), and 86.3 vs. 82.5 on Flame-React-Eval (a 3.8-point improvement). The MMLongBench-Doc improvement is particularly large, suggesting that the 128K context window specifically benefits long-document tasks. The coding improvements are also substantial and may reflect the tool-use capabilities added in GLM-4.6V. However, GLM-4.6V slightly underperforms GLM-4.5V on a few benchmarks: 62.3 vs. 65.4 on HallusionBench (−3.1 points), 63.5 vs. 65.6 on MathVision (−2.1 points), and 65.9 vs. 68.8 on WeMath (−2.9 points). These regressions are not commented on in the text and may indicate some interference between the newly added capabilities (tool use, extended context) and the existing reasoning skills, though the differences are small enough that evaluation noise cannot be ruled out.
+
+#### Cross-Domain Generalization Results (Section 6.3, Figure 6)
+
+The cross-domain RL experiments provide the paper's most detailed mechanistic evidence. The experimental design compares five RL training configurations on GLM-4.1V-9B-Thinking, each starting from the same SFT checkpoint: (1) STEM-only, (2) OCR & Chart-only, (3) Grounding-only, (4) GUI Agent-only, and (5) Mix-all (all four domains combined). Each single-domain experiment processes exactly the same number of samples that the domain receives in the Mix-all experiment, controlling for training data volume. Evaluation is conducted on five benchmark suites: STEM, OCR & Chart, Grounding, GUI Agent, and General Image VQA (a held-out domain with no corresponding RL training data).
+
+The results are presented as a matrix in Figure 6, where each cell shows the average performance improvement (in percentage points) relative to the SFT baseline, and cell colors are normalized within each evaluation domain column.
+
+**Training on one domain boosts performance in others.** The evidence is clearest for GUI-agent training, which produces improvements across all five evaluation domains: +3.0 on STEM, +1.2 on OCR & Chart, +10.5 on Grounding, +30.1 on GUI Agent (the trained domain), and +3.5 on General Image VQA. This is the only single-domain configuration that shows universal positive transfer.
+
+STEM-only training produces improvements on STEM (+6.6), Grounding (+5.2), GUI Agent (+30.1 — nearly matching the Mix-all gain of +30.4), and General VQA (+6.0), but causes a slight decline on OCR & Chart (−0.5). The massive GUI-agent improvement from STEM-only training (+30.1) is a striking finding — it suggests that STEM reasoning capabilities transfer almost entirely to GUI-agent tasks, even though the training data contained no GUI interactions.
+
+OCR & Chart-only training produces improvements on STEM (+2.4), OCR & Chart (+1.5 — surprisingly modest for the trained domain), GUI Agent (+9.0), and General VQA (+9.2), but degrades Grounding (−4.6). The negative transfer to grounding suggests that fine-grained chart reading and text recognition may compete with pixel-level spatial localization for model capacity or attention patterns.
+
+Grounding-only training shows the narrowest transfer profile: it improves Grounding (+30.4 — the trained domain), produces modest gains on STEM (+3.0) and OCR & Chart (+1.1), but significantly degrades GUI Agent (−14.5) and General VQA (−0.2). The −14.5 drop on GUI agents is the largest negative transfer observed in any configuration, and it suggests that pure grounding optimization pushes the model toward representations that are actively harmful for the higher-level planning and reasoning that GUI agents require.
+
+**Joint training yields greater improvements in each domain.** The Mix-all configuration (training on all four domains simultaneously) achieves the best or near-best performance in three out of five evaluation domains: STEM (+6.6, tied with STEM-only), OCR & Chart (+5.2, substantially better than any single-domain configuration), and General VQA (+3.4, better than Grounding-only's −0.2 but worse than OCR & Chart-only's +9.2). However, Mix-all underperforms the best single-domain configuration on Grounding (+3.0 vs. Grounding-only's +30.4) and GUI Agent (+30.4 vs. GUI Agent-only's +30.1, essentially tied).
+
+The failure of Mix-all to improve grounding performance is explicitly noted by the paper as warranting "further exploration" (Section 6.3). This is a significant limitation: the multi-domain approach that works well for most capabilities does not help (and may even hurt) grounding. The paper speculates that grounding "may require more targeted or specialized multi-domain strategies," but does not investigate further.
+
+**Asymmetric transfer patterns.** The transfer matrix is notably asymmetric. GUI-agent training improves grounding by +10.5, but grounding training degrades GUI agents by −14.5. OCR & Chart improves GUI agents by +9.0, and GUI agents improve OCR & Chart by +1.2. STEM improves GUI agents by +30.1, and GUI agents improve STEM by +3.0. These asymmetries are not random — they suggest a hierarchy where tasks requiring broader, more integrative reasoning (GUI agents, STEM) transfer well to narrower perceptual tasks (grounding), but the reverse does not hold. This is consistent with the interpretation that GUI-agent and STEM tasks co-activate a broader set of cognitive primitives that, when strengthened, benefit more specialized capabilities, while narrowly specialized training can over-optimize at the expense of broader reasoning.
+
+### Ablation Studies and Robustness Checks
+
+**RLCS effectiveness (Section 5.3, text discussion):** The paper reports qualitative evidence that RLCS "significantly accelerates model improvement and consistently leads to performance gains," but does not provide a dedicated ablation study comparing RLCS against a fixed-sampling baseline. The claim is supported by the pilot observation that "over half of all prompts achieve accuracy over 90% after just 200 training steps" without curriculum sampling — meaning that the majority of training computation would be wasted — and the paper's assertion that RLCS addresses this by re-weighting toward medium-difficulty examples. While the logic is clear, the absence of a direct no-curriculum vs. curriculum comparison means the quantitative benefit of RLCS (in terms of final benchmark scores or training speed) is not empirically isolated from other components of the training recipe. This is the paper's most significant missing ablation.
+
+**Dynamic sampling expansion via ratio EMA (Section 5.3.1):** Similarly, the oversampling mechanism that discards all-correct and all-incorrect batches is described in detail but not evaluated in isolation. The paper states that this method "facilitates parallel sampling and balanced rollout allocation, which aligns more closely with the underlying large-scale RL infrastructure for greater efficiency," but no experiment compares training with and without this mechanism. The engineering justification (infrastructure efficiency) is provided, but the training quality justification (does it improve final performance?) rests on the same logic as RLCS: reducing the fraction of zero-gradient batches should improve learning.
+
+**KL loss removal (Section 5.3.1):** The paper reports that applying KL loss to constrain divergence from the reference model causes model capabilities to be "noticeably constrained," motivating its removal. No quantitative comparison of training with and without KL loss is presented. This is a potentially important finding — it contradicts the standard practice in RLHF and some RLVR implementations where KL penalties are considered essential for preventing reward hacking and maintaining output quality — but without empirical evidence, it remains an anecdotal observation from the authors' development process.
+
+**Entropy loss removal (Section 5.3.2):** The paper reports that incorporating entropy loss "could cause the model to produce garbled output, which eventually leads to training collapse." This is presented as an empirical finding ("we found that...") and is consistent with reports from other large-scale RL training efforts, but the paper does not characterize the conditions under which this occurs (how large an entropy coefficient, at what stage of training, with what other hyperparameters), making it difficult to assess generalizability.
+
+**Top-p = 1 vs. lower values (Section 5.3.2):** The comparison of top-p = 1 (full distribution sampling) against lower values like top-p = 0.9 is described qualitatively: lower top-p "increases the risk of garbling over time" while top-p = 1 "eliminates the garbled outputs that tend to appear in later iterations." The mechanism hypothesized is that top-p = 1 "ensures full vocabulary coverage, preventing the under-learning of rare tokens." Like the entropy loss finding, this is an interesting observation that could benefit from controlled experimentation but is presented as a learned best practice rather than an empirically validated claim.
+
+**Per-sample vs. per-token loss computation (Section 5.3.2):** The paper compared these two loss computation methods and "observed no significant difference in mean reward, but per-sample loss computation yielded more stable training." This is one of the few ablations where a direct comparison is reported, though without specific stability metrics (variance of reward over time? frequency of training collapses?). The finding is practical advice for RL training infrastructure.
+
+**Cold-start data quality vs. RL performance (Section 5.3.1):** The paper reports a specific empirical result: "increasing cold-start training from 1,000 to 2,000 steps boosts the post-cold-start performance by about two points on average. However, after RL, both checkpoints converge to nearly the same performance." This is a controlled comparison — the same model architecture, same RL recipe, different SFT durations — and provides evidence that SFT accuracy does not determine RL ceiling. However, the paper does not report the actual benchmark scores, convergence curves, or the specific benchmarks where this was observed, limiting replicability.
+
+**Cold-start data quality vs. RL stability (Section 5.3.2):** The converse finding — that poor cold-start data causes RL instability — is supported by the observation that "if the cold-start data contains a large amount of meaningless thinking paths, the resulting model exhibits severe instability during RL training or even leads to training collapse." This is not presented with quantitative evidence (what constitutes "large amount"? How severe is "severe instability"?), but the direction of the effect is clearly stated.
+
+**Verifier quality cross-domain contamination (Section 5.2, Figure 5):** This is the paper's most thoroughly documented ablation. Figure 5 shows training reward curves and evaluation metrics when the STEM verifier is finely tuned but verifiers for other-single-image and other-multi-image tasks have weaknesses. The consequences are visible in the plotted data: reward noise in the single-image domain causes the model to "tweak outputs to drive rewards up without improving actual accuracy," and reward hacking in the multi-image domain causes the model to "learn shortcuts that repeatedly fool the verifier." After step 150, STEM reward growth stalls and then declines, and overall multimodal benchmark scores drop — including STEM-specific benchmarks MMMU, MathVista, and AI2D. This is a strong empirical demonstration of the weakest-verifier principle, though the paper does not report what specific weaknesses in the weak verifiers enabled the exploitation, which would be valuable for practitioners trying to audit their own verifiers.
+
+**Format-based reward during RL (Section 5.3.2):** The paper "strongly recommend[s] that the model fully learn the required output format during the cold-start phase rather than depending on RL," based on the observation that "if format errors frequently occur, the mixture of format and correctness reward may destabilize training." No controlled experiment is reported — the recommendation is based on the authors' accumulated development experience rather than a systematic comparison of SFT-format-learning vs. RL-format-learning.
+
+**Iterative data enhancement (Section 4.1):** The paper describes incorporating high-quality reasoning traces from RL checkpoints back into the SFT data for subsequent training rounds. While this is described as improving "the quality and challenge level of the cold-start dataset," no ablation compares training with and without this feedback loop. The benefit is asserted based on the intuition that RL-discovered reasoning patterns are higher quality than initially curated ones, but the magnitude of the effect is not quantified.
+
+**Non-thinking mode design choice (Section 4.2):** The paper found that "directly using the content from the <answer> part in the thinking examples yields better results than constructing a separately curated subset for the non-thinking mode." This is a concrete design choice with empirical backing (the comparison was made, and one approach was found better), though the quantitative difference is not reported.
+
+**LLM-based vs. rule-based answer extraction (Section 5.2):** The paper reports that LLM-based extraction is "often proved to be inaccurate, causing errors in the subsequent correctness judgment," and that in multimodal settings "the diversity of questions and answers increases dramatically, making extraction significantly more complex with numerous corner cases." This is presented as a motivation for the box-token approach, but no direct comparison of extraction accuracy between LLM-based and rule-based methods is provided. The paper might have compared the accuracy of an LLM extractor against the box-token extractor on a set of model outputs, but this experiment is not reported.
+
+### Critical Assessment
+
+#### Claim 1: GLM-4.5V achieves state-of-the-art performance among open-source models of similar size across nearly all benchmarks.
+
+This claim is **well-supported by the evidence in Table 2**, but with two important qualifications. First, "similar size" is doing significant work — the comparison set includes Step-3 (321B-A38B, roughly 3× the total parameters), Qwen2.5-VL-72B (72B, roughly 0.7× the total parameters but dense rather than MoE), Kimi-VL-2506 (16B-A3B), and Gemma-3 (27B). GLM-4.5V's 106B-A12B configuration is not directly comparable to any baseline in terms of total parameters, activated parameters, or architecture. It outperforms the larger dense model (Qwen2.5-VL-72B) and the larger MoE model (Step-3), which is impressive, but the "similar size" framing elides the MoE-vs-dense architectural difference that makes parameter-count comparisons difficult. Second, the claim holds for the evaluated benchmarks, but the selection of 42 benchmarks — while extensive — represents a particular slice of the VLM evaluation landscape. The paper does not evaluate on several commonly used benchmarks (e.g., TextVQA, ScienceQA, POPE for hallucination, MMBench-CN for Chinese-specific capabilities beyond the CN variant of MMBench), and the absence of hallucination-specific evaluation is notable given the paper's own caveats about reasoning quality and hallucinated reasoning chains (Section 7).
+
+The comparison with Gemini-2.5-Flash — claimed as "comparable or even superior performance on 22 benchmarks" — is **weaker than the open-source comparison** because the specific scores are not reported in Table 2. The claim is made in the abstract and Figure 1A, but the paper provides no column for Gemini-2.5-Flash in its main results table, making independent verification impossible without re-running the Gemini evaluation. This is a significant omission for a claim that appears prominently in the abstract and introduction. The paper should either report the Gemini scores alongside the open-source baselines or qualify the claim more carefully.
+
+#### Claim 2: GLM-4.1V-9B-Thinking achieves superior results to Qwen2.5-VL-72B on 29 out of 42 benchmarks.
+
+This claim is **fully supported by Table 3** and is one of the paper's most striking results. The 9B model outperforming the 72B model on 29 benchmarks (69% of the evaluated tasks) is a genuine efficiency achievement that suggests the training recipe — particularly the multi-domain RL — is extracting substantially more capability per parameter than prior approaches. The benchmarks where Qwen2.5-VL-72B retains an advantage (e.g., VideoMME without subtitles: 65.1 vs. 68.2, though Table 3 shows GLM-4.1V at 68.2 and Qwen2.5-VL-72B at 73.3 — this is actually a loss for GLM-4.1V; MMBench-V1.1-EN: 85.8 vs. 88.0) are consistent with the pattern that the larger model has advantages on tasks requiring broader world knowledge (general VQA) or longer temporal reasoning (video), while the smaller model's RL-driven reasoning improvements compensate on tasks requiring structured problem-solving (STEM, charts, coding, agents).
+
+However, the 9B-to-72B comparison is not entirely fair to Qwen2.5-VL-72B — GLM-4.1V-9B-Thinking is a "thinking" model that uses extended chain-of-thought reasoning (up to 8,192 output tokens), while Qwen2.5-VL-72B is evaluated in "non-thinking" mode (standard short-answer generation). The paper acknowledges this in Table 2 by labeling the mode column ("thinking" vs. "non-thinking"), but does not control for inference compute in the cross-model comparison. GLM-4.1V-9B-Thinking likely uses substantially more inference-time computation (more tokens generated = more FLOPs) than Qwen2.5-VL-72B on the same benchmarks, so the performance advantage conflates model quality with inference-time compute budget. A fairer comparison would match inference FLOPs rather than just parameter counts, but the paper does not perform this analysis.
+
+#### Claim 3: Multi-domain reinforcement learning demonstrates robust cross-domain generalization and mutual facilitation.
+
+This claim is **well-supported by Figure 6**, but the evidence reveals a more nuanced picture than "mutual facilitation across all domains." The cross-domain transfer is:
+- **Strongly positive** from STEM to GUI agents (+30.1), from GUI agents to grounding (+10.5), from OCR & Chart to General VQA (+9.2), and from STEM to General VQA (+6.0).
+- **Weakly positive or neutral** in several directions (e.g., STEM to OCR & Chart: −0.5; Grounding to STEM: +3.0).
+- **Strongly negative** from grounding to GUI agents (−14.5), and moderately negative from OCR & Chart to grounding (−4.6).
+
+The paper frames these results as "robust cross-domain generalization and mutual facilitation" (Section 1, key finding bullet), which overstates the symmetry of the transfer. "Mutual facilitation" implies bidirectional benefit, but the transfer matrix is clearly asymmetric — grounding helps OCR & Chart by only +1.1, while OCR & Chart hurts grounding by −4.6. The more precise characterization would be that **certain domains (GUI agents, STEM) act as "hub" domains whose training benefits many others, while other domains (grounding) are "spoke" domains that benefit from hub training but do not reciprocate and may even cause negative transfer to specific others.** This asymmetry is actually more interesting than uniform mutual facilitation — it suggests a hierarchy of reasoning capabilities — but the paper's framing downplays the negative transfer results.
+
+The experiment also has a notable design limitation: each single-domain configuration processes the same absolute number of samples as that domain receives in the Mix-all setup, but the Mix-all setup processes 4× more total samples (because it includes all four domains). This means the single-domain experiments are not directly comparable to Mix-all in terms of total compute — they test what happens when a fixed amount of domain-specific training is applied, while Mix-all tests what happens when four times as much total training is distributed across domains. The Mix-all advantage over single-domain in some areas (e.g., OCR & Chart: +5.2 vs. +1.5 for OCR & Chart-only) may partly reflect the larger total training budget rather than synergy per se. Computing single-domain results with the same total sample count as Mix-all (by repeating or augmenting data) would more cleanly isolate the synergy effect.
+
+#### Claim 4: A robust and precise reward system is critical — even a slight weakness in one domain can collapse training across all domains.
+
+This claim is **the best-supported mechanistic claim in the paper**, backed by the concrete evidence in Figure 5. The demonstration that a weak verifier in the multi-image domain causes STEM benchmark scores to decline after step 150 — while the STEM verifier itself is high-quality — provides compelling evidence for the cross-domain contamination mechanism through shared parameters. This is a genuinely important finding for the field, and the paper documents it clearly.
+
+However, the claim would be strengthened by:
+1. **Characterizing the specific weakness** that made the multi-image verifier hackable. The paper describes the symptoms (the model learned shortcuts that "repeatedly fool the verifier") but does not explain what those shortcuts were, making it hard for other practitioners to audit their own verifiers for similar vulnerabilities.
+2. **Demonstrating that the collapse is reversible or preventable.** If the weak verifier is subsequently hardened (e.g., by improving its extraction logic or adding adversarial training), does the model recover? Or is the damage permanent once the shared parameters have been corrupted? This experiment is not reported.
+3. **Showing the dose-response relationship.** How weak does a verifier need to be before collapse occurs? The paper treats verifier quality as binary (weak vs. robust), but in practice verifiers exist on a continuum. Experiments with gradually degraded verifiers would help practitioners understand the safety margin.
+
+#### Claim 5: RLCS significantly accelerates model improvement and consistently leads to performance gains.
+
+This claim is **not directly supported by an ablation experiment**. The paper presents RLCS as a core methodological contribution, but the evidence for its effectiveness is circumstantial: the pilot observation that prompts become too easy (accuracy > 90%) rapidly during RL, the logical argument that curriculum sampling should help, and the fact that the final model performs well. But without a controlled comparison — same model, same data, same RL algorithm, with and without curriculum sampling — the quantitative benefit of RLCS cannot be assessed. This is the paper's most significant experimental gap given the prominence of RLCS in the contribution framing. The paper could have run a small-scale experiment (e.g., on a subset of domains for a fixed number of steps) comparing RLCS against uniform sampling, but chose not to.
+
+#### Additional Weaknesses
+
+**Missing hallucination evaluation.** The paper acknowledges in Section 7 that "in certain instances, the model produces correct answers but relies on incorrect reasoning steps" and that "flawed or even hallucinated reasoning chains may inadvertently be reinforced if they lead to correct answers." This is a concerning failure mode — the model could achieve high benchmark scores through lucky reasoning rather than genuine understanding — but the paper does not evaluate on any hallucination-specific benchmark (e.g., POPE, AMBER, HallusionBench's reasoning-specific subsets beyond the overall score) that would quantify the prevalence of this issue. The HallusionBench score of 65.4 for GLM-4.5V (Table 2) provides only a coarse signal; more fine-grained analysis of reasoning quality would substantially strengthen the evaluation.
+
+**Lack of error analysis.** Beyond the broad benchmark scores, the paper provides no systematic error analysis — no breakdown of failure modes, no analysis of whether errors cluster in particular subcategories within benchmarks, no comparison of the types of errors made by GLM models vs. baselines. The qualitative examples in Appendix A are exclusively success cases, which is standard for technical reports but limits the reader's ability to assess model weaknesses. Understanding *how* the model fails (does it misperceive visual details? Does it reason correctly but extract the wrong answer? Does it produce the right answer through wrong reasoning?) would be as valuable as knowing its success rate.
+
+**Single evaluation per benchmark.** The paper reports single-point accuracy estimates without confidence intervals, standard deviations, or multiple evaluation runs. For some benchmarks with small test sets (e.g., ZeroBench with only a validation subset, TreeBench and Ref-L4 which are newer benchmarks with potentially smaller evaluation sets), the uncertainty around the point estimate could be substantial. Differences of 1–2 percentage points between models may not be statistically meaningful, but the paper treats all differences as equally informative.
+
+**Evaluation of non-thinking mode.** GLM-4.5V and GLM-4.6V support both thinking and non-thinking modes, but the paper evaluates only the thinking mode in its main comparison (Table 2). The non-thinking mode performance is not reported, making it impossible to assess the accuracy-speed tradeoff that the dual-mode design is intended to offer. A simple table comparing thinking vs. non-thinking accuracy on a subset of benchmarks, along with inference latency measurements, would demonstrate the practical value of the dual-mode capability.
+
+**GUI agent evaluation with fixed prompts.** The paper emphasizes in Appendix B.2 that specific prompts are "essential" for triggering optimal GUI agent behavior, and provides links to the exact prompt templates. This raises a concern about prompt sensitivity: if GLM-4.5V's strong GUI agent performance depends on carefully tuned prompts, then the benchmark comparison may not reflect the kind of robustness needed for real-world deployment where prompt variations are inevitable. The paper does not evaluate prompt robustness or report performance under prompt perturbations.
+
+**Baseline model versioning.** Several baselines (Step-3, Kimi-VL-2506, InternVL3) are recent models where the specific checkpoint version may matter for reproducibility. The paper does not specify exact model version numbers or commit hashes for the baselines, relying instead on paper citations. Given that these are fast-moving open-source projects where model weights may be updated post-publication, this creates a reproducibility concern for the specific scores reported.
 
 ## 6. Limitations and Trade-offs
-- Outcome‑only rewards can reinforce flawed reasoning (Section 7)
-  - Current verifiers typically score only final answers. The models sometimes reach correct answers via incorrect or hallucinated steps, and RL might reinforce those paths when the outcome is correct (p.18).
-- Training sensitivity and stability (Section 7)
-  - Early setups saw large variations in reasoning depth/style; although mitigated with better rewards and cold‑start data, large‑scale RL remains sensitive to configuration (p.18).
-- Dependence on precise verifiers (Section 5.2; Figure 5)
-  - A single weak domain verifier can destabilize multi‑domain training. Building and maintaining high‑quality verifiers per domain is nontrivial.
-- Compute and data requirements
-  - Pre‑training uses very large datasets (e.g., 10B+ image‑text pairs to start; 220M OCR; 140M GUI QA; Section 3.1), long contexts (32k tokens), and large batch sizes (global 1,536), plus MoE routing/balancing—demanding infrastructure.
-- Coverage gaps
-  - Mixed results in some domains: “mix‑all” RL did not improve grounding or GUI in Figure 6, suggesting these may need specialized curricula or rewards. Perception failures on cluttered/ambiguous images can undermine reasoning (Section 7).
+
+### 6.1 The RLCS Curriculum Sampling Claim Lacks a Direct Ablation — the Quantitative Benefit Is Unmeasured
+
+**The assumption or constraint.** RLCS is framed as a core methodological contribution — the paper's title highlights "Scalable Reinforcement Learning," and Section 5.3 presents RLCS as the mechanism that addresses the vanishing-gradient problem in GRPO. The paper argues that because "over half of all prompts achieve accuracy over 90% after just 200 training steps," the majority of training computation produces zero-gradient batches, and curriculum sampling solves this. However, the paper **never reports a controlled experiment comparing RLCS against uniform sampling** — same model, same data, same RL algorithm, with and without curriculum re-weighting.
+
+**The consequence.** Without this ablation, a practitioner cannot determine whether RLCS is responsible for the reported performance gains or whether those gains would have been achieved anyway through the other components of the training recipe (larger batch size, force answering, no KL loss, domain-specific verifiers, etc.). The logical argument for curriculum sampling is sound, but the magnitude of its benefit is unknown. A practitioner deciding whether to invest in implementing RLCS for their own multi-domain RL system has no quantitative evidence that it matters — only the authors' assertion that it "significantly accelerates model improvement and consistently leads to performance gains" (Section 5.3). If RLCS provides, say, a 1% improvement in final accuracy while adding substantial infrastructure complexity, a practitioner might reasonably choose to skip it. If it provides a 10% improvement, the implementation cost would be clearly justified. The paper provides no basis for making this judgment.
+
+**What evidence exists in the paper.** The only evidence presented is indirect: the pilot observation about prompt accuracy exceeding 90% after 200 steps, and the final model's strong benchmark performance. Neither isolates the causal effect of curriculum sampling. The dynamic sampling expansion via ratio EMA mechanism similarly lacks an ablation — the paper describes it as improving infrastructure efficiency but provides no training-quality comparison with and without it.
+
+**Mitigation status.** The paper does not acknowledge this as a gap. The authors treat RLCS as a working component of their system and describe its design in detail, but never frame the absence of a direct ablation as a limitation. This is the most significant missing experiment in the paper given the prominence of RLCS in the contribution narrative.
+
+---
+
+### 6.2 Difficulty Estimation During Deployment Is Not Solved — the Current Method Is Impractically Expensive for Real-World Use
+
+**The assumption or constraint.** The paper's entire compute-optimal allocation depends on knowing problem difficulty before selecting a strategy, but this is not the same paper — it's a reference to the prior sections' analysis framework. However, GLM-4.5V has a related practical issue: the model supports both "thinking" and "non-thinking" modes via the `/nothink` token, enabling "flexible trade-offs between performance and efficiency" (Section 1). But **the paper provides no mechanism for deciding when to use which mode**. In deployment, a user or system must decide per-query whether to invoke the expensive thinking mode (up to 8,192 output tokens, full chain-of-thought) or the fast non-thinking mode (empty thinking block, direct answer). The paper does not train a router, provide heuristics, or characterize which query types benefit from thinking vs. not.
+
+**The consequence.** The dual-mode capability — which the paper highlights as a key feature — is not actionable without a decision mechanism. Deploying the model requires either (a) always using thinking mode (maximizing accuracy at the cost of latency and compute), (b) always using non-thinking mode (maximizing speed at the cost of accuracy), or (c) building a custom routing system that the paper does not provide. Option (c) is what a practitioner would want, but the paper offers no guidance on how to build it, what features predict thinking-benefit, or what the accuracy-latency Pareto frontier looks like.
+
+**What evidence exists in the paper.** The paper evaluates only the thinking mode in its main benchmark comparisons (Table 2, Table 3). Non-thinking mode performance is never reported. Section 4.2 describes *how* the non-thinking mode is trained (append `/nothink`, train with empty thinking blocks), but Section 6 never provides a head-to-head comparison of thinking vs. non-thinking accuracy on any benchmark. The paper acknowledges that GLM-4.5V "natively supports both 'thinking' and 'non-thinking' modes" (Section 1), but the evaluation treats this as a binary feature rather than a tunable tradeoff with measurable consequences.
+
+**Mitigation status.** Not addressed. The paper provides no data on the thinking/non-thinking performance gap, no latency measurements, and no routing strategy. A practitioner who deploys GLM-4.5V has no information about how much accuracy they sacrifice by using non-thinking mode, or which query types are safe to route to the fast path. This is a direct consequence of the paper's evaluation design — evaluating only one mode for benchmarks leaves the dual-mode capability as an untested promise.
+
+---
+
+### 6.3 The Hardest Problems — Including Those Outside the Model's Capability Range — Are Not Systematically Characterized
+
+**The assumption or constraint.** The paper evaluates GLM-4.5V across 42 benchmarks and reports state-of-the-art results, but provides almost no analysis of *where* the model still fails. The qualitative examples in Appendix A are exclusively success cases. There is no error taxonomy, no breakdown of failure modes, and no analysis of whether residual errors cluster in particular subcategories (e.g., within MMMU, does the model fail on physics problems more than chemistry? Within MathVista, does it fail on geometry more than algebra?). The paper acknowledges in Section 7 that the model "might still struggle in complex scenarios" including "images involving clutters, occluded objects, or ambiguous visual details," and that "under these conditions, the models may resort to guesswork or generic assumptions rather than engaging in grounded inference."
+
+**The consequence.** A practitioner cannot assess the model's reliability boundaries. State-of-the-art on 42 benchmarks is impressive, but if the model fails catastrophically on specific subcategories — say, medical image interpretation, or mathematical proofs requiring novel lemma discovery, or GUI tasks with unusual interface patterns — those boundaries matter for deployment decisions. Without error analysis, a practitioner cannot know whether the model's errors are due to perceptual failures (it literally can't see the relevant detail), reasoning failures (it sees the detail but reasons incorrectly), or format failures (it reasons correctly but fails to output the answer in parseable form). These different failure modes require different mitigations: better vision encoders vs. better RL vs. better format training.
+
+**What evidence exists in the paper.** Section 7 contains the paper's only discussion of failures, and it is entirely qualitative: "RL does not consistently improve reasoning quality," "flawed or even hallucinated reasoning chains may inadvertently be reinforced," "images involving clutters, occluded objects, or ambiguous visual details could cause perceptual errors." No benchmark scores are broken down by difficulty, subcategory, or error type. The per-benchmark scores in Table 2 are single aggregate numbers that conceal all internal variation. The HallusionBench score of 65.4 (Table 2) provides a coarse signal about visual hallucination, but no analysis of what specific types of hallucinations occur or whether they correlate with other benchmark failures.
+
+**Mitigation status.** The paper identifies this as a limitation in Section 7 ("evaluation frameworks must evolve correspondingly... Future benchmarks should be both more challenging and diagnostic, designed to explicitly detect more failure modes such as shortcut reasoning or hallucination") but does not perform any such diagnostic evaluation itself. The limitation is acknowledged as a future direction rather than addressed within the current work.
+
+---
+
+### 6.4 The Paper Evaluates Only Thinking Mode Against Baselines — the Inference Compute Budget Is Not Controlled Across Model Comparisons
+
+**The assumption or constraint.** GLM-4.1V-9B-Thinking and GLM-4.5V are evaluated in "thinking" mode — they generate up to 8,192 tokens of chain-of-thought reasoning per response. The baseline models they are compared against (Qwen2.5-VL-72B, InternVL3-9B, Kimi-VL, MiMo-VL, Step-3) are evaluated in their default modes, which for most of these models means standard short-answer generation without extended chain-of-thought. Qwen2.5-VL-72B is explicitly labeled "non-thinking" in Table 2. The paper does not control for inference-time compute (FLOPs or tokens generated) in the cross-model comparison.
+
+**The consequence.** The performance comparisons conflate two distinct sources of advantage: (1) the GLM models' training recipe (pre-training data, SFT, multi-domain RL), and (2) the GLM models' substantially larger inference-time compute budget (potentially orders of magnitude more tokens generated per query). A model that spends 8,000 tokens reasoning about a problem and a model that answers in 100 tokens are not operating under comparable computational constraints. The paper's claim that GLM-4.1V-9B-Thinking "demonstrates superior performance to the much larger Qwen2.5-VL-72B model on 29 out of 42 benchmarks" (Section 6.2) is true, but it does not tell a practitioner whether the advantage comes from better training or from more inference compute — and the deployment implications are very different. If the advantage is primarily from inference compute, then a practitioner could potentially achieve similar results by allowing Qwen2.5-VL-72B to use chain-of-thought reasoning (which it may support with appropriate prompting), without adopting the GLM training pipeline.
+
+**What evidence exists in the paper.** The paper acknowledges the thinking/non-thinking distinction by labeling it in Table 2 and Table 3, but never discusses its implications for cross-model comparison fairness. No inference FLOPs calculations are provided. No experiment gives the baseline models an equivalent chain-of-thought budget. The paper's evaluation protocol in Section 6.1 specifies that the maximum output length is 8,192 tokens for the GLM models, but does not report the output length limits used for baselines (beyond stating that "all models... are evaluated using the same toolchain, policies, and prompt templates" — which applies to the evaluation infrastructure but not to the models' generation configurations).
+
+**Mitigation status.** Not addressed. The paper does not frame the thinking-mode compute advantage as a limitation requiring control. A fairer comparison would either (a) match inference FLOPs across models (allowing the GLM models fewer output tokens or the baselines more), or (b) report both thinking and non-thinking results for the GLM models so that the compute-matched comparison (both in non-thinking mode) is available. Neither is done.
+
+---
+
+### 6.5 Reward Hacking Remains an Unsolved Vulnerability — the System Mitigates It per Domain but Does Not Eliminate It
+
+**The assumption or constraint.** The paper's RLCS framework depends on domain-specific verifiers that must be "hack-resistant" (Section 5.2), and the paper invests substantial engineering in making them so — box tokens for unambiguous extraction, Sympy for math equivalence, edit distance for OCR, IoU for grounding, LLM judges for semantic matching. However, Section 7 explicitly acknowledges that the current reward system "typically evaluates final outcomes without verifying intermediate reasoning steps," and that "flawed or even hallucinated reasoning chains may inadvertently be reinforced if they lead to correct answers."
+
+**The consequence.** The model can achieve high benchmark scores through lucky or superficial reasoning rather than genuine understanding. Even with the paper's carefully engineered verifiers, the optimization pressure from GRPO will find exploit paths — these are just harder to find than with naive verifiers. The paper's own Figure 5 demonstrates that verifier exploitation is a real failure mode (the model learned to "tweak outputs to drive rewards up without improving actual accuracy" on single-image tasks). The domain-specific verifier hardening (Table 1) likely raises the bar for exploitation but does not eliminate the fundamental issue: any verifier that scores final answers without checking reasoning steps creates an incentive for the model to find answers through any means, including hallucinated reasoning.
+
+**What evidence exists in the paper.** Section 7 is candid about this: "This issue arises because current reward models typically evaluate final outcomes without verifying intermediate reasoning steps." The paper provides no measurement of how often GLM-4.5V produces correct answers through incorrect reasoning — no benchmark or evaluation protocol exists in the paper to quantify this. The qualitative examples in Appendix A show reasoning traces that appear correct, but these are curated success cases. There is no systematic audit of reasoning quality on, say, 100 randomly selected correct answers.
+
+**Mitigation status.** The paper identifies this as a key future direction: "Future reward models should assess not only final answers but also intermediate reasoning steps, actively detecting hallucinations and flagging logical inconsistencies" (Section 7). Within the current work, this limitation is acknowledged but not solved. The paper's box-token extraction and domain-specific comparison logic address one class of reward hacking (format manipulation and answer extraction failures), but the deeper problem — that final-answer correctness does not imply reasoning correctness — remains entirely open.
+
+---
+
+### 6.6 Single Model Family, Single Training Paradigm — the Generalizability of the RLCS Recipe to Other Architectures and Domains Is Unverified
+
+**The assumption or constraint.** All experiments in the paper use the same base architecture (AIMv2-Huge vision encoder + GLM-4 LLM decoder) and the same training recipe (pre-training on the paper's curated data mixture, SFT with the described format conventions, RL with GRPO and the domain-specific verifiers). The paper "believe[s] this model is representative of the capabilities of many contemporary LLMs" (Section 4, paraphrased for context), but this belief is not tested. No experiments vary the base architecture, the vision encoder, the pre-training data mixture, or the RL algorithm to assess whether the findings — particularly the weakest-verifier cross-domain contamination and the cross-domain generalization patterns — replicate under different conditions.
+
+**The consequence.** A practitioner using a different base architecture (e.g., a SigLIP vision encoder, a LLaMA-family LLM, a different MoE configuration) cannot know whether the paper's key findings transfer. The weakest-verifier phenomenon might be specific to the interaction between GRPO and the GLM-4 model family's parameterization. The cross-domain transfer patterns (Figure 6) might depend on the specific pre-training data mixture, which determines what shared representations exist between domains. The RLCS curriculum sampling effectiveness might depend on the difficulty distribution of the paper's specific training data, which is not publicly characterized. Without replication on other architectures or with other data mixtures, the paper's findings are best understood as existence proofs — "this can work" — rather than as general principles — "this will work."
+
+**What evidence exists in the paper.** No cross-architecture experiments. No experiments varying the pre-training data mixture to test whether the cross-domain transfer patterns are robust to different data compositions. No experiments with alternative RL algorithms (PPO, REINFORCE variants) to test whether the GRPO-specific gradient-vanishing diagnosis generalizes. The paper evaluates only the final models against external baselines — it never varies the training recipe itself.
+
+**Mitigation status.** Not addressed. The paper presents its findings as general insights ("We summarize our key findings from the development process," Section 1) without qualifying their potential architecture-specificity. The open-sourcing of models, training data, and reward systems partially mitigates this by enabling third-party replication, but the paper itself provides no evidence of generalizability beyond its specific setup. This is a common limitation of large-scale training papers — the computational cost of ablation experiments at this scale is prohibitive — but it means the paper's claims should be interpreted as validated on the specific configuration described, with generalizability remaining an open question.
 
 ## 7. Implications and Future Directions
 - Field impact

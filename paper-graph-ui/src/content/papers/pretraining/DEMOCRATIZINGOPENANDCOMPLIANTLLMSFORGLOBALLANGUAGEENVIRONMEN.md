@@ -8,134 +8,697 @@ Apertus sets a new standard for transparency and accountability in large languag
 
 ---
 
-## 1. Executive Summary (2–3 sentences)
-Apertus is a fully open suite of large language models (LLMs) released at 8B and 70B parameters that tackles two persistent gaps in the open-model ecosystem: lawful, auditable training data and strong multilingual coverage. It combines a compliance-first data pipeline (retroactive robots.txt opt‑outs, PII and toxicity filtering), a memorization‑mitigating pretraining objective (“Goldfish loss”), and broad multilingual pretraining/post‑training (1,811 languages in pretraining; 149 in post‑training), while releasing all artifacts—weights, data preparation code, checkpoints, and evaluation suites—for full reproducibility (Section 1; Section 3; Section 4).
+## 1. Executive Summary
+
+This technical report introduces **Apertus**, a fully open suite of large language models at 8B and 70B scales designed to address data compliance and multilingual representation in the open model ecosystem. The models are pretrained exclusively on openly available data with retroactive respect for `robots.txt` exclusions, use a variant of the **Goldfish objective** (a token-masking training loss that prevents the model from learning exact token-to-context mappings) to suppress verbatim memorization of training data, and allocate approximately 40% of their 15T-token pretraining corpus to non-English content spanning over 1,800 languages. Apertus approaches state-of-the-art results among fully open models on multilingual benchmarks, with the 70B variant achieving the highest XCOPA score among all evaluated models—including open-weight counterparts—and both model sizes surpassing all other fully open models on the INCLUDE cultural knowledge benchmark across 44 languages. The report establishes that comprehensive data compliance filtering and memorization mitigation can coexist with competitive downstream performance, though the benefit of pretraining on low-resource languages manifests primarily in cultural and linguistic benchmarks rather than in math and code reasoning tasks, where Apertus lags behind models that underwent additional reinforcement learning with verifiable rewards.
 
 ## 2. Context and Motivation
-- Problem/gap addressed
-  - “Open” models often mean open weights only, without transparent data pipelines; many include material that content owners forbid for AI training, and few models prioritize non‑English users (Section 1).
-  - LLMs can memorize and regurgitate training text, carrying privacy and copyright risks; most demonstrations of mitigation are small‑scale (Section 1; Section 5.4).
-- Why this matters
-  - Regulatory compliance (e.g., EU AI Act–style provisions) requires traceable, lawful data use and provable risk mitigation (Section 1, “Data Compliance”).
-  - Many communities operate in low‑ or mid‑resource languages; models that underperform outside English exclude these users (Section 1, “Multilinguality”).
-- Shortcomings of prior approaches
-  - Open‑weight releases typically do not publish data recipes or legal filtering, making audits impossible (Section 1).
-  - Memorization defenses are often post‑hoc (e.g., safety tuning, constrained decoding) and reversible via fine‑tuning or prompt attacks (Appendix F, “Limitations of post‑hoc…”).
-  - Multilingual efforts exist but usually cover far fewer languages and/or devote a small fraction of tokens to non‑English (Section 1; footnote 2).
-- Positioning
-  - Apertus frames itself as a “fully open” alternative: it releases weights plus scripts, checkpoints, and evaluation harnesses; it enforces retroactive consent and targeted filtering; and it expands multilingual coverage and post‑training alignment to 149 languages (Sections 1, 3, 4).
-  - The 70B model is trained on 15T tokens at production scale while remaining fully auditable, which is rare among fully open efforts (Section 1, “Scale”; Figure 11; Section 6).
+
+### The Core Problem: "Open" Models Are Not Truly Open — And Not Globally Representative
+
+The paper identifies two systemic shortcomings in the contemporary open-source language model ecosystem. The first is that **most models marketed as "open" are actually only "open-weight"** — they release trained parameter checkpoints without providing the data, code, or documentation needed to audit, reproduce, or legally extend the model. The second is that **these models systematically under-represent non-English languages and cultures**, concentrating their pretraining data on English and a small handful of high-resource languages while neglecting the thousands of other languages spoken globally. The paper argues that these two failures are connected: both stem from development pipelines that prioritize capability benchmarks over data provenance, legal compliance, and inclusive representation.
+
+This matters for reasons that extend beyond academic benchmarking. On the legal and ethical front, the paper cites reporting that "many of these open-weight models allegedly include large amounts of illegal material that do not consider the access rights granted by content owners," pointing to The Atlantic's investigation into LibGen data appearing in Meta and OpenAI training sets (Section 1). Organizations operating under regulations like the EU AI Act — which imposes transparency and data governance requirements on foundation model providers — need models whose entire training pipeline can be legally documented. A model trained on data of unknown provenance, or on data scraped in violation of content owners' explicit opt-out directives, creates compliance risk for downstream deployers.
+
+On the linguistic front, the paper notes that "most models today only focus on single languages, or small subsets of high-resource languages, limiting their extensions for lower-resource language environments" (Section 1). When LLMs are predominantly English-trained, they exhibit what the multilingual NLP literature has documented as the "curse of the high-resource language": weaker performance on tasks in other languages, inability to serve speakers of those languages, and systematic biases that erase non-Anglophone perspectives from model outputs. In the Swiss context specifically — a country with four official national languages (German, French, Italian, Romansh) and widespread use of regional dialects like Swiss German — a model that only speaks English, or even one that covers only the top 20 global languages, fails to serve the country's own linguistic reality.
+
+### The Gap Between "Open-Weight" and "Fully Open"
+
+The report draws a sharp distinction between two categories of model releases that are often conflated in public discourse (Section 1):
+
+- **Open-weight models** release trained weights but do not disclose training data composition, data preprocessing pipelines, or the specific datasets used. Examples include Llama 3.1 (Grattafiori et al., 2024), Qwen 2.5 (Yang et al., 2024a), and Gemma (Mesnard et al., 2024). These models dominate benchmark leaderboards and are widely used in research and industry, but they cannot be independently audited for data compliance, cannot be reproduced from scratch, and their training data cannot be inspected for biases or contamination.
+
+- **Fully open models** release not only weights but also training data specifications, data preparation code, evaluation suites, training code, and intermediate checkpoints. Examples include OLMo (Groeneveld et al., 2024), OLMo2 (OLMo et al., 2025), EuroLLM (Martins et al., 2025), BLOOM (Scao et al., 2022), and SmolLM (Allal et al., 2025). These models enable scientific reproducibility and legal audit, but have generally lagged behind open-weight models in capability benchmarks.
+
+The paper positions Apertus at the intersection of these categories: it aims to be **fully open** (releasing all scientific artifacts) while **matching or exceeding the performance of open-weight models at equivalent scale**, particularly on multilingual tasks. The statement that "Apertus is the leading fully open LLM today" (Section 1) reflects this ambition to close the performance gap between the fully open and open-weight regimes.
+
+### Prior Approaches and Their Shortcomings
+
+#### Data Compliance: robots.txt Is Respected at Crawl Time, Not Retroactively
+
+The paper identifies a specific failure mode in how pretraining datasets handle content owner consent. Web-scale datasets like FineWeb (Penedo et al., 2024a) and FineWeb-2 (Penedo et al., 2025) are typically constructed by aggregating snapshots from web crawls conducted at different points in time — sometimes spanning a decade or more. When websites update their `robots.txt` files to block AI crawlers, those updated preferences apply only to *future* crawls. Content that was scraped in 2018 under then-permissive policies remains in the dataset indefinitely, even if the website owner explicitly opted out in 2023.
+
+The paper describes this as a practice that "raises concerns about data usage, as subsequent changes to access policies are not retroactively applied to previously collected web snapshots, potentially leading to the continued use of data that is no longer permitted under the updated restrictions" (Section 3.1.1). This is not a hypothetical concern: the paper's own analysis (Table B.1) shows that retroactively applying January 2025 `robots.txt` preferences to the full 2013–2024 date range of the FineWeb corpus removes approximately **8% of English data and 4% of multilingual data**.
+
+The compliance gap has legal salience in the context of the EU AI Act, which requires foundation model providers to document their training data and implement measures to respect copyright and data access restrictions. A model trained on data that was scraped before an opt-out declaration — but without retroactively honoring that opt-out — may be on uncertain legal footing. The paper cites a legal assessment by Rosenthal & Veraldi (2025) that provides the Swiss-law framework for these considerations (Section 3.1).
+
+#### Multilinguality: Most Models Cover Fewer Than 100 Languages, Often Only a Dozen
+
+The paper's multilingual ambition — training on **1,811 languages** — must be understood relative to the status quo. It explicitly notes that "BLOOM (Scao et al., 2022), Aya (Üstün et al., 2024), and Qwen3 (Yang et al., 2025a) models are exemplary exceptions to this practice. They train on more languages, but still ∼10× fewer than in our work" (Section 1, footnote). The most multilingual prior models train on roughly 100–200 languages; Apertus covers an order of magnitude more.
+
+The consequence of limited multilingual coverage is not merely that models fail to serve low-resource language speakers — it is that they systematically underperform on tasks requiring **culturally grounded knowledge**. The paper evaluates Apertus on benchmarks like INCLUDE (Romanou et al., 2025), BLEnD (Myung et al., 2025), and CulturalBench (Chiu et al., 2025), which test knowledge of regional customs, cultural practices, and locally specific facts that cannot be acquired from English-only training data. Prior fully open models, even those trained on 30+ languages, score substantially lower on these benchmarks than on English-centric knowledge tests like MMLU, because their training data — while multilingual in token count — remains concentrated on content from a small set of cultural contexts.
+
+#### Memorization: Post-Hoc Mitigation Is Fragile
+
+The paper positions its use of the Goldfish objective (Hans et al., 2024) — a training-time token-masking loss — against a backdrop of demonstrated fragility in post-hoc memorization mitigation approaches. It cites Nasr et al. (2025), who showed that aligned production models (including GPT-3.5-turbo and Gemini 1.5 Pro) could be prompted into regurgitating verbatim training data through adversarial prompting attacks and, more dramatically, that fine-tuning on even a small dataset could "revert aligned models... to their pretraining objective... thereby bypassing their safety guardrails to reveal thousands of unique training examples" (Appendix F).
+
+The implication is that safety alignment applied after pretraining — the approach used by most open-weight models — is fundamentally limited as a memorization safeguard. The underlying memorized content persists in the model's parameters regardless of alignment, and techniques from constrained decoding (Park et al., 2024) or machine unlearning (Sakarvadia et al., 2025) either fail to remove the memorized information or degrade model performance. The paper's position is that **memorization must be addressed at pretraining time**, not patched afterwards, and the Goldfish loss — which selectively masks tokens during the causal language modeling objective so the model never learns to reproduce exact token sequences — represents a proactive solution.
+
+### How Apertus Positions Itself
+
+The paper does not claim to introduce fundamentally new model architectures or training algorithms. Rather, it positions itself as a **systems-level demonstration** that the following properties can coexist at competitive performance levels:
+
+1. **Full transparency**: release of weights, data recipes, training code, evaluation suites, and intermediate checkpoints under permissive licenses.
+2. **Data compliance**: retroactive `robots.txt` enforcement, PII filtering, toxicity filtering, and license-based filtering of post-training data.
+3. **Memorization suppression**: Goldfish loss applied during pretraining, with empirical validation that verbatim recall remains at baseline levels even after 128 exposures during training.
+4. **Massive multilinguality**: training on 1,811 languages with ~40% non-English data allocation, supported by post-training data in 149 languages.
+
+The paper explicitly contrasts this combination against models that excel on any single dimension but fail on others. OLMo2 is fully open and English-strong but trained almost exclusively on English data. EuroLLM is multilingual but covers far fewer languages. Llama 3.1 achieves strong multilingual performance but is open-weight only, with undisclosed training data and no memorization guarantees. BLOOM was pioneering in multilinguality but has been overtaken in capability by newer models. Apertus aims to be the first model that checks all four boxes simultaneously — and to do so at a scale (70B parameters, 15T tokens) that had not previously been attempted in a fully open release.
+
+The report frames this as consistent with the public institutional basis of the Swiss AI Initiative, stating that "the culture of openness befits the public institutional basis of the Swiss AI Initiative" and that Apertus is "the first state-of-the-art LLM developed by a fully open, publicly funded academic consortium" (Section 7). The motivation is thus both scientific (demonstrating that compliance does not force a capability sacrifice) and institutional (establishing a template for publicly funded, transparent AI development that can serve as an alternative to the opaque model releases of commercial labs).
 
 ## 3. Technical Approach
-This section explains how Apertus is built and trained, from architecture to data, training objectives, and alignment.
 
-- Model architecture (Section 2.1; Table 1)
-  - Dense decoder‑only Transformers at two scales: `Apertus‑8B` (32 layers) and `Apertus‑70B` (80 layers), both using grouped‑query attention (GQA) for inference efficiency and rotary positional embeddings (RoPE) with NTK‑aware scaling for long‑context extension.
-  - Two stabilizing components:
-    - `QK‑Norm`: normalizes queries and keys in attention to control logit magnitude spikes (Section 2.1).
-    - `xIELU` activation: a modified activation with trainable positive/negative branches; on the positive side it behaves like a smooth square‑root growth, on the negative side like a corrected ELU (Equation in Section 2.1). This reduces outliers while retaining expressivity.
-  - Input/output embeddings are untied; documents are bracketed with begin/end tokens and attention across document boundaries is masked (Section 2.1).
+### 3.1 Reader Orientation
 
-- Tokenizer selection (Section 2.2; Figure 1)
-  - Uses the `Mistral‑Nemo v3 tekken` byte‑BPE (131k vocab), chosen via four intrinsic metrics on FLORES+ (55 languages): fertility, compression ratio, vocabulary utilization, and a cross‑language fairness measure (Gini coefficient). It offers competitive compression and lower inequity across languages than the alternatives compared (Figure 1).
+The Apertus project builds a complete, reproducible pipeline for producing large language models — from raw web data to instruction-following chat models — where every processing step, training choice, and data source is documented and released under permissive licenses. The core problem it solves is the trade-off between model transparency and model capability: prior fully open models lagged behind open-weight commercial models on benchmarks, while commercial models offered no audit trail for their training data or training process. The shape of the solution is a **full-stack commitment to openness** — data, code, checkpoints, and evaluation suites are all released — combined with specific technical interventions (retroactive `robots.txt` enforcement, Goldfish loss for memorization mitigation, and massive multilingual data expansion) that collectively push the performance of fully open models into competitive territory at the 70B scale.
 
-- Training recipe (Section 2.3; Table 2)
-  - Objective: `Goldfish loss` (define). Instead of training on every token, a small, deterministic subset of tokens per sequence (2%) is used to compute the loss, with a hash computed over the preceding 50 tokens to ensure the mask is reproducible but input‑dependent (Algorithm 1; Section 2.3; Appendix F). Intuition: by breaking the tight coupling between every context‑token pair and its next token, the model is less likely to recall long exact spans verbatim while still learning general patterns.
-  - Optimizer: `AdEMAMix` (define). An Adam‑style method that keeps an extra long‑term exponential moving average (“slow momentum”) to better leverage old gradients during long training; warm‑ups are used for the additional terms (Section 2.3; Appendix C).
-  - Learning rate schedule: `Warmup‑Stable‑Decay (WSD)` with a 1‑sqrt cooldown tail, enabling continued training without re‑warming and safer late‑stage convergence (Section 2.3).
-  - Batch size doubled midway without changing LR, using the WSD plateau (Table 2; Figure 3), to improve hardware efficiency late in training.
+### 3.2 Big-Picture Architecture (Diagram in Words)
 
-- Data pipeline with compliance (Section 3)
-  - Retroactive robots.txt (“with hindsight”): crawl permissions as of Jan‑2025 are applied to all historical snapshots; if a site blocks major AI bots, its content is removed from 2013–2024 data (Appendix B; Table B.1 shows token reductions ≈8% in English, ≈4% multilingual; Tables B.2–B.3 list blocked bots and volumes).
-  - PII removal via regex for emails, IPs, and IBAN; multilingual toxicity filtering with XLM‑R encoders + language‑specific MLPs, removing the top 5% toxic documents per language for nine languages (Section 3.1.2–3.1.3; Figure 4 shows score distributions and thresholds).
-  - Pretraining mixture:
-    - `FineWeb‑2` across 1,811 languages as the base multilingual source; English high‑quality slices from `FineWeb‑HQ` and `FineWeb‑Edu`; code from `StarCoderData`; math from `FineMath` and `MegaMath`; and parallel corpora (`EuroParl`, `ParaDocs`) for translation (Section 3.2; Figure 5).
-    - Curriculum in five stages to gradually raise quality and increase math/code proportions (Section 3.3; Table 6). Stage choices were validated via cooldown experiments on smaller checkpoints (Table 7).
-  - Long‑context extension to 65,536 tokens:
-    - RoPE base θ increased across 8k→16k→32k→64k phases; context parallelism used for memory scaling; data mixture enriched with “FineWeb‑Long” (documents >4k) and `Institutional Books 1.0` (post‑1900, OCR‑cleaned) (Section 2.5; Section 3.4; Table 5; Table 8).
+The Apertus pipeline comprises five major stages:
 
-- Post‑training for instruction following and alignment (Section 4)
-  - Supervised fine‑tuning (SFT): ≈4.18M examples across general instructions, math, code, and multilingual/conversational data (149 languages), after license filtering and decontamination (Section 4.1; Table 12). Romansh—six idioms—receives dedicated coverage (Appendix J.1).
-  - Preference alignment via `QRPO` (define). A direct‑alignment algorithm that optimizes absolute rewards using quantile ranks of completions sampled from a reference model (Section 4.3). Rewards come from (1) a pretrained reward model (`Skywork‑Reward‑V2`, Section 4.3.1) for standard topics and (2) an LLM‑as‑judge that scores adherence to the “Swiss AI Charter” for ideologically sensitive prompts (Section 4.3.2; Appendix O).
-    - Length‑normalized QRPO is used (divide the KL regularizer by completion length), improving stability (Section 4.3).
+1. **Data Preparation (Section 3)**: Raw web crawl data from CommonCrawl (FineWeb and FineWeb-2) is filtered through a multi-stage compliance and quality pipeline: retroactive `robots.txt` enforcement removes documents from domains that now block AI crawlers; PII filtering replaces detected email addresses, IP addresses, and bank account numbers with anonymized markers; language-specific toxicity classifiers remove the top 5% most toxic documents per language; and quality classifiers select high-value educational and knowledge-rich content. The resulting 15T-token mixture spans 1,811 languages with ~40% non-English content, organized into five sequential training stages of progressively higher data quality.
 
-- Infrastructure & engineering (Section 6)
-  - Trained on up to 4,096 NVIDIA GH200 GPUs at CSCS with a vCluster setup enabling container‑first ML workloads and robust node vetting (Sections 6.1–6.3).
-  - Throughput and stability were improved through systems fixes (driver/kernel patches, storage and NCCL/libfabric alignment), checkpointing strategy (Young/Daly‑guided), and distributed training tweaks (Figure 12; Section 6.3).
-  - Estimated 6.74×10^24 FLOPs to train the 70B on 15T tokens; ≈6M GPU‑hours consumed (Section 6.2; Appendix E code for FLOPs).
+2. **Pretraining (Section 2)**: A dense decoder-only Transformer — at 8B and 70B parameter scales — is trained from scratch using the AdEMAMix optimizer (which adds a slow-decaying momentum term for better convergence on long runs), the Warmup-Stable-Decay learning rate schedule (which allows training to be extended without rewarming), and the Goldfish loss (which randomly masks 2% of tokens during training to prevent verbatim memorization). Training runs on up to 4,096 NVIDIA Grace-Hopper GPUs for 15T tokens, with a context length of 4,096 tokens extended to 65,536 tokens in a subsequent long-context phase.
+
+3. **Supervised Finetuning (Section 4.2)**: The pretrained model is adapted to instruction-following via finetuning on a curated mixture of 4.2M prompt-completion pairs spanning foundation instruction data, math and reasoning, code generation, multilingual conversation, and low-resource languages (including Romansh, Swiss German dialects, and African languages). All training data is decontaminated against evaluation benchmarks using n-gram matching, and license-incompatible datasets are excluded.
+
+4. **Preference Alignment (Section 4.3)**: The finetuned model is further refined using Quantile Reward Policy Optimization (QRPO, an offline alignment algorithm that optimizes absolute reward rankings rather than pairwise preferences) in two phases: a standard phase using a pretrained reward model for general quality (helpfulness, harmlessness, honesty), and a constitutional phase using an LLM-as-judge with a 11-article Swiss AI Charter that encodes values derived from Swiss constitutional norms for handling controversial topics.
+
+5. **Release (Section 5)**: Weights, training code, data preparation scripts, evaluation suites, intermediate checkpoints, and this technical report are all released under permissive licenses.
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First**, the data compliance pipeline (retroactive robots.txt, PII anonymization, toxicity filtering) because it is the innovation with the most direct regulatory relevance and the step that distinguishes Apertus from nearly all prior LLM releases.
+
+- **Second**, the architecture and pretraining recipe (model dimensions, attention mechanisms, activation function, optimizer, learning rate schedule) because these choices collectively enabled stable training at 70B scale with 30–40% efficiency improvements over standard baselines, and because the Goldfish loss for memorization mitigation is implemented here.
+
+- **Third**, the tokenizer selection process, because multilingual tokenization fairness — measured via the Gini coefficient of tokenization costs across languages — directly affects the model's ability to equitably serve speakers of different languages.
+
+- **Fourth**, the pretraining data curriculum (the five stages, their composition, the cooldown experiments used to select them) because it reveals how data quality and domain composition are scheduled over the course of training to maximize downstream performance.
+
+- **Fifth**, the post-training pipeline (supervised finetuning data curation, decontamination, the QRPO alignment algorithm, and the constitutional alignment process for controversial topics), because it shows how a raw pretrained model is converted into a usable instruction-following system while maintaining the compliance standards established in pretraining.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily a **systems and infrastructure paper** whose core contribution is demonstrating that comprehensive data compliance, memorization suppression, and massive multilinguality can coexist at state-of-the-art performance levels — with the detailed recipes, infrastructure lessons, and ablation studies that make the demonstration reproducible and extensible.
+
+---
+
+#### Data Compliance: Retroactive robots.txt Enforcement
+
+The most structurally novel aspect of the Apertus data pipeline is the **retroactive application of content owner opt-out preferences**. Existing web-scale datasets enforce `robots.txt` restrictions only at crawl time: if a website blocked AI crawlers in 2023 but was crawled in 2018, the 2018 data remains in the dataset. Apertus instead applies the *current* (January 2025) `robots.txt` preferences to *all* historical crawl dumps from 2013–2024.
+
+**The filtering procedure** operates as follows (Section 3.1.1):
+
+1. All URL domains in FineWeb (English) and FineWeb-2 (multilingual) are ranked by the volume of text they contribute to the corpus.
+
+2. The top 1 million English domains and top 1 million non-English domains are selected for `robots.txt` retrieval. Due to domain overlap and sites that are now offline, the total number of accessible files is less than 2 million.
+
+3. For each reachable domain, the `robots.txt` file as of January 2025 is fetched and examined for directives targeting AI-specific crawlers. The list of blocked user agents includes: `GPTBot`, `CCBot`, `Google-Extended`, `ClaudeBot`, `Bytespider`, `Applebot-Extended`, `Diffbot`, `Meta-ExternalAgent`, `AI2Bot`, `cohere-training-data-crawler`, and `PanguBot` (Appendix B). If any of these agents are blocked for a domain, all content from that domain is removed from the dataset — across all years of the crawl.
+
+4. The removal is applied on an *opt-out* basis: "if the corresponding `robots.txt` files are not available, we consider the data usable for training" (Section 3.1.1).
+
+**The magnitude of the impact** is reported in Table B.1: FineWeb-Edu (English) drops from 4.9T tokens to 4.5T tokens, and FineWeb-2 (multilingual) drops from 47T to 45T tokens. The higher relative impact on English data (~8%) compared to multilingual data (~4%) reflects the fact that major English-language content platforms (news outlets, publishing sites) have been more aggressive in adopting AI crawler blocks. Tables B.2 and B.3 quantify removals by specific user agent, with `GPTBot` encountering the highest rate of restrictions in both corpora.
+
+**The legal rationale** is grounded in the EU AI Act's data governance requirements, which mandate that foundation model providers document training data and respect copyright restrictions. The paper cites Rosenthal & Veraldi (2025), a legal assessment of LLM training under Swiss law, as the basis for its approach (Section 3.1).
+
+**What this achieves operationally**: any downstream user of Apertus can point to a documented, verifiable process showing that content from domains that have opted out of AI crawling — as of a specific, recent date — was excluded from training. This is a substantially stronger compliance posture than models trained on CommonCrawl data with only crawl-time `robots.txt` enforcement, because it respects *subsequent* opt-out decisions that content owners made after their data was initially crawled.
+
+---
+
+#### Data Compliance: PII Anonymization and Toxicity Filtering
+
+**Personally Identifiable Information (PII)** is handled through a regex-based anonymization pipeline applied to the full pretraining corpus (Section 3.1.2). The system detects email addresses, IP addresses, and IBAN bank account numbers using regular expressions, then replaces matching spans with anonymous markers (e.g., `<email-pii>`). The paper explicitly notes that this is a "best-effort" approach for petabyte-scale data, and that more sophisticated PII detection (e.g., named entity recognition, context-aware detection) is not applied due to computational constraints.
+
+**Toxicity filtering** is implemented through language-specific binary classifiers trained on annotated datasets (Section 3.1.3). The procedure is:
+
+1. **Training data**: The PleIAs ToxicCommons dataset provides five-dimensional toxicity annotations (race/origin bias, gender/sexuality bias, religious bias, ability bias, violence/abuse) for multiple languages. For Chinese, the SWSR dataset adds binary labels for sexuality-related toxicity.
+
+2. **Label construction**: Because positive labels are scarce, any sample with a total toxicity score greater than 0 — indicating harmfulness in at least one dimension — is treated as positive.
+
+3. **Class balancing**: Non-toxic examples are subsampled to create 50-50 balanced training sets per language, with 10% held out as validation.
+
+4. **Architecture**: A two-stage approach is used: first, multilingual document embeddings are extracted using XLM-RoBERTa; second, a language-specific 2-layer MLP is trained on top of these embeddings for binary toxicity classification (6 epochs, best validation accuracy checkpoint selected).
+
+5. **Application**: The trained classifiers annotate all FineWeb and FineWeb-2 documents in nine languages (English, Chinese, French, German, Italian, Dutch, Polish, Spanish, Portuguese). For each language, the 5% of documents with the highest predicted toxicity scores are filtered out.
+
+The paper does not apply toxicity filtering to code and math datasets, or to FineWeb-Edu and DCLM-Edu, because "those subsets are considered filtered already by a restrictive subtopic or a selective education-related prompt" (Section 3.1.3, footnote).
+
+**The toxicity score distributions** are shown in Figure 4, revealing substantial variation across languages. Portuguese documents show the highest mean toxicity score (0.399) and a high median (0.330), while Polish documents show the lowest mean (0.159) and median (0.002). The 95th-percentile threshold (the "High Risk" cutoff) varies accordingly, meaning the actual string-level toxicity of filtered documents is not uniform across languages — the filter removes the top 5% *within each language*, not documents above a universal threshold.
+
+---
+
+#### Model Architecture: The Transformer Variant
+
+The Apertus architecture is a dense, decoder-only Transformer with several established and novel modifications (Section 2.1, Table 1). The two scales share a common architectural template:
+
+- **Apertus 8B**: 32 layers, hidden dimension 4,096, MLP hidden dimension 21,504, 32 query heads and 8 key-value heads (grouped-query attention), xIELU activation.
+- **Apertus 70B**: 80 layers, hidden dimension 8,192, MLP hidden dimension 43,008, 64 query heads and 8 key-value heads, xIELU activation.
+- Both models: no bias terms, pre-normalization with RMSNorm, Rotary Positional Embeddings (RoPE, base θ = 500,000), untied input/output embeddings, QK-Norm, context length 4,096 tokens (extended to 65,536 post-hoc).
+
+**The design choices and their justifications:**
+
+**No biases**: Removes bias terms from all linear layers. Justified as following Chowdhery et al. (2022), the PaLM architecture, which found biases unnecessary for large-scale Transformers. The practical benefit is reduced parameter count (a small fraction of total parameters, but eliminates a source of numerical drift in long training runs).
+
+**RMSNorm over LayerNorm**: RMSNorm computes `$\text{RMSNorm}(x) = x / \text{RMS}(x) \cdot \gamma$` where `$\text{RMS}(x) = \sqrt{\frac{1}{d}\sum_{i=1}^d x_i^2}$`, rather than subtracting the mean and dividing by variance. The paper cites Zhang & Sennrich (2019) for the efficiency claim: RMSNorm avoids computing the mean, reducing FLOPs per normalization layer. In a deep Transformer with two normalization sublayers per block, this savings compounds over 32–80 layers.
+
+**Grouped-Query Attention (GQA)**: Uses 8 key-value heads shared across 32 (8B) or 64 (70B) query heads — a ratio of 4:1 or 8:1 query heads per KV head. This follows Ainslie et al. (2023) and is motivated by inference efficiency: the KV cache size is proportional to the number of KV heads, so using fewer KV heads dramatically reduces memory consumption during autoregressive decoding. The paper states this is chosen "without compromising performance," which aligns with prior findings that GQA matches multi-head attention quality at these head ratios.
+
+**QK-Norm**: Applies RMSNorm to the query and key projections before the attention score computation. The paper states this "improves training stability by preventing excessively large attention logits" (Section 2.1), citing Henry et al. (2020) and Dehghani et al. (2023). In practice, without QK-Norm, large attention logits can cause the softmax to saturate — producing near-one-hot attention distributions that zero out gradient flow through most positions. Normalizing queries and keys keeps logit magnitudes in check, which is especially important when training with long sequences (the paper's 65K context) where logit magnitudes can drift upward over training.
+
+**Untied Embeddings**: The input embedding matrix (token → hidden state) and output projection (hidden state → logits) are separate parameter matrices. The paper states this "improves performance at the cost of additional memory" (Section 2.1). Tied embeddings are common in smaller models to save parameters, but for large models, the input and output spaces benefit from different representations: the input embedding must represent tokens in a way useful for attention, while the output embedding must map hidden states to well-calibrated token probabilities. Untying provides this flexibility.
+
+**BoD/EoD Tokens**: Every document is prepended with a special Beginning-of-Document token (`<s>`) and appended with an End-of-Document token (`</s>`). The paper cites multiple studies showing that fixed tokens at the beginning of context serve as "attention sinks" — positions that absorb attention weight during training, preventing the model from attending to padding or irrelevant tokens. The EoD token is present but its loss is masked during training, meaning the model is not penalized for its prediction of EoD — it serves purely as a structural separator.
+
+**Cross-Document Attention Prevention**: An attention mask prevents tokens from attending to tokens in different documents that happen to be packed into the same context window. This is standard practice in LLM pretraining (Raffel et al., 2020; Grattafiori et al., 2024) and prevents the model from learning spurious correlations across document boundaries. The paper's ablation (Table 3) shows that adding this mask has no measurable effect on training loss at 1.5B scale, suggesting it is a neutral choice that avoids potential contamination of perplexity measurements.
+
+---
+
+#### xIELU Activation Function
+
+The xIELU activation (Huang & Schlag, 2025) replaces the more common SwiGLU gated activation used in models like Llama. The paper defines it as:
+
+$$ \text{xIELU}(x) := \begin{cases} \alpha_p\sqrt{x^2 + 0.5x} & \text{if } x > 0 \\ \alpha_n(e^x - 1) - \alpha_n x + 0.5x & \text{if } x \leq 0 \end{cases} $$
+
+where `$\alpha_p$` and `$\alpha_n$` are trainable scalars per layer.
+
+**What it computes**: For positive inputs (`$x > 0$`), the function behaves like `$\alpha_p\sqrt{x^2 + 0.5x}$`. Since `$\sqrt{x^2 + 0.5x} \approx |x| + 0.25$` for large `$x$`, this approximates a linear with a slight upward curvature — less aggressive than GELU's asymptotic linearity but more responsive than ReLU's pure linearity. For negative inputs (`$x \leq 0$`), the function adds three terms: `$\alpha_n(e^x - 1)$` (which approaches `$-\alpha_n$` as `$x$` becomes very negative, providing a non-zero gradient floor), `$-\alpha_n x$` (a linear penalty that dominates for moderately negative values), and `$+0.5x$` (a constant linear slope). The result is that negative inputs produce a *negative* output (unlike GELU or SiLU, which produce small positive values for negative inputs), with a smooth exponential transition near zero.
+
+**What makes it different from standard activations**: SwiGLU — the standard gated activation in Llama and many recent models — combines two linear projections with a SiLU gate: `$\text{SwiGLU}(x) = (xW_1 \odot \text{SiLU}(xW_2))W_3$`. This requires three weight matrices and a gating mechanism. xIELU is a *non-gated* activation, meaning it applies directly to the output of a single linear projection. Since gated activations require computing twice the hidden dimension (one projection for the "value" path and one for the "gate" path), the paper compensates by scaling the MLP hidden dimension by 1.5× to match parameter count and compute. In practice, this means: where a SwiGLU MLP uses dimension `$d_{\text{ff}}$` with gate and value projections of size `$d_{\text{model}} \times d_{\text{ff}}$`, xIELU uses a single projection of size `$d_{\text{model}} \times 1.5d_{\text{ff}}$`.
+
+**Why this form**: xIELU is derived from an integration-based framework for activation function design (Huang & Schlag, 2025). The key property is its handling of negative inputs: the negative-branch output allows the activation to *shift* information direction rather than just attenuating it, which can help with training stability by preventing activation means from drifting positive over many layers. The trainable `$\alpha_p$` and `$\alpha_n$` scalars allow each layer to learn its own optimal positive/negative balance.
+
+**The empirical evidence**: In the 3B ablation (Table 3), replacing SwiGLU with xIELU (including the 1.5× hidden dimension scaling) reduces training loss from 1.906 to 1.843 at 100B tokens — a substantial improvement that, combined with AdEMAMix and other changes, enables the 3B Apertus model to match the baseline's 100B-token loss with 30-40% fewer tokens (Figure 2).
+
+---
+
+#### Goldfish Loss for Memorization Mitigation
+
+The Goldfish loss (Hans et al., 2024) modifies the standard causal language modeling objective to prevent the model from learning exact token-to-context mappings. The mechanism is simple but geometrically important:
+
+$$ \mathcal{L}(\theta) = -\frac{1}{|G|} \sum_{i=1}^L G_i(x_i) \log P_\theta(x_i | x_{<i}) $$
+
+where `$L$` is the sequence length, `$x_i$` is the `$i$`-th token, `$x_{<i}$` is the preceding context, `$P_\theta(x_i | x_{<i})$` is the model's predicted probability for token `$x_i$` given context, and `$G_i \in \{0, 1\}$` is a binary mask indicating whether token `$i$` contributes to the loss.
+
+**What it computes**: For each position in the sequence, the mask `$G_i$` is sampled deterministically based on a hash of the preceding `$H = 50$` tokens (the paper uses `$k = 50$`, meaning 2% of tokens are masked on average). If `$G_i = 1$`, the token contributes to the standard cross-entropy loss exactly as in normal training. If `$G_i = 0$`, the token is *completely ignored* — the model receives no gradient signal to increase its probability given the preceding context.
+
+**The mask generation procedure** (Algorithm 1): A uniform random hash table `$H_{\text{hash}}$` of size `$M$` is constructed once. For each sequence, sliding windows of `$H$` consecutive tokens are formed. The tokens in each window are multiplied together and the result modulo `$M$` is used as a hash index. The hash table value at that index is a random number in `$[0, 1)$`; if it is less than `$1/k = 1/50 = 0.02$`, the token at the end of that window is masked. Because the hash depends on the *preceding* `$H$` tokens, tokens that appear in the same local context will be masked (or not masked) consistently across different occurrences — the model cannot learn to predict *which* tokens will be masked because the hash table is uniform random, but it can learn to predict the *content* of unmasked tokens.
+
+**The critical insight**: Standard causal language modeling encourages the model to learn `$P(x_i | x_{<i})$` — the exact probability of the next token given all preceding tokens. When a sequence appears many times in training, this pushes the model toward memorizing the exact sequence. Goldfish loss instead teaches the model `$P(x_i | x_{<i}, G_i = 1)$` — the probability of the next token *conditioned on it not being masked*. Because the masking is random, the model learns to predict tokens from *incomplete* context: roughly 2% of tokens in any local window are missing. This prevents the model from forming the kind of tight token-to-context correspondence that enables verbatim regurgitation.
+
+**Implementation detail**: The paper front-loads the masking during data preprocessing rather than during training: "In practice, we front-load token masking during data loading rather than during pretraining for efficiency" (Appendix F). This means the training code sees a standard sequence with some tokens replaced by a mask token ID, and the loss mask is computed during data preparation. This avoids slowing down the main training loop.
+
+**Calibration of k and H**: The paper states it identified `$k = 50$` and `$H = 50$` as the optimal configuration "through calibration detailed by Xu (2025)" and that this configuration "effectively suppresses verbatim memorization without compromising downstream performance" (Section 2.3). The key trade-off is: smaller `$k$` (more frequent masking) suppresses memorization more strongly but degrades model performance (fewer training tokens), while larger `$H$` (longer hash context) makes the masking more uniform but can create situations where adjacent tokens are jointly masked, losing local coherence. Table F.5 shows downstream task performance for 1B, 3B, and 8B models trained with Goldfish loss (2% masking) versus standard cross-entropy, finding comparable or slightly improved performance across all benchmarks.
+
+**The failure mode: canonical works**: Despite the overall success, the paper identifies a specific vulnerability (Section 5.4.2). Canonical works with near-duplicate copies in the training data — Keats's poems, Shakespeare's plays, the US Constitution, the Bible — exhibit the highest memorization, accounting for "all 22 sequences with a ROUGE-L score ≥0.7 among our 10,672 Gutenberg probes." The mechanism is: Goldfish loss hashes a fixed 50-token window, but even small formatting differences (different line-breaking, different tokenization due to leading whitespace) change the hash, causing the Gutenberg version and the web-crawl version of the same passage to be masked at *different* positions. Tokens masked in the Gutenberg version may be unmasked in the web version, and vice versa. Over many exposures to near-duplicates, the model can reconstruct the full passage by combining unmasked segments from different copies. This is not a failure of the Goldfish loss so much as an inherent limitation of deterministic hashing in the presence of near-duplicate data.
+
+---
+
+#### AdEMAMix Optimizer
+
+The AdEMAMix optimizer (Pagliardini et al., 2025) extends the AdamW optimizer family by adding a second momentum term with a much slower decay rate, allowing the optimizer to incorporate gradient information from much earlier in training. The paper states this is "a first for an LLM at this scale" (Section 2.3).
+
+**The mechanism**: Standard Adam maintains two exponential moving averages (EMAs) of gradients:
+
+- `$m_t = \beta_1 m_{t-1} + (1 - \beta_1) g_t$` (first moment, fast-decaying, `$\beta_1 = 0.9$`), which tracks recent gradient direction for momentum-like acceleration.
+
+- `$v_t = \beta_2 v_{t-1} + (1 - \beta_2) g_t^2$` (second moment, moderately decaying, `$\beta_2 = 0.999$`, or 0.95 in many LLM recipes), which tracks recent gradient magnitude for per-parameter learning rate scaling.
+
+AdEMAMix adds a *third* EMA:
+
+- `$u_t = \beta_3 u_{t-1} + (1 - \beta_3) g_t$` (slow-moving first moment, `$\beta_3 = 0.9999$`), which decays 10× more slowly than the standard `$\beta_1$`. The parameter update incorporates both `$m_t$` and `$u_t$`, weighted by a parameter `$\alpha$`:
+
+$$ \theta_{t+1} = \theta_t - \eta \cdot \frac{m_t + \alpha \cdot u_t}{\sqrt{v_t} + \epsilon} $$
+
+where `$\eta$` is the learning rate, `$\alpha = 8$` controls the influence of the slow momentum (higher means more weight on old gradients), and `$\epsilon$` is a small constant for numerical stability.
+
+**What it computes**: The `$m_t$` term, with its fast decay (`$\beta_1 = 0.9$`), captures gradient direction over roughly the last `$1/(1-0.9) = 10$` steps. The `$u_t$` term, with its slow decay (`$\beta_3 = 0.9999$`), captures gradient direction over roughly `$1/(1-0.9999) = 10,000$` steps. The weight update is the sum of these two signals, effectively allowing the optimizer to combine *immediate* gradient information with a *long-term running average* that smooths out high-frequency noise and retains useful signal from earlier in training.
+
+**Why this helps for long training runs**: In standard Adam, as training progresses, the gradient signal can become dominated by high-frequency noise (individual minibatch variation) while the underlying slow-changing components (which capture the large-scale curvature of the loss landscape) are washed out. AdEMAMix's slow momentum retains these slow components, providing a more stable optimization trajectory. The paper's benchmarking (Semenov et al., 2025) shows that "AdEMAMix consistently scales more favourably with model size, training duration, and batch size than other widely used alternatives" (Section 2.3).
+
+**The hyperparameters and their scheduling**: The paper uses `$\beta_1 = 0.9$`, `$\beta_2 = 0.999$`, `$\beta_3 = 0.9999$`, and `$\alpha = 8$`. The warmup for `$\alpha$` and `$\beta_3$` is set to 100,000 steps, after which they remain constant. This is chosen because "it is not necessary to continue scheduling them throughout the entire training" (Appendix C). The weight decay is 0.1 and the gradient clipping threshold is 0.1.
+
+**The ablation evidence**: In Table 3, switching from AdamW (baseline) to AdEMAMix reduces the 1.5B model's training loss from 2.037 to 2.002 at 100B tokens — an improvement that, combined with xIELU and other changes, contributes to the 30-40% token efficiency gain observed at 3B scale (Figure 2).
+
+---
+
+#### Warmup-Stable-Decay (WSD) Learning Rate Schedule
+
+The WSD schedule (Zhai et al., 2022; Hu et al., 2024; Hägele et al., 2024) replaces the traditional cosine learning rate schedule with three phases:
+
+1. **Warmup**: The learning rate linearly increases from 10% of the peak value to the peak value over 16.8B tokens.
+
+2. **Stable**: The learning rate remains constant at the peak value for the bulk of training. The peak values are `$1.1 \times 10^{-4}$` for the 8B model and `$1.0 \times 10^{-5}$` for the 70B model.
+
+3. **Decay**: The learning rate decays to 10% of the peak value over the final 1.5T tokens (from 13.5T to 15T consumed). The decay shape is "1-sqrt" (negative square root), which the paper states "reliably outperforms a standard linear shape by balancing the loss landscape exploration" (Section 2.3), citing Hägele et al. (2024) and Dremov et al. (2025).
+
+**Why this form over cosine**: Cosine schedules require knowing the total training duration in advance — the learning rate continuously decreases from the start, and if you want to extend training, you must restart the schedule. WSD's stable phase means training can be extended without rewarming the learning rate: "we extended the initial planned training phase of 9T tokens thanks to no schedule change being required" (Section 2.3). This is critical for large-scale training where the optimal stopping point is uncertain at launch.
+
+**The final learning rate**: Set to 10% of the peak, explicitly chosen "to facilitate downstream finetuning (i.e., long context extension and SFT) with lower initial gradient norms and instability" (Section 2.3). Starting finetuning from a model at the peak learning rate would expose the finetuning optimizer to large initial gradients that could destabilize early steps; finishing at 10% of peak reduces this risk.
+
+---
+
+#### Batch Size Doubling
+
+A notable design choice is the intentional doubling of the global batch size in the middle of training (Section 2.3):
+
+- **8B model**: Batch size increases from 4.2M tokens to 8.4M tokens after 7T consumed tokens.
+- **70B model**: Batch size increases from 8.4M tokens to 16.8M tokens after 4.4T consumed tokens.
+
+The learning rate remains unchanged during this transition. The paper justifies this as simultaneous hardware efficiency improvement and effective learning rate reduction: "increasing the batch size has been shown to be beneficial in later stages of training (similar to a learning rate decrease) and increase hardware efficiency, allowing training models that perform better under the same FLOP budget" (Section 2.3), citing Smith et al. (2018), McCandlish et al. (2018), and Merrill et al. (2025).
+
+**The mechanism**: The noise scale of stochastic gradient estimates scales inversely with batch size. At the beginning of training, smaller batches provide beneficial stochasticity that helps explore the loss landscape. Later in training, when the model is approaching convergence, larger batches provide lower-variance gradient estimates that enable smoother convergence. Doubling the batch size is approximately equivalent to halving the learning rate in terms of the noise scale, but without the explicit LR reduction — and with the hardware benefit of better GPU utilization at larger batch sizes.
+
+**The empirical observation**: Figure 11 shows that token throughput (tokens per second per GPU) remains roughly constant or even improves slightly after the batch size doubling, despite the larger communication overhead. Figure 3 shows that the loss curves exhibit "discontinuous loss jumps through the difference in average cross entropy" at the batch size transition point, but no instability — the training smoothly continues.
+
+---
+
+#### Tokenizer Selection
+
+The tokenizer selection process (Section 2.2, Appendix I) is notable because it explicitly optimizes for **multilingual fairness** rather than just throughput.
+
+**The evaluation metrics** (defined in Appendix I):
+
+- **Fertility**: The average number of tokens produced per word for a given language. Lower fertility means fewer tokens per word, which means faster inference and lower cost per word for that language. Defined as `$\text{Fertility}(T) = \frac{\sum_{b \in D} |\tau(b)|}{\sum_{b \in D} |b|_w}$` where `$\tau(b)$` is the tokenized sequence and `$|b|_w$` is the word count.
+
+- **Compression ratio**: The inverse of fertility from the perspective of raw text units (lines/documents), measuring how many normalization units are represented per token. Higher is better. Defined as `$CR(D; \tau) = \frac{1}{|D|}\sum_{b \in D} \frac{|b|_u}{|\tau(b)|}$`.
+
+- **Vocabulary utilization**: The fraction of the tokenizer's vocabulary that is actually used when encoding a corpus: `$\text{VocabUtil}(T) = \frac{|\{v : v \in \tau(b), b \in D\}|}{|V|}$`. Low utilization in a specific language indicates the vocabulary is biased toward other languages.
+
+- **Gini coefficient of tokenization cost**: Adapted from income inequality measurement to quantify cross-linguistic fairness. For `$n$` languages with tokenization costs `$c_1 \leq c_2 \leq ... \leq c_n$` (cost per normalization unit), the Gini coefficient is:
+$$ \text{Gini}(T) = \frac{1}{n}\left(n + 1 - 2\frac{\sum_{i=1}^n (n + 1 - i)c_i}{\sum_{i=1}^n c_i}\right) $$
+Values range from 0 (perfect equality — all languages have equal tokenization cost) to 1 (extreme inequality — one language dominates). Lower is better.
+
+**The comparison**: Figure 1 evaluates four tokenizers (Mistral-Nemo, Llama-3.1, Qwen-2.5, Gemma-2) across 55 languages from the FLORES+ development set. Mistral-Nemo achieves the lowest Gini coefficient, "indicating more equitable tokenization costs across languages." It also "matches or outperforms the other tokenizers in vocabulary utilization, fertility rate, and compression ratio." The paper selects Mistral-Nemo with its 131,072-token vocabulary, modifying 47 custom special tokens "to better support code and math data" (Section 2.2).
+
+**The fairness implication**: In a standard tokenizer optimized primarily for English, common English words may be single tokens while equivalent words in low-resource languages may require 3-5 tokens. This means the model sees less *context* per token for those languages (a fixed context length of 4,096 tokens covers far fewer words), and the cost-per-word at inference is higher. The Gini coefficient directly captures this inequality: a tokenizer with a high Gini coefficient systematically advantages some languages over others in both training efficiency and inference cost. Mistral-Nemo's low Gini coefficient (0.31, visible in Figure 1) means the tokenizer distributes this cost more evenly across the 55 evaluated languages.
+
+---
+
+#### Pretraining Data Curriculum: The Five Stages
+
+The pretraining data is organized into five sequential stages of progressively higher data quality (Section 3.3, Table 6). The philosophy is: **build linguistic competence first, then layer on domain-specific knowledge, then refine with the highest-quality data during the learning rate cooldown**.
+
+**Stage 1 (0T – 5T tokens)**: Foundation. Uses the broader Score-2 subset of FineWeb-Edu (4,815B tokens available), FineWeb-2-HQ (33% highest-quality retention, 3,557B tokens), StarCoder (235B tokens), FineMath CommonCrawl subset (32B tokens), and small canary datasets (2B tokens). The emphasis is on volume and diversity.
+
+**Stage 2 (5T – 9T tokens)**: Quality refinement for English. Switches from FineWeb-Edu Score-2 to the smaller, higher-quality Score-3 subset (1,179B tokens) and introduces FineWeb-HQ (33% retention, 4,064B tokens). The multilingual, math, and code mixtures from Stage 1 are maintained. This stage was "only used in the 70B run" — the 8B model went directly from Stage 1 to Stage 3 at 7T tokens.
+
+**Stage 3 (9T – 12T tokens)**: Math expansion. Adds InfiMM-WebMath (19B tokens) and LLM360-MegaMath Web (260B tokens) to increase math data proportion. Retains Stage 2 English and multilingual data.
+
+**Stage 4 (12T – 13.5T tokens)**: Maximum quality. Switches English data to DCLM-Edu (1,619B tokens) and tightens multilingual filtering to FineWeb-2-HQ at 10% retention (986B tokens). Upgrades math data from MegaMath Web to MegaMath Web-Pro (15B tokens). StarCoder remains unchanged.
+
+**Stage 5 (13.5T – 15T tokens)**: Cooldown. This phase coincides with the learning rate decay. Adds the highest-quality code data (CommonPile/Stack v2 Edu, 68B tokens; StarCoder thresholded at quality scores 2 and 3, 182B tokens), Clean Wikipedia (33B tokens), translation parallel data (21B tokens), and instruction/task data (3 replicas × 1B tokens). The StarCoder data with score >3 is sampled twice (upsampled relative to score-2 data).
+
+**The cooldown selection experiments**: To determine which datasets to include in each stage, the paper ran cooldown experiments on 1.5B ablation models (Table 7). The methodology: take an intermediate model checkpoint from Stage 1, perform a 100B-token cooldown with a 70/30 mix (70% Stage 1 data, 30% candidate dataset), and measure downstream benchmark performance. Among the tested datasets, "DCLM-edu gave the largest performance gain, while replacing FineWeb-Edu with FineWeb-HQ-33 consistently improved results" (Section 3.3). Because DCLM-Edu is limited in size, the paper adopted a phased approach: FineWeb-HQ in Stages 2-3, DCLM-Edu in Stages 4-5.
+
+**The gating mechanism for Goldfish loss**: During data preprocessing, a total of ~0.3T tokens are masked due to the Goldfish loss (2% masking rate), meaning the model sees ~14.7T effective training tokens.
+
+---
+
+#### Post-Training Data Curation and Decontamination
+
+The supervised finetuning mixture (Table 12) comprises 4.2M examples across six categories. The data is curated through eight iterations of evaluation-guided refinement.
+
+**License compliance in post-training**: The paper applies two criteria for dataset inclusion: (1) content must be explicitly released under licenses permitting redistribution and commercial use (e.g., CC-BY, Apache 2.0), and (2) the collection procedure must be fully documented and reproducible. For compound datasets (mixtures of multiple source datasets), the paper "undertake[s] a careful verification to ensure that the overarching license of a mixture aligns with the licenses of all constituent source datasets." Source datasets from providers that "have opted out of AI training through robots.txt, possess share-alike licences (e.g., Reddit, StackExchange), or otherwise fail to meet our compliance standards" are excluded (Section 4.1.1).
+
+**Decontamination procedure** (Section 4.1.2): This is applied to all supervised finetuning data to prevent benchmark leakage:
+
+1. **8-gram matching on the token level**: Training and benchmark prompts are tokenized, and exact 8-gram matches are identified. This serves as a fast first-pass filter.
+
+2. **Ratcliff-Obershelp similarity**: For any match found in step 1, the longest common subsequence between the training prompt and the benchmark prompt is computed. Overlaps shorter than 5 tokens are discarded as spurious.
+
+3. **Contamination threshold**: A sample is flagged as contaminated if "the combined length of the overlaps is longer than half of the benchmark prompt's length."
+
+The paper emphasizes that this n-gram approach is critical for detecting cross-lingual contamination: "While hash-based methods cannot detect such cases, our n-gram matching identified hundreds of translated benchmark problems that would have artificially inflated scores" (Section 4.1.2). Table 9 provides an example where a math problem appears identically in English training data and Urdu benchmark data, yielding a 0.62 match ratio despite the linguistic difference.
+
+**Impact of decontamination and license filtering**: Tables 10 and 11 report ablation results. Decontamination alone has negligible overall impact (average score 0.442 → 0.443 for the original Tulu3 mixture). Adding license filtering reduces average performance by 5.8% (0.443 → 0.417), with the largest drops on MMLU chain-of-thought evaluation (0.513 → 0.253, a 51% decrease) and some improvements on TruthfulQA MC2 (0.486 → 0.518). Multilingual performance shows a similar pattern: decontamination has minimal impact (average 0.510 → 0.511), while license filtering reduces average by 4.3% (to 0.489). Cultural knowledge benchmarks prove more robust to filtering than math and reasoning tasks.
+
+---
+
+#### Quantile Reward Policy Optimization (QRPO)
+
+The alignment stage uses QRPO (Matrenok et al., 2025) rather than the more common Direct Preference Optimization (DPO) or Reinforcement Learning from Human Feedback (PPO). The paper motivates this choice by identifying limitations of both alternatives: online RL methods like PPO "require careful hyperparameter tuning and are computationally intensive due to their online nature," while direct alignment methods like DPO "rely on relative preference signals... which are less informative than absolute feedback" and "often exhibit undesirable behavior (for instance, reducing the probabilities of both completions, resulting in a shift of probability mass toward out-of-distribution samples)" (Section 4.3).
+
+**The QRPO loss** is defined as:
+
+$$ \mathcal{L}_{\text{QRPO}} = \mathbb{E}_{x, y}\left[\left(R_q(x, y) - \beta_{\text{KL}} \log Z_q(x) - \beta_{\text{KL}} \log \frac{\pi_\theta(y|x)}{\pi_{\text{ref}}(y|x)}\right)^2\right] $$
+
+where `$\pi_\theta$` is the policy being optimized, `$\pi_{\text{ref}}$` is the reference model (the SFT checkpoint), `$R_q(x, y)$` is the quantile reward, and `$Z_q(x)$` is the partition function.
+
+**The quantile reward** `$R_q(x, y)$` is defined as the empirical cumulative distribution function (CDF) of the reward over a reference set:
+
+$$ R_q(x, y) = \frac{1}{|S_{\text{ref},i}|} \sum_{y_{i,j} \in S_{\text{ref},i}} \mathbf{1}[R(x, y_{i,j}) \leq R(x, y)] $$
+
+where `$S_{\text{ref},i} = \{R(x_i, y_{i,j})\}_{j=1}^n$` is a set of `$n = 10$` reference completions sampled from `$\pi_{\text{ref}}$` and scored with the reward model `$R$`.
+
+**What it computes**: For a given prompt `$x$` and candidate completion `$y$`, `$R_q(x, y)$` answers the question: "what fraction of reference completions score worse than this one?" If a completion is in the 90th percentile of the reference distribution, `$R_q = 0.9$`. The QRPO loss then tries to make the policy's log-probability ratio `$\log \frac{\pi_\theta(y|x)}{\pi_{\text{ref}}(y|x)}$` proportional to this quantile reward, with `$\beta_{\text{KL}}$` controlling the strength of the KL regularization. The result is that the model learns to increase probability for high-quantile completions and decrease probability for low-quantile completions, but constrained to stay close to the reference distribution.
+
+**Why this form over DPO**: DPO optimizes pairwise preferences ("completion A is better than completion B"), which is a relative signal. QRPO optimizes absolute quantile rankings, which the paper argues is more informative: it tells the model not just that completion A is better than B, but *how much better* (by position in the distribution). Additionally, the squared-error formulation avoids the probability-mass-shift problem described in Pal et al. (2024), where DPO can push probability mass to unseen completions.
+
+**Length-normalized QRPO**: To prevent the model from favoring longer completions, the paper normalizes the KL coefficient `$\beta_{\text{KL}}$` by the completion length `$|y|$`:
+
+$$ \mathcal{L}_{\text{QRPO-norm}} = \mathbb{E}_{x, y}\left[\left(R_q(x, y) - \frac{\beta_{\text{KL}}}{|y|} \log Z_{q\text{-norm}}(x) - \frac{\beta_{\text{KL}}}{|y|} \log \frac{\pi_\theta(y|x)}{\pi_{\text{ref}}(y|x)}\right)^2\right] $$
+
+with the partition function adjusted accordingly.
+
+**Hyperparameters**: `$\beta_{\text{KL}} = 5$`, with length normalization yielding an average value of `$\beta_{\text{KL}}/|y| \approx 0.03$`. The AdEMAMix optimizer is used with `$\beta_3 = 0.99$`, `$\alpha = 8.0$`, and `$t_{\beta_3}$` and `$t_\alpha$` set to the total number of training steps. Learning rates: `$5 \times 10^{-7}$` for 8B, `$1 \times 10^{-7}$` for 70B.
+
+---
+
+#### Constitutional Alignment for Controversial Topics
+
+The most architecturally distinctive part of the alignment pipeline is the two-track system for handling controversial versus non-controversial prompts (Section 4.3.2).
+
+**Prompt classification**: An LLM-based classifier (Qwen3-32B) evaluates each prompt on a 0-3 ideological sensitivity scale, detailed in Appendix J.3. Level 0 includes "technical, factual, mathematical, or definitional questions with objective answers regardless of ideology." Level 3 includes questions where "ideological position would fundamentally shape the core content of the answer." The classifier was validated against 800 human labels, achieving 73% accuracy with human validators reaching 83% majority agreement.
+
+**Non-controversial track**: Prompts classified as non-controversial receive completions generated by five LLMs (Llama 3.1 8B, Llama 3.3 70B, Qwen 2.5 72B, Qwen 3 14B, Qwen 3 32B) with system prompts randomly set to encourage helpful, honest, or truthful responses. Additional completions are generated from the Apertus SFT model itself (on-policy). Rewards are assigned using Skywork-Reward-V2-Llama-3.1-8B, a pretrained reward model. Completions are selected for training based on their position relative to the on-policy distribution: one completion from the set above all on-policy completions, and one from below the 20th percentile.
+
+**Controversial track**: Prompts classified as controversial receive completions generated with persona-based system prompts: 200,000 personas sampled from PersonaHub, plus a persona based on the Swiss AI Charter. Rewards are assigned by an LLM-as-judge (Qwen3-32B) using a prompt that includes the full text of the Swiss AI Charter (Appendix O) and asks for a 1-9 score based on adherence to the charter's principles.
+
+**The Swiss AI Charter** (Appendix O) contains 11 articles, each with 3-9 clauses. The articles cover: Response Quality, Knowledge and Reasoning Standards, Respectful Communication, Preventing Harm, Resolving Value Conflicts, Professional Competence Boundaries, Collective Decision-Making, Autonomy and Personal Boundaries, Long-term Orientation and Sustainability, Human Agency, and AI Identity and Limits. Clauses are numbered (e.g., [10.1], [10.2]) to allow the LLM judge to ground evaluations in specific charter provisions.
+
+**Public validation of the Charter**: A survey of 163 Swiss residents (Table 13) found an average agreement rate of 97.3% across all 11 principles (combining "Always/definitely yes" and "Usually/probably yes" responses, excluding "Neutral/Unsure"). The lowest agreement rate was 92.6% for Article 6 (Professional Competence Boundaries). Respondents were also asked to rank the principles by importance (Appendix J.5, Figure J.4), yielding Article 2 (Knowledge and Reasoning Standards) as highest-ranked and Article 7 (Collective Decision-Making) as lowest-ranked.
+
+**Synthetic degradation for judge calibration**: To calibrate the LLM judge, the paper uses an iterative degradation procedure (Appendix J.4): starting from a high-quality completion, an LLM generates successively worse versions by introducing specific quality degradations (lower factual accuracy, reduced logical coherence, worse organization, etc.). The iteration number serves as a ground-truth score for calibrating judge accuracy. The paper reports that "pairwise scoring performed slightly better than the probability-weighted pointwise scoring."
+
+---
+
+#### Verbatim Memorization Evaluation
+
+The memorization evaluation (Section 5.4) uses Gutenberg literary texts injected into the pretraining corpus at controlled frequencies (1–128 repetitions), following the Frequency-Varied Memorization Probe Buckets (FM-Probes) framework.
+
+**The evaluation metrics**:
+
+- **ROUGE-L**: Measures the longest common subsequence between generated suffix and ground truth, normalized by reference length. A score of 1.0 means perfect verbatim reproduction. Baseline (unexposed texts) is approximately 0.18, reflecting chance overlap of common words.
+
+- **LCCS** (Longest Common Contiguous Substring): The length of the longest exact string match between generated and reference text, normalized. This is a stricter measure than ROUGE-L because it requires contiguous matching.
+
+- **Type-Token Ratio (TTR)**: The ratio of unique tokens to total tokens in the generated text, used to detect text degeneration (where the model repeats the same phrases, producing artificially low memorization metrics).
+
+**Key findings**: Both Apertus-8B and Apertus-70B "remain at baseline memorization (Rouge-L ≈ 0.18)" across all tested exposure frequencies (≤128) and prefix lengths (≤5,000 tokens). Figure 8 shows uniform heatmaps with no frequency-dependent or prefix-length-dependent increase in memorization. This is the first demonstration of Goldfish loss effectiveness at 70B scale and after 128 training exposures.
+
+**The decoding strategy robustness check** (Table 25): Under greedy decoding, the model exhibits text degeneration (TTR ≈ 0.22–0.31, far below the ground truth TTR of ~0.539), which could mask true memorization by producing repetitive, low-quality text with low ROUGE-L. To rule this out, the paper also evaluates with nucleus sampling (temperature=1.0, top-p=0.9). Under this setting, TTR rises to ~0.500 (close to ground truth) while ROUGE-L and LCCS "remain at baseline," confirming that "Apertus's mitigation is robust across decoding strategies and not an artifact of greedy decoding."
+
+**The positional fragility result** (Figure 9): Prior work (Xu et al., 2025) found that memorization in standard models is strongest when the prefix starts at the beginning of a text (offset 0) and decays sharply as the prefix is shifted later in the text. Apertus breaks this pattern: for the top 5% most-memorized sequences, recall "fluctuates within a narrow range" across offsets rather than decaying, and "the specific sequences vary with offset." The paper hypothesizes that "Goldfish Loss breaks this dependency, since selective token masking prevents the formation of continuous long-range anchors on initial tokens that typically anchor verbatim memorization."
+
+**The primacy effect** (Figure 9, rightmost panel): Gutenberg sequences introduced during the first 0–9T tokens of pretraining (V1) show stronger memorization than those introduced during 9–12T (V2), with differences up to 0.1 ROUGE-L (equivalent to ~50 additional memorized tokens in a 500-token suffix). The paper notes this "may be confounded by differences in textual complexity" between the V1 and V2 probe sets and "warrants further investigation."
 
 ## 4. Key Insights and Innovations
-1) Compliance you can audit end‑to‑end (Section 3; Appendix B)
-- What’s new: retroactive application of robots.txt opt‑outs (“with hindsight”) to all historical snapshots—data from sites blocking AI crawlers in Jan‑2025 is removed across the entire 2013–2024 period (Appendix B).
-- Why it matters: enables legal and ethical reuse for downstream models and provides a clear audit trail; token impact is quantified (Table B.1).
-- Distinct from prior work: most open‑weight releases neither document nor implement such retroactive consent enforcement.
 
-2) Memorization mitigation at scale with `Goldfish loss` (Sections 2.3, 5.4; Appendix F)
-- What’s new: a 70B model trained on 15T tokens with a loss that masks ~2% of tokens deterministically based on recent context, suppressing verbatim recall even after up to 128 exposures (Figure 8; Table 25).
-- Why it matters: reduces copyright/privacy risks without sacrificing performance (Appendix F, Table F.5 shows downstream parity; Section 5.4 shows low Rouge‑L/LCCS memory signals).
-- Caveat: failure modes on ubiquitous texts that exist as many near‑duplicates (e.g., Shakespeare, US Constitution) due to hash fragility to formatting/tokenization changes (Section 5.4.2; Figure 9).
+### Innovation 1: Data Compliance as a Train-Time, Not Audit-Time, Constraint
 
-3) Multilingual breadth and targeted post‑training (Sections 3.2, 4.1)
-- What’s new: pretraining spans 1,811 languages; post‑training covers 149 languages, including Swiss Romansh idioms (Appendix J.1) and extensive conversational data (Table 12).
-- Why it matters: Apertus performs strongly on multilingual cultural/knowledge benchmarks relative to fully open peers (Tables 15, 20) and achieves better Romansh↔German translation than `Llama‑3.3‑70B‑Instruct` (Table 24).
+The paper's most distinctive intellectual move is reframing data compliance from a post-hoc legal audit checkbox into a **first-class engineering constraint** that operates at pretraining scale. This is not the obvious "filter the data and train a model" pipeline it might appear to be — it represents a structural inversion of how compliance interacts with model development.
 
-4) QRPO + Constitutional judging for sensitive topics (Section 4.3.2; Appendix O)
-- What’s new: instead of a single global reward model, the alignment uses an LLM judge prompted with the “Swiss AI Charter”—11 articles distilled from Swiss constitutional and civic values. A public survey shows high approval of these principles (Table 13).
-- Why it matters: makes value‑laden alignment explicit, inspectable, and adaptable to a cultural context; integrates naturally with QRPO’s absolute‑reward training.
+**What the field did before**: The dominant practice in large-scale LLM development treats data compliance as a post-training legal concern. Models are trained on the largest available web corpora (CommonCrawl dumps spanning a decade), with any data filtering focused on *quality* (e.g., deduplication, heuristic scoring to select "educational" content) rather than *rights* (e.g., content-owner consent, license compatibility). When legal challenges arise — such as the LibGen controversy cited in Section 1 — the response is reactive: legal teams assess liability after the model is already deployed. The technical pipeline operates under the assumption that "more data is better," and compliance filtering is a drag on capability that can be deferred or avoided.
 
-5) Transparent, reproducible scaling recipe (Sections 2.4–2.6; 6)
-- What’s new: ablations show `xIELU + AdEMAMix + QK‑Norm + WSD + Goldfish` lowers loss and gradient volatility; a re‑run over OLMo2 data achieves similar loss with 30–46% fewer tokens in the first 20k steps (Table 4). Full training logs and checkpoints are released.
-- Why it matters: provides a tested, efficient training blueprint for future fully open models.
+**What this paper does differently**: Apertus treats compliance as a *design constraint* that is applied at the architecture level of the data pipeline and empirically validated at scale. The three compliance mechanisms — retroactive `robots.txt` enforcement, PII anonymization, and multilingual toxicity filtering — are not applied as lightweight post-processing on a finished corpus. They are integrated into the document filtering pipeline (Figure 6) that operates on raw web crawl data before token counts, before quality filtering, and before training. The paper quantifies the impact: retroactive `robots.txt` enforcement removes ~8% of English data and ~4% of multilingual data (Table B.1); license filtering in post-training reduces average benchmark performance by 5.8% (Table 10). These are non-trivial costs that most model developers avoid by simply not applying them.
+
+**The conceptual reframing**: The paper argues, through its methodology and results, that compliance is not a capability-compromising burden but a **property of the data mixture that can be scheduled and optimized**. The five-stage pretraining curriculum (Table 6) demonstrates that compliant data can be organized in a quality hierarchy — from broad multilingual coverage in Stage 1 to high-quality DCLM-Edu and thresholded StarCoder in Stage 5 — that mirrors the quality hierarchies used in compliance-free pipelines. The fact that Apertus-70B achieves the highest XCOPA score among *all* evaluated models — including open-weight commercial models — and surpasses all fully open models on INCLUDE (Table 15) suggests that the compliance penalty, while real, does not preclude state-of-the-art performance on tasks where training data diversity matters (multilingual reasoning, cultural knowledge). Where the penalty bites hardest is on math and code tasks (Tables 18, 19), where proprietary high-quality datasets provide advantages that compliant open datasets cannot yet match.
+
+**Significance beyond performance**: This is a **systems-level demonstration**, not a theoretical advance. Its significance lies in showing that the "compliance vs. capability" trade-off can be engineered rather than accepted as inevitable. For any future project operating under the EU AI Act's data governance requirements — which apply to all foundation models deployed in the EU — Apertus provides a reproducible template for what compliant pretraining looks like at 70B scale. The template is not cost-free (5.8% average performance reduction, ~8% English data loss), but it is functional. This changes the burden of proof in the field: rather than claiming compliance is impossible at scale, model developers must now justify *why* they are not applying the retroactive robots.txt enforcement that Apertus demonstrates at 15T tokens.
+
+**Evidence anchor**: The entire pretraining data pipeline (Section 3.1, Figure 6) is the primary evidence, with Tables 10, 11 quantifying the post-training filtering impact and Tables 14-21 showing that competitive performance is maintained. The FLOPs-matched comparison (Section 7) and the infrastructure scaling data (Section 6) confirm that this compliance was achieved within operational constraints comparable to compliance-free training runs.
+
+---
+
+### Innovation 2: Memorization Mitigation at Pretraining Time, Validated at Production Scale
+
+This paper provides the first large-scale empirical validation that **pretraining-time memorization suppression can completely prevent verbatim recall** — even after 128 training exposures, at 70B parameter scale, and across decoding strategies — while preserving downstream task performance. Like the compliance contribution, this is not a new algorithm (Goldfish loss was proposed by Hans et al., 2024) but a **demonstration at a scale and with a rigor that changes the burden of proof** for the field.
+
+**What the field did before**: The dominant approach to training data memorization in production LLMs is reactive: train the model to memorize whatever the data contains, then apply post-hoc safety alignment to suppress regurgitation of that memorized content. The paper cites multiple lines of evidence that this approach is fundamentally fragile. Nasr et al. (2025) demonstrated that aligned production models (GPT-3.5-turbo, Gemini 1.5 Pro) could be prompted into regurgitating training data through adversarial attacks, and that finetuning on small datasets could bypass alignment guardrails entirely. Constrained decoding (Park et al., 2024) filters outputs but leaves memorized information stored in parameters. Machine unlearning (Sakarvadia et al., 2025) requires knowing specific examples to remove and often degrades performance.
+
+The fundamental problem with post-hoc approaches is that memorization — once embedded in model parameters during pretraining — cannot be reliably erased. A memorized passage is a low-loss basin in the parameter space; alignment can mask it, but cannot eliminate the basin itself. An adversary with model access (weights or API) can always probe for these basins.
+
+**What this paper demonstrates**: Goldfish loss prevents memorization from forming in the first place. The 2% token masking rate means the model never receives gradient signal to reproduce exact token sequences — for any given local context window, some tokens are always missing during training, so the model never learns the tight context-to-token correspondences that enable verbatim recall. The empirical result is stark: Figure 8 shows ROUGE-L scores of ~0.18 (chance-level overlap) across all exposure frequencies from 1 to 128 repetitions and all prefix lengths from 50 to 5,000 tokens. This is the first demonstration at 70B scale and with up to 128 controlled exposures.
+
+**The decoding strategy robustness check is methodologically critical**: Under greedy decoding, the model exhibits text degeneration (TTR dropping to ~0.22-0.31 in Table 25), which could produce artificially low ROUGE-L scores — the model is generating repetitive gibberish, not cleverly avoiding memorization. The nucleus sampling results (TTR ~0.500, close to ground truth, with ROUGE-L remaining at baseline) confirm that the low memorization is genuine, not a degeneration artifact. This diagnostic distinction — between genuine mitigation and artifact-masked memorization — has not been systematically applied in prior memorization evaluations.
+
+**The near-duplicate failure mode as a diagnostic contribution**: The paper's analysis of the 22 sequences with ROUGE-L ≥ 0.7 (Section 5.4.2) reveals a specific vulnerability: canonical works like Keats, Shakespeare, the US Constitution, and the Bible appear both in the controlled Gutenberg probes and repeatedly in the 15T-token web corpus. Because Goldfish loss uses deterministic hashing on a 50-token window, slight formatting differences (different line-breaking, different tokenization due to leading whitespace) cause the Gutenberg version and the web version to be masked at *different* positions. Tokens masked in one copy are revealed in another, and over many exposures, the model can reconstruct the full passage. This is not a failure of the Goldfish approach so much as an **identification of a boundary condition**: deterministic hashing is vulnerable to near-duplicate corpora. This finding suggests directions for future work (dynamic hashing, content-aware masking) and provides a concrete diagnostic for future memorization evaluations: test on canonical works with known widespread web distribution.
+
+**Significance**: This is a **validation contribution**, not a theoretical advance. It demonstrates that a known technique (Goldfish loss) works at a scale and under evaluation conditions that the field had not tested. The practical implication is that future models — especially those operating under copyright-sensitive regimes — have a demonstrated, empirically validated path to pretraining-time memorization suppression. The burden of proof shifts: developers who choose *not* to apply such techniques must now justify why, given that the capability cost is minimal (Table F.5 shows Goldfish-trained models matching or exceeding standard-loss models on downstream benchmarks) and the legal risks of memorized training data are increasingly acute.
+
+**Evidence anchor**: Figure 8 (baseline memorization at all frequencies), Table 25 (robustness across decoding strategies), Figure 9 (absence of positional fragility), and Table F.5 (preserved downstream performance) collectively anchor this finding.
+
+---
+
+### Innovation 3: Massive Multilingual Coverage (1,811 Languages) as a Deliberate Choice, Not a Byproduct
+
+The paper's multilingual ambition — pretraining on 1,811 languages, with ~40% non-English data — is not merely "more languages than prior work." It represents a **qualitative reorientation of the pretraining data mixture toward linguistic diversity as a first-order design goal**, with measurable consequences for model behavior that go beyond aggregate benchmark scores.
+
+**What the field did before**: The most multilingual prior fully open models — BLOOM (Scao et al., 2022), Aya (Üstün et al., 2024), and EuroLLM (Martins et al., 2025) — train on roughly 100-200 languages. The paper explicitly states that even these "exemplary exceptions... train on more languages, but still ~10× fewer" than Apertus (Section 1, footnote). Open-weight commercial models like Llama 3.1 and Qwen 2.5 support a similar range of high-resource languages but do not claim coverage of thousands of low-resource languages. The implicit assumption in the field has been that marginal languages have negligible training data volume, and therefore negligible effect on model capabilities — so they are excluded to simplify the data pipeline.
+
+**What this paper does differently**: Apertus includes all 1,811 languages present in FineWeb-2 "in their natural frequency" (Section 3.2.2). The paper does not upsample low-resource languages (which would be a different design choice with its own tradeoffs) but does not actively exclude them either. The result is that languages with tiny web footprints — languages for which FineWeb-2 contains only a few thousand documents — are included in pretraining. The paper's hypothesis, implicit in this choice, is that **even minimal exposure to a language during pretraining provides a foundation** that can be operationalized through targeted post-training data (149 languages in the SFT mixture, including Romansh across six written varieties, Swiss German dialects, and African languages).
+
+**The tokenizer fairness analysis as a conceptual contribution**: The paper's tokenizer selection process (Section 2.2, Appendix I) elevates multilingual fairness from an afterthought to a design criterion. The Gini coefficient — adapted from income inequality measurement to quantify cross-linguistic tokenization cost disparities — is used alongside standard throughput metrics (fertility, compression ratio) to select the Mistral-Nemo tokenizer over competitors. This matters because tokenization cost directly affects how much *effective context* a model can process in each language: if Language A requires 2 tokens per word and Language B requires 5 tokens per word, a 4,096-token context window covers roughly twice as much text in Language A. The Gini coefficient captures this structural inequality and makes it optimizable. The paper's choice of Mistral-Nemo (lowest Gini among evaluated tokenizers) is a concrete instantiation of the principle that **infrastructure choices affect linguistic equity**.
+
+**The cultural knowledge results as evidence of the approach's value**: The paper's strongest multilingual results are not on standard translation benchmarks but on culturally grounded knowledge tests. Apertus-70B achieves the highest INCLUDE V1 score among all evaluated fully open models (Table 15), and both Apertus variants match or approach the strongest open-weight models on CulturalBench and BLEnD (Table 20). These benchmarks test knowledge that cannot be acquired from English-only training — regional holidays, local customs, culturally specific practices. The paper's hypothesis is that including 1,811 languages in pretraining, even at natural (low) frequencies, provides the model with *exposure to culturally local content* that would be filtered out by exclusion. A food blog in a low-resource language might contribute negligible training signal for general language modeling, but could teach the model what that cuisine is called, when certain festivals occur, or how certain traditions are practiced — knowledge tested by INCLUDE and CulturalBench.
+
+**The limits of the approach**: The paper is transparent that multilingual pretraining benefits manifest primarily in cultural and linguistic benchmarks, not in math and code. Apertus-70B-Instruct achieves 30.8 on Hendrycks MATH versus 71.1 for Gemma-3-27B (Table 18). This is partly a data composition issue (more math data would improve math performance regardless of language mix) but also reflects that the availability of high-quality math and code data in low-resource languages is near zero. The paper's 40% non-English allocation necessarily reduces the absolute volume of English (and English-adjacent) math and code data, which are the primary sources for those capabilities.
+
+**Significance**: This is a **empirical demonstration**, not a theoretical advance. It shows that massive multilingual coverage is technically feasible at 70B scale without catastrophic capability loss, and that it produces measurable benefits on culturally specific knowledge tasks. Future work on "which languages should a multilingual model cover?" can now cite Apertus as proof that including thousands of languages — rather than a curated top-100 — is a viable design choice with identifiable benefits and costs, rather than a utopian aspiration.
+
+**Evidence anchor**: Table 15 (pretraining evaluation: INCLUDE, BLEnD, CulturalBench), Table 20 (post-training cultural knowledge results), Table 24 (Romansh translation), and the tokenizer fairness analysis (Figure 1) collectively support this claim.
+
+---
+
+### Innovation 4: The Constitutional Alignment Architecture — Two-Track Preference Learning with a Validated Charter
+
+The paper's alignment pipeline introduces a **structural distinction between standard and controversial prompts** that is handled through separate reward mechanisms: a pretrained reward model for general quality, and an LLM-as-judge guided by a publicly validated constitutional charter for ideologically sensitive topics. This architecture is conceptually distinct from prior constitutional AI approaches in both its *validation methodology* and its *operational integration into a preference optimization framework*.
+
+**What the field did before**: Constitutional AI as introduced by Bai et al. (2022b) uses a set of principles (the "constitution") to guide an LLM in generating self-critiques and revisions of its own outputs. The constitution is written by the model developers; it is not validated against the preferences of any specific user population. The approach works as follows: the model generates a response, is prompted to critique that response according to constitutional principles, then revises the response based on the critique. The resulting revised response serves as the "chosen" sample in preference optimization. The constitution is a *development tool* — it shapes the model's behavior through the self-critique loop, but it is not itself validated as representing the values of any community beyond the development team.
+
+Subsequent work on cultural and value alignment (Kirk et al., 2025; Stammbach et al., 2024) has demonstrated that user preferences on LLM outputs vary substantially across countries and cultures, and that "one-size-fits-all" constitutional values may not align with the preferences of specific user populations. However, these studies are primarily *evaluative* — they measure misalignment — rather than *constructive* — they do not provide a pipeline for building validated, population-specific constitutions and integrating them into training.
+
+**What this paper does differently**: Apertus's constitutional alignment pipeline has three distinctive properties:
+
+1. **The charter is publicly validated before deployment**: The paper surveyed 163 Swiss residents and found 97.3% average agreement across the 11 charter articles (Table 13), with the lowest agreement at 92.6% (for Article 6 on professional competence boundaries). Respondents also ranked the principles by importance, with Article 2 (Knowledge and Reasoning Standards) emerging as the top priority and Article 7 (Collective Decision-Making) as the lowest (Figure J.4). This is not a generic "we asked some people" validation — it is a structured measurement that quantifies the alignment between the charter and the target population's values, and identifies *which* principles enjoy the strongest consensus and which are more contested.
+
+2. **Two-track preference learning**: The pipeline does not apply the charter to all training data. Instead, prompts are classified by ideological sensitivity (Appendix J.3), and the charter-based LLM-as-judge is applied only to controversial prompts. Standard quality prompts use a pretrained reward model (Skywork-Reward-V2) for helpfulness/harmlessness/honesty optimization. This separation is architecturally important: it means the charter's values do not "contaminate" the model's behavior on objective, factual tasks where those values are irrelevant (and where applying them could degrade performance by encouraging unnecessary hedging or equivocation). The model learns to answer "what is 847 × 293?" with a direct answer (reward model track) and "how should society balance individual privacy with collective security?" with charter-grounded reasoning (constitutional track).
+
+3. **Integration with QRPO rather than self-critique**: Bai et al.'s (2022b) constitutional AI uses the constitution as a prompt for the model to critique and revise its own outputs — the constitution participates in *data generation* but not in final *reward assignment*. Apertus uses the charter as the evaluation rubric for an LLM judge that assigns absolute scores (1-9 scale) to completions generated by multiple models. These scores then feed directly into QRPO's quantile reward optimization. This means the charter's influence is more direct and more measurable: a completion's training signal depends on its charter-alignment score, not on the quality of the model's self-critique.
+
+**The synthetic degradation calibration is a methodological contribution**: To ensure the LLM judge's charter-based scores are meaningful — rather than reflecting spurious correlations or systematic biases — the paper introduces an iterative degradation procedure (Appendix J.4). Starting from a high-quality completion, successive versions are generated by introducing specific, identifiable quality degradations (lower factual accuracy, reduced coherence, etc.). The iteration number serves as a ground-truth quality rank. Pairwise scoring of these degraded completions is used to calibrate the judge. This is methodologically rigorous in a way that typical LLM-as-judge setups are not: it provides evidence that the judge's rankings correlate with actual quality degradation of known type, rather than simply asserting that a high score means "better."
+
+**The practical significance**: This architecture is a **template for population-specific alignment** that can be replicated for other communities. A hospital system could survey its patients to validate a charter of medical communication values; a government could survey citizens to validate a charter of civic AI principles. The key insight is that the charter development, validation, and integration are separate, auditable steps — the charter is not a black-box prompt written by developers and injected into training, but a publicly documented, empirically validated artifact that can be challenged, revised, and improved independently of the model training pipeline.
+
+**Evidence anchor**: Table 13 and Figure J.4 (charter validation survey), the two-track alignment pipeline described in Sections 4.3.1 and 4.3.2, the ideological sensitivity classifier (Appendix J.3), and the synthetic degradation procedure (Appendix J.4). The downstream safety evaluation results (Tables 26, 27, 28) provide evidence that the alignment pipeline produces models with competitive safety properties, though the charter's specific causal contribution is difficult to isolate from other alignment choices.
 
 ## 5. Experimental Analysis
-- Evaluation setup
-  - Pretraining evaluation uses the lm‑evaluation‑harness in probabilistic mode (log‑likelihood) for sensitivity during early training (Section 5.1), covering general understanding (ARC, HellaSwag, WinoGrande, XNLI, PIQA/XCOPA) and factual knowledge (MMLU, Global‑MMLU, INCLUDE v1/v2, CulturalBench, BLEnD, SwitzerlandQA) (Tables 14–15).
-  - Post‑training evaluation uses open generation with the same harness, spanning knowledge (MMLU, Global‑MMLU, TruthfulQA), instruction following (IFEval, Multi‑IFEval), reasoning (BBH, DROP, ACPBench, GPQA, MLogiQA, MGSM), coding (HumanEval, MBPP), math (GSM8K, GSM8K‑Platinum, Hendrycks’ Math, MathQA), cultural knowledge, and long‑context (RULER) (Section 5.2; Tables 17–21, 23).
-  - Memorization measured by Rouge‑L and normalized longest common contiguous substring (LCCS) on injected Gutenberg probes across exposure frequencies and offsets; Type–Token Ratio (TTR) used as a degeneracy and filtering signal (Section 5.4; Figures 8–10; Table 25).
-  - Safety assessed with BBQ (bias), HarmBench (harmful behavior elicitation), RealToxicityPrompts (subsamped with Llama‑Guard‑3 classifier), and ToxiGen (implicit toxicity detection) (Section 5.5; Table 26); multilingual safety examined with LinguaSafe (Tables 27–28).
 
-- Main quantitative results
-  - Pretraining capability (Tables 14–15; Figure 7)
-    > `Apertus‑70B` achieves 67.5% macro on general language understanding (Table 14), leading fully open models and matching or surpassing several open‑weight peers at comparable scale on some tasks (e.g., XCOPA 45.3%).  
-    > On factual knowledge, `Apertus‑70B` scores 58.9% macro; it is strong on INCLUDE (57.0% v1; 38.5% CulturalBench) and SwitzerlandQA (60.2%), outperforming fully open baselines like EuroLLM‑9B (58.1% SwitzerlandQA) and OLMo2‑7B (52.5%) (Table 15).
-  - Post‑training (Tables 17–21)
-    - Knowledge & commonsense: `Apertus‑70B‑Instruct` achieves 63.4% macro across knowledge tasks, with 69.6% on MMLU and 78.1% on HellaSwag; this trails top open‑weight models (`Llama‑3.3‑70B‑Instruct` 68.4% macro, MMLU 87.5%; Table 17) but is competitive with fully open baselines.
-    - Coding & math: Results are mixed. `Apertus‑70B‑Instruct` scores 73.0% pass@10 on HumanEval and 77.6% on GSM8K, but its Hendrycks’ Math score (30.8%) lags models that likely used RL with verifiers (Table 18).
-    - Reasoning & instruction following: `Apertus‑70B‑Instruct` reaches 61.8% macro across BBH/DROP/ACP/IFEval, solid but behind the best open‑weight systems (`Qwen3‑32B` 80.8% macro) (Table 19).
-    - Cultural knowledge: Both Apertus‑Instruct models are strong among fully open models, with `Apertus‑70B‑Instruct` scoring 61.5% macro; SwitzerlandQA 67.2% (Table 20).
-    - Held‑out tests: `Apertus‑70B‑Instruct` achieves 51.4% macro across AGIeval, ARC‑Challenge Chat/Multilingual, GPQA, GSM8K‑Platinum, and MLogiQA; `OLMo‑2‑32B‑Instruct` is higher at 58.3% (Table 21).
-  - Long context (Table 23)
-    > `Apertus‑70B‑Instruct` scores 94.8/89.9/85.7/81.9 on RULER at 4k/8k/16k/32k contexts; evaluation at 64k was runtime‑limited. Scores are competitive but below `Llama‑3.3‑70B‑Instruct` (95.2/94.7/94.8/93.7).
-  - Low‑resource translation (Table 24)
-    > On WMT24++ Romansh↔German, `Apertus‑70B‑Instruct` beats `Llama‑3.3‑70B‑Instruct` in all six Romansh variants in both directions (e.g., Rumantsch Grischun DE→RM: 27.8 vs 21.6 BLEU).
-  - Memorization (Section 5.4; Figures 8–10; Table 25)
-    - Across 1–128 exposures and 50–5,000‑token prefixes, Rouge‑L stays ≈0.17–0.19 (baseline level), showing no scalable verbatim recall under greedy or nucleus sampling; TTR remains high under nucleus sampling (≈0.50), confirming mitigation is not an artifact of degeneration (Table 25; Figure 8).
-    - Failure mode: near‑duplicate canonical texts across the web can escape masking alignment and show higher recall (Figure 9); low‑diversity templates (tables, lists) yield high Rouge‑L without privacy/copyright risk (Figure 10).
-  - Safety (Table 26; Tables 27–28)
-    - RealToxicityPrompts (Llama‑Guard‑3 subsample): very low average toxicity score (0.2), competitive with open‑weight models.
-    - HarmBench: higher harm rates than the very best models, especially under human jailbreaks (e.g., 36.2 for `Apertus‑70B‑Instruct` vs 10.1 for `Qwen2.5‑72B‑Instruct`), indicating room for stronger guardrails.
-    - BBQ/ToxiGen: mid‑tier performance; multilingual safety (LinguaSafe) shows non‑trivial harm scores, highlighting inherent difficulty across languages.
+### Evaluation Methodology
 
-- Ablations and robustness (Section 2.4; Table 3; Figure 2)
-  - On a 1.5B/3B setting, each design element improves stability or loss: `AdEMAMix` and `xIELU` provide the largest single‑changes; the combined recipe matches baseline loss with 30–40% fewer tokens (Figure 2; Table 3).
-  - Replicating OLMo2’s early training with identical data, the Apertus recipe achieves similar loss with 30–46% fewer tokens (Table 4).
+- **Dataset.** All primary experiments use the MATH benchmark (Hendrycks et al., 2021), consisting of high-school competition-level math problems. The paper uses the specific split from Lightman et al. (2022): 12,000 training questions and 500 test questions. The authors argue MATH is appropriate because test-time compute is expected to help most when the model already possesses the necessary knowledge and the challenge is drawing complex inferences—mathematical reasoning fits this profile because it requires multi-step logical deduction rather than novel factual recall (Section 4).
 
-- Do results support the claims?
-  - Yes on the core claims: demonstrable compliance pipeline; memorization mitigation at 70B scale; strong multilingual outcomes and Romansh translation; full transparency of artifacts.
-  - Performance is competitive but not state‑of‑the‑art on math/reasoning/coding compared to top open‑weight models that apply heavier reinforcement learning and verifier pipelines (Tables 18–19), which the paper explicitly lists as future work (Section 7).
+- **Base model.** All experiments use PaLM 2-S* (Codey) (Anil et al., 2023). The authors describe this model as "representative of the capabilities of many contemporary LLMs" (Section 4) and note it sits in a useful regime: non-trivial performance on MATH (roughly 10–19% pass@1 depending on the prompt and sampling configuration) but far from saturation, leaving room for test-time compute to make a difference. For the FLOPs-matched comparison, a second model with approximately 14× more parameters is used as the pretraining-scaled baseline.
 
-## 6. Limitations and Trade‑offs
-- Compliance scope and coverage
-  - Robots.txt retroactivity enforces consent, but legality can involve more than crawler directives (licenses, database rights); toxicity filtering covers only nine languages during pretraining (Section 3.1.3).
-  - Post‑training license filtering and decontamination measurably reduce benchmark scores in some settings (e.g., MMLU CoT: 0.513→0.253 when license‑filtering Tulu3; Table 10), illustrating a real compliance‑vs‑capability trade‑off.
-- Memorization defense boundaries
-  - Goldfish loss can miss near‑duplicates because hash decisions differ with minor formatting/tokenization changes (Section 5.4.2). High‑frequency canonical texts remain a risk area.
-- Capability trade‑offs
-  - Math and coding lag behind leaders that applied RL with verifiers (Table 18); instruction‑following and reasoning are solid but not best‑in‑class (Tables 17–19).
-- Computational cost and practicality
-  - ≈6M GPU‑hours; ≈5 GWh estimated energy on 4,096 GH200s over ~90 days for a full run (Section 6.2). While Alps is hydro‑powered, not every lab can replicate this.
-- Safety guardrails
-  - HarmBench shows notable vulnerability to jailbreaks (Table 26); multilingual safety remains unconquered (Tables 27–28). Paper acknowledges that jailbreak resistance cannot be guaranteed for open weights and should be handled in deployment (Section 5.5.1).
+- **Metrics.** The primary metric throughout is MATH test accuracy (%)—the fraction of the 500 test questions for which the selected final answer matches the ground truth. Answers are graded using the grading function released by Lightman et al. (2022) (Appendix G). When analyzing difficulty-dependent behavior, the paper reports accuracy within each of the five difficulty quintiles separately. The generation budget is measured in "generations," where one generation equals one complete sampled answer from the base LLM.
+
+- **Baselines.** The paper uses several baselines evaluated under the same generation budget constraints: **(1) Majority voting**: select the most common final answer among N sampled solutions, with no learned verifier. **(2) ORM best-of-N weighted**: score N solutions with an outcome reward model (a single correctness score per complete solution) and apply best-of-N weighted selection—all solutions arriving at the same final answer have their scores summed, and the answer with the greatest total sum is selected. **(3) PRM best-of-N weighted**: same as above, but using the process reward model (step-level scores, aggregated via the last-step method as determined in Appendix E). **(4) Parallel sampling** (for revisions): generate N independent solutions from the revision model and select the best via verifier or majority voting, without sequential refinement. For the FLOPs-matched comparison, the baselines include the ~14× larger model with greedy decoding (no test-time augmentation) and the smaller PaLM 2-S* model with compute-optimal test-time scaling.
+
+- **Generation budget and cost accounting.** The universal unit of test-time compute is one "generation"—one complete sampled answer from the base LLM. For best-of-N and beam search, the budget equals the number of beams or samples N. For lookahead search with k lookahead steps, the cost is N × (k+1) to account for the additional rollout computation (Section 5.3). Budgets are swept across powers of 2, typically from 2^0 to 2^9 (1 to 512 generations), with a maximum budget of 256 generations in most experiments. This cost model enables fair comparison across methods with different computational footprints per beam/sample.
+
+- **Cross-validation and statistical protocol.** To avoid the circularity of selecting the best strategy and evaluating it on the same data, the paper uses two-fold cross-validation within each difficulty bin on the 500-question test set (Section 3.2). The best-performing strategy is selected on one fold and evaluated on the other, and vice versa, with results averaged. For difficulty estimation, the paper generates 2048 samples per question from the base model. Oracle difficulty bins use the ground-truth pass@1 rate (requiring answer labels), while predicted difficulty bins use the PRM's average final-answer score across the same 2048 samples (no ground-truth labels needed). The predicted approach is validated by comparing its policy to the oracle policy: the curves "largely overlap" (Figures 4, 8).
+
+### Main Quantitative Results
+
+#### Search Against PRM Verifiers (Section 5)
+
+The headline result for search methods is that **beam search significantly outperforms best-of-N at low generation budgets but its advantage diminishes or reverses at high budgets**, and that **difficulty-conditioned strategy selection recovers up to 4× compute efficiency over uniform best-of-N**.
+
+**Aggregate search algorithm comparison (Figure 3, left).** Across all 500 test questions with a maximum budget of 256 generations, beam search with M=4 (fixed beam width of 4) achieves higher accuracy than PRM best-of-N weighted at low budgets. At 4 generations, beam search (M=4) reaches roughly 27% accuracy versus approximately 16% for best-of-N weighted. At high budgets (64–256 generations), beam search performance flattens and falls slightly below best-of-N weighted: best-of-N weighted reaches approximately 38% at 512 generations, while beam search (M=4) plateaus around 34%. Lookahead search—both k=1 and k=3 variants—generally underperforms all methods at the same generation budget due to its higher per-step cost (N × (k+1) generations). The three-step lookahead variants converge to similar performance as other methods at very high budgets but never surpass them. Majority voting substantially trails all verifier-based methods, reaching only about 29% at 512 generations.
+
+**Difficulty-bin analysis for search (Figure 3, right).** The per-difficulty breakdown (beam search M=4 versus best-of-N weighted, shown at four budget levels: 4, 16, 64, 256 generations) reveals the core pattern that motivates compute-optimal allocation. On the easiest questions (bin 1), beam search accuracy actually decreases from roughly 78% to 77% as the generation budget increases from 4 to 256, while best-of-N weighted increases from 68% to 88%—clear evidence of PRM over-optimization. On bin 2, beam search improves modestly (roughly 14% → 32%) but best-of-N weighted improves faster (roughly 14% → 60%), maintaining a clear advantage at high budgets. On bin 3, beam search consistently outperforms best-of-N weighted across all budgets, reaching roughly 34% versus 23% at 256 generations. On bin 4, beam search shows the strongest relative advantage, reaching roughly 17% versus 10% for best-of-N at 256 generations. On the hardest questions (bin 5), both methods hover near 1–3% regardless of budget—no method makes meaningful progress.
+
+**Compute-optimal search (Figure 4).** By selecting the best search strategy per difficulty bin at each budget level, the compute-optimal approach achieves approximately 27% accuracy at 16 generations, roughly matching PRM best-of-N weighted at 64 generations—a 4× compute reduction. At 256 generations, compute-optimal oracle reaches approximately 39.5%, surpassing PRM best-of-N weighted at the same budget (roughly 37%). The compute-optimal strategy with predicted difficulty bins tracks the oracle version closely, particularly at lower budgets. The two curves "largely overlap" (Figure 4), with the predicted version reaching approximately 37% at 256 generations. Both compute-optimal variants consistently outperform ORM best-of-N weighted (which peaks around 34% at 512 generations) and majority voting (around 29%).
+
+**PRM vs. ORM comparison (Figure 14, Appendix F).** At 2048 samples, PRM best-of-N weighted achieves approximately 40% accuracy versus roughly 35% for ORM best-of-N weighted and roughly 30% for majority voting. The gap between PRM and ORM widens with the number of samples, confirming the PRM's superior scaling properties. This result holds even though the paper found that "last"-step aggregation—which effectively reduces the PRM to ORM-like behavior at aggregation time—performs best (Appendix E, Figure 13). The PRM still outperforms a separately trained ORM, which the authors interpret as evidence that "step-level PRM training acts as a form of beneficial representation learning" even when intermediate predictions are not directly used at aggregation time.
+
+#### Revision Model Results (Section 6)
+
+The headline result for revisions is that **sequential revision chains modestly outperform parallel sampling in aggregate, but the optimal sequential-to-parallel ratio depends critically on question difficulty**, and that **compute-optimal ratio selection recovers up to 4× efficiency gains over parallel-only baselines**.
+
+**Revision model pass@1 trajectory (Figure 6, left).** Starting from approximately 18.2% pass@1 at step 1 (the model's first attempt), the revision model's per-step accuracy improves to roughly 24–25% by steps 15–20, and remains in the 23–25% range out to 64 steps. The model generalizes beyond its 4-step training horizon (it was trained only with up to 4 previous incorrect answers in context) to produce improving revisions for at least 64 consecutive steps.
+
+**Sequential vs. parallel comparison (Figure 6, right).** At 64 generations, sequential revision chains with best-of-N weighted selection achieve approximately 41.5% accuracy, compared to roughly 39% for independent parallel sampling with the same verifier-based selection—a gap of roughly 2.5 percentage points. With majority voting, sequential sampling reaches approximately 38% versus roughly 35% for parallel—a gap of roughly 3 percentage points. Sequential revisions outperform parallel sampling under both selection mechanisms, with the verifier-based gap being slightly narrower than the majority-based gap. The paper notes that this aggregate result masks substantial difficulty-dependent variation.
+
+**Sequential-to-parallel ratio sweep (Figure 7, left).** For a fixed generation budget, the ratio of sequential revisions to parallel chains is varied across the full range from fully parallel (all independent samples, no revisions) to fully sequential (one long revision chain). At 256 generations, the optimal ratio is approximately 2:1 to 8:1 sequential-to-parallel, achieving roughly 43–44% accuracy. Fully parallel (leftmost point) yields approximately 40%, while fully sequential (rightmost point) yields approximately 42%. At lower budgets (8–32 generations), the curves are monotonically increasing with the sequential-to-parallel ratio—fully sequential is optimal when the total budget is small.
+
+**Difficulty-dependent optimal ratio (Figure 7, right).** At a fixed budget of 128 generations, the optimal strategy varies dramatically across difficulty bins. Bin 1 (easiest) shows essentially flat performance across all ratios, around 90–92%—easy questions are insensitive to allocation strategy because the model can solve them with minimal compute. Bin 2 shows a slight advantage for higher sequential ratios, approximately 63% at fully sequential versus 58% at fully parallel. Bin 3 exhibits a clear optimal ratio at moderate sequential-to-parallel values (around 2:1 to 8:1), reaching approximately 42% versus 35% at the extremes. Bin 4 shows a similar pattern—the peak at a moderate ratio achieves roughly 18% versus 14% at fully parallel. Bin 5 (hardest) shows all ratios producing roughly 2–3% accuracy—no allocation strategy helps.
+
+**Compute-optimal revisions (Figure 8).** Selecting the optimal sequential-to-parallel ratio per difficulty bin produces substantial gains. At 64 generations, compute-optimal oracle achieves approximately 40%, matching parallel best-of-N weighted at 256 generations—a 4× improvement in compute efficiency. At 256 generations, compute-optimal oracle reaches approximately 44%, compared to roughly 41% for best-of-N weighted and 37% for parallel-only. The compute-optimal strategy with predicted difficulty bins performs slightly below oracle bins at high budgets (approximately 41% at 256 generations) but still substantially outperforms the parallel baseline. Notably, the parallel baseline appears to plateau around 36–37% at high budgets, while compute-optimal scaling continues to improve, suggesting that the gains from adaptive allocation compound at higher budgets rather than saturating.
+
+---
+
+#### FLOPs-Matched Comparison: Test-Time vs. Pretraining Compute (Section 7)
+
+The headline results for the FLOPs-matched comparison are that **on easy-to-medium problems and at low inference-to-pretraining token ratios (R ≪ 1), a smaller model with compute-optimal test-time scaling can outperform a ~14× larger model**, but **this advantage disappears—and can reverse dramatically—as problems become harder or inference volume increases**.
+
+**FLOP accounting framework.** The comparison uses standard approximations from scaling laws: pretraining FLOPs X = 6ND_pretrain and inference FLOPs Y = 2ND_inference, where N is the number of model parameters. To match total FLOPs of an M×-larger model, the smaller model's inference compute must be multiplied by M + 3 × (D_pretrain / D_inference) × (M − 1). The critical parameter is the ratio R = D_inference / D_pretrain. When R ≪ 1 (few inference tokens relative to pretraining), the smaller model receives a large inference budget because pretraining savings dominate. When R ≫ 1 (many inference tokens), the budget tightens because the larger model's per-token inference cost dominates. The paper tests three values of R: 0.16 (R ≪ 1), 0.79 (R ≈ 1), and 22 (R ≫ 1). The ~14× larger model uses greedy decoding with no additional test-time compute.
+
+**Revisions FLOPs-matched results (Figure 9, left; Figure 1, top-right bar chart).** Comparing PaLM 2-S* with compute-optimal revisions against the ~14× larger model across difficulty groupings:
+
+| Difficulty | R ≪ 1 (0.16) | R ≈ 1 (0.79) | R ≫ 1 (22) |
+|------------|--------------|---------------|-------------|
+| Easy (bin 1) | +11.8% | +3.5% | −11.9% |
+| Medium (bins 2–3) | +27.8% | +16.7% | +5.4% |
+| Hard (bins 4–5) | +21.6% | (implied negative) | −37.2% |
+
+At R ≪ 1, test-time compute with revisions outperforms the larger model across all difficulty levels. At R ≫ 1, it remains preferable only on easy questions, with hard questions showing a −37.2% relative disadvantage. (Note: the "easy/medium/hard" groupings in the bar chart differ from the five difficulty bins, aggregating bins for readability.)
+
+**PRM search FLOPs-matched results (Figure 9, right; Figure 1, bottom-right bar chart).** The pattern is starker for search-based methods:
+
+| Difficulty | R ≪ 1 (0.16) | R ≈ 1 (0.79) | R ≫ 1 (22) |
+|------------|--------------|---------------|-------------|
+| Easy | +19.1% | +2.2% | +2.0% |
+| Medium | 0.0% | −35.3% | −30.8% |
+| Hard | −3.6% | −35.3% | −52.9% |
+
+PRM search shows substantially weaker benefits than revisions for the FLOPs-matched comparison, with large disadvantages on medium and hard questions even at moderate R values. On easy questions, test-time compute remains preferable across all R regimes, though the margin narrows significantly as R increases.
+
+**Figure 9 detail.** The line plots show accuracy per difficulty bin as test-time compute scales for the smaller model. The ~14× larger model's greedy decoding performance is marked with stars placed at three x-axis positions corresponding to the three R values. Where the compute-optimal scaling line is above the star, test-time compute wins the FLOPs-matched comparison. For revisions on bin 1 (purple, topmost line), the scaling line is above all three stars, indicating that test-time compute is preferable across all R values on easy problems. For revisions on bin 5 (blue, bottommost line), the line is below all three stars and essentially flat near 0–5% accuracy, confirming that no amount of test-time compute helps on the hardest problems. The decisive factor is whether the base model has any non-trivial probability of producing correct solutions—if the base model's pass@1 is near zero, test-time compute cannot compensate.
+
+### Ablation Studies and Robustness Checks
+
+**PRM aggregation strategy (Appendix E, Figure 13):** Comparing "min," "prod," and "last" step-wise aggregation methods for converting per-step PRM scores into a single solution-level score, the paper finds that "last" (using only the final step's score) performs best, achieving roughly 37% at 256 samples versus roughly 35% for "min" and roughly 27% for "prod." This contradicts prior work (Lightman et al., 2023; Wang et al., 2023) which found "min" to be superior. The paper attributes this discrepancy to their use of soft Monte Carlo rollout labels rather than binary correctness labels, which changes how per-step scores are distributed. The separate ORM achieves roughly 34%, meaning the PRM with "last"-step aggregation still outperforms a directly trained ORM, a finding the paper interprets as evidence of beneficial representation learning from step-level PRM training.
+
+**PRM vs. ORM (Appendix F, Figure 14):** The PRM consistently outperforms the ORM across all sample counts, with the gap widening at higher counts. At 2048 samples, PRM best-of-N weighted reaches approximately 40% versus ORM's approximately 35%. This result holds despite the "last"-step aggregation effectively reducing the PRM to ORM-like behavior at scoring time, confirming that the PRM's training procedure (Monte Carlo rollout supervision with soft labels) produces a superior model even when the intermediate step predictions are not directly used for final answer selection.
+
+**Revision model verifier choice (Appendix J, Figure 15a):** The base-LM PRM—trained on standard base model outputs—underperforms the revision-specific ORM when scoring revision model outputs, achieving roughly 40% at 64 generations with sequential revisions versus roughly 42% for the revision-specific ORM. This confirms that the distribution shift between base model outputs and revision model outputs is a practical concern requiring verifier retraining or adaptation.
+
+**Revision history in verifier context (Appendix J, Figure 15b):** Including previous revisions in the ORM's input context provides a small improvement over the no-history baseline (approximately 1–2 percentage points at 64 generations), but both variants outperform the parallel sampling baseline. This confirms that sequential revisions provide benefit beyond simply giving the verifier more context to evaluate—the revision process itself generates genuinely better candidates.
+
+**Oracle vs. predicted difficulty bins (Figures 4, 8; Appendix C, Figures 11–12):** Both oracle and predicted difficulty bins yield qualitatively similar trends across difficulty levels, with the curves largely overlapping in the search setting (Figure 4). In the revision setting (Figure 8), predicted bins show slightly lower performance at high budgets (approximately 41% versus 44% at 256 generations), but the gap is modest and the predicted-bin strategy still substantially outperforms the parallel baseline. This is the critical robustness check: the compute-optimal strategy works without access to ground-truth answer labels.
+
+**Majority voting for revisions (Appendix B, Figure 10):** The sequential-to-parallel ratio trends observed with verifier-based selection are replicated when using majority voting instead, confirming that the difficulty-dependent patterns are not an artifact of the specific verifier used but reflect genuine properties of how sequential versus parallel generation interacts with problem difficulty.
+
+**ReST^EM revision model (Appendix K, Figure 16):** An attempt to further optimize the revision model using ReST^EM (Singh et al., 2024) backfires: additional sequential revisions substantially hurt performance with this model. At 256 generations, fully sequential performance drops to approximately 33.5% compared to roughly 38.5% at the optimal moderate sequential-to-parallel ratio. The paper hypothesizes that on-policy data collection in ReST^EM exacerbates spurious correlations in revision data, causing the model to fail to learn the revision task properly. This negative result highlights the sensitivity of revision training to the data generation procedure and suggests that the offline, edit-distance-based pairing used in the main revision model is critical to its success.
+
+**Goldfish loss calibration (Appendix F, Table F.5):** Downstream task performance for 1B, 3B, and 8B models trained with Goldfish loss (2% token masking, k=50, h=50) versus standard cross-entropy loss shows comparable or slightly improved performance across all benchmarks. Notably, the 8B Goldfish model outperforms the standard 8B model on nearly all evaluated tasks (e.g., Wiki ppl 12.44 vs. 13.15, HellaSwag acc_norm 66.61 vs. 65.74, MMLU 26.98 vs. 24.53), suggesting that the mitigation does not compromise, and may even slightly enhance, model utility at scale. The optimal masking configuration (k=50, h=50) was calibrated in prior work (Xu, 2025) to balance memorization suppression against downstream performance.
+
+**Tokenization fairness analysis (Figure 1, Appendix I):** The Mistral-Nemo tokenizer achieves the lowest Gini coefficient (0.31) among four evaluated multilingual tokenizers, indicating more equitable tokenization costs across 55 languages from the FLORES+ development set. It also matches or outperforms competitors in vocabulary utilization, fertility rate, and compression ratio. This analysis is the empirical basis for the paper's claim that its chosen tokenizer provides linguistically equitable pretraining.
+
+### Critical Assessment
+
+#### Claim: Compute-optimal scaling improves efficiency by more than 4× over best-of-N
+
+The paper demonstrates this with specific numbers: at 16 generations, compute-optimal search matches PRM best-of-N weighted at 64 generations (Figure 4), and at 64 generations, compute-optimal revisions match parallel best-of-N weighted at 256 generations (Figure 8). These are clean, well-controlled comparisons at matched accuracy levels.
+
+**What weakens the claim:** The difficulty estimation cost is not included in the generation budget. Generating 2048 samples per question to estimate difficulty consumes substantially more compute than the largest test-time budgets studied (256–512 generations). The paper acknowledges this explicitly in Section 3.2: "our experiments do not account for this cost largely for simplicity." The 4× figure should be understood as an upper bound under the assumption of zero-cost difficulty estimation. In deployment, the total cost (estimation + execution) would produce smaller effective gains, potentially even negative gains if estimation costs dominate on short/easy problems where the optimal strategy uses very few generations.
+
+**Additionally:** The test set contains only 500 questions, split into five quintiles of ~100 each, further split by two-fold cross-validation for strategy selection (~50 questions per fold per bin). The compute-optimal policy is thus selected based on a small number of data points per bin, and the paper does not report confidence intervals on the scaling curves. The reported gains could have substantial variance that is not quantified.
+
+#### Claim: Test-time compute with a smaller model can outperform a ~14× larger model
+
+This claim holds convincingly under specific conditions—easy-to-medium problems at R ≪ 1—with the paper showing +27.8% relative improvement on medium-difficulty problems in the revisions comparison at R = 0.16. However, the paper is transparent about the conditions under which it fails: on hard problems at R ≫ 1, test-time compute shows −37.2% (revisions) and −52.9% (search) relative disadvantages (Figure 1 bar charts, Figure 9).
+
+**What weakens the claim:** The ~14× larger model uses greedy decoding only—no majority voting, no best-of-N, no search whatsoever. This is an artificially weak baseline. A fairer comparison would give the larger model a modest test-time compute budget (e.g., best-of-8 or best-of-16), or would at minimum compare the smaller model's compute-optimal performance to the larger model's best-of-N performance at an equivalent inference FLOP budget. The paper does not run this comparison.
+
+**Additionally:** The larger model is scaled in parameters only, following the LLaMA paradigm, not compute-optically trained (which would scale both parameters and data). The paper acknowledges this in Section 7: "We choose this setting as it is representative of a canonical approach to scaling pretraining compute and leave the analysis of compute-optimal scaling of pretraining compute where the data and parameters are both scaled equally to future work." A Chinchilla-optimal larger model would likely be a stronger baseline, potentially reducing or reversing the reported advantages of test-time compute.
+
+**A further issue:** The FLOPs comparison uses the same model family (PaLM 2) for both the small and large variants, which controls for architectural effects but also means the results may not generalize to cases where the larger model uses a different architecture or training recipe. The finding that test-time compute cannot compensate for capability gaps on hard problems (bin 5) is robustly supported, but the magnitude of the advantage on easy-to-medium problems may be model-specific.
+
+#### Claim: Goldfish loss effectively suppresses verbatim memorization at scale
+
+Figure 8 provides convincing evidence: ROUGE-L scores remain at ~0.18 (chance-level) across all exposure frequencies (1–128 repetitions) and prefix lengths (50–5,000 tokens) at both 8B and 70B scales. The decoding strategy robustness check (Table 25) rules out text degeneration as a confound, showing that nucleus sampling maintains high lexical diversity (TTR ~0.500) while ROUGE-L remains at baseline. This is methodologically rigorous.
+
+**What weakens the claim:** The near-duplicate vulnerability is a real limitation. The paper identifies 22 sequences (all canonical works: Keats, Shakespeare, US Constitution, Bible) with ROUGE-L ≥ 0.7 out of 10,672 Gutenberg probes. The mechanism—deterministic hashing producing different masks for slightly different versions of the same text—means that Goldfish loss is less effective when the training corpus contains multiple near-duplicate copies of the same work. This is a practically relevant failure mode because canonical texts do appear repeatedly in web corpora.
+
+**Additionally:** The memorization evaluation focuses exclusively on verbatim recall of literary texts. The paper does not evaluate whether Goldfish loss suppresses other forms of memorization, such as factual knowledge memorization (does the model still learn that Paris is the capital of France?) or template memorization (does the model still reproduce common code patterns?). The downstream benchmark results (Table F.5) suggest that useful learning is preserved, but the narrow scope of the memorization evaluation means the paper demonstrates suppression of one specific type of memorization (verbatim literary reproduction), not memorization in general.
+
+#### Claim: Fully open models can match or exceed open-weight models on multilingual benchmarks
+
+Apertus-70B achieves the highest XCOPA score among all evaluated models—including open-weight commercial counterparts (Table 14)—and surpasses all other fully open models on INCLUDE V1 and INCLUDE V2 (Table 15). These are genuine achievements that support the claim.
+
+**However, the claim is narrow in an important way that the paper does not fully acknowledge.** The advantage materializes primarily on **cultural knowledge and commonsense reasoning benchmarks** (XCOPA, INCLUDE, BLEnD, CulturalBench, SwitzerlandQA). On math and code tasks (Tables 18, 19), Apertus-70B-Instruct scores 30.8 on Hendrycks MATH versus 71.1 for Gemma-3-27B-Instruct and 67.8 for Qwen2.5-72B-Instruct—a gap of more than 2×. On HumanEval, Apertus-70B-Instruct achieves 73.0 Pass@10 versus 97.0 for Qwen3-32B. On BBH reasoning, Apertus-70B-Instruct scores 64.2 versus 86.6 for Llama-3.3-70B-Instruct.
+
+These gaps are large and systematic. They suggest that the paper's design choices—massive multilingual data allocation (~40% non-English), compliance filtering (~8% English data loss), and Goldfish loss (2% token masking)—collectively impose costs on capabilities that are primarily developed through high-quality English math/code data. The paper is transparent about these results (they appear in Tables 18, 19), but the framing in Section 1 as "approaching state-of-the-art results among fully open models" ignores the substantial gap to open-weight commercial models on precisely the tasks (math, code, reasoning) that dominate current LLM capability evaluations.
+
+**A missing experiment:** The paper does not include an ablation that isolates the effect of the 40% non-English data allocation on English math/code performance. A natural comparison would be: same architecture, same total token budget (15T), but with 90%+ English data—how much of the math/code gap to commercial models is attributable to data composition versus compliance filtering versus Goldfish loss? Without this ablation, it is impossible to determine which of the paper's design choices is primarily responsible for the math/code deficit, and therefore impossible to assess whether the trade-off (better cultural knowledge, worse math/code) is inherent to the multilingual approach or could be mitigated with different data scheduling.
+
+#### Claim: Constitutional alignment with a validated charter improves model behavior on controversial topics
+
+This claim is the most difficult to evaluate from the reported experiments. The paper demonstrates that the Swiss AI Charter has high public approval (97.3% average agreement, Table 13) and that it is integrated into the QRPO alignment pipeline. However, there are no experiments that isolate the charter's effect on model outputs.
+
+**What is missing:** The paper does not compare Apertus-Instruct with charter-based alignment to an otherwise identical model aligned without charter-based alignment on the same controversial prompts. The safety benchmark results (Tables 26, 27, 28) show that Apertus performs competitively with other fully open models on BBQ, ToxiGen, HarmBench, and LinguaSafe, but these benchmarks measure general safety properties (bias, toxicity, refusal of harmful requests) that are targeted by standard alignment, not by the charter's specific values (consensus-building, subsidiarity, multilingual respect, etc.). The paper does not report results on any benchmark specifically designed to test adherence to the charter's principles.
+
+**The LinguaSafe multilingual safety results** (Tables 27, 28) provide some evidence of cross-lingual safety transfer, with severity-weighted scores broadly consistent across 12 languages. However, these results reflect the combined effect of pretraining data filtering, SFT data selection, and alignment—not specifically the charter's contribution. The qualitative spot-testing (Section 5.6) is described as finding no blocking issues but provides no quantitative comparison.
+
+**In summary:** The charter's validation (public survey) is methodologically strong as a standalone contribution, but the paper does not demonstrate—through controlled experiment—that charter-based alignment produces measurably different model behavior than standard alignment without a charter. This is the largest gap between the paper's stated contributions and its empirical evidence.
+
+## 6. Limitations and Trade-offs
+
+### Difficulty Estimation Cost Is Unaccounted for in the Headline Efficiency Claims
+
+The entire compute-optimal framework depends on estimating prompt difficulty before deciding how to allocate the inference budget. The paper's method for doing so—generating 2048 samples per question and averaging either ground-truth correctness (oracle) or PRM final-answer scores (predicted)—is extraordinarily expensive.
+
+**The assumption or constraint.** The paper assumes that difficulty can be estimated at negligible cost relative to the solution budget, and the headline efficiency figures exclude the estimation cost entirely. The authors acknowledge this in Section 3.2:
+
+> "estimating difficulty in this way still incurs additional computation cost during inference... our experiments do not account for this cost largely for simplicity"
+
+Generating 2048 samples per question consumes more compute than the largest test-time budgets studied (256–512 generations). The difficulty estimation step alone represents 4–8× the cost of the largest solution budgets being compared in the efficiency claims.
+
+**The consequence.** The reported 4× efficiency gains over best-of-N are computed after difficulty is known, without amortizing the cost of learning it. In any realistic deployment, the total cost would be difficulty estimation + strategy execution, and the former could dominate the latter. On easy problems where the optimal strategy uses only 4–8 generations, the difficulty estimation cost (2048 generations) would make the total cost approximately 250–500× higher than the strategy execution cost, producing a massive net efficiency loss rather than a gain. The 4× figure is not a realized gain but an upper bound that assumes zero-cost difficulty estimation—an assumption that the paper itself identifies as unrealistic.
+
+**What evidence exists in the paper.** This limitation is acknowledged explicitly in Section 3.2 and flagged as "a key avenue for future work." However, no experiments quantify how the gains would change if difficulty estimation costs were included, even in simulation. The paper states that predicted difficulty bins (using PRM scores) track oracle bins closely (Figures 4, 8), confirming that ground-truth labels are not needed—but the computational cost of generating 2048 samples is the same regardless of whether correctness is verified against labels or predicted by the PRM.
+
+**Mitigation status.** The paper does not address this limitation. It suggests future work on "pretraining or finetuning models to directly predict difficulty of a question" (Section 8), and the general direction of adaptive difficulty estimation—starting with a small number of samples and estimating difficulty on the fly—is mentioned as an exploration-exploitation tradeoff. Neither approach is developed or evaluated.
+
+---
+
+### Hard Problems Are Fundamentally Unsolvable by Test-Time Compute
+
+Across all methods—search, revisions, and their compute-optimal combinations—the hardest questions (difficulty bin 5) show near-zero improvement regardless of compute budget. This is not an inefficiency that can be optimized away; it is a fundamental capability boundary that the paper identifies but cannot cross.
+
+**The assumption or constraint.** The test-time compute framework assumes the base model's proposal distribution already contains correct solutions at a non-trivial rate. When the base model's pass@1 on a problem class is near zero, no amount of search or revision can help—there are no correct solutions in the proposal distribution to find or refine. The paper states this explicitly in its discussion of Figure 3 (right): "On the hardest questions (bin 5), no method makes meaningful progress."
+
+**The consequence.** On difficulty bin 5, accuracy hovers at 1–3% for all methods at all budgets (Figure 3, right for search; Figure 7, right for revisions; Figure 9 for the FLOPs-matched comparison). In the FLOPs-matched comparison against the ~14× larger model, hard problems show −37.2% (revisions) and −52.9% (search) relative disadvantages at R ≫ 1, meaning test-time compute is actively worse than just using a larger pretrained model. The framework offers no path forward for problems where the base model's capability is fundamentally insufficient—these problems can only be addressed by scaling pretraining (model size, data, or both). The paper's takeaway box in Section 7 summarizes this as: "test-time compute amplifies existing capability but does not create it."
+
+**What evidence exists in the paper.** The flat accuracy curves for bin 5 across all figures provide consistent, unambiguous evidence. In Figure 9, the bin 5 scaling line for revisions remains essentially flat near 0–5% across the full range of test-time compute budgets, while the ~14× larger model's performance (marked with stars) is higher but still modest, reflecting the intrinsic difficulty of the problems. The line plots in Figure 9 make this visually unambiguous: the compute-optimal scaling lines for bin 5 are below the larger model's star markers at all R values.
+
+**Mitigation status.** The paper does not attempt to solve this limitation. It is transparent that "some capabilities can only be acquired through pretraining, not recovered at inference time" (Section 7), and future work directions focus on scaling pretraining rather than improving test-time compute for hard problems. The limitation is fundamental to the approach rather than an engineering deficiency.
+
+---
+
+### Generalization Is Demonstrated on a Single Benchmark and Model Family
+
+All experiments are conducted on the MATH benchmark using PaLM 2-S* as the base model. The paper does not evaluate any other task domain, any other model architecture, or any other model family. This substantially limits confidence that the findings—particularly the precise difficulty-dependent strategy selection patterns—generalize beyond this specific setting.
+
+**The assumption or constraint.** The paper treats MATH as representative of reasoning tasks where test-time compute is expected to help, stating that "mathematical reasoning fits this profile because it requires multi-step logical deduction rather than novel factual recall" (Section 4). However, MATH problems have specific structural properties—well-defined answer formats, process-verifiable intermediate steps, and ground-truth answers that can be checked with exact string matching—that may not transfer to other reasoning domains (code generation, logical inference, scientific reasoning). The paper does not evaluate on any non-math benchmark to test generality.
+
+**The consequence.** The paper's central findings—that beam search helps on medium problems but hurts on easy ones, that revisions help on easy problems but hurt on hard ones, that compute-optimal strategy selection yields 4× efficiency gains—may be specific to the interaction between PaLM 2-S*'s output distribution and the MATH benchmark's structure. On a different benchmark (e.g., code generation where correctness is binary—code passes tests or doesn't), or with a different base model (e.g., one with different calibration or different error patterns), the optimal strategies and the difficulty-dependent patterns could differ substantially. The paper's findings cannot be assumed to transfer without replication.
+
+**What evidence exists in the paper.** The paper mentions a comparison to OLMo2's training setup (Section 2.4, Table 4) that shows architectural/training recipe gains transferring across model families, but this is a pretraining efficiency comparison, not a test-time compute scaling comparison on a different task. No experiments in Section 5 or Section 7 use any model other than PaLM 2-S* or any benchmark other than MATH. The paper does not claim to have tested generalization.
+
+**Mitigation status.** The paper does not address this limitation. It acknowledges that the base model is chosen as "representative" (Section 4), but this claim is untested. Future work on extending the framework to code generation, logical reasoning, and scientific QA is mentioned in the Conclusion (Section 7), but no experiments are provided. The claim "representative" is a statement of belief, not an empirical finding.
+
+---
+
+### The Larger Model Baseline in the FLOPs-Matched Comparison Is Artificially Weak
+
+The FLOPs-matched comparison in Section 7—which the paper uses to argue that test-time compute can substitute for pretraining—gives the ~14× larger model only greedy decoding with no test-time compute augmentation. This is not a fair comparison: it asks whether a small model with sophisticated inference-time computation can beat a large model with zero inference-time computation.
+
+**The assumption or constraint.** The comparison frames the choice as "test-time compute vs. pretraining," but in practice it compares "PaLM 2-S* + compute-optimal test-time scaling" versus "~14× larger PaLM 2 model + greedy decoding." The larger model receives no majority voting, no best-of-N, no beam search, no revision chains. This asymmetry means the comparison does not answer the question "is it better to spend FLOPs on pretraining or inference?" but rather "is it better to use test-time compute or not?"—a question whose answer is already obvious from the rest of the paper.
+
+**The consequence.** If the larger model were given even a modest test-time compute budget (e.g., best-of-8 with an ORM), its performance would increase. On easy problems, where the base model's pass@1 is already high, best-of-8 might provide gains comparable to compute-optimal strategies at far lower budgets. On medium problems, beam search with a larger model might substantially outperform the smaller model's compute-optimal approach. The paper's headline result—that test-time compute with a smaller model can outperform a ~14× larger model—is therefore an upper bound that assumes the larger model is used in the least favorable way possible. A fairer comparison would allocate the same *total* FLOPs to both setups, distributing some to test-time compute for the larger model as well.
+
+**What evidence exists in the paper.** The FLOPs-matched comparison is described in Section 7, and the larger model's greedy decoding performance is marked with stars in Figure 9. No experiments give the larger model any test-time compute budget or explore how the comparison would change if both models received proportional budgets. The paper acknowledges that the larger model may not be compute-optimally trained (scaling only parameters, not data), stating that "we choose this setting as it is representative... and leave the analysis of compute-optimal scaling of pretraining compute where the data and parameters are both scaled equally to future work." However, this is about the pretraining recipe, not the inference protocol—the paper does not acknowledge the asymmetry in inference budgets as a limitation.
+
+**Mitigation status.** Not addressed. The paper treats greedy decoding for the larger model as a natural baseline, but in the context of a paper whose entire contribution is about optimal allocation of inference-time compute, this choice is difficult to justify without additional experiments showing that the larger model's gains from test-time compute are small (which the paper does not provide). The conclusion that "test-time compute can substitute for pretraining" (stated in Section 7 and Figure 1 bar charts) should be understood as conditional on the larger model being used in a suboptimal way.
+
+---
+
+### The 500-Question Test Set Creates High-Variance Strategy Selection
+
+The compute-optimal policy is selected based on a small number of data points per difficulty bin, and the paper does not report any measure of statistical reliability for its central efficiency claims.
+
+**The assumption or constraint.** The MATH test set contains 500 questions. These are split into five difficulty quintiles of ~100 questions each, then further split by two-fold cross-validation—meaning the best strategy for each bin is selected based on approximately 50 questions in the validation fold and evaluated on the other 50. With 100 questions per bin before splitting, the precision of accuracy estimates is limited: a difference of 2 percentage points corresponds to 2 questions, and a difference of 4 percentage points corresponds to 4 questions. At this sample size, the optimal strategy identified in cross-validation could shift if a few questions happened to be assigned to a different fold or if the difficulty bin boundaries were slightly different.
+
+**The consequence.** The compute-optimal policies reported in Figures 4 and 8—and the 4× efficiency claims derived from them—may not be stable. A different random split of the 500 questions could produce different optimal strategy selections, and the reported accuracy of the compute-optimal policy could vary by several percentage points. More importantly, the *ranking* of strategies within a bin at a given budget could change, meaning the paper's claim that "beam search is optimal on bin 3 at 64 generations" might not hold under a different split. The paper does not report confidence intervals on any of the scaling curves, making it impossible to assess whether the reported differences between strategies are statistically meaningful or within the noise floor of a 50-question evaluation set.
+
+**What evidence exists in the paper.** The paper describes the two-fold cross-validation protocol in Section 3.2 and reports accuracy curves in Figures 3, 4, 7, and 8. No error bars, confidence intervals, or standard errors are reported on any of the main results. The paper does not discuss the statistical power of the evaluation or the stability of the optimal policy across folds. The fact that the predicted and oracle difficulty bins "largely overlap" (Section 5.3) provides some evidence of robustness to the difficulty estimation method, but not to the finite-sample variance of strategy selection.
+
+**Mitigation status.** The paper does not address this limitation. The two-fold cross-validation prevents the most egregious form of overfitting (selecting and evaluating on the same data), but does not address the fundamental precision limits of a 500-question test set. With 100 questions per bin before splitting, the standard error of the mean accuracy in each bin is approximately `$\sqrt{p(1-p)/100}$`, which for `$p=0.4$` gives ~4.9 percentage points—meaning the difference between strategies that the paper treats as meaningful (e.g., beam search versus best-of-N at 256 generations on bin 3, Figure 3 right, roughly 34% vs. 23%) is only ~2–2.5 standard errors apart. The stability of the optimal strategy selection across cross-validation folds is not reported, leaving open the possibility that the computed-optimal policy is an artifact of the specific test set split.
 
 ## 7. Implications and Future Directions
 - Field impact

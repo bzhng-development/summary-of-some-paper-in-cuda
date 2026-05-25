@@ -9,148 +9,892 @@ This paper pioneers a principled, predictive framework for scaling reinforcement
 ---
 
 ## 1. Executive Summary
-This paper introduces a predictive framework for scaling reinforcement learning (RL) compute for large language models (LLMs) and distills a practical training recipe, called `ScaleRL`, that follows those predictions. It shows that RL performance versus compute follows a stable sigmoidal curve (Equation (1)), enabling accurate extrapolation from small runs to very large ones, and validates this with >400,000 GPU-hours of experiments, including a single run scaled to 100,000 GPU-hours (Figure 1).
+
+This paper presents the first large-scale systematic study of how to scale reinforcement learning compute for LLMs, conducting over 400,000 GPU-hours of experiments on an 8B dense model and a 17B×16 MoE architecture using the Polaris-53K math reasoning dataset. The core contribution is a **predictive framework** that fits sigmoidal compute–performance curves (capturing asymptotic reward `A`, scaling exponent `B`, and midpoint `C_mid`) to enable extrapolation from smaller-scale RL runs to large compute budgets, along with a best-practice recipe called **ScaleRL** that combines asynchronous pipeline training, truncated importance sampling loss (CISPO), FP32 precision at logits, prompt-level loss aggregation, batch-level advantage normalization, zero-variance filtering, and no-positive-resampling curriculum. The paper demonstrates that ScaleRL achieves predictable scaling up to 100,000 GPU-hours — extrapolated curves from 50K GPU-hours closely match final performance — and establishes a new state-of-the-art asymptotic pass rate (`A = 0.61`) versus prevalent recipes like GRPO and DAPO. A central empirical finding across all design axes is that most algorithmic choices — loss aggregation, advantage normalization, curriculum, and off-policy configuration — primarily modulate compute efficiency (`B`) without materially shifting the asymptotic performance ceiling, establishing that the field's key bottleneck is identifying the few decisions (loss type, precision, batch size) that genuinely raise the ceiling rather than merely accelerating convergence.
 
 ## 2. Context and Motivation
-- Problem addressed
-  - RL has become a key stage for unlocking reasoning and agentic abilities in LLMs, but there is no principled, predictive way to scale RL compute the way pre-training now enjoys through scaling laws (Section 1).
-  - Practitioners face many choices—loss functions, off-policy setups, normalization, length control—but lack a way to predict which choices will still work as compute increases (Section 1).
-- Why this matters
-  - Real systems already allocate massive budgets to RL (e.g., 100k H800 GPU-hours in DeepSeek-R1-Zero; Section 1). Misallocating compute or choosing non-scalable recipes wastes resources and hampers reproducibility.
-  - A predictive scaling methodology would let both industry and academia evaluate candidates at small scale and forecast their performance at large compute, democratizing progress (Section 1).
-- Prior approaches and limitations
-  - Pre-training has converged on predictable power-law scaling (Kaplan et al., 2020; Hoffmann et al., 2022), but RL lacks analogous, validated laws (Section 1).
-  - Reports like GRPO, DAPO, Magistral, and others document recipe details but not compute–performance predictability or how choices affect asymptotic performance versus efficiency (Sections 1, 6 and Appendix A.1/A.16).
-- Positioning
-  - The work proposes a concrete compute–performance model for RL (a sigmoid), stress-tests many recipe choices under a unified setup, and shows which choices raise the ceiling (“asymptote”) and which mainly change efficiency. It then composes those choices into `ScaleRL` and validates its predictability to 100k GPU-hours (Figures 1–2, Sections 2–5).
+
+### The Core Problem: RL for LLMs Has Scaled Massively, But Our Understanding of How to Scale It Has Not
+
+The paper addresses a fundamental asymmetry in the current LLM development paradigm: **pretraining has well-established scaling laws, but reinforcement learning — which unlocks many of today's most important LLM capabilities — operates without any predictive framework for how performance scales with compute.** This is not a minor theoretical gap; it has direct practical consequences for how research is conducted, how resources are allocated, and who gets to participate in advancing the field.
+
+To grasp the scale of this asymmetry, consider the numbers the paper cites (Section 1): DeepSeek-R1-Zero used approximately 100,000 H800 GPU-hours for RL training, representing roughly 3.75% of its pretraining compute. Frontier models have seen more than a **10× increase** in RL compute from o1 to o3, and a similar leap from Grok-3 to Grok-4. These are not marginal increases — they represent compute budgets that rival or exceed the entire pretraining budgets of models from just a few years ago. Yet unlike pretraining, where researchers can use scaling laws (Kaplan et al., 2020; Hoffmann et al., 2022) to answer questions like "If I double my pretraining budget, should I make the model bigger or train on more data?", the RL practitioner faces an overwhelming combinatorial space of design choices — loss type, clipping thresholds, advantage normalization strategy, off-policy configuration, precision settings, curriculum design — with no principled way to predict how any of these choices will behave when compute is scaled up.
+
+### Why This Matters: The Practical Consequences of a Missing Framework
+
+The absence of an RL scaling methodology creates several concrete problems that the paper identifies:
+
+**Progress is tied to large-scale experimentation.** When there is no reliable way to identify promising candidates *a priori*, the only way to know if an algorithmic improvement matters at scale is to run it at scale. This creates a self-reinforcing cycle: only organizations with massive compute budgets can credibly evaluate new RL methods, which means the research process itself is gated by access to resources. The paper explicitly states that this "stifles research progress" and "sidelines most of the academic community" (Section 1). A predictive framework that allows extrapolation from smaller-scale runs would democratize RL research by enabling researchers to evaluate the scalability of their methods without needing a 100,000 GPU-hour budget.
+
+**The field lacks a shared vocabulary for comparing methods.** When different papers report different RL recipes — DeepSeek using GRPO with certain clipping parameters, DAPO using asymmetric clipping and dynamic sampling, Magistral using PipelineRL, MiniMax using CISPO — the comparisons are typically point-in-time: "our method beats baseline X at a fixed compute budget." But this tells you nothing about whether baseline X would catch up or surpass your method at larger scale. The paper introduces a vocabulary of *asymptotic performance* (`A`) and *compute efficiency* (`B`, `C_mid`) that enables a richer comparison: we can ask not just "who is winning now?" but "who will be winning when we have 10× more compute?" This distinction matters enormously in practice, because the method that looks best at a small budget may be the one with high efficiency but a low ceiling — it plateaus early — while a slower-starting method with a higher asymptote ultimately dominates.
+
+**Resource allocation decisions lack principled guidance.** Organizations deciding how to split their RL compute budget — how many generations per prompt, what batch size, what context length, whether to train on math alone or math+code jointly — currently rely on intuition and ad-hoc experimentation. The paper's scaling framework provides a scientific basis for these decisions: by fitting sigmoidal curves to smaller-scale experiments, one can forecast which scaling knob (context length, batch size, model size) will deliver the most reliable performance gain at the target budget.
+
+### Prior Approaches and Where They Fall Short
+
+The paper positions itself against a landscape that is rich in *methods* but poor in *methodology*. Let's examine the key prior work and identify the specific gaps.
+
+**GRPO (Shao et al., 2024; Guo et al., 2025).** Group Relative Policy Optimization became the de facto standard for RL with verifiable rewards after DeepSeek-R1. GRPO is critic-free — it replaces a learned value baseline with group-normalized advantages (the mean and standard deviation of rewards within a batch of completions from the same prompt) — which reduces computational cost and simplifies training. The limitation of GRPO, as the paper and prior work (Yu et al., 2025; Yue et al., 2025) have documented, is not just that it can underperform, but that its behavior at scale is poorly characterized. The paper's Figure 2 shows that a GRPO-based recipe becomes unstable after approximately 6,000 GPU-hours on an 8B model, with performance degradation linked to rising truncation rates (Appendix A.15). More importantly, **nobody had shown whether GRPO's asymptotic performance ceiling is inherently lower than alternatives** — the paper addresses exactly this question by fitting scaling curves that reveal `A = 0.61` for ScaleRL versus lower ceilings for GRPO-based approaches.
+
+**DAPO (Yu et al., 2025).** DAPO introduced asymmetric clipping (separate thresholds for upward and downward updates), prompt-level loss aggregation, and dynamic sampling (dropping prompts with zero variance and resampling). These were genuine improvements over GRPO, but DAPO's evaluation, like GRPO's, was fundamentally a *point evaluation*: the authors showed DAPO > GRPO at a fixed compute budget. The paper reveals a more nuanced picture by fitting scaling curves (Figure 2): while DAPO's asymptotic performance is higher than GRPO's, it is still below ScaleRL's. Moreover, the paper demonstrates that DAPO's clipping hyperparameter `ε_max` is critically sensitive — changing it from 0.20 to 0.28 fundamentally alters the asymptotic performance `A` (Appendix A.17.1, Figure 19a). This hyperparameter sensitivity is invisible in point evaluations but becomes glaring when you fit scaling curves. A method that works well at one budget with one hyperparameter setting may perform entirely differently with a different hyperparameter setting at a larger budget — and without a predictive framework, you would never know until you ran the experiment.
+
+**VAPO (Yue et al., 2025) and other value-augmented approaches.** VAPO combines value pre-training, decoupled Generalized Advantage Estimation, and length-adaptive GAE to achieve strong stability. These are valuable algorithmic contributions, but they are "model-specific training reports" — recipes that work, not frameworks for understanding *why* they work or *how* their components contribute to scaling behavior. The paper distinguishes itself from this entire class of work by making the *scaling methodology* the primary contribution, not any single algorithmic novelty.
+
+**Magistral (Rastogi et al., 2025), MiniMax-M1 (MiniMax et al., 2025), and other technical reports.** These are comprehensive training reports that detail various recipes, but as the paper notes, they "don't share extensive experiments on why their design choices are better than the baselines." They provide *what* they did, not *how to think about* what they did. The paper's Figure 2 directly fits scaling curves to these recipes and shows that:
+- Magistral and MiniMax both achieve better asymptotic performance than GRPO-based recipes
+- ScaleRL surpasses all of them
+- The extrapolated curves for "stable" recipes (ScaleRL, MiniMax) closely match extended training, while less stable recipes deviate — validating the framework's predictive power
+
+**ProRL (Liu et al., 2025a).** ProRL demonstrated that prolonged RL fine-tuning (~2000 optimization steps, 64 batch size) for 16K GPU-hours on a 1.5B model can uncover novel solution strategies rivaling larger models' performance. This is valuable evidence that RL can substitute for model scale, but ProRL's contributions are "specific heuristics for stability (KL-regularization, policy resetting, entropy controls, etc.)" rather than a scaling methodology. The paper's experiments operate at a much larger scale — 6× the compute budget of ProRL — and on an 8B model rather than 1.5B, making the scaling findings more directly relevant to frontier-model training.
+
+**LitePPO (Liu et al., 2025c).** LitePPO offers a "minimalist combination" that outperforms GRPO and DAPO on smaller-scale models, providing valuable comparative empirical findings. But the focus is on identifying which components matter for absolute performance at a given scale, not on characterizing how performance scales with compute. The paper's framework subsumes this — it shows that many components LitePPO might treat as interchangeable actually have qualitatively different effects on `A` versus `B`, and that conflating these leads to suboptimal decisions at larger scales.
+
+### A Deeper Gap: Conflating "Better Now" with "Better at Scale"
+
+The paper identifies a cognitive trap that pervades the RL literature: **the methods that appear superior at small compute budgets are often worse when extrapolated to large-compute regimes.** This is the "bitter lesson" that the paper explicitly embraces (Section 1, Principle 2). Figure 2 demonstrates this concretely: some recipes show promising early gains but plateau at lower ceilings, while ScaleRL may appear comparable or even slightly worse at very low budgets but pulls ahead decisively as compute scales. This phenomenon is well-documented in pretraining (larger models can be less "sample efficient" in terms of loss per FLOP at small budgets but dominate at large budgets), but the RL literature had no framework for recognizing or quantifying it. The sigmoidal fit — with its decomposition into `A` (where you end up) and `B`, `C_mid` (how fast you get there) — provides exactly this framework.
+
+### The Specific Gap: No Predictive Science for RL Compute Scaling
+
+The paper's central diagnosis is that the RL literature is characterized by **"isolated studies on novel algorithms" and "model-specific training reports" that provide "ad-hoc solutions tailored to specific contexts"** (Section 1). What is missing is:
+
+1. **A predictive compute–performance model.** Pretraining has power laws (Kaplan et al., 2020; Hoffmann et al., 2022) that enable researchers to forecast model performance at larger scales from smaller-scale runs. RL has nothing comparable. The paper fills this gap by introducing sigmoidal scaling curves (`R_C = R_0 + (A - R_0) / (1 + (C_mid / C)^B)`) as a robust fit for bounded metrics like pass rate, and validating that extrapolated curves match extended training across multiple settings.
+
+2. **A principled methodology for comparing algorithms.** When two RL methods are compared at a single compute budget — which is how virtually all prior work operates — the comparison can be deeply misleading. A method with high `B` (fast convergence) but low `A` (low ceiling) will look superior at small budgets, while a method with lower `B` but higher `A` will ultimately dominate. The paper provides the conceptual machinery (`A`, `B`, `C_mid`) and the experimental protocol (fit on early points, extrapolate, verify with extended training) to make these distinctions.
+
+3. **A decomposition of design choices into "ceiling-raisers" versus "efficiency-modulators."** The paper's most counterintuitive finding — and the one that most thoroughly undermines the existing literature's methodology — is that **most design choices that researchers obsess over primarily affect efficiency (`B`), not the asymptotic ceiling (`A`).** Loss aggregation, advantage normalization, curriculum, and off-policy configuration shift how fast you reach the ceiling, but the ceiling itself is determined by a much smaller set of decisions: loss type (CISPO vs. DAPO), numerical precision (FP32 at logits), and batch size. This reorients the research agenda: if you are trying to push the frontier, you should spend your research effort on the few knobs that actually raise the ceiling, not on the many knobs that merely get you to the ceiling faster.
+
+### How This Paper Positions Itself
+
+The paper positions itself not as an algorithmic contribution but as a **methodological contribution** — it provides the infrastructure for *science* in RL scaling, analogous to what scaling laws provided for pretraining. The authors are explicit about this framing (Section 1):
+
+> "This work lays the groundwork for science of RL scaling by borrowing from the well-established concept of scaling laws from pre-training."
+
+The word "science" is carefully chosen. Science requires predictive theories, falsifiable hypotheses, and reproducible methodology. By introducing sigmoidal scaling curves, a vocabulary for asymptotic versus efficiency effects, and a protocol for validating extrapolations (fit on early points, predict later points, verify by running), the paper provides all three.
+
+The paper also positions itself as a response to the field's "bitter lesson" — that methods which work at small scale often do not transfer to large scale. Figure 2 is the key exhibit: methods that looked competitive in small-scale comparisons (GRPO, DAPO) are revealed to have lower ceilings when scaling curves are fitted and extrapolated. ScaleRL, by contrast, achieves both a higher asymptote and predictable scaling — not because it invents fundamentally new components, but because it systematically selects the options that raise `A` or improve `B` based on scaling-aware criteria rather than point evaluations.
+
+A critical distinction the paper makes — one that is easy to miss but is central to understanding its contribution — is between **studying the in-distribution validation performance** and **studying downstream benchmark performance.** Prior work (ProRL, LitePPO, DAPO) primarily evaluates on downstream benchmarks like AIME. But downstream benchmarks are inherently limited and noisy for studying scaling behavior — they have finite size, are subject to contamination, and may not reflect the training distribution over which scaling laws are expected to emerge. The paper, following pre-training practice (Hoffmann et al., 2022; Porian et al., 2025), studies scaling on an in-distribution held-out validation set (1,000 prompts from Polaris-53K), and uses downstream benchmarks only as a sanity check that the in-distribution trends generalize. This is a methodological choice that enables the fitting of stable, extrapolatable curves — something that would be impossible with the sparse and noisy signal from a benchmark like AIME with its 30 questions.
+
+### The Connection to Pretraining Scaling Laws
+
+The paper's intellectual lineage is worth making explicit. In pretraining, the discovery of power-law scaling (Kaplan et al., 2020) and compute-optimal scaling (Hoffmann et al., 2022) transformed research practice. Before these laws, pretraining research was speculative: you tried architectural changes at small scale, hoped they transferred to large scale, and were often disappointed. After scaling laws, researchers could fit curves from small-scale experiments, extrapolate, and make informed decisions about model size, data quantity, and hyperparameters without running the full experiment. The paper explicitly aims to bring RL into this same paradigm.
+
+But the mapping is not one-to-one. The paper makes a deliberate departure from pretraining practice: it uses sigmoidal fits rather than power laws. This is not an arbitrary choice — the authors provide empirical justification (Appendix A.4). Power-law fits for bounded metrics like accuracy are both theoretically questionable (a power law is unbounded and would predict accuracy > 1.0 given enough compute) and empirically unstable (the fitted asymptote is highly sensitive to the fitting regime). The sigmoidal form captures the saturating behavior that is inherent to bounded metrics: slow initial progress, a phase of efficient scaling, and eventual saturation at a finite ceiling. The paper shows that this choice matters — a power-law fit on their 100K GPU-hour run predicts `A = 1.0` when fitted over 1.5K–50K GPU hours, which is clearly wrong; the sigmoidal fit gives `A = 0.645`, which matches extended training.
+
+### The Specific Algorithms Under Study
+
+Before diving into the technical approach, it is worth understanding the algorithmic landscape the paper operates in, since this context is assumed in the experiments but is not common knowledge.
+
+**GRPO (Group Relative Policy Optimization):** The base algorithm. For a given prompt `x`, the model generates `G` completions (typically 16), each assigned a scalar reward (typically +1 for correct, -1 for incorrect). Advantages are computed as `Â_i = (r_i - mean({r_j})) / (std({r_j}) + ε)` — a group-relative normalization that replaces the learned value function in PPO. The policy is updated using a clipped importance-sampling objective: `min(ρ_i,t · Â_i, clip(ρ_i,t, 1-ε, 1+ε) · Â_i)`, where `ρ_i,t` is the probability ratio between the new and old policy for token `t` in completion `i`. The key characteristics are: token-level IS ratios, symmetric clipping, and sample-level loss aggregation (each completion contributes equally regardless of length).
+
+**DAPO (Decoupled Clip and Dynamic Sampling Policy Optimization):** Extends GRPO along three axes: (1) asymmetric clipping — `clip_asym(ρ, 1-ε_low, 1+ε_high)` with `ε_high > ε_low` to prevent entropy collapse; (2) prompt-level loss aggregation — all tokens from all `G` completions of a prompt are averaged together, so each prompt contributes equally regardless of how many completions it has; (3) dynamic sampling — prompts where all `G` completions have the same reward (zero variance) are dropped and resampled. The paper's baseline in Section 2 uses "asymmetric DAPO clipping" combined with GRPO-style loss and sample-level aggregation — this is important to note, as it means the baseline already incorporates DAPO's key insight about asymmetric clipping.
+
+**CISPO (Clipped Importance Sampling Policy Optimization):** A simpler loss function that the paper adopts from MiniMax et al. (2025) and Yao et al. (2025). Instead of the PPO-style clipped objective, CISPO uses truncated importance sampling with a vanilla policy gradient: `J_CISPO = E[ (1/T) Σ_i Σ_t sg(min(ρ_i,t, ε_max)) · Â_i · log π_train(y_i,t) ]`, where `sg` is the stop-gradient operator. The key differences from GRPO/DAPO: (1) the IS ratio is only used to *weight* the log-probability gradient, not to clip it — the gradient itself comes from the standard policy gradient; (2) the truncation is one-sided (only clipping high ratios, not low ratios); (3) the loss is arguably more stable because the IS ratio does not appear inside a log or a ratio, it's just a scalar multiplier.
+
+**PipelineRL vs. PPO-off-policy:** These are not loss functions but *asynchronous training regimes*. In PPO-off-policy-`k`, generation and training alternate in phases: generators produce `B` completions using the old policy, trainers perform `k` gradient updates on mini-batches of size `B/k`, then new parameters are pushed to generators. In PipelineRL, generation and training operate asynchronously in a streaming fashion: generators continuously produce completions, trainers consume batches as soon as they are available, and updated parameters are immediately pushed back to generators — who may be in the middle of generating tokens with a stale KV cache. PipelineRL reduces idle time and keeps training closer to the on-policy regime.
+
+Understanding these distinctions is essential because the paper's scaling analysis — particularly the decomposition into `A`-effects (asymptotic) and `B`-effects (efficiency) — depends on comparing these algorithms not at a point, but across a range of compute budgets where their qualitative differences in scaling behavior become apparent. The finding that CISPO and PipelineRL primarily affect `A` while other choices primarily affect `B` is not guessable from the algorithm descriptions alone; it emerges from the systematic scaling analysis.
 
 ## 3. Technical Approach
-This section explains both the modeling framework (the “scaling law”) and the RL training recipe that is ultimately recommended.
 
-- Compute–performance model (Section 2.1; Equation (1))
-  - What is fit: mean pass rate on a held-out validation set versus compute (GPU-hours) in log scale.
-  - Sigmoid form:
-    - `RC` is validation pass rate after compute `C`.
-    - `R0` is the initial pass rate.
-    - `A` is the asymptotic pass rate (“ceiling” achievable at large compute).
-    - `B > 0` controls the steepness/efficiency of improvement (bigger is more efficient).
-    - `Cmid` is the compute where half of the total gain is reached (shifts the curve left/right).
-  - Intuition: early slow growth, a mid-range with fast improvement, then saturation at a ceiling; the parameters separate “how high you can ultimately get” (`A`) from “how fast you get there” (`B`, `Cmid`) (Figure 3).
-  - Why a sigmoid (Appendix A.4): empirically more robust than power-law fits for bounded metrics like accuracy; power laws over-predict in early-to-mid regimes and are very sensitive to fit range.
-  - Fitting procedure (Appendix A.5/A.7): fit after the first ~1.5k GPU-hours to avoid early transient regimes; grid-search over `A` and `Cmid` and fit `B`; error margin on `A` is about ±0.02 based on three independent runs (Figure 8a).
+### 3.1 Reader Orientation
 
-- Experimental regimen and system (Section 2; Appendix A.3)
-  - Domain: RL for verifiable reasoning (math primarily; later math+code).
-  - Prompt format: model produces a hidden “thinking” trace `<think>…</think>` and a final answer.
-  - Generation budget (default): 16,384 total tokens (12,288 think + 2,048 answer + 2,048 prompt). A longer 32,768-budget setting is also studied (Section 5).
-  - Data: Polaris-53K math RL dataset (An et al., 2025) with a 1,000-prompt held-out validation set; for multi-task, adds DeepCoder for code (Section 2, Appendix A.3).
-  - Batch: 48 prompts × 16 generations per prompt = 768 completions per update (Section 2).
-  - Reward: +1/-1 pass/fail using automated checkers; pass rate is measured as mean@16 generations on the 1,000 held-out prompts (Section 2.1).
-  - Generator–trainer split: a subset of GPUs run fast generation, the rest run training and periodically synchronize weights (Section 2; Figure 4 and Appendix A.11).
+This paper is a **large-scale empirical analysis** that builds a framework for predicting and optimizing the scaling behavior of reinforcement learning for LLMs, rather than proposing a fundamentally novel RL algorithm. The core idea is that RL performance (measured as pass rate on a held-out validation set) follows a sigmoidal relationship with training compute that can be fitted from smaller-scale runs and extrapolated to larger budgets, enabling researchers to evaluate algorithmic choices based on their effects on **asymptotic performance** (`A`) versus **compute efficiency** (`B`, `C_mid`) rather than just point-in-time comparisons. The problem this solves is the current state of affairs where RL research is driven by ad-hoc comparisons at arbitrary compute budgets, with no principled way to predict which methods will dominate at scale — the paper provides both the mathematical framework (sigmoidal scaling curves with interpretable parameters) and the experimental methodology (fit on early points, extrapolate, verify by extended training) to bring RL into the same predictive paradigm that pretraining scaling laws established.
 
-- Base RL objectives and critical definitions (Sections 2–3)
-  - `Importance sampling (IS) ratio` is the ratio between the new policy probability and the old policy probability for a token or sequence; used to correct for off-policy learning (Equation (2)).
-  - `Clipping` limits IS ratios to stabilize updates (prevents very large policy changes). DAPO uses asymmetric upper/lower clipping (Equation (2) and Appendix A.2).
-  - `Advantages` quantify how good a rollout is relative to others for the same prompt; normalized either per-prompt or per-batch (Section 2).
-  - Several loss families are compared:
-    - GRPO-like with DAPO’s asymmetric clipping (token-level IS) (Equations (2)–(3), Appendix A.2).
-    - `GSPO`: sequence-level IS ratios (Section 3.2).
-    - `CISPO`: REINFORCE with truncated IS factors applied via stop-gradient (“truncated importance-sampling REINFORCE”) (Equation (4), Section 3.2).
+### 3.2 Big-Picture Architecture (Diagram in Words)
 
-- Off-policy training architecture (Section 3.1; Figure 4)
-  - `PPO-off-policy-k`: alternate generation and training phases; each “batch” generates rollouts with the old policy then performs `k` gradient updates on mini-batches (Section 3.1).
-  - `PipelineRL-k`: a streaming, asynchronous pipeline. Generators keep generating; each time training completes, the updated weights are pushed to generators immediately—even as they continue generation using stale key-value caches. Trainers wait if they get `k` steps ahead (Section 3.1; Appendix A.11).
-  - Empirical finding: PipelineRL reaches similar or slightly higher `A` but with much higher `B` (better efficiency), as shown in Figure 4a; best `k` found to be ~8 (Figure 4b).
+The system has five major conceptual components, though the "system" here is a research methodology rather than a deployed application:
 
-- Length control (Sections 2, A.10, A.15)
-  - `Forced interruptions`: insert a “time is up” end-of-thinking phrase to stop overly long reasoning and prompt the final answer (prevents runaway lengths and instability).
-  - `Length penalty`: subtract a penalty for overly long correct solutions within a tolerance window (Equation (9)).
-  - In the final recipe, interruptions are preferred; length penalty does not outperform it in the combined setting (Appendix A.10).
+1. **Base Language Model (8B dense or 17B×16 MoE)** — a pretrained LLM that has undergone supervised fine-tuning on reasoning traces. It serves as the initial policy `π_θ` that will be optimized via RL. The SFT model is trained on "a curated data mix of reasoning traces" filtered to remove trivial prompts, traces exceeding 12K tokens, and contaminated benchmarks (Appendix A.3).
 
-- The `ScaleRL` recipe (Section 4)
-  - Components chosen after ablations:
-    - Architecture: `PipelineRL-8` (Section 3.1).
-    - Loss: `CISPO` (Equation (4)) with prompt-level loss aggregation and batch-level advantage normalization (Section 4).
-    - Numeric stability: FP32 precision for the language-model head (logits) on both generator and trainer (Section 3.2; Figure 5b).
-    - Length control: forced interruptions (Section 2; Appendix A.10).
-    - Batch hygiene: drop prompts with zero reward variance (“zero-variance filtering”) because they give zero gradient; do not resample them within the same step (Figure 6a).
-    - Curriculum: `No-Positive-Resampling`—permanently stop sampling prompts that are ≥0.9 pass rate historically (Figure 6b).
-  - The combined loss is summarized in Section 4 (under `JScaleRL(θ)`): truncated IS coefficients via stop-gradient, prompt-level averaging, batch-level normalization, zero-variance filtering, and no-positive resampling.
+2. **Asynchronous RL Training Infrastructure** — a generator–trainer split across GPUs where a subset of GPUs (generators) use optimized inference kernels for high-throughput rollout generation, while the remaining GPUs (trainers) run the training backend (FSDP) and update parameters. This infrastructure implements either the PPO-off-policy-`k` or PipelineRL-`k` asynchronous regime, which governs how stale the rollouts are relative to the current policy.
 
-- How the ablation logic was run (Sections 3–4)
-  - Stage 1: explore many choices at 3.5–4k GPU-hours; only stable variants are extended (Section 3).
-  - Stage 2: combine best choices, then run leave-one-out (LOO) ablations for 16k GPU-hours, fitting on the first 8k and extrapolating to 16k (Section 4; Figure 7).
-  - Stage 3: scale on multiple axes—batch size, generation length, MoE model scale, math+code multi-task—and test predictability by fitting on half the target compute and extrapolating to the end (Section 5; Figures 1, 9–11; Table 1 in Appendix A.13).
+3. **RL Algorithm (ScaleRL recipe)** — the collection of design choices that constitute the policy optimization procedure: loss type (CISPO), loss aggregation (prompt-level), advantage normalization (batch-level), precision (FP32 at logits), zero-variance filtering, no-positive-resampling curriculum, and forced interruptions for length control. Each component has a specific computational role in shaping the policy gradient.
+
+4. **Scaling Curve Fitting Framework** — the mathematical machinery that takes validation pass rates measured at regular intervals (every 100 training steps) and fits a sigmoidal function to estimate the parameters `A` (asymptotic pass rate), `B` (scaling exponent), and `C_mid` (compute midpoint). This framework is used both for extrapolation (predicting performance at larger compute budgets) and for comparative analysis (identifying whether design choices affect `A` or `B`).
+
+5. **Validation and Evaluation Pipeline** — a held-out set of 1,000 prompts from Polaris-53K used for in-distribution scaling analysis, plus downstream benchmarks (AIME-24, LiveCodeBench) for generalization assessment. The validation set is evaluated every 100 training steps with 16 generations per prompt, producing the data points to which scaling curves are fitted.
+
+Information flows as follows: prompts are sampled from the training data (Polaris-53K, optionally filtered by the no-positive-resampling curriculum) → generators produce `G=16` completions per prompt using the current policy → rewards are computed (±1 for correct/incorrect math answers using Sympy or Math-Verify) → trainers compute advantages, loss, and gradients using the ScaleRL objective → parameters are updated and pushed back to generators → every 100 steps, the current policy is evaluated on the 1,000 held-out prompts → the resulting pass rate vs. compute data is used to fit sigmoidal curves → the fitted parameters `A`, `B`, `C_mid` are used to compare algorithms and extrapolate performance.
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First**, the sigmoidal scaling curve framework (Equation 1) — since this is the central intellectual contribution that enables all subsequent analysis, we must understand what `A`, `B`, and `C_mid` represent, why a sigmoid rather than a power law, and how fitting is performed.
+- **Second**, the base RL algorithm and the individual design choices studied in Section 3 — asynchronous training regimes (PipelineRL vs. PPO-off-policy), loss functions (GRPO/DAPO vs. CISPO/GSPO), precision, loss aggregation, advantage normalization, zero-variance filtering, and curriculum — because understanding the full combinatorial space of choices is necessary to appreciate why ScaleRL selects the specific combination it does.
+- **Third**, the ScaleRL recipe itself — how the individual components are combined, what the unified loss function looks like, and why each component was selected based on its effect on `A` or `B`.
+- **Fourth**, the leave-one-out experimental methodology — how the paper validates that each component contributes positively even in the combined recipe, and how it transforms the sigmoidal fit to isolate efficiency differences when asymptotic performance is similar.
+- **Fifth**, the fitting procedure in detail — the grid search over `A` and `C_mid`, the computation of `B`, the robustness of the procedure, and the empirical error margins derived from multiple independent runs.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily an **empirical methodology paper** whose core idea is that RL performance follows a sigmoidal relationship with compute that can be decomposed into asymptotic performance (`A`) and efficiency parameters (`B`, `C_mid`), and that this decomposition enables both extrapolation and principled comparison of algorithmic choices. The paper systematically ablates design choices along this `A`/`B` axis and combines the best options into a recipe (ScaleRL) that scales predictably to 100,000 GPU-hours.
+
+---
+
+#### The Sigmoidal Scaling Curve Framework
+
+The central mathematical framework is a sigmoid-like saturating function that relates the expected reward (pass rate) `R_C` on an i.i.d. validation set to the training compute `C`:
+
+$$R_C = R_0 + (A - R_0) \times \frac{1}{1 + (C_{\text{mid}} / C)^B}$$
+
+where `$R_0$` is the initial performance at zero RL compute (the SFT model's pass rate), `$A \in [0, 1]$` is the asymptotic pass rate — the performance ceiling the RL training converges to given infinite compute, `$B > 0$` is a scaling exponent that determines the steepness of the transition from `$R_0$` to `$A$` (higher `$B$` means faster saturation once the efficient regime begins), and `$C_{\text{mid}}$` is the compute budget at which half of the total gain `$A - R_0$` has been achieved — smaller `$C_{\text{mid}}$` means faster initial ascent toward the asymptote.
+
+**What it computes:** given a compute budget `$C$` (measured in GPU-hours), the equation predicts the expected pass rate on the validation set. The term `$R_0$` establishes the baseline; the term `$(A - R_0)$` is the total headroom available through RL; and the fraction `$1 / (1 + (C_{\text{mid}}/C)^B)$` is a saturating multiplier that goes from near-zero at `$C \ll C_{\text{mid}}$` to near-one at `$C \gg C_{\text{mid}}$`, with the transition's sharpness controlled by `$B$`. At `$C = C_{\text{mid}}$`, the multiplier is exactly `$1/2$`, meaning half the possible improvement has been realized.
+
+The equation decomposes into a **reward gain** term (`$R_C - R_0$`) equaling an **asymptotic reward gain** (`$A - R_0$`) multiplied by a **compute efficiency** term (`$1 / (1 + (C_{\text{mid}}/C)^B)$`). This decomposition is not just algebraic — it defines the paper's central analytical vocabulary: design choices that shift `$A$` change *where you end up*; design choices that shift `$B$` or `$C_{\text{mid}}$` change *how fast you get there*.
+
+**Why this form:** the paper considered and rejected power-law fits (Appendix A.4) for three reasons. First, for **bounded metrics** like accuracy, sigmoidal curves provide better predictive fits — power laws are unbounded and would predict accuracy exceeding 1.0 given enough compute, which is physically impossible. The paper demonstrates this concretely: fitting a power law to their 100K GPU-hour 8B dense run over the range 1.5K–50K GPU-hours predicts `$A = 1.0$`, which is "clearly incorrect" since the actual curve saturates near 0.65. The sigmoidal fit yields `$A = 0.645$`, which matches the extended training.
+
+Second, **power laws are typically fit only beyond a threshold** `$C_0$` because they are unbounded at low compute. In RL post-training, total training spans far fewer steps than pretraining — the paper's largest run has only approximately 75 evaluation points across 7,400 steps. Discarding early points would further reduce already limited fitting data, making stable extrapolation infeasible.
+
+Third, **power-law fits are empirically unstable** — the fitted asymptote is highly sensitive to the chosen fitting regime. The paper shows that fitting a power law over (5K, 50K) GPU-hours instead of (1.5K, 50K) changes the predicted asymptote from `$A = 1.0$` to `$A = 0.74$`, while the sigmoidal fit remains robust at `$A = 0.645$` regardless of the fitting regime. The authors' goal is to predict large-scale performance from lower-compute regimes where such long runs are unavailable, making this robustness essential.
+
+An important mathematical property noted in Appendix A.4: at high compute (`$C \gg C_{\text{mid}}$`), the sigmoidal curve approximates a power law. Specifically, for large `$C$`, the fraction `$1/(1 + (C_{\text{mid}}/C)^B) \approx 1 - (C_{\text{mid}}/C)^B$`, yielding `$R_C \approx A - (A - R_0)C_{\text{mid}}^B / C^B = A - D/C^B$` where `$D = (A - R_0)C_{\text{mid}}^B$`. This means the sigmoidal form nests the power-law behavior in the high-compute regime while remaining well-behaved in the low-compute regime — it captures the full S-curve that power laws miss.
+
+**Interpreting the parameters (Figure 3):** the paper provides a schematic that illustrates the distinct roles of `$A$`, `$B$`, and `$C_{\text{mid}}$`:
+
+- `$C_{\text{mid}}$` determines the compute point at which half the total gain is achieved — smaller values correspond to faster ascent toward the asymptote. A method with lower `$C_{\text{mid}}$` will appear better early in training.
+- `$B$` controls the curve's steepness, with larger values indicating greater efficiency — once the method starts improving, it saturates faster.
+- `$A$` represents the asymptotic performance reached at large compute scales — this is *where* the curve ultimately flattens, independent of how fast it got there.
+
+The paper further illustrates these roles in Appendix A.8 with additional figures (Figures 12a, 12b, 13a) that vary one parameter at a time while keeping the others fixed, showing that `$B$` and `$C_{\text{mid}}$` primarily affect efficiency while `$A$` determines the ceiling. Figure 13b in the appendix illustrates the critical practical insight: "a design choice can be less efficient yet reach a higher asymptote" — a method that looks worse at small compute may ultimately dominate if its `$A$` is higher. This is the "bitter lesson" the paper embraces: apparent early superiority can be misleading.
+
+**Computing compute:** the paper measures compute `$C$` in GPU-hours, with experiments spanning from approximately 1,500 GPU-hours (the cutoff for fitting, roughly one epoch for most experiments) to 100,000 GPU-hours (the largest ScaleRL run). All experiments use 80 Nvidia GB200 GPUs per run, with 64 allocated as generators and 16 as trainers (Appendix A.3). The baseline configuration uses a batch size of 768 completions (48 prompts × 16 generations each) with sequence length of 16,384 tokens: 12,288 for the thinking trace, 2,048 for the solution, and 2,048 for the input prompt.
+
+---
+
+#### The Base RL Algorithm and Design Space
+
+The paper starts from a "base" algorithm that resembles GRPO (Shao et al., 2024) without any KL regularization term, consistent with large-scale training reports (Rastogi et al., 2025; MiniMax et al., 2025), and includes asymmetric DAPO clipping (Yu et al., 2025). This base serves as the control against which all design choices are evaluated.
+
+**Core RL loop:** for a given prompt `$x$` sampled from the data distribution `$\mathcal{D}$`, the old policy `$\pi_{\text{gen}}(\theta_{\text{old}})$` on generator GPUs produces `$G$` candidate completions `$\{y_i\}_{i=1}^G$`, each consisting of a thinking trace enclosed in special tokens (`<thinking> ... </thinking>`) followed by a final solution within `<response> ... </response>`, and each assigned a scalar reward `$r_i$`. The reward is `$\pm 1$` for correct and incorrect final answers respectively, verified using automated checkers like Sympy or Math-Verify (Appendix A.3).
+
+**Advantage computation:** advantages `$\hat{A}_i$` are computed as the raw reward centered by the mean of rewards across the `$G$` completions for the same prompt, and group-normalized advantages `$\hat{A}_i^G$` divide by the standard deviation plus a small epsilon:
+
+$$\hat{A}_i = r_i - \text{mean}(\{r_j\}_{j=1}^G)$$
+
+$$\hat{A}_i^G = \frac{\hat{A}_i}{\text{std}(\{r_j\}_{j=1}^G) + \epsilon}$$
+
+where `$\text{mean}(\{r_j\})$` is the average reward across the `$G$` completions for prompt `$x$`, `$\text{std}(\{r_j\})$` is the standard deviation of those rewards, and `$\epsilon$` is a small constant for numerical stability.
+
+**What this computes:** the advantage `$\hat{A}_i$` is positive for completions better than the group average and negative for completions worse than the group average. The normalization by standard deviation scales advantages so that the policy gradient's magnitude is invariant to the absolute scale of rewards — this matters because with ±1 rewards, the standard deviation can vary substantially across prompts (a prompt where all completions are correct has zero standard deviation and zero gradient; a prompt with a mix of correct and incorrect completions has a larger standard deviation and thus larger updates).
+
+**Token-level importance sampling:** for each completion `$y_i$` of length `$|y_i|$`, token-level importance sampling (IS) ratios are computed as the ratio of probabilities under the current training policy to probabilities under the old generator policy:
+
+$$\rho_{i,t}(\theta) = \frac{\pi_{\text{train}}(y_{i,t} \mid x, y_{i,<t}, \theta)}{\pi_{\text{gen}}(y_{i,t} \mid x, y_{i,<t}, \theta_{\text{old}})} = \frac{\pi_{\text{train}}(y_{i,t})}{\pi_{\text{gen}}(y_{i,t})}$$
+
+where `$y_{i,t}$` is the `$t$`-th token of completion `$i$`, `$\pi_{\text{train}}(y_{i,t})$` is the probability assigned by the current training policy, and `$\pi_{\text{gen}}(y_{i,t})$` is the probability assigned by the old generator policy when the completion was generated.
+
+**What this computes:** the IS ratio `$\rho_{i,t}$` measures how much more (or less) likely the current policy is to generate token `$y_{i,t}$` compared to the old policy that actually generated it. A ratio greater than 1 means the current policy has increased the probability of this token; a ratio less than 1 means it has decreased it. This ratio is used to correct for the fact that the training policy has changed since the completions were generated — without this correction, the policy gradient would be computed under the wrong distribution.
+
+**Asymmetric clipping:** the base algorithm uses DAPO-style asymmetric clipping thresholds `$\epsilon_-$` and `$\epsilon_+$`:
+
+$$\text{clip}_{\text{asym}}(\rho, \epsilon_-, \epsilon_+) = \text{clip}(\rho, 1 - \epsilon_-, 1 + \epsilon_+)$$
+
+where `$\epsilon_-$` clips downward deviations (preventing the ratio from dropping below `$1 - \epsilon_-$`) and `$\epsilon_+$` clips upward deviations (preventing the ratio from exceeding `$1 + \epsilon_+$`). The asymmetry (`$\epsilon_+ > \epsilon_-$`) is designed to prevent entropy collapse: the policy is allowed more freedom to increase probabilities of good tokens than to decrease probabilities of bad tokens.
+
+**Base surrogate objective (Equation 3):** the policy is optimized by maximizing a clipped surrogate objective that aggregates losses at the sample level:
+
+$$J(\theta) = \mathbb{E}_{x \sim \mathcal{D}, \{y_i\}_{i=1}^G \sim \pi_{\theta_{\text{old}}}(\cdot|x)} \left[ \frac{1}{G} \sum_{i=1}^G \frac{1}{|y_i|} \sum_{t=1}^{|y_i|} \min\left( \rho_{i,t}(\theta) \hat{A}_i^G, \text{clip}_{\text{asym}}(\rho_{i,t}(\theta), \epsilon_-, \epsilon_+) \hat{A}_i^G \right) \right]$$
+
+where the outer expectation is over prompts `$x$` and completions `$\{y_i\}$` from the old policy, the sum over `$i$` averages across the `$G$` completions (each weighted equally regardless of the prompt they belong to — this is sample-level aggregation), and the sum over `$t$` averages token-level losses within each completion.
+
+**What this computes:** for each token in each completion, the objective takes the minimum of the unclipped IS-weighted advantage (`$\rho_{i,t} \hat{A}_i^G$`) and the clipped IS-weighted advantage (`$\text{clip}_{\text{asym}}(\rho_{i,t}) \hat{A}_i^G$`). The minimum operator is the standard PPO pessimism: if the IS ratio has moved too far from 1, the clipped version is used to limit the update; if the IS ratio is within the clipping range, the unclipped version is used. The result is a scalar per token; averaged first within each completion (the `$1/|y_i|$` factor) and then across completions (the `$1/G$` factor). The final output is a single scalar representing the expected improvement (or degradation) of the policy.
+
+**Why this form:** the PPO-style clipped objective with a minimum operator ensures that policy updates are conservative — the policy is penalized only when it makes large changes, and the penalty is one-sided (only clipping the ratio, not the advantage). The group-normalized advantage `$\hat{A}_i^G$` replaces the traditional value baseline in PPO, removing the need to train a separate value network, which simplifies the system and reduces memory requirements.
+
+**Controlling generation length:** to prevent reasoning output lengths from exploding during training (which harms training stability and efficiency), the base algorithm uses **forced interruptions** that append an end-of-thinking phrase — "Okay, time is up. Let me stop thinking and formulate a final answer now. </thinking> <response>" — when a generation exceeds the allocated thinking budget. The interruption tokens are placed randomly within the [10K, 12K] token range (in the 14K generation budget setup) to induce generalization to different generation lengths (Appendix A.10). This is contrasted with length penalties that reshape the reward to discourage long completions — the paper evaluates both options and finds that interruptions perform comparably in the final ScaleRL recipe (Section 4).
+
+**Training regimen details (Appendix A.3):** all RL experiments use a constant learning rate of `$5 \times 10^{-7}$`, the AdamW optimizer (Loshchilov & Hutter, 2019) with `$\epsilon = 10^{-15}$` (set lower than the default `$10^{-8}$` to avoid gradient clipping from epsilon underflow — see Wortsman et al., 2023), weight decay of 0.01, and a linear warmup of 100 steps. The SFT model is trained with a batch size of 2M tokens, max sequence length 12,288, and learning rate `$3 \times 10^{-5}$` using AdamW on 32 H100 GPU nodes for approximately 4 epochs totalling 32B tokens. The SFT data is "a curated data mix of reasoning traces" filtered to remove trivial prompts, discard traces exceeding 12K tokens, and decontaminate from AIME 2024/2025 and MATH-500 benchmarks.
+
+---
+
+#### Asynchronous RL Training Regimes (Section 3.1)
+
+The paper identifies the choice of asynchronous off-policy RL setup as a fundamental decision that "governs training stability and efficiency, generally independent of all other design choices" (Section 3.1). Two approaches are compared:
+
+**PPO-off-policy-`k`:** the default approach for asynchronous RL, used by Qwen3 (Yang et al., 2025) and ProRL (Liu et al., 2025a). Generation and training proceed in alternating phases:
+
+1. Generators produce reasoning traces for a batch of `$B$` prompts using the old policy `$\pi_{\theta_{\text{old}}}$`.
+2. Trainers perform gradient updates, with each gradient update processing a mini-batch of `$\hat{B}$` prompts.
+3. The parameter `$k = B / \hat{B}$` determines how many gradient updates are performed per generation batch — this is the "off-policyness" because after the first update, the training policy has changed, making subsequent updates progressively more off-policy relative to the generations.
+
+In the paper's experiments, the mini-batch size is fixed at `$\hat{B} = 48$` prompts (with 16 generations each), and `$k \in \{1, 8\}$` is varied by setting `$B = k \times 48$`. With `$k=1$`, the policy is updated exactly once per generation batch (closest to on-policy); with `$k=8$`, the policy is updated 8 times on the same batch of generations (more off-policy but more computationally efficient since generations are reused).
+
+**PipelineRL-`k`:** a recent approach from Piche et al. (2025) used by Magistral (Rastogi et al., 2025). Generators and trainers operate asynchronously in a streaming fashion:
+
+1. Generators continuously produce reasoning traces — they never stop to wait for trainers.
+2. Whenever trainers finish a policy update, the new parameters are immediately pushed to the generators.
+3. Generators continue generating with the updated weights but a **stale KV cache** from the old policy — the key-value cache for tokens generated before the update was computed under the old policy, creating a mismatch between the model weights and the cached representations.
+4. Once a full batch of traces (generated under the mixed old/new policy with stale KV cache) is accumulated, it is passed to the trainers for the next update.
+5. The parameter `$k$` is introduced as a control mechanism: trainers wait if they get `$k$` steps ahead of the generators, preventing the training from becoming too off-policy. This means the trainers are allowed to be at most `$k$` gradient updates ahead of the generators' latest produced batch.
+
+**Results (Figure 4a):** PipelineRL-8 and PPO-off-policy achieve similar asymptotic performance `$A$`, but PipelineRL substantially improves compute efficiency `$B$` — it reaches the ceiling `$A$` faster. The paper attributes this to PipelineRL reducing the amount of idle time in the training process: generators do not wait while trainers complete updates, and trainers start processing batches as soon as they are available rather than waiting for a complete generation phase.
+
+**Off-policyness sweep (Figure 4b):** varying the maximum off-policyness for PipelineRL shows that `$k=8$` is optimal, with `$k=4$` performing equally well. The paper adopts `$k=8$` because "this choice yields reliable gains with fewer tokens, making larger sweeps at a lower compute budget possible" (Section 3.1).
+
+**Why PipelineRL outperforms PPO-off-policy (Appendix A.11):** the paper attributes the advantage to PipelineRL's closer alignment with on-policy training. In PPO-off-policy, the trainers operate strictly on batches that are as off-policy as `$k$` — the last `$k-1$` updates in a batch are performed on completions generated by a policy that is multiple gradient steps old. In PipelineRL, the tight feedback loop (new parameters immediately pushed to generators, who immediately use them for ongoing generation) keeps the training distribution closer to the current policy. The paper notes this is "one of the most consequential design decisions in RL post-training" because it affects the asymptotic performance `$A$`, not just the efficiency exponent `$B$` — very few axes shift the asymptote in this way.
+
+**A subtle detail about the stale KV cache:** in PipelineRL, when updated weights are pushed to generators mid-generation, the generators have a stale KV cache — the key-value pairs for previously generated tokens were computed under the old policy weights, but new tokens will be generated under the new policy weights. This creates a mathematical inconsistency: the probability of the already-generated prefix under the new policy is different from what the KV cache implies. The paper does not explicitly analyze the impact of this inconsistency, but the empirical results suggest it is not detrimental — possibly because the KV cache mismatch introduces a form of implicit regularization that keeps the policy from changing too rapidly.
+
+---
+
+#### Algorithmic Design Choices: Loss Type (Section 3.2)
+
+The paper compares three loss functions, all built on top of the same group-relative advantage computation but differing in how the importance sampling ratio is used. This axis turns out to be one of the few that materially shifts the asymptotic performance `$A$`.
+
+**DAPO loss (the baseline):** the asymmetric clipped objective described in Equation 8 (Appendix A.2), which is the same as the base algorithm described above but with prompt-level aggregation rather than sample-level aggregation:
+
+$$J_{\text{DAPO}}(\theta) = \mathbb{E}_{x \sim \mathcal{D}, \{y_i\}_{i=1}^G \sim \pi_{\text{gen}}(\cdot|x,\theta_{\text{old}})} \left[ \frac{1}{T} \sum_{i=1}^G \sum_{t=1}^{|y_i|} \min\left( \rho_{i,t}(\theta) \hat{A}_i, \text{clip}_{\text{asym}}(\rho_{i,t}(\theta)) \hat{A}_i \right) \right]$$
+
+where `$T = \sum_{i=1}^G |y_i|$` is the total number of tokens across all completions for the prompt. The key difference from the base algorithm is that the loss is normalized by `$T$` (all tokens across all completions of one prompt) rather than by `$G$` and `$|y_i|$` separately — this is prompt-level aggregation, ensuring each prompt contributes equally regardless of how many completions it has or how long they are.
+
+**GSPO (Group Sequence Policy Optimization):** proposed by Zheng et al. (2025a), GSPO applies importance sampling at the **sequence level** rather than the token level. Instead of computing per-token IS ratios `$\rho_{i,t}$`, GSPO computes a single sequence-level ratio:
+
+$$\rho_i(\theta) = \frac{\pi_{\text{train}}(y_i \mid x, \theta)}{\pi_{\text{gen}}(y_i \mid x, \theta_{\text{old}})}$$
+
+where `$\pi(y_i \mid x)$` is the full sequence probability (product of token probabilities). This ratio is then used in a PPO-style clipped objective at the sequence level. The paper notes that the default clipping scale of `$10^{-4}$` from the GSPO paper "did not work well in our setting" (Appendix A.17.3), requiring a broader sweep across scales to identify the correct order of magnitude (`$10^{-3}$`). Once the correct scale was identified (e.g., `$4 \times 10^{-3}$` and higher), performance was "stable and largely insensitive to fine-grained changes" (Figure 20b).
+
+**CISPO (Clipped Importance Sampling Policy Optimization):** the loss function ultimately selected for ScaleRL, adopted from MiniMax et al. (2025) and Yao et al. (2025). CISPO combines truncated importance sampling with a vanilla policy gradient:
+
+$$J_{\text{CISPO}}(\theta) = \mathbb{E}_{x \sim \mathcal{D}, \{y_i\}_{i=1}^G \sim \pi_{\text{gen}}(\cdot|x,\theta_{\text{old}})} \left[ \frac{1}{T} \sum_{i=1}^G \sum_{t=1}^{|y_i|} \text{sg}(\min(\rho_{i,t}, \epsilon_{\text{max}})) \hat{A}_i \log(\pi_{\text{train}}(y_{i,t} \mid x, y_{i,<t}, \theta)) \right]$$
+
+where `$\text{sg}$` is the stop-gradient operator (the expression inside is treated as a constant during backpropagation), `$\epsilon_{\text{max}}$` is the upper truncation threshold (no lower truncation), and `$\hat{A}_i$` is the unnormalized or group-normalized advantage.
+
+**What this computes:** CISPO does not use the PPO-style clipped minimum. Instead, it takes the standard policy gradient — the log-probability of each token under the current policy, multiplied by the advantage — and weights it by a **truncated importance sampling ratio**. The IS ratio `$\min(\rho_{i,t}, \epsilon_{\text{max}})$` is computed normally, but it is stopped from contributing gradients (`$\text{sg}$` ensures that the gradient flows only through `$\log \pi_{\text{train}}$`, not through the IS ratio). The truncation `$\min(\rho_{i,t}, \epsilon_{\text{max}})$` caps the ratio at `$\epsilon_{\text{max}}$` — if the current policy is more than `$\epsilon_{\text{max}}$` times as likely as the old policy to generate a token, the weight is clipped to `$\epsilon_{\text{max}}$`. There is no lower truncation — tokens that have become less likely receive their full (potentially very small) IS weight.
+
+**Why this form:** there are three key design choices embedded in CISPO that distinguish it from DAPO:
+
+1. **No minimum operator.** DAPO uses `$\min(\rho \hat{A}, \text{clip}(\rho) \hat{A})$` which can create gradient discontinuities at the clipping boundary. CISPO avoids this by directly truncating the multiplier and using it as a weight on the standard policy gradient.
+
+2. **Stop-gradient on the IS ratio.** This means the IS ratio serves purely as a per-token weight that scales the magnitude of the policy gradient, without itself being part of the objective being optimized. In DAPO, both the policy probabilities and the IS ratio (which depends on policy probabilities) contribute gradients — this creates a more complex optimization landscape. In CISPO, only the log-probability contributes gradients; the IS ratio is a fixed scalar weight per token.
+
+3. **One-sided truncation.** Only upward deviations are clipped; downward deviations are allowed. This means the policy can freely decrease probabilities of tokens that were bad (low advantage) — the IS ratio for such tokens will be small (the current policy assigns them lower probability than the old policy), and the weight will be small, but the gradient will still flow to further reduce their probability. In DAPO, both upward and downward deviations are clipped, which can prevent the policy from adequately penalizing bad tokens.
+
+**Empirical comparison (Figure 5a):** both GSPO and CISPO substantially outperform DAPO, "improving the asymptotic pass rate `$A$` by a large margin." CISPO exhibits "a prolonged near-linear reward increase" and is marginally better than GSPO later in training, leading the paper to select CISPO for ScaleRL.
+
+**Robustness to hyperparameters (Appendix A.17):** a critical practical advantage of CISPO is its robustness to the clipping hyperparameter `$\epsilon_{\text{max}}$`. Appendix A.17.2 (Figure 19b) shows that varying `$\epsilon_{\text{max}}$` across a wide range produces little difference in performance. This contrasts sharply with DAPO, where the clipping threshold `$\epsilon_{\text{max}}$` is "critically sensitive" — Appendix A.17.1 (Figure 19a) demonstrates that changing `$\epsilon_{\text{max}}$` from 0.20 to 0.28 "fundamentally alters the asymptotic performance value `$A$`." The paper notes this is "a striking effect: unlike many hyper-parameters that merely shift the convergence speed, `$\epsilon_{\text{max}}$` governs the asymptotic error itself" — a problem invisible in point evaluations but glaring when scaling curves are fitted.
+
+**GSPO instability (Appendix A.17.4):** despite being robust to hyperparameters once the correct scale is identified, GSPO exhibited stability issues. "On multiple occasions, GSPO runs diverged mid-training, leading to sudden drops in performance." For 8B models, restarting from a stable checkpoint allowed recovery, but on larger models (Scout 17B×16 MoE), "instability persisted despite repeated resetting to a stable checkpoint." The paper checked for implementation bugs but found none. CISPO provides "the best balance of stability and robustness to hyperparameters."
+
+---
+
+#### Algorithmic Design Choices: FP32 Precision for Logits (Section 3.2)
+
+This design choice addresses a specific numerical issue that arises from the generator–trainer split architecture. Generators use optimized inference kernels (potentially in lower precision like BF16 or FP16) while trainers use the training backend (FSDP, potentially in mixed precision). These different kernels can produce "small numerical mismatches in their token probabilities" (He & Lab, 2025).
+
+The importance sampling ratio `$\rho_{i,t} = \pi_{\text{train}}(y_{i,t}) / \pi_{\text{gen}}(y_{i,t})$` directly compares probabilities from two different computational paths. If these probabilities differ due to numerical precision rather than actual policy change, the IS ratio will be systematically biased, introducing noise or systematic error into the policy gradient.
+
+The paper identifies, following MiniMax et al. (2025), that "these mismatches are especially pronounced at the language model head" — the final linear layer that projects hidden states to vocabulary logits and then applies softmax. The fix is straightforward: compute the LM head in FP32 precision for both the generator and the trainer. This ensures that the token probabilities used in the IS ratio are computed with identical numerical precision regardless of what precision the rest of the forward pass uses.
+
+**Empirical impact (Figure 5b):** the precision fix "dramatically improves the asymptotic performance `$A$` from 0.52 to 0.61" — a 9-percentage-point increase in the ceiling. This is one of the largest single-component effects in the entire study, and it establishes FP32 precision as a first-order design decision for RL training.
+
+**Interaction with loss type:** the precision fix's importance varies depending on the loss function. In the DAPO/GRPO baseline (Figure 5b), the fix provides large gains — the baseline without the fix converges to a much lower asymptote. In ScaleRL with CISPO, the benefit is less dramatic (the leave-one-out experiment in Figure 7 shows that removing FP32 precision only slightly degrades performance). The paper argues this does not mean the fix is redundant: "while the FP32 precision fix makes little difference with dense 8B trained with ScaleRL (Figure 7), it provides large gains in GRPO/DAPO-style losses by mitigating numerical instabilities" (Section 4). Furthermore, on the larger Scout 17B×16 MoE, the FP32 fix improves scalability (Figure 8b), indicating "its benefits extend beyond the specific ScaleRL configuration."
+
+---
+
+#### Algorithmic Design Choices: Loss Aggregation (Section 3.2)
+
+The paper evaluates three strategies for aggregating the per-token RL loss into a single scalar per batch (Appendix A.9, Figure 14a):
+
+**Sample average:** each completion contributes equally to the final loss, regardless of the prompt it belongs to. This is the method used by GRPO: for a batch of `$P$` prompts with `$G$` completions each, the loss is `$(1/(PG)) \sum_p \sum_i (1/|y_{p,i}|) \sum_t \ell_{p,i,t}$` — each completion's average token loss is computed, then all completion averages are themselves averaged.
+
+**Prompt average:** each prompt contributes equally regardless of how many completions it has. This is the method used by DAPO: the loss is `$(1/P) \sum_p (1/T_p) \sum_i \sum_t \ell_{p,i,t}$` where `$T_p = \sum_i |y_{p,i}|$` — all tokens from all completions of a prompt are averaged together, so a prompt with 16 long completions and a prompt with 16 short completions contribute equally.
+
+**Token average:** no intermediate grouping — all token losses across the entire batch are averaged directly: `$(1/\sum_{p,i} |y_{p,i}|) \sum_{p,i,t} \ell_{p,i,t}$`. This means each token contributes equally, so prompts with longer completions (or more completions) contribute proportionally more to the loss.
+
+**Result:** the paper finds that "prompt average achieves the highest asymptotic performance" and adopts this choice for ScaleRL. The reasoning is not explicitly spelled out, but one interpretation is that prompt-level aggregation prevents the loss from being dominated by a small number of prompts with unusually long completions, which would happen under token averaging, and prevents prompts with unusual difficulty from being diluted by averaging across all completions in the batch, which would happen under sample averaging for large `$G$`.
+
+---
+
+#### Algorithmic Design Choices: Advantage Normalization (Section 3.2)
+
+The paper compares three variants for normalizing advantages across the batch (Appendix A.9, Figure 14b):
+
+**Prompt-level normalization:** advantages are normalized by the standard deviation of rewards from completions of the *same prompt only*. This is the GRPO approach: `$\hat{A}_i^G = \hat{A}_i / (\text{std}(\{r_j\}_{j=1}^G) + \epsilon)$` where the standard deviation is computed over the `$G$` completions for that specific prompt.
+
+**Batch-level normalization:** advantages are normalized by the standard deviation across *all generations in the batch*, as used by Hu et al. (2025a) and Rastogi et al. (2025). For a batch of `$P$` prompts with `$G$` completions each, the standard deviation is computed over all `$P \times G$` rewards, and this single value is used to normalize all advantages: `$\hat{A}_i^{\text{norm}} = \hat{A}_i / \hat{A}^{\text{std}}$` where `$\hat{A}^{\text{std}}$` is the standard deviation of all `$\hat{A}_i$` in the batch.
+
+**No normalization:** advantages are computed as raw rewards centered by the mean reward of the prompt's generations, without any variance scaling. This is the Dr. GRPO approach (Liu et al., 2025b): `$\hat{A}_i = r_i - \text{mean}(\{r_j\}_{j=1}^G)$`.
+
+**Result:** "all three methods are observed to yield similar performance" (Section 3.2). The paper adopts batch-level normalization because it is "theoretically sound and marginally better." The theoretical soundness comes from the fact that batch-level normalization uses a larger sample to estimate the standard deviation, reducing noise in the normalization factor — prompt-level normalization with only `$G=16$` completions has high variance in the standard deviation estimate, especially when most completions have the same reward (zero or near-zero variance).
+
+---
+
+#### Algorithmic Design Choices: Zero-Variance Filtering (Section 3.2)
+
+Within each batch, some prompts yield identical rewards across all their `$G=16$` generations — all correct (pass rate 1.0) or all incorrect (pass rate 0.0). For these "zero-variance" prompts, the advantage `$\hat{A}_i$` is zero for all completions (since every reward equals the mean), and therefore the policy gradient contribution is exactly zero — these prompts consume compute but contribute no learning signal.
+
+The paper compares two approaches (Figure 6a):
+
+**Default (include zero-variance prompts):** these prompts are included in the loss computation, adding zero to the sum but consuming a slot in the batch.
+
+**Effective batch (filter zero-variance prompts):** only prompts with non-zero variance (at least one correct and one incorrect completion) are included in the loss calculation. The effective batch size is smaller than the nominal batch size, but every prompt in the effective batch contributes a non-zero gradient.
+
+**Important distinction from DAPO's dynamic sampling:** DAPO (Yu et al., 2025) also addresses zero-variance prompts, but by *resampling* — if a prompt has zero variance, it is dropped and a new prompt is sampled until the batch is full. Zero-variance filtering, as implemented here, simply drops the prompts and proceeds with a smaller effective batch. The paper notes that DAPO-style dynamic resampling was not implemented because it was inefficient in their codebase — generators pre-decide how many prompts each will handle (`#prompts/#generators`), and resampling would require generators to coordinate, causing stalls (Appendix A.16).
+
+**Result:** "using the effective batch performs better asymptotically" (Figure 6a). The paper hypothesizes that including zero-variance prompts effectively reduces the signal-to-noise ratio of the batch — they add computation without adding gradient signal, diluting the effective learning rate.
+
+---
+
+#### Algorithmic Design Choices: Adaptive Prompt Filtering / No-Positive-Resampling (Section 3.2)
+
+This curriculum strategy addresses the observation that "once a prompt becomes too easy for a policy, it typically remains easy" — as the policy improves, some prompts become trivially solvable (pass rate near 1.0). These prompts no longer provide useful gradient signal because all completions are correct, yielding zero advantage. However, they continue to consume compute if included in subsequent epochs.
+
+The paper implements a simple curriculum, termed **No-Positive-Resampling**: maintain a history of pass rates for each prompt and permanently remove any prompt with pass rate `$\geq 0.9$` from subsequent training epochs. This differs from filtering based on a single batch's performance — the history ensures that a prompt is only removed once it has been consistently easy across multiple training steps.
+
+**Empirical impact (Figure 6b):** compared to the default setting where all prompts are resampled uniformly throughout training, the curriculum "improves scalability and the asymptotic reward `$A$`" (Section 3.2). The mechanism is straightforward: by removing saturated prompts, the effective training distribution shifts toward harder prompts that still provide useful gradient signal, concentrating the compute budget on the frontier of the policy's current capability.
+
+---
+
+#### The ScaleRL Recipe: Combining All Components (Section 4)
+
+ScaleRL consolidates the best-performing settings into a single asynchronous RL recipe:
+
+**Infrastructure:** PipelineRL with `$k=8$` steps of allowed off-policyness, with generators (64 GPUs) and trainers (16 GPUs) operating in streaming fashion on 80 Nvidia GB200 GPUs.
+
+**Length control:** forced interruptions that randomly insert the end-of-thinking phrase within the [10K, 12K] token range (in the 14K token generation budget setup), signaling the model to terminate reasoning and produce a final answer.
+
+**Precision:** FP32 computation for the LM head logits on both generator and trainer sides to eliminate numerical mismatches in token probabilities.
+
+**The unified ScaleRL loss function (Equation in Section 4):**
+
+$$J_{\text{ScaleRL}}(\theta) = \mathbb{E}_{x \sim \mathcal{D}, \{y_i\}_{i=1}^G \sim \pi_{\theta_{\text{old}}}(\cdot|x)} \left[ \frac{1}{\sum_{g=1}^G |y_g|} \sum_{i=1}^G \sum_{t=1}^{|y_i|} \text{sg}(\min(\rho_{i,t}, \epsilon)) \hat{A}_i^{\text{norm}} \log \pi_{\text{train}}(y_{i,t}) \right]$$
+
+subject to the constraints that `$0 < \text{mean}(\{r_j\}_{j=1}^G) < 1$` (the prompt has non-zero variance — at least one correct and one incorrect generation, which is the zero-variance filtering condition) and `$\text{pass\_rate}(x) < 0.9$` (the prompt has not been removed by the no-positive-resampling curriculum), where:
+
+- `$\rho_{i,t} = \pi_{\text{train}}(y_{i,t}) / \pi_{\theta_{\text{old}}}(y_{i,t})$` is the token-level importance sampling ratio (computed with FP32 precision at the LM head),
+- `$\text{sg}$` is the stop-gradient operator,
+- `$\min(\rho_{i,t}, \epsilon)$` is the truncated IS ratio capped at `$\epsilon$` (CISPO-style one-sided truncation),
+- `$\hat{A}_i^{\text{norm}} = \hat{A}_i / \hat{A}^{\text{std}}$` is the batch-level normalized advantage, where `$\hat{A}_i = r_i - \text{mean}(\{r_j\}_{j=1}^G)$` and `$\hat{A}^{\text{std}}$` is the standard deviation of all advantages in the batch,
+- `$\frac{1}{\sum_{g=1}^G |y_g|}$` is the prompt-level aggregation — all tokens from all `$G$` completions of a prompt are averaged together,
+- `$\text{mean}(\{r_j\}_{j=1}^G)$` is the average reward for the prompt's completions, and the condition `$0 < \text{mean} < 1$` ensures the prompt has non-zero variance (not all correct, not all incorrect),
+- `$\text{pass\_rate}(x)$` denotes the historical pass rate of the prompt, and the condition `$\text{pass\_rate}(x) < 0.9$` implements the no-positive-resampling curriculum.
+
+**What this loss computes:** for each prompt that passes both filters (non-zero variance and not too easy), the loss computes the per-token log-probability of each token in each completion, multiplies it by the batch-normalized advantage and the truncated IS ratio (treated as a constant weight via stop-gradient), averages across all tokens in all completions of the prompt (prompt-level aggregation), and then averages across prompts. The resulting scalar is the improvement (or degradation) the policy update will cause — maximizing this objective increases the probability of tokens in good completions (positive advantage) and decreases the probability of tokens in bad completions (negative advantage), with the magnitude of the update scaled by how off-policy the generation is (the IS ratio) and how unusual the completion's reward is relative to the batch (the batch-normalized advantage).
+
+**Why this specific combination:** each component addresses a distinct aspect of the scaling curve:
+
+- **CISPO loss** (vs. DAPO/GRPO) primarily raises `$A$` — it enables a higher asymptotic performance ceiling (Figure 5a). It does so through a combination of one-sided truncation (allowing the policy to freely penalize bad tokens), stop-gradient on the IS ratio (simplifying the optimization landscape), and robustness to clipping hyperparameters (reducing the risk of accidentally selecting a suboptimal `$\epsilon$` that lowers the ceiling, as happens with DAPO — Appendix A.17.1).
+- **FP32 precision** primarily raises `$A$` — eliminating numerical mismatches in the IS ratio removes a source of systematic error that compounds over training, allowing the policy to converge to a higher true optimum (Figure 5b).
+- **PipelineRL** primarily improves efficiency `$B$` — the streaming architecture reduces idle time and keeps training closer to on-policy, reaching the ceiling faster (Figure 4a).
+- **Prompt-level loss aggregation** primarily raises `$A$` — preventing the loss from being dominated by outlier prompts with unusually long or numerous completions (Figure 14a).
+- **Batch-level advantage normalization** is "marginally better" for both efficiency and asymptote — using a larger sample for standard deviation estimation reduces noise in the normalization (Figure 14b).
+- **Zero-variance filtering** primarily raises `$A$` — removing prompts that contribute zero gradient increases the signal-to-noise ratio of each batch (Figure 6a).
+- **No-positive-resampling** primarily raises `$A$` — concentrating compute on the frontier of the policy's capability prevents wasted computation on saturated prompts (Figure 6b).
+
+---
+
+#### Leave-One-Out (LOO) Experimental Validation (Section 4)
+
+To validate that each component contributes positively even when all others are present, the paper conducts leave-one-out (LOO) experiments: starting from the full ScaleRL recipe, revert one design choice at a time to its baseline counterpart (from Section 2) and re-train for 16,000 GPU-hours. The LOO variants tested are:
+
+- **loo-pplan:** revert to prompt-level advantage normalization (from batch-level)
+- **loo-lp:** revert to length penalty (from forced interruptions)
+- **loo-batch:** revert to including zero-variance prompts in the batch (from filtering them)
+- **loo-8op:** revert to PPO-offpolicy-8 (from PipelineRL-8)
+- **loo-fp32:** revert to not using FP32 precision fix at the LM head
+- **loo-savg:** revert to sample average loss aggregation (from prompt average)
+- **loo-dapo:** revert to DAPO loss function (from CISPO)
+
+**Primary finding:** across all axes, ScaleRL consistently remains the most effective configuration, slightly outperforming LOO variants either in asymptotic reward `$A$` or in compute efficiency `$B$` (Figure 7 table, last column). Most LOO variants reach similar asymptotic pass rates — the differences are primarily in efficiency.
+
+**Isolating efficiency differences (Figure 7, transformed plot):** because most LOO variants achieve similar `$A$` values, the paper transforms the sigmoidal fit to highlight efficiency differences. It averages the asymptotic reward `$A$` across all runs (obtaining a single consensus `$A$`), re-fits the curves with this fixed `$A$`, and then rearranges Equation 1 into a form that makes `$B$` directly visible as a slope:
+
+$$F(R_C) = C^B$$
+
+where `$F(R_C) = C_{\text{mid}}^B / \left( \frac{A - R_0}{R_C - R_0} - 1 \right)$`. Plotting `$\log F(R_C)$` versus `$\log C$` yields a line with slope `$B$`, enabling direct visual comparison of efficiency. ScaleRL achieves the highest slope (`$B = 1.92$`), confirming it is the most compute-efficient variant.
+
+**Extrapolation validation:** for all LOO experiments and independent ScaleRL runs, the sigmoidal curve is fitted up to 8,000 GPU-hours and extrapolated to 16,000 GPU-hours. The predicted curves "align closely with both training and extended points," validating the predictability of the framework for stable recipes.
+
+**The apparent redundancy paradox:** in the LOO experiments (Figure 7), some components that showed large individual effects in the forward ablations — notably FP32 precision (Figure 5b) and loss type (Figure 5a) — appear less critical individually, with LOO variants reaching similar `$A$` values. The paper argues this does not mean the components are truly redundant:
+
+1. **FP32 precision:** while it appears to make little difference for dense 8B with ScaleRL, it provides large gains in GRPO/DAPO-style losses (Figure 5b) and on the Scout MoE (Figure 8b). "Its benefits extend beyond the specific ScaleRL configuration we study." The paper's interpretation is that CISPO is more numerically robust than DAPO, so the precision fix matters less when CISPO is used — but it provides an important safety net against numerical instabilities in other regimes.
+
+2. **CISPO vs. DAPO:** while reverting to DAPO yields similar asymptotic performance in the combined ScaleRL recipe, CISPO is "markedly more robust to the choice of IS-clipping parameter `$\epsilon_{\text{max}}$`" (Appendix A.17.1). A carefully tuned DAPO variant can perform similarly, but the tuning is brittle — "change of `$\epsilon_{\text{max}}$` fundamentally changes the asymptotic performance value `$A$`" (Figure 19a). CISPO's robustness means that the recipe works out-of-the-box without expensive hyperparameter sweeps. Additionally, CISPO is more efficient: `$B = 2.01$` vs. `$B = 1.77$` for DAPO in the LOO comparison.
+
+In summary, "even when individual design choices appear redundant within the combined recipe, they often enhance training stability, robustness, or efficiency in ways that generalize across models and setups." ScaleRL retains components not solely for marginal gains in one configuration, but because they address recurring sources of instability and variance.
+
+---
+
+#### Fitting Procedure: Grid Search Over Sigmoidal Parameters (Appendix A.5)
+
+The sigmoidal curve is fitted to validation pass rates measured every 100 training steps on 1,000 held-out prompts from Polaris-53K, with 16 generations per prompt at each evaluation step. The fitting problem has three free parameters: `$A$` (asymptote), `$B$` (exponent), and `$C_{\text{mid}}$` (midpoint).
+
+**Why direct three-parameter fitting is challenging:** the sigmoidal function is non-linear in all three parameters, and the parameters are correlated — changing `$A$` changes the optimal `$B$` and `$C_{\text{mid}}$`, and vice versa. Gradient-based optimization can converge to poor local minima, especially with the limited data available (approximately 75 evaluation points for the largest run).
+
+**The grid-search procedure:**
+
+1. Perform a grid search over `$A \in \{0.450, 0.455, 0.460, \ldots, 0.800\}$` (steps of 0.005) and `$C_{\text{mid}} \in [100, 40000]$` (100 linearly-spaced values).
+2. For each candidate pair `$(A, C_{\text{mid}})$`, fit only `$B$` using SciPy's `curve_fit` with default initialization. Since `$A$` and `$C_{\text{mid}}$` are fixed, the fitting problem reduces to a single-parameter fit in `$B$`, which is more stable.
+3. Select the combination `$(A, C_{\text{mid}}, B)$` that minimizes the sum of squared residuals across all evaluation points.
+
+**Why grid search over `$A$` in steps of 0.005:** the paper empirically found that the variance in fitted `$A$` across independent runs is approximately `$\pm 0.015$` (derived from three independent ScaleRL runs, Figure 8a). Therefore, a step of 0.005 provides sufficient resolution to distinguish meaningful differences while keeping the grid search computationally tractable. Varying the initialization of `curve_fit` produced identical results, confirming the stability of the single-parameter fit for `$B$`.
+
+**The fitting regime:** all scaling fits begin after approximately 1,500 GPU-hours (roughly 1 epoch for the baseline configuration), because the very early low-compute regime exhibits a rapid, almost linear increase that does not follow the sigmoidal pattern (Figure 15) and can destabilize the fit. The paper notes this is "consistent with observations in large-scale pre-training, where the loss exhibits a sharp initial drop before settling into a predictable power-law decay" (Appendix A.6). The 1,500 GPU-hour threshold is a heuristic "chosen empirically" and corresponds approximately to one epoch for most experiments in Section 3.2. The paper finds that "changing the fitting regime (e.g., including or excluding the initial 1.5k GPU-hour range) yields similar predictable results" for stable experiments, but excluding it improves fit quality for less stable setups from Section 3.2.
+
+**Robustness of fits (Appendix A.7):** for the 100K GPU-hour 8B dense run, the paper tests multiple fitting regimes:
+- Fit on (1.5K, 50K) GPU-hours: `$B = 1.70$`, `$A = 0.645$`
+- Fit on (0, 100K) GPU-hours: `$B = 1.56$`, `$A = 0.655$`
+- Fit on (0, 50K) GPU-hours: `$B = 1.70$`, `$A = 0.645$`
+- Fit on (5K, 50K) GPU-hours: `$B = 1.67$`, `$A = 0.645$`
+
+Across these regimes, parameter values remain within the expected error margin (`$\pm 0.02$` for `$A$`, derived from the three independent runs in Figure 8a). This stability is essential for the framework's predictive validity — if the fitted parameters were highly sensitive to the choice of fitting regime, extrapolations would not be reliable.
+
+---
+
+#### Error Margins and Statistical Reliability (Section 4, Figure 8a)
+
+Since RL training exhibits high variance (Agarwal et al., 2021), the paper quantifies the variability in fitted scaling coefficients by training three independent ScaleRL runs with identical hyperparameters (batch size 768, generation length 14K) and fitting sigmoidal curves to each. The observed variance in `$A$` is at most `$\pm 0.015$`, which the paper rounds to `$\pm 0.02$` as "a reasonable error margin on the estimates of asymptotic performance" (Appendix A.5).
+
+**Implication for comparing algorithms:** if two methods achieve asymptotic performance values `$A_1$` and `$A_2$` such that `$|A_1 - A_2| \leq 0.02$`, the difference is not statistically meaningful — the methods have equivalent ceilings. In such cases, efficiency parameters `$B$` and `$C_{\text{mid}}$` become the relevant comparison metrics. The paper's LOO analysis (Figure 7) uses exactly this logic: since most LOO variants reach similar `$A$` values (within the error margin), the comparison focuses on efficiency via the transformed slope analysis.
+
+**Error margin for `$B$`:** the paper notes that "estimating the error margin for the fitted value `$B$` is difficult, as different algorithms with different `$A$` values can have different error margins for `$B$`" (Appendix A.5). However, for the purpose of comparing algorithms with similar `$A$` values, the refitting procedure (fixing `$A$` to the average and re-fitting `$B$`) provides a clean comparison — the method with the higher `$B$` under the fixed-`$A$` fit is at least as efficient.
+
+---
+
+#### The Fitting-Measurement-Validation Cycle (Sections 3–5)
+
+The paper's experimental methodology follows a consistent three-stage cycle that is applied at multiple scales:
+
+**Stage 1 — Forward ablations (3,500–4,000 GPU-hours):** starting from the baseline, each design choice is ablated individually (e.g., CISPO vs. DAPO vs. GSPO) by fitting scaling curves over the available compute budget. The choice that yields the higher `$A$` is selected when `$A$` differs; when `$A$` is similar, the choice with better efficiency (`$B$`, `$C_{\text{mid}}$`) is selected. Some combinations are unstable beyond 3,500–4,000 GPU-hours (Appendix A.15 details that truncation rates above 10–15% correlate with training instability), so this stage identifies both the best options and the stable combinations.
+
+**Stage 2 — Leave-one-out validation (16,000 GPU-hours, Section 4):** the best options are combined into ScaleRL, and each component is reverted one at a time to verify it contributes positively in the combined recipe. Fits are performed on the first 8,000 GPU-hours and extrapolated to 16,000 GPU-hours; the alignment of extrapolated curves with extended training validates both the recipe's stability and the framework's predictive power.
+
+**Stage 3 — Large-scale extrapolation (30,000–100,000 GPU-hours, Section 5):** ScaleRL is run at extreme compute budgets with variations along scaling axes (batch size, context length, model size, multi-task). Fits from early training are extrapolated to the target budget and verified against extended training, confirming that the framework's predictions hold across multiple orders of magnitude of compute.
+
+This three-stage cycle embodies the paper's central methodological claim: **smaller-scale ablations, when analyzed through the lens of sigmoidal scaling curves, can predict performance at larger scales** — enabling systematic, cost-effective development of scalable RL methods.
 
 ## 4. Key Insights and Innovations
-- A predictive, separable model of RL scaling
-  - Novelty: models bounded accuracy vs. compute with a sigmoidal curve that cleanly separates asymptotic performance `A` (ceiling) from efficiency (`B`, `Cmid`) (Section 2.1; Figure 3; Equation (1)).
-  - Significance: enables reliable extrapolation from small runs to large budgets; for the 8B model, fitting up to 50k GPU-hours accurately extrapolates the 100k trajectory (Figure 1a). For the 17B×16 MoE, fitting up to 16k extrapolates to 45k (Figure 1a).
-- What actually raises the ceiling versus what “just” improves efficiency
-  - Finding: some design choices change `A` (e.g., loss family and FP32 logits), while others primarily change `B`/`Cmid` (e.g., normalization, aggregation, curriculum) (Sections 3.2, 4; Figures 5–7).
-  - Example: FP32 logits lift `A` from 0.52 to 0.61 (Figure 5b). CISPO/GSPO lift `A` relative to DAPO (Figure 5a). LOO studies show many other choices have similar `A` but different `B` (Figure 7).
-- PipelineRL as the more scalable off-policy mechanism
-  - Difference from prior work: instead of batch-alternating “generate then train” (PPO-off-policy), PipelineRL streams updates to generators immediately, keeping training closer to on-policy (Section 3.1; Appendix A.11).
-  - Impact: much better `B` (efficiency) and slightly higher `A` than PPO-off-policy under matched settings (Figure 4a).
-- A robust, practical recipe (`ScaleRL`) that remains predictable at scale
-  - Composition over invention: `ScaleRL` integrates existing techniques—CISPO, FP32 logits, PipelineRL-8, prompt-averaging, batch normalization, zero-variance filtering, no-positive resampling, interruptions—and validates each component via leave-one-out ablations (Section 4; Figure 7).
-  - Predictability: extrapolations from the first half of training consistently match extended runs, including the 100k GPU-hour run (Figures 1, 7–11).
-- Hyperparameter robustness of CISPO vs. sensitivity of DAPO
-  - Evidence: changing DAPO’s upper clipping (`ϵmax`) shifts the asymptote `A` materially (Appendix A.17.1; Figure 19a), whereas CISPO’s clipping range changes have little effect (Appendix A.17.2; Figure 19b). GSPO is robust to scale once the correct order of magnitude is chosen, but showed mid-training instability in some runs (Appendix A.17.3–A.17.4).
+
+### Innovation 1: Decomposing RL Scaling into Asymptotic Performance vs. Compute Efficiency as Two Separable Science Questions
+
+The paper's most fundamental intellectual contribution is not any specific algorithmic choice, but rather the **conceptual decomposition of RL scaling into two orthogonal axes**: the asymptotic performance ceiling `A` (where the curve ultimately flattens) and the efficiency parameters `B` and `C_mid` (how fast it gets there). This decomposition transforms RL research from a point-evaluation activity — "my method beats yours at budget X" — into a scaling-aware science where choices are evaluated based on *which axis they affect*, enabling predictions about behavior at budgets far beyond what was tested.
+
+Prior to this work, the RL-for-LLMs literature implicitly conflated these two axes. When a paper reported that DAPO outperforms GRPO (Yu et al., 2025), or that VAPO surpasses value-free baselines (Yue et al., 2025), the comparison was made at a single compute budget — typically whatever the authors could afford. The reader had no way to know whether the winning method had a genuinely higher ceiling, or was merely more sample-efficient and would plateau at the same asymptote given more compute. This conflation matters enormously in practice: a method that looks 5% better at 4,000 GPU-hours but plateaus at `A = 0.52` is strictly worse than a method that looks 2% worse at 4,000 GPU-hours but saturates at `A = 0.61`. The field had no vocabulary for making this distinction, and therefore no way to design experiments that would reveal it.
+
+The paper introduces exactly this vocabulary. By fitting sigmoidal curves `R_C = R_0 + (A - R_0) / (1 + (C_mid/C)^B)` and interpreting `A` as "ceiling" and `B`, `C_mid` as "efficiency," the paper enables a qualitatively different kind of comparison. Figure 13b in Appendix A.8 makes this vivid: a method can be less efficient yet reach a higher asymptote, making it ultimately superior despite an early deficit. This is the "bitter lesson" the paper embraces (Section 1, Principle 2): "Methods that appear superior at small compute budgets can be worse when extrapolated to large-compute regimes."
+
+The conceptual move here parallels what Hoffmann et al. (2022) did for pretraining: before Chinchilla, pretraining compute was allocated by intuition; after Chinchilla, there was a framework for computing the optimal model-size-to-data ratio. Analogously, before this paper, RL design choices were evaluated by point comparisons; after this paper, they can be evaluated by their effect on `A` versus `B`. This is not an algorithmic advance — it does not make any single method better — but it is a **methodological advance** that changes how the field should conduct and evaluate RL research.
+
+The significance extends beyond academic comparison. For practitioners allocating real compute budgets, knowing that loss type predominantly shifts `A` while advantage normalization predominantly shifts `B` enables principled resource allocation: first maximize `A` (since you will eventually saturate at it), then optimize for efficiency. The paper's experimental design — forward ablations to identify `A`-raisers (Section 3.2), leave-one-out experiments to confirm cumulative effects (Section 4) — operationalizes this principle, providing a template for future RL research.
+
+The evidence supporting this decomposition runs throughout the paper. Figure 5a shows that CISPO raises `A` compared to DAPO; Figure 5b shows FP32 precision raises `A`; Figure 4a shows PipelineRL primarily improves `B`; Figure 14a shows loss aggregation shifts `A`; Figure 14b shows advantage normalization has minimal effect on either axis. Most strikingly, the leave-one-out analysis (Figure 7) reveals that when starting from ScaleRL and removing individual components, almost all removals leave `A` nearly unchanged — the differences are in efficiency. This is not a foregone conclusion; it is an empirical discovery that most of the design choices the community obsesses over are efficiency-modulators, not ceiling-raisers.
+
+### Innovation 2: Sigmoidal Predictive Fits as a Robust Alternative to Power Laws for Bounded RL Metrics
+
+The paper's second conceptual contribution is the **deliberate departure from power-law scaling fits in favor of sigmoidal functions**, grounded in both theoretical and empirical arguments about the nature of RL performance curves. This is not merely a curve-fitting preference — it reflects a deeper insight about the structure of RL post-training that distinguishes it from pretraining, and the choice has direct consequences for whether predictions are reliable.
+
+The pretraining scaling literature has converged on power laws: `L(C) = L_∞ + D/C^α` for loss (Kaplan et al., 2020; Hoffmann et al., 2022). These laws are empirically well-supported for pretraining loss, which is theoretically unbounded below (entropy of natural language is positive). But RL post-training is evaluated on bounded metrics — accuracy, pass rate, reward — that sit in [0, 1]. Fitting a power law to a bounded metric is mathematically ill-posed: the power law asymptotes to `L_∞` from above, but there is no guarantee that `L_∞ ∈ [0, 1]`, and at high compute the power law is unbounded and would eventually predict accuracy exceeding 1.0.
+
+The paper demonstrates this failure mode concretely (Appendix A.4): fitting a power law to their 100K GPU-hour 8B run over 1.5K–50K GPU-hours predicts `A = 1.0`, which is "clearly incorrect" since the actual curve saturates near 0.65. More damagingly, the power-law fit is highly sensitive to the fitting regime: changing from (1.5K, 50K) to (5K, 50K) changes the predicted asymptote from `A = 1.0` to `A = 0.74`. This instability makes power-law extrapolations useless for the paper's stated goal of predicting large-scale performance from lower-compute regimes.
+
+The sigmoidal form solves both problems. By construction, `R_C ∈ [R_0, A]` with `A ≤ 1`, ensuring predictions remain physically meaningful. Empirically, the fitted parameters are stable across fitting regimes: the same 100K run yields `A = 0.645` whether fitted over (1.5K, 50K), (0, 100K), (0, 50K), or (5K, 50K) GPU-hours (Appendix A.7) — the variance is within the `±0.02` error margin derived from independent replicates (Figure 8a). This robustness is what makes the framework *predictive* rather than merely descriptive.
+
+The choice of sigmoidal over power-law also reflects a substantive claim about the dynamics of RL training. Power laws imply that each multiplicative increase in compute yields a constant proportional gain indefinitely — there is always room to improve, just with diminishing returns. A sigmoid implies that there is a **finite performance ceiling** determined by the algorithm, model, and data, beyond which additional compute yields essentially zero improvement. The paper's evidence strongly supports the sigmoidal picture: across all experiments, performance clearly saturates (Figure 1, Figure 2, Figure 7, Figure 9), and in some cases actually degrades due to instability at very high compute (the extended GRPO run in Figure 2). The existence of a finite ceiling is not a disappointing limitation — it is the key insight that enables the `A`/`B` decomposition and the scaling-aware methodology.
+
+A subtle but important mathematical point (Appendix A.4): the sigmoidal form nests power-law behavior in the high-compute regime. For `C ≫ C_mid`, the approximation `R_C ≈ A - (A - R_0)C_mid^B / C^B` recovers the power-law form with exponent `B`. This means the sigmoid is not in conflict with power-law behavior — it simply captures the full S-curve, including the low-compute regime where a power law would be unbounded, while converging to power-law behavior where it is appropriate. The paper's choice is thus a **generalization** of power-law fitting to the bounded-metric setting, not a rejection of power-law thinking.
+
+### Innovation 3: The Empirical Discovery That Most Design Choices Modulate Efficiency, Not the Asymptote — and What This Implies for Research Priorities
+
+The paper's most counterintuitive empirical finding — and the one with the greatest implications for how RL research should be conducted — is that **the vast majority of design choices that the community debates primarily affect compute efficiency (`B`, `C_mid`) rather than the asymptotic performance ceiling (`A`)**. This finding challenges the implicit assumption underlying virtually all prior RL work: that algorithmic innovations raise the ceiling of what is achievable.
+
+The evidence for this claim is systematic and cumulative. Across the forward ablations in Section 3.2 and the leave-one-out experiments in Section 4:
+
+- **Loss type** (CISPO vs. DAPO vs. GSPO): primarily shifts `A` (Figure 5a) — this is one of the few genuine ceiling-raisers.
+- **FP32 precision**: shifts `A` substantially when using DAPO/GRPO-style losses (Figure 5b), but has minimal effect on `A` with CISPO in the LOO experiments (Figure 7) — though it provides robustness on larger models (Figure 8b).
+- **Loss aggregation** (sample vs. prompt vs. token): primarily shifts `A` (Figure 14a).
+- **Advantage normalization** (prompt-level vs. batch-level vs. none): similar `A` across all variants (Figure 14b) — efficiency modulation.
+- **Zero-variance filtering**: primarily shifts `A` (Figure 6a).
+- **No-positive-resampling curriculum**: primarily shifts `A` (Figure 6b).
+- **PipelineRL vs. PPO-off-policy**: primarily shifts `B` (Figure 4a) — this is one of the few axes that substantially affects efficiency.
+- **Forced interruptions vs. length penalty**: similar performance in the LOO experiment (Figure 7) — second-order effect.
+- **Loss aggregation, advantage normalization, precision (within ScaleRL)**: in the LOO experiments (Figure 7), removing any of these leaves `A` essentially unchanged — the differences are all in `B`.
+
+The pattern is striking: of the approximately eight design axes studied, only two or three (loss type, precision, zero-variance filtering) materially shift the asymptote; the rest are efficiency knobs. This is not obvious *a priori* — one could easily imagine that advantage normalization strategy or off-policy algorithm choice would change the quality of the final policy, not just how quickly it is reached. The fact that they do not is a substantive empirical claim about the structure of RL optimization for LLMs.
+
+The implication for research is a **reorientation of priorities**. The paper's framework suggests that the field should:
+
+1. **First, identify and optimize the few ceiling-raising knobs** — loss type, precision, filtering strategies, and (as shown in Section 5) batch size, context length, and model scale. These are the decisions that determine whether your method will ultimately dominate or plateau.
+2. **Then, optimize efficiency** — advantage normalization, off-policy algorithm, loss aggregation details, curriculum design. These matter for practical compute budgets (getting to the ceiling faster) but will not change where you end up.
+3. **Stop evaluating methods at fixed, arbitrary compute budgets** — a method that looks better at 4,000 GPU-hours may simply be more efficient, not better. Only scaling curves reveal the difference.
+
+This reorientation is not a minor methodological tweak. Consider the implication for the DAPO paper (Yu et al., 2025): DAPO's primary contributions were asymmetric clipping, prompt-level aggregation, and dynamic sampling. Evaluated at a fixed budget, DAPO outperformed GRPO — a legitimate and useful result. But the paper's scaling analysis reveals that DAPO's clipping hyperparameter `ε_max` fundamentally alters the asymptotic performance `A` (Appendix A.17.1, Figure 19a), while the aggregation and sampling changes primarily affect efficiency. This means that a DAPO-vs-GRPO comparison at a single budget conflates ceiling effects (from clipping) with efficiency effects (from aggregation), and could easily mislead a practitioner into thinking the aggregation innovation was responsible for the gain when it was actually the clipping threshold. The scaling framework disentangles these, enabling attribution of effects to specific components.
+
+### Innovation 4: The Identification of Verifier-Independent Scaling Phenomena That Are Intrinsic to RL Training, Not Specific to Reward Design
+
+While not framed as a verifier study, the paper makes an important implicit contribution by demonstrating that the scaling phenomena it observes — sigmoidal saturation, the A/B decomposition, the dominance of efficiency over asymptote for most design choices — emerge in a setting with **binary ±1 rewards on verifiable math problems**, the simplest possible reward function. This is significant because it isolates the scaling behavior as a property of the RL optimization dynamics themselves, rather than an artifact of reward model quality, reward hacking, or verifier over-optimization.
+
+The contrast with prior work is instructive. Studies of test-time compute scaling (e.g., the compute-optimal test-time scaling paper) identified verifier over-optimization as the primary bottleneck — search degrades at high budgets because the reward model is exploited. Studies of RLHF scaling identified reward model quality as a limiting factor. But in this paper, the reward is perfect (binary correctness on math problems with automated verification). There is no reward model to hack, no distribution shift in reward quality, no ambiguity in the reward signal. Yet the scaling curves still saturate. The performance ceiling `A ≈ 0.61` for ScaleRL on the 8B model is not a property of the reward — it is a property of the RL algorithm, the model capacity, and the data distribution.
+
+This finding narrows the space of explanations for why RL plateaus. If saturation occurs even with perfect rewards, then the bottleneck cannot be solely reward-related. The remaining candidates include:
+
+- **Model capacity saturation**: given the fixed 8B parameters and fixed SFT initialization, there may be a fundamental limit to how much the policy can improve on this data distribution via RL, regardless of the reward signal. The fact that scaling to a 17B×16 MoE raises the asymptote (Figure 1b, Table 1: `A = 0.71` for Scout vs. `A = 0.61` for 8B) supports this — larger models have higher ceilings.
+- **Data distribution saturation**: the Polaris-53K training set may not contain enough challenging-but-solvable prompts to push the policy beyond a certain ceiling. The no-positive-resampling curriculum (Figure 6b) partly addresses this by removing saturated prompts, but it cannot add new harder prompts.
+- **Optimization landscape properties**: the RL objective with importance sampling, clipping, and group-relative advantages may have local optima or flat regions that prevent convergence to the global optimum of the reward landscape.
+- **Entropy collapse**: even with asymmetric clipping and CISPO's one-sided truncation, the policy may gradually lose diversity, reducing exploration and preventing further improvement.
+
+The paper does not resolve which of these is dominant, but by demonstrating that saturation occurs with perfect rewards, it **reframes the question**. The community's focus on reward quality as the primary scaling bottleneck may be misplaced; the paper suggests that algorithmic and architectural factors (loss type, model size, data curriculum) are at least equally important. This is a negative result with positive implications: it tells researchers where *not* to look (reward design) and where to look instead (optimization dynamics, model capacity, data).
+
+### Innovation 5: A Reproducible Methodology for Predictive RL Scaling That Democratizes Large-Scale Research
+
+The paper's final innovation is best understood as a **meta-contribution**: it provides a complete, reproducible methodology for conducting scaling-aware RL research that does not require the compute budgets of frontier labs. This methodology consists of the sigmoidal fitting framework, the error margin estimation via independent replicates, the three-stage experimental protocol (forward ablations → LOO validation → large-scale extrapolation), and the distinction between in-distribution validation sets (for fitting scaling laws) and downstream benchmarks (for generalization checks).
+
+Why is this an innovation rather than just "good experimental practice"? Because prior RL work had no such methodology, and its absence had tangible consequences:
+
+- **Comparisons were unreliable.** Methods compared at arbitrary compute budgets could not distinguish ceiling effects from efficiency effects, leading to potentially incorrect conclusions about which algorithms were genuinely superior. The paper's re-evaluation of prevalent recipes (Figure 2) demonstrates this concretely: methods that looked competitive at small budgets (GRPO, DAPO) were revealed to have lower ceilings when fitted and extrapolated.
+- **Resource allocation was speculative.** Without a predictive framework, decisions about batch size, context length, and model scale were made by intuition or by running the full experiment — there was no way to extrapolate from smaller-scale runs. The paper's Section 5 demonstrates that all of these decisions can be informed by fitting on early training points and extrapolating.
+- **The academic community was sidelined.** The paper explicitly states (Section 1) that "with no reliable way to identify promising RL candidates *a priori*, progress is tied to large-scale experimentation that sidelines most of the academic community." A methodology that enables prediction from smaller-scale runs (e.g., 16K GPU-hour LOO experiments to predict behavior at 100K GPU-hours) lowers the barrier to entry for RL scaling research.
+
+The paper validates this methodology by *using it to design ScaleRL* and then demonstrating that the recipe scales predictably to 100,000 GPU-hours — extrapolations from 50K GPU-hours match extended training (Figure 1a). This is the acid test: if the methodology only worked retrospectively, it would be curve-fitting, not prediction. The fact that it successfully forecasts performance at compute budgets 2× beyond the fitting regime — and across multiple scaling axes (batch size, context length, model size, multi-task) — establishes it as a genuine predictive framework.
+
+A subtle but critical design choice that makes this methodology reproducible: the paper's primary evaluation metric is **in-distribution validation pass rate**, not downstream benchmark performance. This follows pretraining practice (Hoffmann et al., 2022; Porian et al., 2025) where scaling laws are fit on held-out training-distribution data, not on downstream tasks. The rationale is that in-distribution validation provides dense, frequent, low-noise evaluation points (1,000 prompts × 16 generations every 100 steps), enabling stable sigmoidal fits. Downstream benchmarks like AIME with 30 questions are too sparse and noisy for fitting (the paper still reports them as sanity checks in Figures 1b, 9b, 10b, 18). This distinction between "scaling metric" and "generalization metric" is conceptually important and will likely become standard in future RL scaling work.
+
+The paper also releases a minimal code repository for curve fitting (Section 7), lowering the barrier for others to adopt the methodology. While the full training infrastructure (80 GB200 GPUs, generator–trainer split, PipelineRL implementation) is not open-sourced, the fitting framework is — and the fitting framework is the portable intellectual contribution that enables scaling-aware research on any infrastructure.
 
 ## 5. Experimental Analysis
-- Evaluation methodology
-  - In-distribution validation: 1,000 held-out Polaris math prompts; pass rate (average over 16 generations per prompt) computed every 100 steps (Section 2.1).
-  - “Compute” is GPU-hours; fits exclude the first ~1.5k GPU-hours (Section 2.1; Appendix A.5–A.7).
-  - Downstream generalization: AIME-24 (math), LiveCodeBench Jan–Jun 2025 (code) (Figures 1b, 9b, 10b, 18).
-  - Stability diagnostics: “truncation rate” (percentage of generations forcibly interrupted), which correlates with instabilities (Appendix A.15).
-- Core ablations and comparisons
-  - Off-policy algorithm (Section 3.1; Figure 4a–b)
-    - PipelineRL-k vs. PPO-off-policy-k: similar `A` (~0.52 in that setup), but PipelineRL’s `B` is substantially larger. Best `k ≈ 8` for PipelineRL (Figure 4b).
-  - Loss family (Section 3.2; Figure 5a; Appendix A.17)
-    - CISPO and GSPO both raise `A` substantially over DAPO; e.g., in Figure 5a, DAPO fits to `A ≈ 0.52`, while CISPO/GSPO fit to `A ≈ 0.595`.
-    - CISPO chosen for better late-training trajectory and robustness to clipping.
-  - FP32 logits (Section 3.2; Figure 5b)
-    - > “Using FP32 precision in the final layer (LM head) gives a considerable boost in the asymptotic reward,” lifting the fitted asymptote from ≈0.52 to ≈0.61 (Figure 5b).
-  - Loss aggregation and advantage normalization (Section 3.2; Appendix A.9)
-    - Prompt-level averaging achieves the best or tied best asymptote among aggregation schemes (Appendix Figure 14a).
-    - Batch-level, prompt-level, or no normalization behave similarly on asymptote; batch-level chosen for theoretical soundness and slight edge (Appendix Figure 14b).
-  - Zero-variance filtering and No-Positive-Resampling (Section 3.2; Figure 6)
-    - Dropping zero-variance prompts improves asymptote relative to counting them toward the batch (Figure 6a).
-    - Filtering out ≥0.9-pass prompts across epochs improves scalability and asymptote (Figure 6b).
-- The `ScaleRL` LOO study (Section 4; Figure 7)
-  - Each component is removed one at a time; most LOO runs achieve similar `A` (within ±0.02), but differ in `B`. Re-plotting in a form where slope equals `B` makes efficiency differences explicit; `ScaleRL` has the highest `B` (Figure 7).
-  - Variability analysis across three independent runs yields ±0.02 error on `A` (Figure 8a), which is used to judge meaningful differences.
-- Scaling experiments and predictability (Section 5; Figures 1, 9–11; Table 1 in Appendix A.13)
-  - Model size (MoE): `Llama-4 17B×16` (“Scout”) trained with `ScaleRL` follows a predictable curve and achieves much higher asymptote (`A ≈ 0.71`) than the 8B dense model (`A ≈ 0.61`), while using about 1/6 of the 8B run’s RL compute to surpass its final level (Figure 1a; Table 1).
-  - Generation length: 32k-token runs have lower efficiency (`B` decreases; `Cmid` increases) but a higher asymptote (`A` increases to ≈0.645), overtaking 14k runs at large compute (Figure 9a; Table 1).
-  - Batch size: larger global batch (e.g., 2,048 prompts) appears slower early but reaches a higher asymptote (`A ≈ 0.645` vs. `≈0.605–0.610`) and better downstream performance (Figure 10; Table 1; Appendix A.14).
-  - Generations per prompt (fixed total batch): changing 8/16/24/32 generations per prompt (and adjusting prompts to keep total batch fixed) leaves fitted curves essentially unchanged at this scale (Appendix A.13; Figure 17).
-  - Multi-task (math+code): both domains show clean, parallel scaling trends, and math-only curves remain predictive references; fitted asymptotes: code ≈0.615, math ≈0.595 (Figure 11; Table 1).
-  - Downstream scaling: AIME-24 tracks the validation scaling trend, confirming transfer; e.g., Figure 1b and Figure 9b.
-- Stability observations (Appendix A.15)
-  - Truncation rates above ~10–15% often coincide with instability and degradation.
-  - `ScaleRL` keeps truncations <5% for >90% of steps at batch 768 and similar low rates at larger scale; larger models and longer budgets reduce truncations further.
 
-Overall, the experiments back three central claims:
-- The sigmoidal model is predictive across setups and scales (Figures 1, 7–11).
-- `ScaleRL` is competitive or better than prevalent recipes and more predictable at scale (Figure 2).
-- Design choices separate into ceiling raisers (loss/precision) and efficiency boosters (off-policy streaming, normalization/aggregation, curricula) (Figures 5–7).
+### Evaluation Methodology
+
+- **Dataset.** All RL experiments use the Polaris-53K math dataset (An et al., 2025), with 1,000 prompts randomly held out for in-distribution validation and the remainder used for training. The SFT stage uses a curated data mix of reasoning traces filtered to remove trivial prompts, discard solution traces exceeding 12K tokens, and decontaminate against AIME 2024/2025 and MATH-500 benchmarks (Appendix A.3). For multi-task experiments (Section 5, Figure 11), the Deepcoder dataset (Luo et al., 2025) is added for code training.
+
+- **Base model(s).** The primary model is an 8B dense model (architecture not explicitly named, but described as undergoing SFT before RL). Larger-scale experiments use a 17B×16 Llama-4 Scout Mixture-of-Experts model. The 8B model is chosen as the workhorse for systematic ablations because individual runs at this scale cost up to 16,000 GPU-hours, making them "6× cheaper than experimenting at our largest training run scale" (Section 1). The Scout MoE is used to validate that findings transfer to larger architectures.
+
+- **Metrics.** The primary metric is **validation pass rate (mean@16)** — the fraction of the 1,000 held-out prompts for which the model's final answer is correct, averaged over 16 generations per prompt, evaluated every 100 training steps. Correctness is determined using automated checkers (Sympy or Math-Verify) that strip the thinking trace and compare the final answer to the ground truth (Appendix A.3). Rewards during training are binary: +1 for correct, −1 for incorrect. Downstream evaluation on AIME-24 and LiveCodeBench is reported as a generalization check but is not used for fitting scaling curves.
+
+- **Baselines.** The paper compares ScaleRL against several prevalent RL recipes (Figure 2):
+  - **DeepSeek (GRPO)** following Guo et al. (2025): GRPO loss with ε_min = ε_max = 0.2, sample average loss aggregation, PPO-offpolicy-8. Training destabilized after ~6K GPU-hours due to truncations (Appendix A.15).
+  - **Qwen-2.5 (DAPO)** following Yu et al. (2025): DAPO loss with ε_min = 0.2, ε_max = 0.26 (tuned; see Appendix A.17.1), PPO-offpolicy-8, prompt average loss aggregation, larger effective batch size of 1,280 due to dynamic sampling approximation (Appendix A.16).
+  - **Magistral** following Rastogi et al. (2025): DAPO-style loss with PipelineRL as the off-policy algorithm.
+  - **MiniMax** following MiniMax et al. (2025): CISPO loss, FP32 precision fix at the LM head, PPO-offpolicy algorithm, prompt average aggregation, larger effective batch of 1,280 (Appendix A.16).
+
+- **Generation budget / compute accounting.** Compute is measured in **GPU-hours** on 80 Nvidia GB200 GPUs per run, with 64 GPUs allocated as generators and 16 as trainers (Appendix A.3). The baseline configuration uses batch size 768 completions (48 prompts × 16 generations each) with sequence length 16,384 tokens: 12,288 for thinking, 2,048 for the solution, and 2,048 for the input prompt. Scaling RL compute corresponds to running multiple epochs over the training prompts. All experiments use a constant learning rate of 5 × 10⁻⁷, AdamW optimizer with ε = 10⁻¹⁵ and weight decay 0.01, and linear warmup of 100 steps.
+
+- **Cross-validation / statistical protocol.** To estimate error margins on fitted scaling coefficients, three independent ScaleRL runs were trained with identical hyperparameters (batch size 768, generation length 14K). The observed variance in asymptotic performance `A` across these runs is at most ±0.015, which the paper rounds to ±0.02 as "a reasonable error margin" (Appendix A.5, Figure 8a). This margin is used to determine whether differences in `A` between methods are statistically meaningful. For the leave-one-out experiments in Section 4, scaling curves are fitted on the first 8,000 GPU-hours and extrapolated to 16,000 GPU-hours; the alignment of extrapolated curves with extended training points serves as validation of both recipe stability and framework predictiveness.
+
+### Main Quantitative Results
+
+#### Forward Ablations: Asynchronous Training Regimes (Section 3.1)
+
+**PipelineRL matches PPO-off-policy in asymptotic performance but substantially improves compute efficiency.** Fitting sigmoidal curves to the baseline (GRPO with asymmetric DAPO clipping) run under both asynchronous regimes (Figure 4a):
+
+- **PPO-offpolicy-8**: B = 1.92, A = 0.52 (approximate values read from Figure 4a)
+- **PipelineRL-8**: B = 2.44, A = 0.52 (matching asymptote, higher efficiency exponent)
+
+Both regimes achieve the same asymptotic pass rate `A`, but PipelineRL reaches it faster — the larger `B` value indicates steeper convergence once the efficient regime begins. The paper attributes this to PipelineRL reducing idle time in the training process: "this choice yields reliable gains with fewer tokens, making larger sweeps at a lower compute budget possible" (Section 3.1). Varying the maximum off-policyness for PipelineRL (Figure 4b) shows that k = 8 is optimal, with k = 4 performing equally well.
+
+#### Forward Ablations: Loss Type (Section 3.2)
+
+**CISPO and GSPO substantially raise the asymptotic performance ceiling compared to DAPO.** Fitting sigmoidal curves (Figure 5a):
+
+- **DAPO**: A ≈ 0.49, B ≈ 1.92 (approximate values from Figure 5a curve)
+- **GSPO**: A ≈ 0.57, B ≈ 2.0
+- **CISPO**: A ≈ 0.60, B ≈ 2.0
+
+Both GSPO and CISPO improve the asymptotic pass rate by a large margin relative to DAPO. CISPO exhibits "a prolonged near-linear reward increase" (Section 3.2) and is marginally better than GSPO later in training, making it the preferred choice for ScaleRL. The paper notes that the default GSPO clipping scale of 10⁻⁴ from Zheng et al. (2025a) "did not work well in our setting" (Appendix A.17.3), requiring a sweep to identify 10⁻³ as the correct scale — but once identified, GSPO was robust to fine-grained changes in the clipping ratio (Figure 20b). However, GSPO exhibited stability issues on larger models (Scout MoE), where "instability persisted despite repeated resetting to a stable checkpoint" (Appendix A.17.4), whereas CISPO maintained stability across all scales.
+
+#### Forward Ablations: FP32 Precision for Logits (Section 3.2)
+
+**FP32 precision at the LM head dramatically raises the asymptotic performance ceiling for DAPO/GRPO-based losses.** Fitting sigmoidal curves (Figure 5b):
+
+- **Without FP32 fix**: A ≈ 0.52
+- **With FP32 fix**: A ≈ 0.61
+
+This represents a 9-percentage-point increase in the ceiling, making it "one of the largest single-component effects in the entire study" (Section 3.2). The fix addresses numerical mismatches in token probabilities between generator inference kernels and trainer computation, which are "especially pronounced at the language model head" (Section 3.2, citing MiniMax et al., 2025). The importance of this fix is loss-dependent: it provides large gains with DAPO/GRPO-style losses but appears less critical with CISPO in the combined ScaleRL recipe (Figure 7 LOO experiment), though it still provides benefits on larger models (Figure 8b, Scout MoE LOO).
+
+#### Forward Ablations: Loss Aggregation, Advantage Normalization, Zero-Variance Filtering, Curriculum (Section 3.2)
+
+**Loss aggregation strategy shifts the asymptote; advantage normalization does not.** Comparing three aggregation strategies (Appendix A.9, Figure 14a):
+
+- **Sample average** (GRPO-style, each completion weighted equally): A ≈ 0.55
+- **Token average** (all tokens in batch averaged directly): A ≈ 0.57
+- **Prompt average** (DAPO-style, each prompt weighted equally): A ≈ 0.58
+
+Prompt average achieves the highest asymptotic performance and is adopted for ScaleRL. For advantage normalization (Figure 14b), all three variants — prompt-level (GRPO-style), batch-level (Hu et al., 2025a; Rastogi et al., 2025), and no normalization (Dr. GRPO, Liu et al., 2025b) — yield similar performance. Batch-level normalization is adopted because it is "theoretically sound and marginally better" (Section 3.2): using a larger sample for standard deviation estimation (P×G = 768 rewards instead of G = 16) reduces noise in the normalization factor.
+
+**Zero-variance filtering raises the asymptote by removing gradient-free prompts.** Comparing the default (include prompts where all G = 16 completions have the same reward, contributing zero policy gradient) against the effective batch approach (filter such prompts out), Figure 6a:
+
+- **Default** (include zero-variance prompts): lower asymptotic A
+- **Effective batch** (filter zero-variance prompts): higher A
+
+The paper hypothesizes that including zero-variance prompts "effectively reduces the signal-to-noise ratio of the batch — they add computation without adding gradient signal, diluting the effective learning rate" (Section 3.2).
+
+**No-positive-resampling curriculum raises the asymptote by concentrating compute on the policy's frontier.** Comparing uniform resampling of all prompts against the curriculum that permanently removes prompts with historical pass rate ≥ 0.9, Figure 6b:
+
+- **Uniform resampling**: lower A, earlier plateau
+- **No-positive-resampling**: higher A, continued improvement at higher compute
+
+The mechanism is that once a prompt becomes trivially solvable (all generations correct, zero advantage), it "consumes some compute but no longer contributes useful gradient signal" (Section 3.2). Removing such prompts shifts the effective training distribution toward harder prompts that still provide learning signal, effectively concentrating the compute budget on the frontier of the policy's current capability.
+
+#### Cross-Recipe Comparison: ScaleRL vs. Prevalent Methods (Figure 2)
+
+**ScaleRL achieves the highest asymptotic performance among all tested recipes.** Fitting sigmoidal curves to each recipe and extrapolating (Figure 2):
+
+- **ScaleRL**: A = 0.61 (highest asymptote), B = 1.92 (approximate from Figure 7 table)
+- **MiniMax**: intermediate A, stable extrapolation (extended points align with predicted curve)
+- **Magistral**: intermediate A, stable extrapolation
+- **Qwen-2.5 (DAPO)**: lower A, some deviation between extrapolated and extended points
+- **DeepSeek (GRPO)**: lowest A, training destabilized after ~6K GPU-hours due to truncations (Appendix A.15)
+
+Stars in Figure 2 denote evaluation points used for fitting; solid curves show fitted sigmoids over the fitting range; dashed curves extrapolate beyond. The "×" markers show extended training points. For stable recipes (ScaleRL, MiniMax), the extended points align closely with extrapolated curves, validating the predictive framework. For less stable recipes (DAPO, GRPO), deviations emerge at higher compute — exactly the regime where the paper's methodology would recommend against trusting those methods for scaling.
+
+#### Leave-One-Out (LOO) Validation of ScaleRL Components (Section 4, Figure 7)
+
+**Most LOO variants reach similar asymptotic performance to full ScaleRL; the differences are primarily in efficiency.** Starting from ScaleRL and reverting one component at a time (each run at 16,000 GPU-hours), fitted parameters (Figure 7 table, last column):
+
+| Variant | C_mid | B | A |
+|---------|-------|---|-----|
+| **ScaleRL** | 2542 | 1.92 | 0.610 |
+| loo-pplan (prompt-level adv norm) | 2536 | 1.89 | 0.610 |
+| loo-lp (length penalty) | 2974 | 1.99 | 0.605 |
+| loo-batch (no zero-var filtering) | 2605 | 1.72 | 0.595 |
+| loo-8op (PPO-offpolicy-8) | 3324 | 1.93 | 0.610 |
+| loo-fp32 (no FP32 fix) | 2511 | 1.72 | 0.605 |
+| loo-savg (sample avg aggregation) | 3092 | 1.69 | 0.595 |
+| loo-dapo (DAPO loss) | 3491 | 1.77 | 0.600 |
+
+ScaleRL achieves the highest or tied-for-highest `A` in every comparison and the highest `B` (1.92) overall. The variation in `A` across variants is within ±0.015 — exactly the error margin estimated from independent replicates (Figure 8a) — meaning the asymptotic differences are not statistically distinguishable. However, the efficiency differences (visible in `B` and `C_mid`) are meaningful: ScaleRL reaches the ceiling fastest. To make these efficiency differences directly visible, the paper transforms the sigmoidal fit into a form where `B` appears as a slope: `log F(R_C) = B log C` where `F(R_C) = C_mid^B / ((A - R_0)/(R_C - R_0) - 1)`. In this transformed plot (Figure 7, main panel), ScaleRL's line has the steepest slope, confirming it as the most compute-efficient configuration.
+
+**The apparent redundancy of certain components in LOO is explained by robustness and cross-model transfer.** The FP32 precision fix and CISPO loss showed large individual effects in forward ablations (Figures 5a, 5b) but appear less critical in LOO with ScaleRL (Figure 7). The paper argues (Section 4) that these components provide stability and robustness that generalize across models and setups:
+- FP32 fix on Scout MoE: Figure 8b shows that removing FP32 precision from ScaleRL on the Scout 17B×16 MoE reduces scalability, confirming its importance transfers to larger architectures.
+- CISPO robustness: Appendix A.17.2 (Figure 19b) shows CISPO performance is largely insensitive to the clipping parameter ε_max across a wide range, while DAPO's ε_max "fundamentally alters the asymptotic performance value A" (Appendix A.17.1, Figure 19a). A carefully tuned DAPO can match CISPO asymptotically (loo-dapo: A = 0.600 vs. ScaleRL: A = 0.610), but CISPO achieves this without expensive hyperparameter sweeps.
+
+#### Large-Scale Extrapolation: 100,000 GPU-Hour 8B Run (Section 5, Figure 1a)
+
+**ScaleRL's performance at 100,000 GPU-hours closely matches the sigmoidal curve extrapolated from the first 50,000 GPU-hours.** The 8B dense model was trained for 7,400 steps (3.5× longer than ProRL, Liu et al., 2025a) at batch size 2,048. Fitting a sigmoidal curve on validation pass rate up to 50K GPU-hours yields `A = 0.645`, `B = 1.70`, `C_mid = 10,909` (Table 1). Extrapolating from 50K to 100K, the predicted curve (dashed line in Figure 1a) closely tracks the extended training points (× markers), demonstrating "both stability at large compute and predictive fits" (Section 1). Downstream evaluation on AIME-24 (Figure 1b) shows a consistent scaling trend, confirming that in-distribution validation improvements translate to generalization gains.
+
+**The fitted asymptote is robust to choice of fitting regime** (Appendix A.7). For the 100K run, fitting over different ranges produces consistent parameters:
+- (1.5K, 50K): B = 1.70, A = 0.645
+- (0, 100K): B = 1.56, A = 0.655
+- (0, 50K): B = 1.70, A = 0.645
+- (5K, 50K): B = 1.67, A = 0.645
+
+All `A` values are within the ±0.02 error margin from independent replicates (Figure 8a).
+
+#### Scaling Model Size: Scout 17B×16 MoE (Section 5, Figure 1)
+
+**Scaling model size substantially improves both downstream and asymptotic RL performance.** The Scout MoE was trained with ScaleRL for 7,100 steps at 50,000 GPU-hours. Fitted parameters (Table 1): `A = 0.71`, `B = 1.65`, `C_mid = 4,242`. The extrapolated curve from 16K GPU-hours closely follows extended training to 45K GPU-hours (Figure 1a). Notably, the Scout MoE achieves higher asymptotic performance than the 8B model (A = 0.71 vs. A = 0.645) using approximately 1/6 of the RL training compute — "the larger 17B×16 MoE exhibits much higher asymptotic RL performance than the 8B dense model, outperforming the 8B's performance using only 1/6 of its RL training compute" (Section 5). This is a critical finding: model scale raises the RL performance ceiling substantially, suggesting that the saturation observed at A ≈ 0.61–0.65 for the 8B model is not a fundamental limit of RL training but rather a capacity limit of the smaller model.
+
+#### Scaling Generation Length (Section 5, Figure 9)
+
+**Longer generation length slows early progress but consistently raises the asymptotic performance ceiling.** Comparing training with 14K token generation budget (12K thinking + 2K response) against 32K tokens:
+
+- **14K tokens** (ScaleRL baseline): lower `A`, faster initial convergence (lower `C_mid`)
+- **32K tokens** (ScaleRL-32k): higher `A` = 0.645 (Table 1), but slower early progress (higher `C_mid` = 11,272, lower `B`)
+
+Figure 9 (left) shows the in-distribution validation curves: the 32K-token run starts below the 14K run at low compute but crosses over and ultimately surpasses it. The paper characterizes long-context RL as "a ceiling-raising knob rather than a mere efficiency trade-off" (Section 5). Figure 9 (right) confirms this pattern transfers to downstream AIME-24 evaluation: the 32K run eventually outperforms the 14K run on the benchmark. Extrapolations made from the early portion of the 32K run correctly forecast the higher convergence point when training is extended.
+
+#### Scaling Batch Size (Section 5, Figure 10)
+
+**Larger batch sizes slow training but settle at a higher asymptotic performance, with particularly strong benefits for downstream generalization.** Comparing batch sizes of 512, 768, and 2,048 prompts (keeping generations per prompt fixed at 16):
+
+- **Batch 512**: A = 0.605, B = 1.77, C_mid = 2,818 (Table 1)
+- **Batch 768**: A = 0.610, B = 1.92, C_mid = 2,542
+- **Batch 2,048**: A = 0.645, B = 1.70, C_mid = 10,909
+
+Figure 10a shows that smaller batches appear better at low compute budgets (faster initial convergence, lower `C_mid`) but are overtaken as compute grows — the batch-2,048 curve starts lowest but ends highest. This is a classic example of the "bitter lesson" pattern: apparent early superiority is misleading. On downstream AIME-24 (Figure 10b), the advantage of larger batch size is even more pronounced — batch 2,048 substantially outperforms batch 768 and 512 at the same compute budgets. The paper notes that "smaller-batch runs show early stagnation on downstream benchmarks even as in-distribution validation performance continues to improve" (Section 5), suggesting that larger batches provide a regularization effect that benefits generalization.
+
+#### Scaling Generations Per Prompt (Section 5, Appendix A.13, Figure 17)
+
+**Varying generations per prompt while holding total batch size fixed has minimal effect on scaling behavior.** Sweeping generations per prompt ∈ {8, 16, 24, 32} and adjusting the number of prompts to keep total batch size fixed (Appendix A.13, Figure 17a) yields fitted scaling curves that are "essentially unchanged" (Section 5). Fitted parameters (Table 1): `A` ranges from 0.585 (8 generations) to 0.595 (32 generations), and `B` ranges from 2.07 to 2.44 with no clear trend. The paper concludes that "at moderate batch, this allocation is a second-order choice for both A and B" and that "clearer differences may emerge at much larger batches (e.g., 2k+), which we leave for future work" (Section 5). Downstream performance (Figure 18a) similarly shows no systematic effect of generations-per-prompt on AIME-24 scores.
+
+#### Multi-Task RL: Math + Code (Section 5, Figure 11)
+
+**Joint training on math and code yields parallel sigmoidal scaling trends for each domain.** Training ScaleRL on a mix of math (Polaris-53K) and code (Deepcoder, Luo et al., 2025) data, the paper reports both math and code validation set performance alongside a math-only reference run (Figure 11). Fitted parameters (Table 1):
+- **Math validation on math+code run**: A = 0.595, B = 2.05, C_mid = 2,896
+- **Code validation on math+code run**: A = 0.615, B = 1.09, C_mid = 1,675
+
+The math-only reference achieves A = 0.610, B = 1.92, C_mid = 2,542. Joint training slightly reduces the math asymptote (from 0.610 to 0.595) while adding code capability. The extended runs remain aligned with extrapolated curves for both domains, demonstrating that "ScaleRL's scalability generalizes beyond a single domain training" (Figure 11 caption). Downstream performance on LiveCodeBench (January–June 2025) and AIME-24 (Figure 18b, 18c) show meaningful absolute performance on both modalities, confirming genuine multi-task learning rather than catastrophic interference. The code scaling curve has a notably lower `B` (1.09 vs. 2.05 for math), indicating that code performance improves more slowly with RL compute in this setup — a domain-specific scaling behavior.
+
+### Ablation Studies and Robustness Checks
+
+**DAPO clipping hyperparameter sensitivity (Appendix A.17.1, Figure 19a):** Varying ε_max in the DAPO loss from 0.20 to 0.28 fundamentally alters the asymptotic performance `A` — an effect not observed for other hyperparameters. At ε_max = 0.20, A ≈ 0.47; at ε_max = 0.24, A ≈ 0.51; at ε_max = 0.28, A ≈ 0.52. Beyond the optimal range, `A` decreases again. This is described as "a striking effect: unlike many hyper-parameters that merely shift the convergence speed, ε_max governs the asymptotic error itself" (Appendix A.17.1). The paper contrasts this with CISPO (Appendix A.17.2, Figure 19b): varying CISPO's clipping ratio ε_max across {4, 5, 8} produces "little difference in performance, indicating that CISPO is largely insensitive to this hyperparameter." This robustness is a key practical advantage of CISPO for large-scale training where expensive hyperparameter sweeps are infeasible.
+
+**GSPO clipping scale and stability (Appendix A.17.3, Figures 20a–20b):** The default 10⁻⁴ clipping scale from the GSPO paper (Zheng et al., 2025a) did not perform well for the 8B model. Sweeping across scales identified 10⁻³ as the correct order of magnitude. Within this scale, varying the upper clipping ratio between 4×10⁻³ and 5×10⁻³ produced similar performance, with 5×10⁻³ slightly better. However, despite this hyperparameter robustness, GSPO exhibited training instability: "On multiple occasions, GSPO runs diverged mid-training, leading to sudden drops in performance" (Appendix A.17.4). On the Scout MoE, "instability persisted despite repeated resetting to a stable checkpoint," whereas CISPO remained stable — making CISPO the preferred loss despite GSPO's competitive asymptotic performance.
+
+**Length penalty vs. forced interruptions (Appendix A.10, Figure 7 loo-lp):** Replacing forced interruptions with a length penalty (reward modification that penalizes overly long completions following DAPO's formulation with L_max = 14K and L_cache = 2K) in the final ScaleRL recipe "does not improve performance" (Appendix A.10). In the LOO experiment (Figure 7, loo-lp), reverting to length penalty yields A = 0.605 vs. 0.610 for ScaleRL and similar B and C_mid — a negligible difference well within the error margin.
+
+**Robustness of sigmoidal fits to fitting regime (Appendix A.7):** For the 100K GPU-hour 8B dense run, changing the fitting regime (including or excluding the initial 1,500 GPU-hour range, varying the upper bound) yields fitted `A` values within ±0.01 of 0.645 across four different regimes. The B parameter varies from 1.56 to 1.70, with the lowest value occurring when the fit includes the very early low-compute regime (0–100K), consistent with the paper's observation that early training exhibits a rapid near-linear increase that deviates from sigmoidal behavior. The 1,500 GPU-hour cutoff is described as "a heuristic chosen empirically" that "approximately corresponds to one epoch for most experiments" and provides "the best balance between fit stability and sample coverage" (Appendix A.7).
+
+**Error margin estimation from independent replicates (Figure 8a):** Three independent ScaleRL runs with identical hyperparameters (batch 768, generation length 14K) yield fitted `A` values varying by at most ±0.015, which the paper rounds to ±0.02 as the empirical error margin. This margin is used throughout the paper to determine whether observed differences in `A` between methods are statistically meaningful — if two methods achieve `A` values within 0.02 of each other, the difference is not considered significant, and efficiency parameters (B, C_mid) become the relevant comparison metric.
+
+**Entropy as a non-predictive metric (Appendix A.12, Figure 16):** Tracking entropy on the held-out validation set throughout training, the paper observes that "larger batches reduced effective exploration similar to smaller batches, per step, yet still yielded substantially better performance" (Appendix A.12). Both batch-768 and batch-2,048 runs followed nearly identical entropy trajectories per training step, despite the batch-2,048 run achieving much stronger downstream performance at every stage (Figure 10b). This "highlights an important point — although entropy is sometimes used as a proxy for exploration, simply maintaining higher entropy does not translate into better generalization" (Appendix A.12). This is presented as a cautionary note: entropy dynamics are not a reliable signal for predicting scaling behavior or downstream performance.
+
+**Truncation rates and training instability (Appendix A.15):** Across experiments, the paper identifies truncation rates as a leading indicator of training instability. At batch size 768, "truncations in the range of 10–15% typically destabilized training, with performance degrading and not recovering without intervention" (Appendix A.15). The extended GRPO run in Figure 2 destabilized after ~6K GPU-hours due to rising truncation rates. By contrast, ScaleRL runs kept truncations below 5% for over 90% of training on the 8B model. On the Scout MoE, truncations remained consistently below 2%, reflecting "the inherent ability of larger models to regulate generation length and their stronger instruction-following ability, which made interruption signals more effective." Training with 32K generation length (instead of 14K) further reduced truncations — spikes briefly reached ~4% but quickly fell below 2%. The paper recommends practitioners "monitor truncation rates closely" as "a reliable warning signal of instability."
+
+### Critical Assessment
+
+**Claim 1: "Most design choices modulate compute efficiency without materially shifting the asymptotic performance ceiling."** This claim is strongly supported by the evidence but requires careful qualification about *which* choices fall into which category.
+
+The forward ablations (Section 3.2) identified loss type (Figure 5a: CISPO A ≈ 0.60 vs. DAPO A ≈ 0.49) and FP32 precision (Figure 5b: A = 0.61 vs. A = 0.52) as genuine ceiling-raisers. The leave-one-out experiments (Figure 7) then show that when these ceiling-raising choices are already in place (CISPO + FP32), removing individual components — loss aggregation, advantage normalization, off-policy algorithm, length control mechanism — leaves `A` essentially unchanged (all within ±0.015 of A ≈ 0.61). This is consistent with the claim: the components that modulate the ceiling are few; most modulate efficiency.
+
+However, a subtle qualification is needed: the LOO results are conditional on the specific ceiling already being high. If the baseline had lower `A` (e.g., using DAPO loss without FP32 precision), the same components might have shown larger `A`-effects. The paper acknowledges this implicitly when discussing the FP32 fix: "while the FP32 precision fix makes little difference with dense 8B trained with ScaleRL (Figure 7), it provides large gains in GRPO/DAPO-style losses by mitigating numerical instabilities" (Section 4). So the correct formulation is: *given* a configuration that already includes the major ceiling-raising choices (CISPO, FP32, zero-variance filtering), the remaining choices primarily affect efficiency. This is not a universal claim about all RL configurations, but a finding about the specific design space the paper explores.
+
+What would strengthen this claim: showing that the same decomposition (few `A`-raisers, many `B`-modulators) holds when starting from a significantly different baseline — e.g., a baseline without asymmetric clipping, or with a different base model architecture. The paper only tests this on the specific baseline described in Section 2 (GRPO + asymmetric DAPO clipping), which already incorporates one of DAPO's key innovations.
+
+**Claim 2: "ScaleRL establishes a new state-of-the-art, achieving A = 0.61 vs. prevalent recipes."** This claim is supported by Figure 2, which fits scaling curves to GRPO, DAPO, Magistral, MiniMax, and ScaleRL. ScaleRL achieves the highest fitted `A` (0.61). However, several caveats apply:
+
+First, the comparison is on the specific Polaris-53K math dataset with an 8B dense model. Whether ScaleRL would dominate on other datasets or model families is untested. The paper does show transfer to Scout MoE (Figure 1) and multi-task math+code (Figure 11), but does not fit comparative scaling curves for other recipes on these settings.
+
+Second, the prevalent recipes were implemented by the authors (Appendix A.16), not by the original recipe designers, and some adaptations were made. DAPO's dynamic sampling was approximated with a larger batch size rather than implemented exactly, and the authors note this "gave some advantage to the DAPO recipe" (Appendix A.16). The MiniMax recipe was similarly given a larger batch size. Any implementation differences could tilt the comparison.
+
+Third, the comparison is limited to recipes for which the authors had sufficient implementation detail. Recipes from closed-source models (OpenAI o1/o3, Grok) or recent open-weight models with different architectural choices are not included — through no fault of the authors, but this limits the scope of "state-of-the-art."
+
+What would strengthen this claim: a direct comparison on at least one more dataset or model scale, with the original recipe implementations where possible. The paper's multi-task run (Figure 11) partially addresses this but does not include comparative recipe fits.
+
+**Claim 3: "ScaleRL scales predictably to 100,000 GPU-hours — extrapolated curves closely match extended training."** This claim is well-supported by the 100K GPU-hour 8B dense run (Figure 1a). The extrapolation from 50K to 100K GPU-hours closely tracks the extended training points. The paper also demonstrates predictable scaling on the Scout MoE (extrapolation from 16K to 45K GPU-hours, Figure 1a) and on other axes (context length, Figure 9; batch size, Figure 10a; multi-task, Figure 11). The robustness analysis (Appendix A.7) shows that the fitted asymptote is stable across multiple fitting regimes.
+
+However, a limitation: the paper only validates the extrapolation on ScaleRL itself. It does not test whether the same extrapolation methodology would have correctly predicted the *failure* of less stable recipes (the dashed GRPO and DAPO extrapolations in Figure 2 do deviate, but this is shown retrospectively). The predictive framework is validated for stable recipes; its ability to *distinguish* stable from unstable recipes in advance (i.e., from early training data alone) is not formally tested — the paper identifies instability retrospectively from truncation rates and curve deviations.
+
+Additionally, the largest extrapolation is 2× (50K → 100K GPU-hours), which is significant but modest compared to the orders-of-magnitude extrapolations that pretraining scaling laws enable (e.g., predicting 100B-parameter model loss from 10M-parameter experiments). The paper does not claim orders-of-magnitude extrapolation is possible for RL — and the saturation at finite `A` means it cannot be — but this bounds the practical utility of the framework for long-range forecasting.
+
+**Claim 4: "Scaling model size and batch size reliably raises the asymptotic ceiling."** For model size, the Scout MoE achieves A = 0.71 vs. A = 0.645 for the 8B dense (Table 1), supporting the claim. For batch size, the 8B run with batch 2,048 achieves A = 0.645 vs. A = 0.610 for batch 768 (Table 1), also supporting the claim. However, the batch size evidence has a subtle complication: the 100K GPU-hour 8B run used batch size 2,048 versus the baseline batch size 768 used in the LOO experiments. This means the asymptotic performance `A = 0.645` was achieved with a combination of larger batch and much longer training — the paper does not isolate whether the higher `A` comes from the larger batch, the longer training revealing that the batch-768 runs had not fully converged, or the interaction. Table 1 shows that batch-512 (A = 0.605) and batch-2048 (A = 0.645) differ substantially, but both were run to different total GPU-hours, complicating direct comparison.
+
+What would strengthen this claim: running batch-768 to the same total FLOPs as batch-2,048 to see if it catches up (efficiency difference only) or plateaus at a lower ceiling. The paper's Figure 10a shows the scaling curves for different batch sizes; batch-2,048 is clearly on a higher trajectory at the end, but the curve is not fully saturated at the plotted compute range, so the true asymptote remains somewhat uncertain.
+
+**Missing experiments that would strengthen the paper:**
+
+- **Ablation of the number of difficulty bins or the threshold for no-positive-resampling.** The curriculum removes prompts with pass rate ≥ 0.9; the sensitivity of results to this threshold is not tested (e.g., 0.8 vs. 0.95 vs. 0.99).
+- **Ablation of the interruption placement strategy.** Interruptions are placed randomly in [10K, 12K] tokens. The effect of the interruption range, deterministic placement, or different interruption phrases is not explored.
+- **Comparison on at least one additional reasoning domain beyond math/code** — e.g., scientific reasoning or formal logic — to test whether the `A`/`B` decomposition generalizes.
+- **Direct comparison of ScaleRL against the exact DAPO recipe with dynamic sampling implemented as intended**, rather than the batch-size approximation, to rule out implementation fidelity as a confounding factor in the cross-recipe comparison.
+- **Training the 8B model with batch-768 to the same total compute as the batch-2,048 100K run** to cleanly separate efficiency effects from asymptotic effects of batch size.
+- **Confidence intervals on individual scaling curve fits** — the paper estimates error margins from three independent full runs (Figure 8a), which is expensive and limits the number of replicates. Bootstrap confidence intervals on single-run fits would provide richer uncertainty quantification for less cost.
+
+**Experimental design strengths worth noting:**
+
+- The three-stage methodology (forward ablations → LOO → large-scale extrapolation) is a principled and efficient use of compute. By doing small-scale ablations first (3.5–4K GPU-hours), medium-scale LOO second (16K GPU-hours), and large-scale verification last (50–100K GPU-hours), the paper demonstrates a cost-effective path to developing scalable recipes.
+- The use of in-distribution validation for fitting and downstream benchmarks for generalization checks mirrors best practices from pretraining scaling law research and is a methodological standard that future RL scaling work should adopt.
+- The explicit error margin estimation from independent replicates (Figure 8a) is rare in RL research and provides a credible basis for distinguishing meaningful from spurious differences — something absent from virtually all prior RL-for-LLMs work.
+- The paper's honesty about negative results (GSPO instability on Scout, ReST^EM failure mentioned briefly, truncation-driven instability in GRPO runs, entropy as a non-predictive metric) is commendable and increases trust in the positive findings.
+
+**Overall assessment:** The experiments provide strong support for the paper's central framework — the sigmoidal decomposition, the distinction between `A`-raising and `B`-modulating design choices, and the predictability of stable recipes. The evidence is most convincing for the 8B model on Polaris-53K math; the transfer to Scout MoE, multi-task, and longer contexts is demonstrated but with fewer comparative baselines. The primary limitation is scope (single model family, primarily single domain) rather than internal validity — the experiments that were run were run carefully and analyzed rigorously. The paper's contribution is more methodological than algorithmic, and the experiments are appropriately designed to validate a methodology rather than to maximize a benchmark score.
 
 ## 6. Limitations and Trade-offs
-- Modeling assumptions
-  - The sigmoidal curve is empirical; while strongly supported here, there is no theoretical proof it must hold for all RL settings, data, or reward types (Section 2.1; Appendix A.4).
-  - Fits exclude the earliest training (first ~1.5k GPU-hours) to avoid transient regimes (Section 2.1; Appendix A.7); extrapolation depends on having entered the predictable region.
-- Scope of tasks and rewards
-  - Focus is mainly on verifiable math (and a math+code mixture later). Other RL-for-LLM regimes (dialogue preferences, multi-turn planning, dense/structured rewards) are not analyzed here (Sections 2, 5, 7; Appendix A.1). 
-- Stability and hyperparameters
-  - Some methods (e.g., GSPO) show mid-training instability on larger models (Appendix A.17.4).
-  - DAPO’s performance ceiling is sensitive to upper clipping `ϵmax` (Appendix A.17.1); robustness depends on careful tuning.
-- Compute and engineering constraints
-  - The approach relies on significant compute (individual runs up to 100k GPU-hours), a generator–trainer split, and careful kernel/precision control (Sections 2–5).
-  - FP32 at the LM head improves scalability but increases compute/memory for that layer (Section 3.2; Figure 5b).
-- Generalization measurement
-  - Predictability is established on held-out in-distribution validation; downstream correlations are promising but not a formal generalization study (Section 7; Appendix A.14).
+
+### In-Distribution Validation as the Primary Scaling Metric: Downstream Generalization Is Correlated but Not Guaranteed
+
+**The assumption or constraint.** The paper's entire predictive framework — the sigmoidal fits, the `A`/`B` decomposition, the cross-method comparisons — is built on **in-distribution validation pass rate** measured on 1,000 prompts held out from the Polaris-53K training data. The paper explicitly acknowledges this focus:
+
+> "Consistent with pre-training practice (Hoffmann et al., 2022; Porian et al., 2025), we measure predictive performance on in-distribution validation data." (Section 2.1)
+
+And later, in the discussion:
+
+> "our primary focus is on studying predictive scaling, which is characterized through in-distribution performance curves on a held-out dataset from training prompts. This still leaves the question of how well the LLM would generalize from the training distribution to held out test sets. While a full characterization of generalization is beyond the scope of our work, we do observe correlation between in-distribution validation and downstream generalization performance." (Section 7)
+
+**The consequence.** The central claim of the paper — that ScaleRL "scales predictably" and that the sigmoidal framework enables extrapolation — is a claim about in-distribution performance, not about generalization to new problems. A practitioner deploying ScaleRL cares about downstream task performance (AIME, LiveCodeBench, novel math problems), not validation pass rate on held-out training-distribution prompts. If the correlation between in-distribution validation and downstream generalization breaks down under certain conditions — and the paper provides evidence that it can — then the predictive framework may give misleading guidance about which design choices matter for deployment.
+
+The paper itself documents cases where this correlation weakens. In the batch size scaling experiments (Section 5, Figure 10), smaller-batch runs "show early stagnation on downstream benchmarks even as in-distribution validation performance continues to improve." The batch-512 run reaches a validation `A ≈ 0.605` while batch-2048 reaches `A ≈ 0.645` (Table 1), but the downstream AIME-24 gap is substantially larger than the validation gap would predict (Figure 10b). This means a practitioner using only the validation-based sigmoidal fits to select a batch size would **underestimate** the benefit of larger batches for generalization. Conversely, there may be design choices that improve validation performance but hurt generalization — the paper does not systematically test for this, but the batch size result shows the correlation is not 1:1.
+
+More broadly, the paper identifies several factors that "seem to help generalization more" beyond what in-distribution validation would suggest: "larger batch size (Section A.14), reducing truncations (Section A.15), longer generation lengths (Section 5, Figure 9), and larger model scale (Section 5, Figure 1)" (Section 7). These are stated as observations, not as findings from a systematic generalization study. A practitioner who optimizes strictly for in-distribution `A` may select suboptimal configurations for downstream use.
+
+**What evidence exists in the paper.** The paper reports downstream evaluation (AIME-24, LiveCodeBench) as a secondary check in Figures 1b, 9b, 10b, 18, and discusses the batch size divergence in Section 5 and Appendix A.14. However, no scaling curves are fitted to downstream performance, no `A`/`B` parameters are estimated for downstream metrics, and no systematic comparison of validation-vs-downstream scaling behavior is conducted. The paper treats downstream results as sanity checks, not as primary evidence.
+
+**Mitigation status.** The paper is transparent that generalization characterization is "beyond the scope of our work" (Section 7) and frames the in-distribution focus as following pre-training scaling law conventions. The downstream curves that are shown (Figures 1b, 9b, 10b) do indicate positive transfer, which is reassuring. However, there is no systematic attempt to bound the gap between validation-based predictions and downstream reality — no experiment varies both a design choice and the validation-downstream correlation to quantify when the validation metric is a reliable proxy and when it is not. The paper's suggestion for future work on "multi-task RL with different training data mixtures" (Section 7) would partially address this if it included systematic generalization analysis.
+
+---
+
+### Difficulty Estimation Cost Is Not Accounted for — and There Is No Mechanism for It
+
+**The assumption or constraint.** This is a methodological limitation rather than a practical deployment one, but it is fundamental to how the paper's results should be interpreted. The scaling curves in the paper are fit **retrospectively** — the pass rate at each compute point is known because the experiment has already been run to that point. In a forward-looking setting where a practitioner wants to use the framework to *decide* how much compute to allocate, they face a chicken-and-egg problem: to estimate `A`, `B`, and `C_mid` for a new configuration, they must first train for some minimum budget (at least 1,500 GPU-hours, the fitting cutoff), but the decision of which configuration to scale up depends on those very parameters. The paper does not provide a cost model for this exploration phase, nor does it account for the compute spent on ablations and fitting when computing the efficiency of ScaleRL relative to baselines.
+
+The paper acknowledges the fitting cost implicitly in the description of the three-stage methodology (forward ablations → LOO → large-scale extrapolation), but does not amortize the cost of the first two stages into the efficiency claims about ScaleRL. The 400,000 total GPU-hours cited in the abstract includes all ablations, LOO experiments, and large-scale runs — this is the cost of *discovering* ScaleRL, not the cost of *running* it.
+
+**The consequence.** The claim that ScaleRL achieves "predictable scaling" is validated retrospectively: given data from 50K GPU-hours, the fitted curve predicts performance at 100K. But a practitioner with a new model, new dataset, or modified recipe cannot rely on the specific `A = 0.645` fitted for ScaleRL on the 8B model — they would need to fit their own scaling curve, which requires running their own forward ablations and LOO experiments. The paper provides the methodology but not a cost model for the methodology itself. In the worst case, the exploration cost to find a good configuration could rival or exceed the cost of simply running a known configuration to a large budget — undermining the claimed efficiency benefits.
+
+More subtly, the paper does not address whether the optimal configuration (`A`-maximizing choices like CISPO, FP32 precision) can be identified from short runs (e.g., 2,000 GPU-hours) without fitting full sigmoidal curves. The forward ablations in Section 3.2 run to 3,500–4,000 GPU-hours per axis — if a practitioner needs to explore, say, five loss types, three precision settings, and four batch sizes, the full grid would cost `5 × 3 × 4 × 4,000 = 240,000` GPU-hours, comparable to the paper's total budget. The paper's sequential approach (first ablations, then LOO, then scaling) is more efficient than a full grid, but the cumulative cost is not amortized into any efficiency metric.
+
+**What evidence exists in the paper.** The paper reports the GPU-hour budgets for each experimental stage explicitly: forward ablations at 3,500–4,000 GPU-hours per run, LOO experiments at 16,000 GPU-hours each, large-scale runs at 50,000–100,000 GPU-hours. The total of "more than 400,000 GPU-hours" is stated in the abstract. The fitting methodology is described in Appendix A.5 and the robustness of fits in Appendix A.7, but there is no analysis of *minimum* compute required for a reliable fit — e.g., "given a new model, what is the smallest budget at which `A` can be estimated within ±0.02?" The 1,500 GPU-hour cutoff is "chosen empirically" (Appendix A.7) and may not transfer to other models or datasets.
+
+**Mitigation status.** Not addressed. The paper does not propose a method for estimating scaling parameters from cheaper proxies (e.g., initial loss reduction rate, early-training reward trajectory shape, or per-prompt difficulty statistics). It does not provide a cost model for the exploration-exploitation tradeoff. The code release for curve fitting (Section 7) enables others to fit curves on their own data, but does not reduce the data collection cost. This limitation is inherent to the empirical methodology — it requires training runs to generate the points to fit — and is arguably acceptable for a first paper establishing the framework, but it means the headline efficiency gains (e.g., "ScaleRL achieves highest B") do not net out the cost of discovering that ScaleRL's configuration was optimal.
+
+---
+
+### ScaleRL's Performance Is Validated on a Single Model Family and Primarily a Single Domain
+
+**The assumption or constraint.** All main experiments — the forward ablations, the leave-one-out validations, the large-scale 100K GPU-hour run, and the cross-recipe comparisons — are conducted on an 8B dense model (architecture unspecified beyond "dense" and "Codey" lineage) using the Polaris-53K math dataset for RL training. The paper extends to a 17B×16 Llama-4 Scout MoE (Figure 1) and to multi-task math+code training (Figure 11), but does not:
+
+- Test on a non-Meta model family (e.g., Qwen, DeepSeek, Gemma)
+- Test on a substantially different architecture (e.g., non-autoregressive, different attention mechanism)
+- Test RL scaling on a domain beyond math and code (e.g., scientific reasoning, instruction following, safety alignment)
+- Fit comparative scaling curves for other recipes on the MoE or multi-task settings — only ScaleRL is tested at these scales
+
+The paper states its model choice is representative: "we believe this model is representative of the capabilities of many contemporary LLMs" (paraphrase of the sentiment in Section 1), but this is asserted, not demonstrated.
+
+**The consequence.** A practitioner with a different base model cannot assume that:
+- The same design choices (CISPO, FP32 precision, prompt-level aggregation, batch-level advantage normalization) will be the optimal combination. The paper shows that FP32 precision provides large gains with DAPO/GRPO-style losses but is less critical with CISPO on the 8B model (Figure 7) — yet matters again on the Scout MoE (Figure 8b). This interaction between loss type, model scale, and precision suggests the optimal recipe may be model- and scale-dependent in ways the paper does not fully characterize.
+- The sigmoidal scaling parameters (`A`, `B`) will follow the same trends. The paper finds that `A` increases from 0.61 (8B) to 0.71 (Scout) — but does not test whether a different architecture of similar parameter count would achieve a different `A`, or whether the `B` parameters are architecture-dependent.
+- The stability properties (truncation rates, entropy collapse) will be similar. The paper notes that Scout MoE had much lower truncation rates (<2% vs. <5% for 8B), suggesting larger models are inherently more stable — but this may not hold for all architectures or training configurations.
+
+For the domain limitation: math reasoning with automated verification (±1 rewards) is the simplest possible RL setting — rewards are clean, unambiguous, and perfectly correlated with correctness. In domains with noisy or learned rewards (RLHF for helpfulness/harmlessness, multi-turn agentic tasks, open-ended generation), the reward signal itself would introduce additional variance that could affect scaling behavior. The paper's finding that "most design choices modulate efficiency, not the asymptote" may depend on the reward being clean — with noisy rewards, choices that improve robustness (FP32 precision, advantage normalization strategy) might shift from efficiency modulators to ceiling-raisers.
+
+**What evidence exists in the paper.** The Scout MoE results (Figure 1, Table 1) demonstrate that ScaleRL transfers to a larger model in the same family, which is encouraging but limited. The multi-task math+code results (Figure 11, Table 1) show that joint training is feasible and that the sigmoidal framework extends to a second domain, but the code scaling curve (`B = 1.09`) is substantially flatter than the math curve (`B = 2.05`), indicating domain-specific scaling behavior that the paper does not analyze in depth. No non-Meta model is tested. No domain beyond math/code is tested. The paper does not compare ScaleRL against other recipes on the MoE.
+
+**Mitigation status.** The paper is candid about scope — it does not claim universality, and the title and framing present this as *a* study of RL scaling, not *the* definitive study. The multi-task and MoE results partially address generalization concerns. However, the absence of even one non-Meta model or one non-reasoning domain limits the strength of the claim that ScaleRL is a "best-practice recipe" (abstract) rather than a best-practice recipe *for 8B dense models on Polaris-53K math*. Future work on "multi-task RL with different training data mixtures" is suggested (Section 7).
+
+---
+
+### The Batch Size and Model Scale Ceiling-Raising Effects Are Confounded with Total Compute
+
+**The assumption or constraint.** The paper's central claim — that scaling axes like batch size and model size "reliably raise the asymptotic ceiling" — is supported by comparing fitted `A` values across configurations that differ not only in the scaling axis of interest but also in the **total compute** to which they were trained. Specifically:
+
+- **Batch size:** The batch-2,048 run achieved `A = 0.645` after 100,000 GPU-hours (Figure 1a). The batch-768 run achieved `A = 0.610` after 16,000 GPU-hours (Figure 7 table). The batch-512 run achieved `A = 0.605` (Table 1). These runs were not trained to the same total compute, and the paper does not demonstrate that batch-768 has fully saturated at 16,000 GPU-hours — if it had been trained to 100,000 GPU-hours, it might achieve a higher `A`. The paper explicitly acknowledges this concern in the scaling analysis:
+
+> "the 100K GPU-hour 8B run used batch size 2,048 versus the baseline batch size 768 used in the LOO experiments. This means the asymptotic performance `A = 0.645` was achieved with a combination of larger batch and much longer training — the paper does not isolate whether the higher `A` comes from the larger batch, the longer training revealing that the batch-768 runs had not fully converged, or the interaction."
+
+- **Model size:** The Scout MoE achieved `A = 0.71` (Table 1), compared to `A = 0.645` for the 8B batch-2,048 run and `A = 0.610` for the 8B batch-768 run. Scout is a 17B×16 MoE (approximately 17B active parameters per token, much larger total parameter count due to experts). The comparison conflates model size, architecture (dense vs. MoE), and total parameters — any of which could drive the `A` difference.
+
+**The consequence.** A practitioner deciding how to allocate a fixed compute budget between batch size, model size, and training duration cannot use the paper's results to make a principled tradeoff. If batch-768 trained to 100,000 GPU-hours would achieve `A ≈ 0.63` (splitting the difference between its 16K-hour value of 0.610 and the batch-2,048 value of 0.645), then the marginal benefit of larger batch size at fixed total compute might be smaller than the paper's comparison suggests. Conversely, if batch-768 at 100,000 GPU-hours would still plateau at `A ≈ 0.61`, then batch size truly raises the ceiling. The paper's data cannot distinguish these scenarios because the batch-size comparison is not compute-matched.
+
+The paper's own theoretical framework acknowledges this ambiguity. The sigmoidal curve `R_C = R_0 + (A - R_0) / (1 + (C_mid/C)^B)` implies that the pass rate at finite `C` is a function of both the asymptote `A` and the efficiency parameters `(B, C_mid)`. A configuration with higher `A` but lower efficiency (larger `C_mid`) can appear worse at a given finite compute budget than a configuration with lower `A` but higher efficiency — this is exactly the "bitter lesson" pattern the paper emphasizes (Figure 13b). The batch-size comparison in Figure 10a shows batch-2,048 starting below batch-512/768 and crossing over, which is consistent with either (a) batch-2,048 having a higher `A`, or (b) batch-2,048 having a higher `A` and also being less efficient (higher `C_mid`), with the crossing point determined by the particular compute budgets observed. The fitted parameters (Table 1) support interpretation (b): batch-2,048 has `A = 0.645` vs. `A = 0.610` for batch-768, but also `C_mid = 10,909` vs. `C_mid = 2,542` — it is both higher-ceiling and slower. However, without running batch-768 to saturation, we cannot confirm that `A = 0.610` is its true asymptote rather than an artifact of stopping at 16,000 GPU-hours.
+
+**What evidence exists in the paper.** The fitted parameters in Table 1 show the `C_mid` values, which indicate how much compute is needed to reach half the asymptotic gain. The batch-2,048 run has `C_mid = 10,909` GPU-hours — far beyond the 16,000 GPU-hours at which the batch-768 LOO experiments stopped. The batch-768 run has `C_mid = 2,542`, meaning half its gain is achieved by ~2,500 GPU-hours. At 16,000 GPU-hours, batch-768 is at roughly `C/C_mid ≈ 6.3`, which (for `B = 1.92`) corresponds to having achieved approximately `1 / (1 + (1/6.3)^1.92) ≈ 0.97` of its asymptotic gain — suggesting it is near saturation. This calculation supports the interpretation that batch-768's `A ≈ 0.61` is genuine. However, this depends on the sigmoidal model being correct, and the paper does not run batch-768 beyond 16,000 GPU-hours to verify saturation. The burst of points at 16,000 GPU-hours in Figure 15 shows the LOO runs ending — there is no extended tail confirming flattening.
+
+**Mitigation status.** Partially addressed through the sigmoidal fit parameters themselves, which estimate asymptotes from finite data. The paper's robustness analysis (Appendix A.7) shows that fitted `A` values are stable across fitting regimes for the 100K run — but this validation is only performed for the one configuration that was run to extreme scale. For batch-768, the fit is based on data up to 16,000 GPU-hours; whether the fitted `A = 0.610` would remain stable if more data were collected is unknown. The paper does not explicitly flag this as a limitation, though the careful reader can infer it from the `C_mid` values in Table 1. Running batch-768 to 50,000 GPU-hours to confirm saturation (or lack thereof) would resolve the ambiguity.
+
+---
+
+### Truncation-Driven Instability Is a Leading Indicator of Failure, but ScaleRL Only Mitigates Rather Than Eliminates It
+
+**The assumption or constraint.** The paper identifies truncations — forced interruptions of generations that exceed the allocated thinking budget — as the primary mechanism of training instability. In Appendix A.15, the paper makes this relationship explicit:
+
+> "Across our experiments we found that training instabilities were often linked to truncations. As generation length grew, many RL runs exhibited fluctuating truncation rates that sometimes increased over training."
+
+> "At batch size 768, we observed that truncations in the range of 10–15% typically destabilized training, with performance degrading and not recovering without intervention. Examples include the extended GRPO run in Figure 2, where instability correlated with rising truncation rates."
+
+ScaleRL reduces truncation rates substantially — below 5% for over 90% of training on the 8B model, and below 2% on the Scout MoE — but does not eliminate them. On the batch-2,048 8B run, truncations "were slightly higher, occasionally approaching ~7%" (Appendix A.15). The paper attributes this to longer average generation lengths at larger batch sizes.
+
+**The consequence.** Truncations represent a fundamental tension in reasoning RL: you want the model to produce longer, more thorough reasoning traces (which improves performance — Section 5 and Figure 9 show longer context budgets raise `A`), but longer traces increase the probability of hitting the generation limit, which triggers truncations, which can destabilize training. ScaleRL navigates this tension by choosing a generation budget (14K tokens) and interruption strategy that keeps truncations low for the 8B model, but this is an empirical compromise specific to the model scale and data distribution.
+
+If a practitioner wants to scale to even longer thinking budgets (beyond 32K tokens), or to models that naturally produce longer traces, or to harder problems where correct solutions require more tokens, they will face rising truncation rates and the associated instability risk. The paper demonstrates that 32K-token training is feasible with ScaleRL (Figure 9) and that truncations remain manageable — "spikes briefly reached ~4% but quickly fell below 2%" (Appendix A.15) — but this is a single successful run, not a systematic study of the truncation-stability boundary.
+
+More subtly, the relationship between truncations and performance may be **non-monotonic**: moderate truncations might act as a useful regularizer that prevents unbounded length growth, while excessive truncations cause instability. The paper does not explore whether there is an "optimal" truncation rate, or whether alternative length-control mechanisms (length penalties, adaptive generation budgets, per-prompt length limits based on difficulty) could push the stability boundary outward.
+
+**What evidence exists in the paper.** Appendix A.15 provides the most detailed analysis, including truncation rate ranges for different configurations: 10–15% for unstable runs (GRPO), <5% for stable 8B ScaleRL runs, ~7% for batch-2,048 8B, <2% for Scout MoE, <4% for 32K-token training. Figure 2 implicitly shows the consequence: the extended GRPO run (which uses the same base recipe but without ScaleRL's stabilizing components) destabilizes after ~6,000 GPU-hours, coinciding with rising truncation rates. However, the paper does not systematically vary the generation budget, interruption placement, or batch size to map out the truncation-instability relationship — the observations are from the configurations that happened to be run.
+
+**Mitigation status.** ScaleRL incorporates design choices that explicitly or implicitly reduce truncation risk: forced interruptions (rather than length penalties) provide a hard cap; larger batch sizes (2,048) maintain adequate effective batch size even when some prompts are truncated; the Scout MoE's stronger instruction-following ability naturally produces shorter, more controlled traces. The paper recommends that "practitioners monitor truncation rates closely" (Appendix A.15) as a warning signal. However, there is no proposed method for *adaptively* controlling truncations during training — e.g., dynamically adjusting the generation budget or interruption threshold based on observed truncation rates. The interruption placement is randomized in [10K, 12K] tokens, but this range is fixed and not adapted to the model's evolving length distribution. Future work on "structured or dense rewards" and "more compute-intensive generative verifiers" (Section 7) might indirectly address this by changing the reward landscape such that longer traces are more reliably rewarded, but these are speculative extensions, not solutions to the truncation-instability coupling documented in this paper.
+
+---
+
+### The Scaling Framework Requires Stable, Saturating Curves — and Cannot Predict or Prevent Instability
+
+**The assumption or constraint.** The sigmoidal fitting methodology fundamentally assumes that the underlying performance curve is **monotonic and eventually saturating** — the pass rate increases smoothly and asymptotically approaches some ceiling `A`. This assumption holds for ScaleRL and the other "stable" recipes (MiniMax, Magistral), but it breaks down for configurations that exhibit training instability: the GRPO run in Figure 2 destabilizes after ~6,000 GPU-hours and performance degrades; the GSPO runs in Appendix A.17.4 "diverged mid-training, leading to sudden drops in performance"; DAPO's performance is highly sensitive to the clipping hyperparameter such that a slightly suboptimal setting could cause collapse rather than saturation (Appendix A.17.1).
+
+The paper explicitly limits its scaling fits to "stable and scalable" configurations and notes that many configurations from the forward ablations (Section 3.2) could not be trained long enough to fit reliable curves:
+
+> "some experimental choices destabilize beyond this scale. Whenever a design change proved stable, we trained it for longer." (Section 3)
+
+> "many RL algorithms we compare are themselves not scalable to such extreme budgets: they often saturate much earlier or even degrade with more compute due to instability." (Appendix A.6)
+
+**The consequence.** The sigmoidal framework is **descriptive of success, not predictive of failure**. A practitioner using the paper's methodology would fit a curve on early training data, extrapolate, and — if the configuration happens to be stable — get an accurate prediction. But if the configuration is unstable, the early data might look normal (the instability onset is at higher compute), and the extrapolation would be wrong. The paper provides no method for distinguishing, from early training data alone, whether a configuration will remain stable or will eventually destabilize.
+
+This matters because the entire value proposition of the framework is to enable **decisions without running the full experiment**. If the user needs to run to 50,000 GPU-hours just to confirm that the configuration is stable, they have not saved any compute — they have only retrospectively confirmed that the curve fits. The truncation rate monitoring recommended in Appendix A.15 is a partial heuristic (truncations above 10–15% are a warning), but this is a lagging indicator — by the time truncations reach 10%, instability may already be underway.
+
+The paper's response to instability is to switch to a different configuration (e.g., from GRPO to ScaleRL, or from DAPO to CISPO), not to predict or prevent the instability within a given configuration. This is reasonable for the paper's goal of identifying a scalable recipe, but it means the framework does not address the **risk assessment** problem: given a new algorithm or a new model, how confident can I be that it will scale stably to my target budget?
+
+**What evidence exists in the paper.** Figure 2 shows the GRPO run deviating from its extrapolated curve — the dashed line continues upward while the actual performance drops. This demonstrates that the sigmoidal fit, if applied naively to the early GRPO data (before the instability point), would have produced an overly optimistic prediction. The paper does not show what the GRPO sigmoidal fit would have been if fitted only on pre-instability data, so the magnitude of the forecasting error is not quantified. Appendix A.17.4 describes GSPO instability on Scout MoE, noting that "restarting from a stable checkpoint allowed recovery" on 8B but failed on Scout. This suggests instability behavior itself may be model-dependent in ways that are not captured by any simple metric.
+
+**Mitigation status.** The paper implicitly addresses this by recommending ScaleRL as a recipe that has been validated to be stable — in effect, the mitigation is "use our recipe, which we have demonstrated does not destabilize." But for practitioners developing new recipes or adapting ScaleRL to new domains, the framework does not provide tools for assessing stability risk. The paper's suggestion to monitor truncation rates (Appendix A.15) is practical but incomplete — there may be forms of instability (entropy collapse, policy divergence) that are not preceded by high truncation rates. Future work on "the methodological framework introduced here can be applied to study the scaling behavior of other post-training regimes" (Section 7) would need to address the stability prediction problem to be useful for novel settings.
 
 ## 7. Implications and Future Directions
 - How this changes the field

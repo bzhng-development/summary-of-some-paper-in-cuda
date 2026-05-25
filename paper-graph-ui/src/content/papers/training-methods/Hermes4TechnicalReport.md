@@ -9,165 +9,680 @@ Hermes 4 introduces a new family of open-weight hybrid reasoning models that com
 ---
 
 ## 1. Executive Summary
-Hermes 4 is a family of open‑weight “reasoner” models that blend long, structured thinking with broad instruction following. The report contributes three things at once: a scalable way to synthesize and verify reasoning‑heavy training data, a training recipe that controls how long models think without hurting quality, and a transparent, reproducible evaluation stack that covers math, code, knowledge, alignment, and creative writing.
 
-## 2. Context and Motivation
-- Problem gap
-  - Many powerful models can follow instructions but stumble on problems that require multi‑step reasoning or tool‑use; specialized reasoners can think deeply but are often closed, hard to reproduce, or over‑think until they run out of context. Hermes 4 targets a “hybrid” capability: sustained, structured reasoning plus general versatility, with open weights and rigorous, reproducible evaluation (Sections 1, 2, 4).
+This technical report introduces **Hermes 4**, a family of hybrid reasoning models that integrate structured, multi-turn reasoning with broad instruction-following ability, trained on approximately 5 million samples totaling 19 billion tokens of newly synthesized data combining reasoning-focused and general-purpose examples. The models—built on Llama 3.1 (70B, 405B) and Qwen3 (14B) base checkpoints—employ two core mechanisms: a graph-based synthetic data generator called **DataForge** (which produces instruction-answer pairs through random walks over directed acyclic graphs where nodes implement a PDDL action interface with preconditions and postconditions) and a **rejection sampling pipeline** using roughly one thousand task-specific verifiers in the Atropos RL environment manager (spanning answer format training, instruction following, code generation, schema adherence, and tool use). The Hermes 4 405B achieves 81.9% on AIME'24, 61.4% on LiveCodeBench v6 (Aug 2024+), and 93.7 on Arena-Hard v1, placing it competitive with frontier open-weight systems like DeepSeek V3-0324, while demonstrating substantially lower refusal rates on RefusalBench (57.1 vs. 11.3–21.7 for most proprietary models), establishing that neutrally-aligned generalist reasoning models can match or exceed the performance of both reasoning-specialized and instruction-tuned counterparts while maintaining dramatically greater behavioral plasticity under prompt and template modifications.
 
-- Why it matters
-  - Real‑world tasks mix skills: solving a math proof, fixing code with strict schemas, obeying output formats, or judging other models. Hermes 4 seeks to make these behaviors controllable and reliable at scale, while remaining open for research and deployment.
+` tag in 60% of cases (Table 2). This is a practical deployment disaster: a reasoning model that doesn't know when to stop thinking. The paper frames this as a *capability-control* problem rather than a simple training failure — the model learned to reason, but it did not learn the meta-cognitive skill of terminating reasoning at an appropriate budget. The team's solution — a focused second-stage SFT that trains *only* on the termination token (` response`) while masking out the reasoning chain itself — is novel in its minimality and in the explicit justification that training on the full self-generated reasoning traces would risk model collapse (Section 3.1).
 
-- Prior approaches and their limitations
-  - Proprietary reasoners existed first; recent open releases improved access but left gaps in data generation pipelines, thinking‑length control, and unified evaluation (Section 1). Existing data often lacks verified trajectories; models also tend to over‑think, hitting context limits (Figure 3a; Section 3.1).
+### Where Prior Approaches Fall Short
 
-- Positioning
-  - Hermes 4 offers:
-    - A graph‑based synthetic data generator (`DataForge`) to produce diverse, high‑quality instruction/reasoning data with judges and verifiers (Section 2.1).
-    - Rejection‑sampled trajectories from many verifiable environments via `Atropos`, an open RL/eval controller (Section 2.2).
-    - A two‑stage training method including targeted “thinking‑length” control by supervising only a single stop token `</think>` (Sections 3 and 3.1).
-    - A standardized, OpenAI‑compatible evaluation stack with shared inference for all benchmarks to improve reproducibility (Section 4.1).
+The paper identifies specific limitations in prior work along several axes. These are not always explicitly called out as "failures" of prior work — rather, they are design constraints that Hermes 4 must navigate.
 
-## 3. Technical Approach
-Hermes 4 has three pillars: data, training, and evaluation.
+**Prior synthetic data pipelines are task-specific, not hybrid.** The paper's DataForge system (Section 2.1) is explicitly inspired by AgentInstruct (Mitra et al., 2024), which demonstrated that graph-based synthetic data generation — where nodes implement transformations and edges represent valid data flow — could produce diverse instructional data. However, AgentInstruct and similar systems (PersonaHub, Ge et al., 2024) were designed for general instruction generation, not for the joint synthesis of reasoning traces and instruction-following data. Hermes 4 extends this lineage by:
 
-- Data: hybrid, large‑scale, verified
-  - Scope
-    - ~5M samples, ~19B tokens (Section 2). About 3.5M are reasoning‑focused and 1.6M are non‑reasoning. Reasoning samples are token‑heavy (average ~5× longer) and include thinking traces up to 16k tokens, later extended for length‑control training (Section 2).
-  - `DataForge` (Section 2.1)
-    - What it is: a graph‑based synthetic data generator. Each node is an operation with declared preconditions/postconditions following a PDDL‑style interface; edges are implied when postconditions of one node satisfy the preconditions of another. A random walk through this DAG produces one datapoint.
-    - How it works (Figure 1a):
-      1) Start from a pre‑training “seed” passage (cleaned and semantically deduplicated; Section 2.1.1).
-      2) Transform it into a target artifact (e.g., turn a news article into a debate transcript or rap).
-      3) Generate an instruction either contextual (the transformed passage is included) or standalone (inspired by it without referencing it).
-      4) Use a specialized answer generator for that instruction type.
-      5) Use an instruction‑specific LLM judge with a rubric (style, coherence, relevance, etc.) to accept/iterate/reject.
-      6) Train not only on the final QA pair but also on all intermediate LLM calls—this gives the model practice in instruction generation and judging itself (Section 2.1.2).
-    - “Higher‑order graphs”: because every graph has a single source/target, a finished graph itself implements the node interface and can be nested inside larger graphs (Figure 1b; Section 2.1.3). This supports scalable composition of complex pipelines.
-  - Rejection‑sampled verified trajectories via `Atropos` (Section 2.2)
-    - Definition (rejection sampling): generate many candidate solutions and keep only those that pass a programmatic verifier or strict rubric.
-    - Environments (Sections 2.2.1–2.2.5):
-      - `Answer Format Training`: enforces correct final‑answer formatting and the use of `<think>…</think>` delimiters, rewarding format validity only.
-      - `Instruction Following`: uses verifiable constraints (from RLVR‑IFEval) like “every Nth word is in French,” sampling only successful trajectories.
-      - `Internbootcamp`: ~70k verified, multi‑domain reasoning trajectories from ~1,000 tasks; multiple correct solution paths kept (Section 2.2.3).
-      - `Schema Adherence`: JSON generation and editing against dynamic Pydantic schemas; binary reward if the object validates (Section 2.2.4).
-      - `Tool Use`: trains the model to produce structured `<tool_call>` JSON matching ground truth (Section 2.2.5).
-    - Multiple unique trajectories leading to the same verified result are kept (OpenThoughts recipe; Section 2.2).
-  - Coverage strategies (Section 2.3)
-    - `Taxonomies`: recursively partition a domain into subdomains until reaching leaf prompts (Section 2.3.1). Example: enumerating parseable output formats.
-    - `PersonaHub`: synthesize realistic user tasks from personas (Appendix A), then produce reasoning traces with strong teachers (e.g., `DeepSeek‑R1‑0528`; Section 2.3.2).
+- Using pre-training seed data (from DCLM and FineWeb) combined with rejection sampling against task-specific verifiers to produce *verified* reasoning trajectories, not just plausible ones.
+- Composing graphs into higher-order graphs — because each DataForge graph implements the node interface (single source, single target, struct → struct map), graphs can be nested as nodes in larger graphs, enabling "arbitrary nesting depth" (Section 2.1.3). This is a design choice that makes the system extensible without requiring manual re-engineering of data pipelines for each new task type.
+- Supporting a covering-set approach to domain coverage: for data-scarce domains, the team generates taxonomies of subdomains through recursive LLM-guided partitioning (Section 2.3.1), ensuring that the final dataset covers the target capability space systematically rather than through ad-hoc prompt engineering.
 
-- Training (Section 3)
-  - Base checkpoints: `Llama 3.1` (405B, 70B) and `Qwen3 14B` for the 14B version (Section 3).
-  - Infrastructure: Modified TorchTitan; 192 NVIDIA B200 GPUs with a mix of Distributed Data Parallel, Tensor Parallel, and Fully Sharded Data Parallel (Section 3).
-  - Curriculum and efficiency
-    - Context length: 16,384 tokens for SFT; packing heterogeneous sample lengths using First‑Fit Decreasing achieves >99.9% batch efficiency (Figure 3a; Section 3).
-    - Attention isolation: `Flex Attention` restricts attention within each packed sample (Section 3).
-    - Loss masking: only tokens by the assistant role contribute to cross‑entropy loss (Figure 2; Section 3).
-    - Learning schedule: cosine LR with 300 warmup steps, 9,000 total steps, global batch size 384 (Section 3).
-    - Training parameters (Table 1): each model size trained on ~56B tokens with size‑specific learning rates and B200‑GPU hours.
-  - Thinking‑length control (Section 3.1)
-    - Problem: The 14B model often exceeded a 40,960 token context at inference—e.g., reached max context 60% of the time on LiveCodeBench when “reasoning” (Section 3.1; Figure 3a).
-    - Method: Second SFT stage teaches the model to end its chain‑of‑thought at a fixed budget by supervising only a single token: the closing `</think>` at 30k tokens (Figure 3b).
-      - Data collection: sample prompts (mostly STEM/coding) and generate long reasoning traces; if a trace stops after `</think>`, allow finishing the answer; if it stops before, force `\n</think>` and generate the answer (Section 3.1.1).
-      - Training trick: mask out all tokens except `</think>` (and the training framework’s necessarily unmasked `<eos>`), so gradients focus entirely on “when to stop,” not on the reasoning content itself (Section 3.1; 3.1.2).
-      - Rationale: single‑step supervision avoids synthetic‑data collapse that can happen when training on full self‑generated reasoning (Section 3.1).
-    - Ablation (Appendix B; Table 5): at a 20k budget, naive SFT on truncated traces increased overlong rates; supervising only `</think>` slashed overlong to ≤0.6% but initially harmed some scores—hence the final choice of a more permissive 30k budget (Section 3.1.3; Appendix B).
+**Rejection sampling for verifiers exists, but operating at scale with heterogeneous environments is an engineering challenge.** The paper's Atropos environment manager (Section 2.2) is not the first system for rejection sampling against verifiers — the approach is standard in RLVR pipelines (DeepSeek-R1, OpenThoughts, ReST$^{EM}$). However, the paper identifies specific practical challenges that existing frameworks handle poorly:
 
-- Evaluation (Section 4)
-  - A single, shared OpenAI‑compatible endpoint for all benchmarks minimizes confounds from different inference engines or backends (Section 4.1).
-  - `lighteval` for most math/multiple‑choice tasks, plus custom integrations for MMLU, OpenBookQA, SimpleQA, and DROP (Section 4.2).
-  - `Atropos` as an evaluation framework (Section 4.3):
-    - Single‑file evaluations, detailed sample‑level logging (useful when parsers/LLM judges disagree), overlap of inference and scoring (critical for expensive verifiers like code tests), explicit error semantics, and CLI/YAML configs generated from dataclasses.
-    - Ports of Arena‑Hard v1 and RewardBench into Atropos (Section 4.3.2).
-    - LiveCodeBench (Section 4.3.3): sandboxed verification in Modal containers; inference and verification overlapped so the run remains inference‑compute‑bound.
-  - Elastic inference cluster: sglang‑router manages preemptible workers that dynamically attach/detach; each replica sharded at TP8; Triton attention backend on B200 (Sections 4.4–4.5).
-  - Evaluation conditions: long context (up to 163,840 for DeepSeek baselines; Hermes evaluated at 40,960 for reasoning/code and 32,768 otherwise), shared sampling settings unless provider‑recommended changes apply; multiple samples per problem for pass@1 estimates (Section 4.5).
+- **Environment diversity matters for capability breadth.** The Hermes 4 pipeline includes verifiers for answer format compliance (150+ output formats, decoupled from semantic correctness), instruction following (RLVR-IFEval constraint tasks), code generation (Internbootcamp's ~1,000 reasoning tasks), schema adherence (dynamic Pydantic validation with programmatic error injection), and tool use (exact-match JSON validation against origin datasets). Each environment has different reward semantics, different execution patterns (some CPU-bound, some I/O-bound, some requiring sandboxed execution), and different scaling characteristics. The paper's contribution here is demonstrating that a *unified* environment manager (Atropos) can handle this diversity while maintaining performance-conscious execution through overlapped inference and scoring.
 
-Definitions of uncommon terms used above:
-- `reasoner model`: a model that performs extended internal “thinking” (multi‑step reasoning traces) and adapts its compute at inference time.
-- `rejection sampling`: keep only generated solutions that pass a verifier/judge.
-- `pass@1`: the fraction of problems solved correctly by the single best (or first) sample.
-- `RefusalBench`: an internal benchmark that measures how often a model refuses certain categories of requests, with three categories scored inversely to prefer refusals (Section 4.5.1).
-- `Arena‑Hard v1`: a “vibe‑check” benchmark graded by an LLM judge using pairwise comparisons (Section 4.3.2).
+- **Standard evaluation harnesses conflate model performance with inference engine configuration.** Section 4.1 makes a pointed observation about reproducibility: "an evaluation score is a function of not only the model but also the inference engine and hardware on which it runs." This is not a theoretical concern — the paper reports that in June 2025, the team found 7.3% disagreement between a popular open-source evaluation framework's GPQA parser and GPT-4o grading. By standardizing all evaluations against a single OpenAI-compatible endpoint shared across benchmarks, the paper's evaluation architecture provides a replicability guarantee that batch-inference-then-batch-scoring pipelines cannot.
+
+**Length control in reasoning models is an underexplored problem.** The paper's treatment of reasoning length control (Section 3.1, Appendix B) addresses a gap that the team explicitly connects to concurrent work: "We also would like to highlight concurrent work on reasoning length by the Nemotron Nano 2 team as well as by our colleague at Nous." The core observation is that reasoning models trained on long chains of thought exhibit *bimodal* behavior at inference time: either they terminate within budget, or they hit the context limit with no closing tag. Traditional approaches to length control — training on truncated chains, penalizing long outputs, or using length-based reward shaping — risk either degrading reasoning quality (because the model cuts off useful deliberation) or failing to control length at all (because the model learns to "pad" early reasoning steps to exhaust the budget without improving answer quality).
+
+The paper's innovation is the **selective supervision** approach: by constructing training data where the reasoning chain is the model's own output (drawn from the current policy), and gradient updates flow *only* through the ` response` termination token (not through the reasoning tokens themselves), the model learns **when to stop thinking** without altering *how* it thinks. The paper explicitly frames this as a stability-preserving intervention: training on full self-generated reasoning traces risks the model collapse documented in synthetic data literature (Zhu et al., 2024; Kazdan et al., 2024), where recursive training on model outputs narrows the output distribution. By concentrating updates on a single token, the approach "exploit[s] the stability of single-step augmentation while minimizing the distributional shift" (Section 3.1).
+
+The failure mode of naive approaches is instructive. Appendix B documents that direct SFT on a mixture of truncated-thinking data and Stage 1 SFT data *increased* overlong rates on GPQA Diamond from 18.2% to 49.6% (Table 5a, "Standard Masking" vs. "Stage 1"). The team hypothesizes — but does not prove — that certain reasoning prefixes (e.g., "Alternatively, ...Alternatively, ...") induce longer reasoning, and selecting for samples with long chains teaches the model to generate these prefixes at higher frequency. This is a concrete example of how simple data-mixing approaches can backfire, motivating the more careful ` response`-only masking strategy.
+
+### How This Paper Positions Itself
+
+The Hermes 4 report is best understood not as proposing a single novel method, but as **a full-stack engineering contribution** — a demonstration that open-weight generalist reasoning models can be built, trained, and evaluated at quality levels competitive with frontier proprietary and open-weight systems. The paper positions itself at the intersection of several active research threads:
+
+- **From the reasoning model lineage** (OpenAI o1, DeepSeek-R1, Qwen3): Hermes 4 adopts the hybrid reasoning paradigm — a single model supporting both reasoning and non-reasoning modes — and contributes data synthesis recipes, training methodology, and evaluation rigor.
+- **From the open-weight release tradition** (Llama, Qwen, Hermes 3): Hermes 4 inherits the commitment to full model weight release and transparent reporting, extending this to the reasoning model regime where most prior releases were proprietary or partially documented.
+- **From the behavioral alignment literature**: The paper introduces "neutral alignment" as an explicit design goal, operationalized through RefusalBench (Section 4.5.1) — a hand-crafted benchmark of 166 prompts across 32 categories that typically elicit refusals, with three inverted categories where refusal is scored positively (minor specific harm, exploitation and human trafficking, suicide/self-harm). This framing is a direct alternative to the "policy compliance" approach of most proprietary models, and the paper quantifies the difference explicitly (Figure 4): Hermes 4 scores 57.1 on RefusalBench (reasoning mode), while proprietary models cluster in the 11–28 range, meaning they refuse 72–89% of the same prompts that Hermes 4 answers.
+
+The paper's stance on evaluation is notably rigorous relative to typical technical reports. Section 4 details not just benchmark scores but the *entire evaluation infrastructure* — inference engine version (SGLang 0.4.9.post3), attention backend (Triton, with explicit note that FlashInfer showed "more repetition and degeneration issues on B200s"), sampling parameters (temperature 0.6, Top-P 0.95, Top-K 20 for non-creative benchmarks), and sample counts per benchmark (64 for AIME, 16 for LiveCodeBench, 3 for creative benchmarks). This level of detail is motivated by the reproducibility concern — the team wants to ensure that reported numbers are independently verifiable, and they release all generated samples ("We log all the samples generated at evaluation time and release them concurrently with our models").
+
+Perhaps the most distinctive positioning claim is the qualitative behavioral analysis in Section 5. The paper argues that standard benchmarks fail to capture important dimensions of model capability — persona adoption, response consistency across prompt variations, stylistic transfer, and sensitivity to structural prompt cues. By including full chain-of-thought rollouts in Appendix C for comparisons across Hermes 4, GPT-OSS-120B, Opus 4.1, GPT-5-High, and DeepSeek R1-0528 on tasks ranging from Lovecraftian poetry to political analysis to villain role-play, the paper makes a case that Hermes 4's behavioral plasticity — its ability to adopt personas, generate in-character responses without meta-disclaimers, and adjust underlying reasoning in response to system prompts — constitutes a genuine capability advance that is invisible to standard leaderboards. This is an unusual inclusion in a technical report and reflects the team's emphasis on what they term "vibe check" capabilities.
+
+In summary, the paper positions Hermes 4 as filling a specific gap: **open-weight models that reason at frontier levels without becoming rigid, compliance-oriented, or behaviorally narrow**. The contributions span data synthesis (DataForge + Atropos rejection sampling), training methodology (loss-masked heterogeneous packing, reasoning-length control through selective supervision), evaluation infrastructure (Atropos-based single-file evaluations with detailed logging), and qualitative behavioral characterization. The unifying thread is transparency — the paper aims to provide sufficient detail for full or partial reproduction, a stance that is unusual in a field where many high-performing models are released with minimal documentation of their training recipes.
+
+` and `<eos>` tokens in synthetically truncated reasoning chains, with all reasoning tokens masked from the loss. This teaches the model when to stop thinking without altering its reasoning distribution.
+
+5. **Evaluation Infrastructure** — A unified architecture where all benchmarks share a single OpenAI-compatible chat completions endpoint, with evaluations implemented as self-contained Python scripts in Atropos (single-file design, detailed sample-level logging of parsing/grading, overlapped inference and scoring for code benchmarks). This design eliminates fragmentation across inference engines and makes the entire evaluation reproducible.
+
+Information flows as follows: raw web text enters seed preparation → cleaned passages feed DataForge graphs → generated QA pairs that pass LLM judge review join verified trajectories from Atropos rejection sampling and retained portions of the Hermes 3 dataset → the combined dataset undergoes packing and loss masking → Stage 1 SFT produces the base Hermes 4 model → for the 14B size, synthetically generated long-reasoning trajectories with forced ` response` truncation feed Stage 2 SFT → final models are evaluated through the unified inference endpoint against reasoning, code, knowledge, alignment, and creative benchmarks.
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First, the DataForge synthetic data generator** (Section 2.1): how the graph-based architecture works, how edges are constructed declaratively through preconditions/postconditions, the node interface that enables graph nesting, and the specific single-turn QA graph used for the majority of the data. This is the pipeline's creative engine — it transforms seed text into diverse instruction-answer pairs without requiring hand-written templates.
+
+- **Second, the covering-set strategies** (Section 2.3): how taxonomic recursion and PersonaHub-based persona synthesis ensure that the dataset covers target capability domains systematically rather than through ad-hoc prompt engineering. These are complementary approaches to DataForge — they address data-scarce domains where graph-based generation might miss important sub-capabilities.
+
+- **Third, the Atropos rejection sampling system** (Section 2.2): the individual verifier environments (answer format, instruction following, code, schema adherence, tool use), their reward semantics, and why operating at scale with heterogeneous environments requires a unified environment manager. This is where correctness signals enter the pipeline — DataForge generates plausible data, but Atropos generates *verified* data.
+
+- **Fourth, the training protocol** (Section 3): the First-Fit Decreasing packing strategy, the loss masking that restricts gradients to assistant-generated tokens, the training parallelism configuration, and the critical Stage 2 length-control fine-tuning that addresses reasoning overflow. This is where the data becomes a model — and where the paper's novel approach to controlling reasoning length through selective supervision is most distinctive.
+
+- **Fifth, the evaluation architecture** (Section 4): the single-endpoint design, Atropos as an evaluation framework (single-file evaluations, sample-level logging, performance-conscious execution, explicit error semantics), the LiveCodeBench overlap optimization, and the elastic inference cluster with preemptible workers. This is necessary context for understanding the reported benchmark numbers — they are a function not just of the model but of the specific inference configuration described.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily an **engineering systems paper** whose core idea is that a neutrally-aligned generalist reasoning model can be built through a combination of graph-based synthetic data generation, large-scale rejection sampling against programmatic verifiers, and careful multi-stage fine-tuning with selective supervision for reasoning length control.
+
+---
+
+#### DataForge: Graph-Based Synthetic Data Generation
+
+DataForge is a synthetic data generator that produces conversational instruction-answer pairs by routing seed data through directed acyclic graphs (DAGs) where each node performs a transformation and edges represent valid data flow between nodes.
+
+**Graph structure and the PDDL node interface.** Each node in a DataForge graph implements the PDDL (Planning Domain Definition Language) action interface, meaning it declares:
+
+1. **Preconditions** — conditions that must be satisfied by the incoming data for the node to execute its transformation. These are assertions about the structure or content of the data (e.g., "the input must be a passage of at least 500 characters," "the input must be an instruction-answer pair with a passing judge score").
+2. **Postconditions** — guarantees about the output data after the node executes. These are assertions that downstream nodes can rely on (e.g., "the output is a JSON object with fields 'instruction' and 'answer'," "the output has been graded and received a passing score").
+
+Edges in the graph are **implicit**: a directed edge exists from node A to node B if and only if the postconditions guaranteed by A satisfy the preconditions required by B. This means the graph topology is not manually specified edge-by-edge; it emerges from the declarative specification of what each node requires and guarantees. When a new node is added to the system, it automatically connects to all existing nodes whose postconditions satisfy its preconditions, and all existing nodes whose preconditions are satisfied by its postconditions.
+
+A node is, in programming terms, a **struct→struct map**: it takes a structured data object as input and produces a structured data object as output. The type of the struct (what fields it contains, what types those fields have) is constrained by the preconditions and postconditions. This is the interface that enables graph composition.
+
+**The single-source, single-target constraint and graph nesting.** Every DataForge graph is constructed with exactly one source node (where data enters the graph) and exactly one target node (where data exits the graph). This means a complete graph is itself a struct→struct map — it takes one input, produces one output, and its internal structure is encapsulated. Because a graph implements the same interface as a node, **graphs can be subgraphed as nodes in higher-order graphs**. For example, a complex graph that generates multi-turn dialogue data (itself composed of many nodes) can be treated as a single "multi-turn dialogue generator" node and inserted into a larger graph that routes different prompt types to different generation strategies. The paper states this enables "arbitrary nesting depth" (Section 2.1.3).
+
+**Seed data preparation.** The input to DataForge is "pre-training seed data" — passages drawn from a biased sample of DCLM and FineWeb, with preference for more recent samples. These raw passages undergo two preprocessing steps before entering DataForge:
+
+1. **Semantic deduplication**: passages are embedded using ModernBert, and any passage with a cosine similarity ≥ 0.7 to an already-included passage is removed.
+2. **LLM judge filtering**: a language model judge (separate from the models used for generation) examines each passage and discards those that are incomplete or ill-formatted.
+
+The output is a set of clean, deduplicated text passages that serve as the creative seed for the DataForge generation process.
+
+**The primary single-turn QA graph (Figure 1).** The paper describes the graph used to generate the majority of the single-turn DataForge data. Data flows through this graph in a sequence of stages, with random selection among available valid paths at each branch point:
+
+**Stage 1: Passage transformation.** The seed passage enters a passage transformation node. This node applies one of many possible transformations to produce a "target passage" of a specified document type. The paper's example: a Wikipedia article (the seed) is transformed into a rap song. The purpose of this stage is to create variety in the underlying content that the subsequent instruction generation will draw upon — rather than generating instructions directly from raw web text (which might produce repetitive or bland prompts), the transformation introduces stylistic and structural diversity.
+
+**Stage 2: Instruction generation.** The transformed passage enters an instruction generation node. The paper distinguishes two modes of instruction generation:
+
+- **Contextual**: the transformed passage is embedded *within* the instruction prompt, and the task is directly related to the transformed passage. For example, "Perform a rhetorical analysis of the following rap song: [transformed passage]."
+- **Standalone**: the transformed passage is used only as *inspiration* to generate a self-contained instruction that does not reference the transformed passage. For example, the rap song about a particular topic might inspire a competitive programming problem loosely related to that topic. The paper explicitly notes the similarity between standalone instruction generation and PersonaHub — both use pre-training data to generate synthetic contexts (personas in PersonaHub, inspired instructions in DataForge) that are then used to generate tasks.
+
+A random instruction type is selected at this stage. The paper does not enumerate all instruction types but implies a wide variety is available — the subsequent answer generation stage has specialized answer generators per instruction type, and edges between instruction generation and answer generation are "more sparse" (Section 2.1.2) because each instruction type is only answerable by a specific subset of answer generators.
+
+**Stage 3: Answer generation.** The generated instruction is passed to a specialized answer generator compatible with its instruction type. Each answer generator is equipped with a system prompt detailing how it should approach that instruction type — for example, a math answer generator might be prompted to show step-by-step work and box the final answer, while a creative writing generator might be prompted to adopt a particular narrative style.
+
+This stage is where the model that will *generate* the answer must differ from the model that will later *judge* the answer. The paper states: "We take care to guarantee that the judge model always has different weights from the answer model as a precautionary measure against LLM judges recognizing and favoring their own generations" (Section 2.1.2), citing Panickssery et al. (2024). This is a design choice motivated by empirical evidence that LLM evaluators show bias toward their own outputs.
+
+**Stage 4: LLM judge review.** The instruction-answer pair enters a specialized LLM judge node compatible with the instruction type. The judge grades the sample based on a rubric specific to the instruction type, "usually cover[ing] coherence, relevance, complexity, style, and tone" (Section 2.1.2). The judge produces a binary pass/fail decision.
+
+If the judge passes the sample, the QA pair is accepted into the training dataset. If the judge fails the sample, the graph *iterates*: the answer generation node is re-invoked (potentially with different generation parameters or a modified prompt incorporating the judge's feedback) and the new answer is re-submitted for judging. This iteration continues until either the judge accepts the sample or a maximum iteration count is reached, at which point the sample is discarded. The paper does not specify the exact iteration count or the mechanism by which judge feedback is incorporated into answer regeneration.
+
+**Training on intermediate outputs.** A distinctive feature of the DataForge pipeline is that the training dataset includes not only the final accepted QA pairs but also "all intermediate LLM calls used to generate that QA-pair" (Section 2.1.2). This means the model is trained on the outputs of the passage transformation node, the instruction generation node, and the judge review node — not just the final answer generation. The stated rationale is that this gives Hermes 4 "substantial specialization in instruction generation and judging." In practice, this means the training data includes examples where the model is asked to perform the same transformations and evaluations that DataForge nodes perform, enabling the model to internalize these meta-capabilities.
+
+**Why declarative edge construction matters.** The alternative to precondition/postcondition-based edge construction would be manually specifying the graph topology for each combination of nodes. For a system with many node types (passage transformers, instruction generators, answer generators, judges), the combinatorial explosion of possible edges makes manual specification impractical. The declarative approach means that adding a new answer generator (say, for a newly defined instruction type) automatically connects it to all instruction generation nodes whose postconditions it satisfies — no manual wiring needed. This is what enables the system to scale to "large and complex structures" without exponential engineering overhead.
+
+The constraint that every graph has a single source and single target serves a dual purpose: it makes graphs composable (as described above), and it enforces a discipline on data flow — there is always exactly one entry point and one exit point, which simplifies debugging and makes the system's behavior more predictable when graphs are nested.
+
+---
+
+#### Covering-Set Strategies: Taxonomies and PersonaHub
+
+DataForge generates diverse data by routing seed passages through random transformations, but randomness alone does not guarantee that the resulting dataset *covers* all sub-capabilities within a target domain. The paper addresses this through two complementary strategies for generating tasks that systematically span a domain.
+
+**Taxonomic recursion (Section 2.3.1).** For data-scarce domains where the team has special interest, they generate a taxonomy of subdomains through recursive LLM-guided decomposition:
+
+1. An LLM is prompted to enumerate `n` subdomains of a target domain that form a partition (collectively exhaustive and mutually exclusive).
+2. The LLM recurses into each subdomain, repeating the enumeration process.
+3. At a maximum depth (or when the LLM determines a subdomain is indivisible), the LLM is prompted to list example prompts within that subdomain.
+
+This is described as "depth-first-search style recursion." The leaves of the resulting taxonomy are concrete prompts that exercise specific sub-capabilities. The paper's example: starting from "LLM output formats that are parseable by code," the recursion produces a concrete task like "Generate 5 MCQs about the Periodic Table, format options as JSON with escaped commas in choice texts, and output as CSV." This task exercises multiple capabilities simultaneously — domain knowledge (Periodic Table), format generation (MCQ construction), JSON serialization with specific constraints (escaped commas), and output format conversion (to CSV).
+
+The taxonomic approach is particularly useful when the team has *a priori* knowledge of which domains matter and wants to ensure comprehensive coverage. It is a top-down, specification-driven approach, in contrast to DataForge's bottom-up, seed-driven approach.
+
+**PersonaHub-based task synthesis (Section 2.3.2).** For domains that involve users or participants, the team simulates human requesters through synthetic personas. The paper gives the example of generating application and script implementation tasks using personas from FinePersonas. A persona (e.g., "a professional in the poultry industry focused on managing exotic Newcastle disease outbreaks") is combined with a task synthesis prompt that specifies:
+
+- Task type focus (e.g., "a text-based adventure game engine")
+- Target difficulty/scope (e.g., "emphasizing UI/UX implementation and front-end best practices")
+- Key technical challenges (e.g., WCAG accessibility, design patterns, performance profiling)
+- Project nature (e.g., "add feature to existing class module")
+- Tone of voice and presence of typos
+
+The resulting task specification includes a hypothetical existing code snippet (15–50 lines), a description of the existing system context, and a clear statement of what needs to be changed. For the poultry professional persona, this produced a task about fixing a disease tracking dashboard with accessibility and performance issues in TypeScript/React — a realistic, domain-informed coding task that a generic prompt template would not generate.
+
+The generated task is then solved by a strong reasoning model (DeepSeek-R1 or DeepSeek-R1-0528) to produce a reasoning trace and answer. This is important: PersonaHub generates the *task specification*, not the solution. The solution comes from rejection sampling or teacher model generation, ensuring correctness.
+
+**Choosing between strategies.** The paper states that for each target domain, the team chooses between taxonomic and PersonaHub approaches "via a vibe inspection" (Section 2.3). This is an informal acknowledgment that domain coverage is partly an art — some domains are more naturally decomposed through hierarchical specification (taxonomies), others through user simulation (personas), and the choice depends on the team's judgment of which approach produces more realistic and diverse coverage.
+
+**Why covering sets matter for a generalist model.** A model trained only on DataForge-generated data might have coverage gaps: some instruction types might be underrepresented because random walks through the graph didn't visit certain node combinations, or some sub-capabilities might not emerge from seed passages. The covering-set strategies provide a safety net: they guarantee that high-priority domains are comprehensively represented in the training data. This is particularly important for a model that aims to be "generalist" — capability gaps that are invisible in aggregate benchmarks can show up as embarrassing failures in specific use cases.
+
+---
+
+#### Atropos Rejection Sampling: Verified Reasoning Trajectories
+
+Atropos is an open-source RL environment manager that orchestrates the generation and verification of reasoning trajectories at scale. The core loop is standard rejection sampling: the model generates a completion, a verifier checks it against some correctness criterion, and only passing completions enter the training dataset. The paper's contribution is not the rejection sampling concept itself but rather the engineering of a system that can manage roughly one thousand heterogeneous verifiers efficiently and the specific verifier environments designed for Hermes 4.
+
+**The Atropos architecture.** Atropos operates as a microservice manager. Each verifier is implemented as an "environment" — a self-contained module that receives model outputs, applies verification logic, and returns a reward signal. The paper does not fully specify the communication protocol between the model inference service and the verifier environments, but the architecture is described as "async first" (from the Atropos repository description), implying that inference requests and verification run concurrently rather than in a lockstep generate-then-verify cycle.
+
+The key design constraints that Atropos addresses:
+
+- **Heterogeneous execution patterns**: some environments are CPU-bound (JSON schema validation), some are I/O-bound (sandboxed code execution), and some require GPU access (LLM-based judging). A naive synchronous pipeline would be bottlenecked by the slowest environment.
+- **Scale**: "roughly a thousand task-specific verifiers" implies a system that must manage many concurrent verification sessions, each potentially with different resource requirements and timeout characteristics.
+- **Transparency**: each environment is a standalone Python script with its own logic, scoring metrics, and configuration defaults. The paper argues this "substantially improves transparency and modifiability" — a researcher can understand an evaluation without tracing through framework abstraction layers.
+
+**Environment 1: Answer Format Training.** This environment trains the model to produce answers in specified output formats, with the critical design choice that **format compliance is decoupled from semantic correctness**. The reward signal is binary: 1.0 if the output matches the requested format, 0.0 if it does not. Whether the answer is actually correct is irrelevant to this verifier.
+
+The format repertoire includes over 150 output formats. An example: placing math answers in a `\boxed{}` LaTeX section. Other formats presumably include JSON structures, CSV tables, markdown lists, code blocks with specific language tags, and the various structured output formats that downstream applications expect.
+
+This environment is specifically responsible for enforcing the `<think>` and ` response` delimiters — the structural markers that distinguish reasoning mode output (where the model first produces internal deliberation within ` thinking` tags, then a final answer within ` response` tags) from non-reasoning mode output. The binary reward for correct delimiter usage, combined with rejection sampling (only correctly formatted outputs enter the training data), ensures the model learns to produce these markers consistently.
+
+The decoupling from semantic correctness is important: if the verifier also penalized incorrect answers, the model would receive a compound signal that conflates format errors with reasoning errors. By training format compliance separately, the model can learn to follow output specifications without the confounding pressure of getting every answer right.
+
+**Environment 2: Instruction Following (RLVR-IFEval).** This environment implements constraint-following tasks from the RLVR-IFEval set of verifiable instructions — tasks where compliance can be checked programmatically rather than by human judgment. Examples include structural constraints like "Every Nth word of your response must be in French" or "Your response must contain exactly three bullet points, each starting with a verb."
+
+The paper notes that although the environment implements an "adaptive online curriculum training method" (presumably adjusting constraint difficulty based on model performance), the Hermes 4 pipeline limits its use to **rejection sampling successful trajectories** — no online RL training occurs. The model is not updated based on the reward signal; rather, the reward signal filters which trajectories enter the supervised fine-tuning dataset.
+
+This is an important distinction from RLVR (Reinforcement Learning with Verifiable Rewards) proper, where the model's policy is updated online using the reward as a training signal. The Hermes 4 approach is pure SFT on verified data — the verifiers are used for data filtering, not for policy gradient updates. This is a simpler and more stable training paradigm, albeit one that cannot improve beyond the best outputs the current policy can already generate.
+
+**Environment 3: Internbootcamp (Code Reasoning).** The Internbootcamp dataset consists of approximately 1,000 reasoning tasks spanning a comprehensive collection of reasoning domains. The paper reformulates this into an Atropos environment to generate 70,000 rejection-sampled trajectories.
+
+The generation process for each task:
+
+1. Generate multiple solution trajectories using DeepHermes and other larger models (the paper does not specify which other models, but the use of "larger" is notable — teacher models stronger than the base model being trained generate the candidate solutions).
+2. Score each trajectory based on correctness (the specific verification mechanism depends on the task type — code tasks may use unit tests, math tasks may use answer matching, etc.).
+3. Select **multiple winning paths per group** that fit within the defined token budget. This is different from standard best-of-N selection, which would keep only the single highest-scoring trajectory. Following OpenThoughts, the paper includes multiple unique trajectories leading to the same verified result. The rationale: seeing multiple valid reasoning paths to the same answer helps the model learn that there are multiple legitimate approaches, rather than overfitting to a single canonical solution path.
+
+The token budget constraint is important: Internbootcamp trajectories can be very long (multi-step reasoning with code generation and execution), and including paths that exceed the context window during training would be wasteful.
+
+**Environment 4: Schema Adherence (JSON Generation and Editing).** This environment handles two related tasks:
+
+- **Generation**: given a natural language prompt and a JSON schema, produce a valid JSON object conforming to that schema.
+- **Editing**: given a malformed JSON object that violates its schema, identify and correct the validation errors.
+
+The critical design feature is **dynamic schema handling**. Rather than relying on a fixed set of schemas hardcoded into the environment, the system compiles Pydantic models "on-the-fly from executable Python code provided in each dataset entry" (Section 2.2.4). This means the schema space is unbounded — any schema expressible as a Pydantic model can appear in the training data, and the model must learn general schema-adherence skills rather than memorizing specific schemas.
+
+The error introduction system for the editing task **programmatically injects** realistic validation failures into valid JSON objects, including:
+- Type mismatches (string where integer expected)
+- Constraint violations (string length exceeds maximum, numeric value outside bounds)
+- Format errors (invalid email, malformed date)
+- Extraneous fields (additional properties not in the schema)
+
+The reward signal is binary: 1.0 if the model's output successfully instantiates the target Pydantic model without error, 0.0 otherwise. There is also "a supplemental penalty for excessive length" — the paper does not specify the penalty magnitude or threshold, but the intent is to prevent the model from generating unnecessarily verbose JSON that, while technically valid, is inefficient.
+
+**Environment 5: Tool Use (Agentic Function Calling).** This environment trains the model to generate reasoning followed by one or more tool calls. The model produces a `tool_call` token, and the environment:
+
+1. Intercepts the `tool_call` token in the model's output stream.
+2. Extracts the JSON that follows.
+3. Validates that the JSON has:
+   - All required fields in the correct hierarchical structure (schema conformance).
+   - The correct *values* for those fields — the environment compares against the origin dataset, which specifies what the tool call should contain.
+4. Assigns a binary reward: 1.0 if the entirety of the produced JSON is equivalent to the origin, 0.0 otherwise.
+
+Equivalence is presumably determined by comparing the function name and all argument values. This is stricter than schema-only validation — the model must produce not just a valid function call, but the *correct* function call for the given task.
+
+The environment is seeded with tasks from the Hermes function calling dataset and other sources. By training on verified tool call trajectories, the model learns to produce well-formed, correct tool invocations as part of its reasoning process — a capability essential for agentic applications.
+
+**Why rejection sampling instead of RL fine-tuning?** The paper does not explicitly argue for rejection sampling over RL, but the choice is consistent with the overall training philosophy: SFT on high-quality verified data is more stable and predictable than online RL, which introduces challenges around reward hacking, distribution shift, and hyperparameter sensitivity. The downside is that rejection sampling cannot improve beyond the best outputs the current policy can generate — if the model never produces a correct tool call, rejection sampling cannot create one. The paper mitigates this by using strong teacher models (DeepHermes and "other larger models") for trajectory generation in the Internbootcamp environment, which means the verified trajectories can be better than what the base model would produce on its own.
+
+---
+
+#### Training Protocol: Packing, Loss Masking, and Parallelism
+
+The training of Hermes 4 follows a supervised fine-tuning paradigm with several engineering optimizations to handle the heterogeneous dataset and produce the desired model behaviors.
+
+**Base model initialization.** The paper uses three base checkpoints:
+
+- Llama 3.1 405B and 70B for the two larger Hermes 4 variants
+- Qwen3 14B for the 14B variant
+
+The choice of Qwen3 14B for the smallest model (rather than a smaller Llama variant) is notable. Qwen3 is itself a hybrid reasoning model (supporting both thinking and non-thinking modes), and starting from a base that already has some reasoning capability likely reduces the amount of reasoning-specific training needed. The 70B and 405B variants, starting from Llama 3.1 (which has no explicit reasoning training), require the full SFT dataset to teach reasoning capabilities from scratch.
+
+**Training framework and parallelism.** Training uses a modified version of TorchTitan, with parallelism configuration varying by model size (Table 1):
+
+| Model Size | Parallelism | Total Tokens Trained | Learning Rate | B200 GPU Hours |
+|---|---|---|---|---|
+| 14B | FSDP | 56B | 5 × 10⁻⁵ | 4,454 |
+| 70B | FSDP + TP | 56B | 1 × 10⁻⁵ | 12,864 |
+| 405B | FSDP + TP | 56B | 5 × 10⁻⁶ | 71,616 |
+
+All models train on 192 NVIDIA B200 GPUs. The 14B model uses Fully Sharded Data Parallelism (FSDP) only — at 14B parameters with 16,384 token context, the model fits in B200 memory without tensor parallelism. The 70B and 405B models add Tensor Parallelism (TP) to distribute individual layers across multiple GPUs.
+
+The total tokens trained is consistent across model sizes (56B tokens), representing roughly 3 epochs over the ~19B token dataset. The learning rate decreases with model size — this is standard practice because larger models have larger activations and gradients, making them more sensitive to per-step parameter updates.
+
+**Learning rate schedule.** The paper follows "a standard cosine learning rate schedule with 300 steps of warmup and a total of 9000 steps" (Section 3). The cosine schedule starts at the peak learning rate after warmup and decays following a cosine curve to near zero at the final step. This is the standard schedule for LLM fine-tuning — it provides aggressive early learning during the high-learning-rate phase and gradual refinement during the decay phase.
+
+The global batch size is 384 samples at 16,384 token context length. With packing (described below), the effective number of samples per batch can be higher because multiple short samples are packed into a single sequence.
+
+**First-Fit Decreasing packing.** The training dataset exhibits "a highly heterogeneous distribution of sample lengths" (Section 3, Figure 3a). The mean sample length is 14,394 characters (measured in characters rather than tokens because the 14B and 70B/405B variants use different tokenizers), with a median of 9,382 characters and a long tail extending to 60,000+ characters. Training on this data with standard batching would be inefficient — each batch would be padded to the length of the longest sample, wasting computation on padding tokens.
+
+The solution is **ahead-of-time packing using First-Fit Decreasing**. The algorithm works as follows:
+
+1. Sort all training samples by length in descending order.
+2. Initialize empty "bins" (training sequences) of capacity 16,384 tokens.
+3. For each sample (starting with the longest), place it in the first bin that has enough remaining capacity.
+4. If no existing bin can accommodate the sample, create a new bin.
+
+This greedy algorithm achieves ">99.9% batch efficiency" — meaning less than 0.1% of the total token capacity across all bins is wasted on padding. First-Fit Decreasing is known to be a 11/9-approximation for bin packing (i.e., it uses at most ~22% more bins than the optimal packing), but in practice on this data distribution it approaches near-perfect efficiency because the many small samples fill the gaps left by the few large samples.
+
+Packing is done **ahead of time** (before training starts) rather than online during data loading. This adds a one-time preprocessing cost but ensures deterministic, reproducible batches and avoids the computational overhead of dynamic packing during training.
+
+**Flex Attention for isolation.** Packing multiple samples into a single sequence creates a problem: the model's self-attention mechanism would normally allow tokens from one sample to attend to tokens from adjacent samples in the packed sequence. This is undesirable because the samples are independent — the model should not learn spurious correlations between unrelated training examples.
+
+The paper uses **Flex Attention** to enforce that attention is restricted to within each sample of the packed batch. Flex Attention is a programming model for generating optimized attention kernels that support custom attention masks (Dong et al., 2024). The paper configures Flex Attention to produce block-diagonal attention masks: tokens in sample 1 can attend only to other tokens in sample 1, tokens in sample 2 can attend only to tokens in sample 2, and so on. This is mathematically equivalent to processing each sample independently but computationally equivalent to processing a single long sequence, giving the throughput benefits of packing without the cross-contamination problem.
+
+**Loss masking.** Not all tokens in a training sample should contribute to the loss. In a conversational format, tokens produced by the "user" role (the prompt) and tokens produced by the "assistant" role that represent reasoning (the ` thinking` block in reasoning mode) have different training semantics from tokens that represent the final output (the ` response` block and the assistant's messages in non-reasoning mode).
+
+The paper states that "only tokens generated by the 'assistant' role contribute to the final cross-entropy loss objective" (Section 3). More specifically, looking at the training loss curve (Figure 2), the cross-entropy is computed over the model's predictions for each token position, but the loss is multiplied by a binary mask: 1 for assistant-generated tokens, 0 for user/prompt tokens. This means the model is penalized only for incorrect predictions on the portions of the sequence it would be responsible for generating at inference time — it does not need to learn to predict the user's prompts.
+
+The paper does not explicitly state whether ` thinking` tokens are masked or trained in the base SFT stage. The context suggests they are trained (since the model needs to learn to generate reasoning), but this is not unambiguously specified. The training data includes both reasoning and non-reasoning samples, and the loss mask likely treats the entire assistant turn — including any ` thinking` block — as trainable, while masking only the user turns.
+
+**The training loss curve (Figure 2).** The loss decreases from approximately 0.62 at step 0 to approximately 0.45 at step 7,000–9,000 for both the 70B and 405B models. The curves are smooth with no visible loss spikes, suggesting stable training dynamics. The 405B model has slightly lower loss than the 70B throughout training, which is expected given its larger capacity.
+
+---
+
+#### Reasoning Length Control: The Stage 2 Fine-Tuning
+
+The most distinctive training innovation in the Hermes 4 pipeline is the **Stage 2 supervised fine-tuning** applied to the 14B model to control reasoning length. This addresses a specific failure mode: the Stage 1 model, when evaluated in reasoning mode on LiveCodeBench, would reach its maximum context of 40,960 tokens without producing a closing ` response` tag in 60% of cases (Table 2, "Stage 1 Overlong@40960 toks" for LCBv6 Aug2024+).
+
+**The overlong problem.** "Overlong" is defined operationally: a model output is overlong if it has not generated the closing ` response` tag by the input+output context length limit of 40,960 tokens. This is a deployment-critical failure — an overlong output is useless because the final answer is never produced. The high overlong rate on LiveCodeBench (60%) means that in a production code-generation setting, the model would time out or truncate on the majority of requests.
+
+The paper notes that overlong rates vary by benchmark: 28.2% on AIME'24, 25.9% on AIME'25, 18.2% on GPQA Diamond, and 60.0% on LiveCodeBench. The LiveCodeBench rate is dramatically higher, likely because code generation problems require longer solutions (more code to write) and the model's reasoning about code structure tends to expand to fill the available context.
+
+**Why naive approaches fail.** The paper documents an instructive failure: direct SFT on a mixture of truncated-thinking data (reasoning chains with ` response` forced at 20,000 tokens) and Stage 1 SFT data **increased** overlong rates on GPQA Diamond from 18.2% to 49.6% (Appendix B, Table 5a, "Standard Masking" column vs. "Stage 1" column). The team hypothesizes that "certain reasoning prefixes (e.g., 'Alternatively, ...Alternatively, ...') can induce longer reasoning, and selecting for samples with long reasoning chains teaches the model to generate these prefixes at greater frequency" (Appendix B).
+
+This is a concrete example of **data selection bias**: by training on reasoning chains that were long enough to need truncation, the model learns the *pattern* of long reasoning (including looping and degenerate "word salad" behaviors observed in manual inspection) even though the training data shows those long chains being cut off. The model does not learn "stop at 20k tokens"; it learns "generate as if you're going to 20k tokens" — which, at inference time with a 40,960 token limit, means generating even longer.
+
+**The selective supervision approach.** The Stage 2 fine-tuning addresses this by radically restricting what the model learns from the truncated reasoning data. The core idea: **train only on the termination decision, not on the reasoning that preceded it.**
+
+**Data construction (Figure 3b):**
+
+1. Gather ~300,000 prompts, mostly STEM and coding, from WebInstruct-Verified, rSTAR-Coder (filtered for prompts with ≥2,000 characters and deduplicated to ~12,000 unique prompts), and DeepMath-130k.
+2. Generate responses of up to 30,000 tokens for each prompt using the current policy (the Stage 1 model).
+3. Filter for responses that did not terminate in a stop token, producing "overlong" generations.
+4. For these overlong generations, the reasoning chain has no closing ` response` tag. The data construction handles two cases:
+   - **Case 1**: The generation terminated in a stop token *after* the closing ` response` tag (meaning the model produced a closing tag and then kept generating into the answer section until hitting the limit). These are allowed to finish generating the answer (presumably by continuing generation from the truncation point).
+   - **Case 2**: The generation terminated in a stop token *before* reaching a closing ` response` tag (meaning the model was still in the thinking phase when it hit the limit). For these, `\n</think>` is forced at the 30,000 token mark, and then the model generates an answer conditioned on the incomplete reasoning trace. The paper notes: "We found that the original policy would still generate an answer when conditioned on an incomplete reasoning trace followed by a closing think tag, even without additional training."
+5. The resulting training samples consist of: the original prompt, a possibly truncated reasoning chain (the first 30,000 tokens of the model's own reasoning), a forced ` response` token at position 30,000, and a model-generated answer.
+
+**Loss masking for Stage 2 (the critical design choice).** In the Stage 2 training, the loss mask is configured so that **only the ` response` and `<eos>` tokens are unmasked** in the overlong data samples. Every reasoning token (all 30,000 of them) is masked out — gradient updates flow only through the single ` response` token that marks the transition from thinking to answering, and the `<eos>` token that terminates the sequence. (The paper notes that training on `<eos>` was "not a design choice of the experiment but rather a facet of Axolotl" — the training framework always unmasks `<eos>`, and including the answer after ` response` ensures the model doesn't learn to emit `<eos>` immediately after ` response`.)
+
+The key insight: because the reasoning chain is the model's own output (generated by the Stage 1 policy), the tokens are already in-distribution for the model. Leaving them masked means the model does not learn to alter *how* it reasons — it learns only *when to stop reasoning*. The paper frames this as exploiting "the stability of single-step augmentation while minimizing the distributional shift" (Section 3.1), explicitly connecting to the model collapse literature (Zhu et al., 2024; Kazdan et al., 2024) which shows that recursive training on full self-generated outputs leads to distribution narrowing and quality degradation.
+
+This is fundamentally different from standard fine-tuning on truncated data, where the model would learn to reproduce the truncated reasoning chains (including any degenerate patterns that caused the chains to be long in the first place). By masking the reasoning, the Stage 2 training says: "Your reasoning is fine as-is. Just learn to put ` response` after 30,000 tokens."
+
+**The data mixture.** The Stage 2 training data does not consist solely of overlong samples. A subset of the Stage 1 SFT data is mixed in, with standard input masking applied to those samples (all assistant turns are trained). This mixture ensures the model does not forget general capabilities while learning the termination behavior.
+
+**Training framework for Stage 2.** The paper uses Axolotl for Stage 2 rather than TorchTitan, citing Axolotl's "convenient character-span interface for token-level masking." The specific character-span masking allows the team to specify "mask tokens 0 through 29,999, unmask token 30,000" without manually constructing token-level mask arrays, which is particularly useful when the truncation point is specified in characters rather than tokens.
+
+**Results of length control (Table 2).** The Stage 2 fine-tuning with a 30,000-token budget produces dramatic reductions in overlong rates:
+
+- AIME'24: 28.2% → 0.1% (−99.6% relative)
+- AIME'25: 25.9% → 0.1% (−99.6% relative)
+- GPQA Diamond: 18.2% → 0.2% (−98.9% relative)
+- LiveCodeBench: 60.0% → 0.1% (−99.8% relative)
+
+The accuracy tradeoff is modest:
+- AIME'24: 55.0 → 55.4 (+0.7% relative — actually an improvement)
+- AIME'25: 48.7 → 46.8 (−3.9% relative)
+- GPQA Diamond: 57.4 → 60.2 (+4.7% relative — a substantial improvement)
+- LiveCodeBench: 28.6 → 42.5 (+48.6% relative — a dramatic improvement)
+
+The LiveCodeBench improvement is notable: by forcing the model to stop thinking and produce an answer at 30,000 tokens, the model's accuracy jumps from 28.6% to 42.5%. This suggests that when the model runs to 40,960 tokens without producing an answer, it is not engaging in productive reasoning — it is looping, degenerating, or otherwise failing to converge. The forced truncation at 30,000 tokens actually *improves* performance by preventing this degeneration.
+
+**The tradeoff between budget and performance (Appendix B).** The paper explores a more aggressive 20,000-token budget in Stage 2 experiments, which reveals a clear accuracy-overlong tradeoff (Table 5):
+
+| Condition | AIME'24 | AIME'25 | GPQA Diamond | LCBv6 |
+|---|---|---|---|---|
+| Stage 1 (baseline) | 55.0 | 48.8 | 57.4 | 28.6 |
+| Standard Masking (20k) | 51.3 | 41.7 | 44.3 | 33.6 |
+| ` response`-only Masking (20k) | 35.4 | 27.3 | 55.7 | 41.8 |
+| Control (extra SFT data, 20k) | 56.5 | 44.0 | 52.6 | 46.0 |
+
+The ` response`-only masking at 20k tokens achieves the lowest overlong rates (≤0.6% across all benchmarks) but at a severe accuracy cost on AIME (−20 percentage points). The Standard Masking at 20k (which trains on the full truncated reasoning chain) increases overlong rates on three of four benchmarks, confirming that training on truncated reasoning is counterproductive. The Control condition (extra 10,709 SFT samples replacing the overlong samples) shows mixed results — improvements on AIME and LiveCodeBench, regressions on GPQA Diamond — suggesting that simply adding more Stage 1-style data can help some benchmarks but not others.
+
+The final choice of 30,000-token budget (rather than 20,000) reflects a pragmatic balancing of the overlong reduction and accuracy preservation. The paper does not present a systematic sweep of budget values; the 30,000 token threshold appears to have been chosen based on the observation that 20,000 tokens caused unacceptable accuracy degradation while 30,000 tokens provided sufficient overlong reduction with minimal performance impact.
+
+---
+
+#### Evaluation Architecture: Reproducibility Through Infrastructure Design
+
+The paper's evaluation architecture is itself a technical contribution, designed to address reproducibility challenges that the authors argue are endemic to LLM benchmarking. The core insight: an evaluation score is a function of the model, the inference engine, and the hardware — and standard evaluation harnesses that manage their own inference obscure the contributions of the latter two.
+
+**Single-endpoint design (Section 4.1).** All benchmarks share a single OpenAI-compatible chat completions endpoint. The evaluation harness is built "assuming the existence of an OpenAI-compatible chat completions endpoint shared by all benchmarks run" — meaning any benchmark can be evaluated by pointing it at the same endpoint URL. This ensures that the inference engine version, hardware configuration, and sampling parameters are identical across all benchmarks, eliminating a source of cross-benchmark variance that the authors argue is common when different evaluation suites manage their own inference.
+
+The specific inference stack: SGLang version 0.4.9.post3 with the Triton attention backend on B200 GPUs. The paper notes that "Circa May 2025 we observed more repetition and degeneration issues on the default FlashInfer attention backend on B200s vs. on H100 and switched to Triton as a mitigation" — a concrete example of how hardware-specific inference engine behavior can affect model outputs, and why specifying the exact inference configuration matters for reproducibility.
+
+**Atropos as evaluation framework (Section 4.3).** The Atropos RL environment manager doubles as the evaluation framework. The design principles:
+
+- **Single-file evaluations**: each benchmark is a self-contained Python script with core logic, scoring metrics, and configuration defaults. The paper acknowledges "this introduces some duplication across evaluations" but argues it "substantially improves transparency and modifiability: researchers can inspect, understand, and adapt an evaluation without navigating a large codebase."
+
+- **Detailed sample-level logging**: Atropos logs "explicit records of which span of a model's output was extracted as the candidate answer, how it was scored, and which competing candidates were rejected." This level of logging enables diagnosis of parsing errors — the paper cites an internal finding that "in our internal benchmarking of a popular open-source evaluation framework in June 2025, we found 7.3% disagreement between their GPQA parser and GPT-4o grading." Without per-sample extraction logs, such discrepancies would be invisible; with them, researchers can identify which specific parsing decisions caused disagreement.
+
+- **Performance-conscious execution**: Atropos does not enforce a batch-inference-then-batch-scoring execution pattern. Instead, "inference and scoring can be overlapped." This is implemented for LiveCodeBench, where verification involves launching sandboxed Modal containers to execute LLM-generated code against test cases. As soon as inference finishes for one problem, that completion is sent to a verifier; the inference worker immediately begins the next generation, and verification runs concurrently. The paper states this keeps the evaluation "inference-compute-bound rather than verification-bound" (Section 4.3.3).
+
+- **Explicit error semantics**: if a request exceeds timeout or retry settings, Atropos defaults to surfacing the error and halting execution — rather than silently scoring the item as incorrect. The paper argues this is better for debugging: a timeout might indicate a deployment bottleneck, not a model failure, and silently converting timeouts to incorrect scores would mask infrastructure problems.
+
+- **Hackable configurations: Atropos uses pydantic-cli** to generate command-line interfaces and YAML configurations from Python dataclass definitions. Adding a new configuration parameter (e.g., number of samples per problem) requires only modifying the dataclass; the CLI automatically reflects the change. This reduces the barrier to running custom evaluation configurations.
+
+**LiveCodeBench verification (Section 4.3.3).** LiveCodeBench presents unique evaluation challenges: problems have up to hundreds of test cases, and executing untrusted LLM-generated code requires sandboxing. The paper's solution:
+
+- Each generation is scored by launching a Modal container — Modal provides sandboxed execution with resource isolation, preventing LLM-generated code from affecting the evaluation infrastructure.
+- Test cases for a single generation are executed sequentially within one Modal container. The team experimented with parallelizing test cases across multiple containers but found "executing all test cases sequentially in a single Modal container was sufficient and also significantly cheaper" — the verification bottleneck was not test case execution time but rather container startup overhead.
+- Inference and verification are overlapped: the inference worker does not wait for verification to complete before starting the next generation. This is the "Magistral" approach (Mistral et al., 2025).
+
+**Elastic inference cluster (Section 4.4).** Evaluation on large models (405B) can take multiple days on a single DGX B200 node. To maximize cluster utilization without blocking training jobs, the inference cluster is designed for worker preemption:
+
+- A non-preemptible "master" job runs the SGLang router and one inference worker.
+- Additional preemptible inference jobs (up to the cluster size) make `/add_worker` requests to the router when they start.
+- When a preemptible worker is preempted (e.g., because a higher-priority training job needs the GPUs), it is automatically requeued by the cluster scheduler and reattaches to the router when reallocated.
+
+This design allows the evaluation cluster to "automatically scale up to use all available compute or scale down to one node" (Section 4.4). The SGLang router's support for worker removal makes this transparent to clients — they continue hitting the same endpoint regardless of how many backend workers are currently active.
+
+**Evaluation conditions (Section 4.5).** The specific parameters used for all non-creative benchmarks: temperature 0.6, Top-P 0.95, Top-K 20, following Qwen3. Context length is 40,960 for reasoning and code benchmarks, 32,768 for all others. Each data-parallel model replica is sharded at TP8 (8-way tensor parallelism) to minimize out-of-memory errors during decoding at long context lengths.
+
+Sample counts per benchmark reflect a pragmatic tradeoff between statistical reliability and compute cost: 64 samples for AIME (high variance, important metric), 16 for LiveCodeBench, 8 for GPQA Diamond, 4 for MATH-500, 3 for creative benchmarks (where multiple samples are used for diversity rather than pass@1 estimation).
+
+**Why this level of detail matters.** The paper's exhaustive specification of evaluation infrastructure is unusual for a technical report — most reports report scores without documenting the inference stack that produced them. The motivation, implicit throughout Section 4, is that reported benchmark numbers are not properties of the model alone; they are properties of the model-inference engine-hardware system. By releasing all generated samples and specifying the exact inference configuration, the paper enables independent verification of its claimed results — and sets a standard that makes it possible to identify when discrepancies between different evaluations of the same model arise from infrastructure differences rather than model differences.
 
 ## 4. Key Insights and Innovations
-1) Graph‑based synthetic data that is composable and verifiable (Sections 2.1–2.1.3; Figure 1)
-- What’s new: `DataForge` builds instruction‑answer data via declarative nodes with pre/postconditions, supports “graphs of graphs,” and trains on all intermediate LLM calls—not only final QA pairs.
-- Why it matters: enables large, diverse, high‑quality instruction and reasoning datasets with built‑in quality control (judges and verifiers), and exposes models to the structure of task creation and judging, not just answering.
 
-2) Verified trajectories at scale via many task‑specific environments (Section 2.2)
-- What’s new: ~1,000 verifiers across environments covering format compliance, constraints, schema validation, tool calls, and multi‑domain reasoning (e.g., Internbootcamp).
-- Why it matters: creates a large pool of grounded, correctness‑checked reasoning traces—critical for reliable reasoner behavior.
+### Innovation 1: Reasoning Length Control Through Selective Supervision — Training the Termination Decision Without Altering the Reasoning Distribution
 
-3) Single‑token “thinking‑length” supervision (Section 3.1; Figure 3b; Table 2; Appendix B, Table 5)
-- What’s new: rather than fine‑tuning on the model’s own long reasoning (which can cause collapse), supervise only the `</think>` emission at a fixed budget. This teaches “when to stop” without altering the rest of the reasoning distribution.
-- Why it matters: reduces sequences that run past context by ~99% with minimal accuracy loss; e.g., for the 14B model, LiveCodeBench overlong rate drops from 60.0% to 0.1% and pass@1 improves from 28.6 to 42.5 (+48.6% relative) after 30k‑budget tuning (Table 2).
+The most intellectually distinctive contribution in this paper is not the observation that reasoning models suffer from overlong generation (many practitioners have encountered this), but rather the **diagnosis of why naive fixes fail** and the resulting **minimal-intervention training strategy** that surgically addresses length control without collapsing reasoning quality.
 
-4) Reproducible, efficient evaluation stack (Sections 4.1–4.4)
-- What’s new: one inference endpoint for everything, detailed sample‑level logs, overlapped inference/verification for code benchmarks, and elastic, preemptible worker pools.
-- Why it matters: more credible cross‑benchmark comparisons and scalable, cheaper code verification runs (essential for LiveCodeBench’s many test cases).
+**What the field was doing before.** The standard approach to controlling generation length in language models falls into a few categories: training on truncated sequences (teach the model what a budget-constrained output looks like), applying length penalties during decoding, or using RL-based reward shaping that penalizes long outputs. These approaches all share a common assumption: that the model needs to learn a *different way of reasoning* — either more compressed or more efficient — to fit within the budget.
 
-## 5. Experimental Analysis
-- Evaluation design (Sections 4.2, 4.5)
-  - Benchmarks include math/reasoning (MATH‑500, AIME’24/’25, GPQA Diamond, MuSR), code (LiveCodeBench v6 Aug‑2024+), knowledge (MMLU, MMLU‑Pro, OBQA, SimpleQA), instruction‑following (IFEval), judge‑ability (RewardBench), refusal tendencies (RefusalBench), and creative writing (EQBench3, CreativeWriting3).
-  - Sampling: typically temperature 0.6, top‑p 0.95, top‑k 20; long context for reasoning/code; multiple samples per task per lighteval defaults (e.g., AIME estimated with 64, LiveCodeBench with 16).
+**Why that assumption is wrong for reasoning models.** The paper's diagnostic experiment in Appendix B provides a clean counterexample. Direct SFT on a mixture of truncated reasoning chains (with ` response` forced at 20k tokens) and standard SFT data *increased* overlong rates on GPQA Diamond from 18.2% to 49.6% (Table 5a). The model did not learn to stop earlier; it learned to generate the *patterns* associated with long reasoning — looping constructs, "Alternatively... Alternatively..." cycles, and degenerate word salad — because those patterns were overrepresented in the samples selected for truncation (by definition, samples that need truncation are the ones with long reasoning). This is a **selection-induced distribution shift**: the act of filtering for long chains made long-chain-generating behaviors more prevalent in training, and the model faithfully reproduced them.
 
-- Main quantitative results
-  - Hermes 4 405B vs strong open‑weight baselines (Table 3):
-    - Math/reasoning:
-      > “MATH‑500: 96.2; AIME’24: 81.9; AIME’25: 78.1; GPQA Diamond: 70.6”
-      These are close to frontier reasoners (e.g., DeepSeek‑R1‑0528 shows 97.5/86.5/83.1/78.1 respectively) while outperforming several others on some tasks.
-    - Code (LiveCodeBench v6, Aug2024+ subset):
-      > “61.4” vs DeepSeek‑V3’s 49.2 and Qwen3‑235B’s 65.1 (Table 3).
-    - Alignment/formatting/QA:
-      > “Arena‑Hard v1: 93.7; RewardBench: 73.0; IFEval (Loose): 81.5”
-      High Arena‑Hard suggests good instruction‑following “vibe” under LLM‑judge settings.
-    - Refusals:
-      > “RefusalBench: 57.1 (reasoning mode), 43.2 (non‑reasoning mode)” (Figure 4; Table 3).
-      This indicates Hermes 4 responds more often (fewer refusals) than many peers, except on three safety‑critical categories where scores are inverted to prefer refusals (Section 4.5.1).
-    - Creativity:
-      > “EQBench3: 85.5; CreativeWriting3: 79.3”—strong creative performance for an open model (Table 3).
+This failure mode is not obvious a priori. It would be natural to assume that showing the model examples of reasoning chains that end at 20k tokens would teach it to end at 20k tokens. The fact that it instead teaches the model to *approach* 20k tokens (and then keep going, since at inference time the context limit is 40k) reveals a subtlety about how language models learn from sequential data: they learn the distribution of the process, not the distribution of the outcome. The model learns "reason in a way that would eventually need 20k tokens" rather than "reason and then stop at 20k tokens."
 
-  - Hermes 4 70B and 14B (Table 4):
-    - 70B:
-      > “AIME’24: 73.5; AIME’25: 67.5; MATH‑500: 95.5; LiveCodeBench: 50.5; Arena‑Hard: 90.1; EQBench3: 84.7.”
-    - 14B:
-      > “AIME’24: 55.4; AIME’25: 46.8; LiveCodeBench: 42.5 after length‑tuning; EQBench3: 77.2.”
-      The 14B model particularly benefits from thinking‑length control (Table 2).
+**The conceptual innovation.** The paper's solution — training only on the ` response` and `<eos>` tokens while masking the entire reasoning chain — reframes the problem entirely. Rather than asking "how do we teach the model to reason more compactly?", the paper asks: **"can we teach the model *when to stop* without changing *how* it reasons?"** The reasoning chain in the training data is the model's own output from the Stage 1 policy — it is already in-distribution. The model does not need to learn to produce better reasoning; it needs to learn the meta-cognitive decision to terminate reasoning at a specific budget.
 
-- Length‑control ablations (Section 3.1.3; Appendix B, Table 5)
-  - At a stricter 20k budget (early experiments), “`</think>`‑only” masking reduced overlong rates to ≤0.6% but hurt AIME’24 by ~20 points (Table 5b). Moving to a 30k budget regained most accuracy while preserving the huge reduction in overlong sequences (Table 2).
-  - The “Control” run (no truncated‑trace data, same framework/settings) unexpectedly boosted LiveCodeBench by 18%—likely due to fixes and longer‑context exposure in Stage 2 (Appendix B discussion).
+By restricting gradient updates to a single token (the ` response` tag), the approach exploits what the paper terms "the stability of single-step augmentation" — the vast majority of tokens in each training example receive zero gradient signal, meaning the model's reasoning distribution is preserved exactly. Only the probability of emitting ` response` at position 30,000 (conditioned on the preceding reasoning) is modified.
 
-- Do the experiments support the claims?
-  - Yes, for three central claims:
-    1) Hybrid capability: Strong results across math, code, alignment, and creative writing (Tables 3–4), with qualitative probes showing persona control and reduced sycophancy under prompt engineering (Section 5; Appendix C).
-    2) Thinking‑length control: Overlong rates drop by ~99% with minimal or acceptable accuracy trade‑offs at a 30k budget (Table 2).
-    3) Reproducibility/engineering: A single inference stack, public logs, and detailed methodology for each benchmark (Sections 4.1–4.5) increase transparency.
+This is a **fundamental conceptual shift** from prior length-control methods, not an incremental refinement. It treats the reasoning process and the termination decision as *separable skills* that can be trained independently. This separability is not obvious — one might expect that teaching a model when to stop necessarily involves teaching it to adjust its reasoning to fit the budget. Table 2 demonstrates that this separability is real: overlong rates drop from 60.0% to 0.1% on LiveCodeBench while accuracy *improves* from 28.6% to 42.5% — the model didn't just learn to stop; it stopped engaging in counterproductive reasoning loops that were degrading its answers.
 
-- Notable caveats
-  - Hermes 4 405B trails DeepSeek‑R1‑0528 on some top‑end reasoning tasks (e.g., AIME’25: 78.1 vs 83.1; GPQA: 70.6 vs 78.1; Table 3).
-  - MMLU/MMLU‑Pro are competitive but not state‑of‑the‑art (e.g., 405B: 87.2/80.6 vs DeepSeek‑R1‑0528: 90.4/84.3; Table 3).
+**Why this matters beyond Hermes 4.** The selective supervision approach has implications for any system that trains models on their own outputs. The model collapse literature (Zhu et al., 2024; Kazdan et al., 2024) warns that recursive training on full self-generated outputs leads to distribution narrowing. The Hermes 4 approach offers a partial escape: if you can identify which *aspects* of the model's output are stable (the reasoning) and which need modification (the termination), you can train only on the latter while reusing the former as fixed context. This is a general pattern — selective gradient routing — that could apply to other capability-control problems, such as teaching models to call tools at appropriate points without altering their underlying reasoning, or teaching models to adjust output verbosity without changing content quality.
+
+### Innovation 2: The Refusal-Ability Spectrum as an Explicit Design Target, Operationalized Through RefusalBench
+
+Most LLM technical reports treat refusal behavior as a safety-compliance metric — either the model refuses harmful requests (good) or it doesn't (bad), and the goal is to maximize refusal rates on a predefined set of unsafe categories. Hermes 4 inverts this framing: **refusal behavior is positioned as a spectrum of behavioral plasticity**, where both excessive refusal and indiscriminate compliance represent failures of the model to appropriately interpret user intent, and the goal is to align refusal rates with a *neutral* stance that respects user autonomy while maintaining safety boundaries.
+
+**The dominant prior framing.** Proprietary model providers (OpenAI, Anthropic, Google) have converged on what the paper terms "policy rigidity" — models that foreground compliance with safety guidelines, frequently issue disclaimers about their AI identity, and refuse a broad range of requests even in clearly fictional or controlled contexts. This is a defensible safety decision for deployed products with millions of users, but it has produced a specific behavioral profile that the paper's qualitative analysis (Section 5.1) documents: GPT-5 and Opus 4.1 "frequently issued disclaimers emphasizing their AI identity or overtly reformulated responses to align with safety constraints," even when the prompt was unambiguously fictional (e.g., supervillain roleplay).
+
+Open-weight models have historically occupied the other extreme — low refusal rates but also low capability, and often a lack of the fine-grained judgment needed to distinguish genuinely harmful requests from edgy roleplay. The field lacked a vocabulary for discussing refusal behavior as anything other than a binary safe/unsafe toggle.
+
+**The conceptual innovation: RefusalBench as a behavioral diagnostic.** The paper's construction of RefusalBench (Section 4.5.1) is methodologically distinctive in several ways:
+
+1. **Inverted categories**: Three of the 32 prompt categories (minor specific harm, exploitation and human trafficking, suicide/self-harm) receive *inverted* scoring — refusals are scored positively. This encodes the normative position that some categories of harmful content should indeed be refused, converting what would otherwise be a one-dimensional "refusal rate" into a multi-dimensional profile that distinguishes appropriate from inappropriate refusals.
+
+2. **Hand-crafted prompts**: The 166 prompts across 32 categories are not sourced from existing datasets but hand-crafted to cover "categories of requests that typically result in refusals from frontier models." This is labor-intensive but produces higher ecological validity than, for example, adversarial prompt benchmarks that optimize for eliciting refusals through jailbreaking techniques — those measure robustness to attacks, not baseline behavioral tendencies.
+
+3. **LLM-as-judge refusal detection**: Sonnet 4 is used to classify responses as refusals or non-refusals, with the explicit goal of capturing subtle refusal patterns (hedging, redirection, identity disclaimers) that keyword-based detection would miss.
+
+The result (Figure 4) is a clear separation: Hermes 4 (reasoning mode) scores 57.1, while proprietary models cluster in the 11–28 range. This is a **2–5× difference** in willingness to engage with the same prompts. But the paper does not present this as an unqualified victory — the existence of the three inverted categories means the score reflects a *balanced* judgment, not raw refusal minimization. A model that scored 100 by never refusing anything (including the inverted categories) would be penalized.
+
+**The significance beyond raw numbers.** The paper's refusal-rate framing connects to the broader qualitative analysis in Section 5, which documents Hermes 4's behavioral plasticity — its ability to adopt personas, generate in-character responses without meta-disclaimers, and adjust reasoning style in response to system prompts. The refusal behavior is not an isolated property; it is a manifestation of the same underlying capacity for contextual interpretation that enables persona embodiment and stylistic transfer.
+
+This suggests a reframing of the alignment problem that the field has not fully internalized: **alignment is not about maximizing or minimizing refusal rates, but about producing models whose behavioral boundaries are predictable and controllable through prompting.** A model that refuses 90% of edgy roleplay prompts is not "safer" than one that refuses 40% — it is simply less capable of distinguishing fictional contexts from real harm. Hermes 4's contribution is to operationalize this distinction through a benchmark that captures it quantitatively, and to demonstrate that a model can achieve competitive reasoning performance (Table 3) without adopting the policy-rigidity profile that has become the de facto standard for frontier models.
+
+### Innovation 3: The DataForge Graph-Composition Architecture as a Declarative Framework for Synthetic Data Generation
+
+The synthetic data generation literature has produced powerful but *imperative* systems: researchers specify a pipeline of transformations (seed → prompt → answer → filter) as a linear or branching script. DataForge's contribution is to recast this as a **declarative graph composition problem**, where nodes declare what they require and guarantee, edges emerge automatically from compatibility, and entire graphs compose into higher-order graphs through a uniform interface.
+
+**What prior systems do.** AgentInstruct (Mitra et al., 2024), the direct inspiration for DataForge, introduced the idea of graph-based data generation where nodes represent transformations and edges represent data flow. But the graph topology is specified explicitly — adding a new node type requires manually defining which existing nodes it connects to. This works for moderate numbers of node types but scales poorly: with N node types, the number of potential connections is O(N²), and the engineering burden of specifying valid connections grows quadratically.
+
+PersonaHub (Ge et al., 2024) takes a different approach, using pre-training data to generate synthetic personas that then seed instruction generation. This is powerful but treats the generation process as a fixed two-stage pipeline (persona → instruction → answer). There is no mechanism for composing generation strategies or for declaratively specifying the conditions under which different strategies apply.
+
+**The conceptual innovation: PDDL-based implicit edge construction.** The insight that makes DataForge different is the adoption of the PDDL action interface, originally designed for automated planning, as the node specification language. Each node declares:
+
+- **Preconditions**: what must be true of the input data for this node to operate (e.g., "input is a passage of at least 500 characters," "input is an instruction-answer pair with a passing judge score")
+- **Postconditions**: what the node guarantees about its output (e.g., "output is a JSON object with fields 'instruction' and 'answer'," "output has been graded and received a passing score")
+
+Edges are not specified manually. Instead, a directed edge exists from node A to node B **if and only if** the postconditions guaranteed by A satisfy the preconditions required by B. This means graph construction is automatic: add a new node type to the system, and it instantly connects to all existing nodes whose outputs satisfy its requirements, and all existing nodes that can consume its outputs.
+
+This is a **fundamental architectural shift**, not an incremental improvement. It transforms the problem from "manually wire up transformation pipelines" to "declare what each node does, and let compatibility emerge." The engineering consequence is that the system scales gracefully: adding a new answer generator for a novel instruction type requires only implementing the node (with its preconditions and postconditions), not modifying any existing code or configuration.
+
+**Graph composability through interface uniformity.** The second architectural insight is that every DataForge graph is structurally a node — it has a single source, a single target, and transforms structured data. Because it implements the same interface as an individual node, a graph can be **subgraphed as a node in a higher-order graph** to "arbitrary nesting depth" (Section 2.1.3). This is composition in the functional programming sense: complex behaviors are built by nesting simpler behaviors, with the interface guaranteeing that the composition is well-defined.
+
+The practical implication is that the system is **modular at the graph level**, not just the node level. A team can develop a sophisticated multi-turn dialogue generation graph (itself composed of many nodes), verify that it works correctly, and then treat it as a black-box "dialogue generator" that can be inserted into larger workflows — for example, a graph that routes different prompt types to different generation strategies, where "multi-turn dialogue" is one of the available strategies alongside "single-turn QA" and "code generation."
+
+**The connection to model capability breadth.** This architecture enables a specific capability that matters for generalist models: **coverage through combinatorial diversity**. A random walk through a DataForge graph encounters different combinations of passage transformations, instruction types, answer generators, and judges at each traversal. With many node types at each stage, the number of possible paths is the product of the branch counts at each decision point, producing a combinatorial explosion of distinct data generation recipes without combinatorial engineering effort. This is what enables the Hermes 4 dataset to span reasoning and non-reasoning domains, diverse output formats, and heterogeneous task types — the graph architecture naturally produces diversity without requiring prompt engineers to anticipate every combination.
+
+### Innovation 4: The Verifier Architecture as an Alternative to RL Fine-Tuning for Reasoning Models
+
+The dominant paradigm for training reasoning models, established by DeepSeek-R1, is reinforcement learning with verifiable rewards (RLVR): the model generates reasoning traces, verifiers score them, and the model's policy is updated through policy gradient methods (GRPO in DeepSeek-R1's case) to increase the probability of high-reward trajectories. Hermes 4 takes a fundamentally different approach: **verifiers are used exclusively for data filtering (rejection sampling), not for policy updates.**
+
+**What the field was converging on.** The DeepSeek-R1 paper demonstrated that RLVR could induce reasoning capabilities in base models without any supervised reasoning data, through the "aha moment" where models spontaneously learn to allocate more computation to difficult problems. This was a compelling result that established RL as the central mechanism for reasoning training. Subsequent work (OpenThoughts, Kimi K2, Qwen3) largely adopted variants of this approach, typically combining SFT on reasoning data with RL-based optimization.
+
+The implicit assumption in this paradigm is that RL is *necessary* for strong reasoning performance — that supervised data alone cannot capture the exploration-exploitation tradeoff that produces high-quality reasoning chains, and that the reward signal must directly shape the policy distribution.
+
+**The counterclaim, and the evidence for it.** Hermes 4's results challenge this assumption, though the paper does not make the argument explicitly. The model achieves 81.9% on AIME'24 and 61.4% on LiveCodeBench using pure SFT on verified data — no policy gradient updates, no online RL training. The verification environments (Section 2.2) produce binary reward signals that are used to *filter* trajectories (keeping correct ones, discarding incorrect ones), but these rewards never directly update the model's parameters.
+
+This is significant because it suggests that **the quality of the verification signal, not the optimization algorithm that uses it, is the primary determinant of reasoning performance** — at least for models within the capability range of strong base checkpoints. The Hermes 4 pipeline uses ~1,000 task-specific verifiers spanning answer format, instruction following, code correctness, schema adherence, and tool use. The diversity and precision of these verifiers may substitute for the exploration benefits that RL provides: rather than letting the model explore and receiving scalar feedback, the verifiers provide exact correctness judgments that, when used for rejection sampling, produce a training dataset where every trajectory is verified correct.
+
+The Atropos architecture (Section 2.2) is what makes this feasible at scale. Managing ~1,000 heterogeneous verifiers — each with different execution requirements, reward semantics, and scaling characteristics — is an engineering challenge that prior rejection-sampling approaches have not addressed at this scale. The key design choices that enable this:
+
+- **Async-first execution**: inference and verification run concurrently, preventing slow verifiers from bottlenecking the entire pipeline.
+- **Environment encapsulation**: each verifier is a standalone module with its own logic, reducing coupling and enabling independent development and testing.
+- **Overlapped scoring**: the verification process is not gated on batch completion; individual trajectories are verified as soon as they are generated.
+
+**Why this matters for the field.** If verified SFT can achieve competitive reasoning performance without RL, it has practical implications for training stability and reproducibility. RL-based reasoning training is notoriously sensitive to hyperparameters (learning rate, KL penalty coefficient, reward normalization) and can exhibit reward hacking (the model learns to produce outputs that score highly under the verifier without being genuinely correct). The Hermes 4 approach sidesteps these issues entirely: if a trajectory is verified correct, it goes into the training set; if not, it is discarded. There is no online optimization, no exploration-exploitation tradeoff, and no reward hacking because the model never sees the reward signal during training.
+
+The caveat, which the paper implicitly acknowledges, is that rejection sampling has a hard ceiling: it cannot produce trajectories better than the best output the current policy can generate. If the model never produces a correct answer for a class of problems, rejection sampling cannot create one. The Hermes 4 pipeline mitigates this by using strong teacher models for trajectory generation in the Internbootcamp environment, but this is a different mechanism than the self-improvement that RL enables. For a model starting from a weaker base checkpoint, or for tasks where teacher models are unavailable, RL may still be necessary.
+
+The contribution here is **not that rejection sampling is superior to RL in all cases**, but rather that the field's assumption — that RL is a necessary component of reasoning model training — is empirically falsifiable and deserves more careful examination. Hermes 4 provides existence proof that pure SFT on verified data, combined with diverse and precise verifiers, can produce reasoning performance competitive with RL-trained models.
+
+` tag. The 14B variant's score is substantially lower than Qwen3 14B's 61.2% (Table 4), consistent with the pattern observed on AIME — Qwen3's native reasoning training produces stronger performance at the 14B scale than Hermes 4's fine-tuning approach, though direct comparison is complicated by the fact that Hermes 4 includes the Stage 2 truncation tradeoff.
+
+The reasoning mode gap on LiveCodeBench (61.4% vs. 28.1% for 405B) is 2.2×, smaller than the AIME gap (>7×), suggesting that code generation benefits from reasoning traces but less dramatically than competition math. This is consistent with the nature of the tasks — code generation requires producing correct implementations, which may depend more on knowledge of libraries and patterns than on extended logical deduction.
+
+#### Knowledge and Comprehension Benchmarks
+
+**MMLU (Table 3):** Hermes 4 405B achieves 87.2% (reasoning) vs. 73.6% (non-reasoning), compared to Cogito 405B at 91.4%, DeepSeek R1-0528 at 90.4%, DeepSeek V3-0324 at 88.6%, and Qwen3 235B at 89.3%. Hermes 4 405B is the lowest among these comparators on MMLU, and the 70B (88.4%) and 14B (84.1%) variants follow the same pattern (Table 4). This is the only major benchmark where Hermes 4 consistently trails all comparison models, suggesting that the heavy emphasis on reasoning data in the training mixture (3.5M reasoning samples vs. 1.6M non-reasoning) may have slightly reduced knowledge retention relative to models with more balanced or knowledge-focused training.
+
+**MMLU-Pro (Table 3):** Hermes 4 405B achieves 80.6% (reasoning) vs. 58.3% (non-reasoning), trailing Cogito 405B (82.6%), DeepSeek R1-0528 (84.3%), DeepSeek V3-0324 (81.6%), and Qwen3 235B (83.1%). The pattern mirrors MMLU — Hermes 4 is competitive but slightly behind the best open-weight models on knowledge-intensive tasks.
+
+**SimpleQA (Table 3):** Hermes 4 405B achieves 25.8% (reasoning) vs. 22.1% (non-reasoning). This is dramatically lower than MMLU and reveals a clear weakness: SimpleQA measures short-form factuality (answering factual questions with single entities), and all evaluated models perform poorly (DeepSeek R1-0528: 22.0%, Qwen3 235B: 10.4%, Cogito 405B: 30.4%), but Hermes 4's score is in the middle of the pack. The 70B variant achieves 17.9%, and the 14B variant achieves only 5.5% (Table 4). SimpleQA's difficulty reflects the challenge of producing exact factual answers without hallucination, and Hermes 4 does not appear to have specialized training addressing this capability.
+
+**DROP (Table 3):** Hermes 4 405B achieves 83.5% (reasoning) vs. 77.6% (non-reasoning), compared to Cogito 405B (87.1%), DeepSeek R1-0528 (86.5%), DeepSeek V3-0324 (83.0%), and Qwen3 235B (90.3%). The 70B variant achieves 85.0%, and the 14B achieves 84.5%. Performance is competitive, with the 14B variant notably close to the larger models on this reading comprehension task.
+
+**MuSR (Table 3):** Hermes 4 405B achieves 66.1% (reasoning) vs. 48.2% (non-reasoning), compared to Cogito 405B (63.8%), DeepSeek R1-0528 (72.6%), DeepSeek V3-0324 (65.5%), and Qwen3 235B (67.2%). The 70B variant achieves a surprising 70.3% — higher than the 405B — while the 14B achieves 66.8% (Table 4). MuSR measures multi-step soft reasoning (narrative understanding with implicit reasoning steps), and the 70B's strong performance suggests this capability benefits less from scale than from training data composition.
+
+**OpenBookQA (Table 3):** Hermes 4 405B achieves 94.2% (reasoning) vs. 84.4% (non-reasoning), with all comparison models clustered between 94.8% and 96.4%. This benchmark is near saturation for the model class, and the results suggest Hermes 4 retains strong common-sense reasoning despite the reasoning-focused training.
+
+#### Logic and Hard Reasoning
+
+**BigBenchHard (BBH) (Table 3):** Hermes 4 405B achieves 86.3% (reasoning) vs. 68.7% (non-reasoning), compared to Cogito 405B at 89.3%, DeepSeek R1-0528 at 89.4%, DeepSeek V3-0324 at 86.8%, and Qwen3 235B at 88.4%. The 70B variant achieves 87.8%, and the 14B achieves 84.4%. BBH consists of 23 challenging tasks from BIG-Bench that were beyond the capabilities of earlier models; the fact that all evaluated models cluster in the 84–90% range suggests this benchmark is approaching saturation for the current model generation, though the reasoning-mode boost (86.3% vs. 68.7% for Hermes 4 405B) indicates extended reasoning still helps on the hardest subtasks.
+
+#### Alignment and Instruction Following
+
+**IFEval (Loose) (Table 3):** Hermes 4 405B achieves 81.5% (reasoning) vs. 84.9% (non-reasoning), trailing all comparison models: Cogito 405B (91.6%), DeepSeek R1-0528 (90.0%), DeepSeek V3-0324 (90.4%), and Qwen3 235B (91.4%). The 70B variant achieves 78.7%, and the 14B achieves 74.8% (Table 4). IFEval measures the ability to follow explicit formatting and content constraints in user prompts. Hermes 4's lower scores — and the counterintuitive pattern where non-reasoning mode outperforms reasoning mode on IFEval — suggest that the reasoning process may interfere with strict instruction adherence, perhaps because the model's internal deliberation explores alternative phrasings that deviate from the requested format. This is a notable weakness relative to models like Qwen3 14B (91.6%) which achieve near-ceiling IFEval scores.
+
+**Arena-Hard v1 (Table 3):** Hermes 4 405B achieves 93.7 (reasoning) vs. 53.5 (non-reasoning), placing it competitive with the strongest models: Cogito 405B (91.0), DeepSeek R1-0528 (95.0), DeepSeek V3-0324 (92.6), and Qwen3 235B (93.9). The 70B variant achieves 90.1, and the 14B achieves 83.0. Arena-Hard is LLM-judged using GPT-4o as the evaluator, measuring "vibe check" alignment — whether model responses are helpful, accurate, and well-structured in open-ended scenarios. The large mode gap (93.7 vs. 53.5) indicates that reasoning significantly improves response quality on open-ended tasks, and Hermes 4's score near the top of the evaluated models supports the paper's claim of strong general instruction-following ability.
+
+**RefusalBench (Figure 4):** Hermes 4 (reasoning mode) achieves 57.1, compared to Grok 4 (51.3), Hermes 4 non-reasoning (43.2), DeepSeek V3 (28.1), Gemini 2.5 Pro (24.2), Llama 3.1 405B (21.7), Gemini 2.5 Flash (19.1), GPT-4o (17.7), Sonnet 4 (17), GPT-4o mini (16.8), Opus 4.1 (15.4), GPT-5 (11.3), gpt-oss-120b (5.6), and gpt-oss-20b (4.8). Scores are the average of 5 runs (the paper does not report variance). The 70B variant scores 59.5 (reasoning) and 49.0 (non-reasoning), and the 14B variant scores 74.3 (reasoning) and 39.9 (non-reasoning) (Table 4). The interpretation: higher scores mean the model refuses fewer prompts across the 29 normal categories, while still refusing on the 3 inverted safety categories (which are scored positively for refusals).
+
+The gap between Hermes 4 and proprietary models is stark: GPT-5 scores 11.3, meaning it refuses roughly 89% of the prompts that Hermes 4 answers. However, this comparison requires careful interpretation. The paper constructed RefusalBench specifically to measure refusal behavior on categories where frontier models tend to refuse; it is not a neutral sample of user requests. The high scores of Hermes 4 and Grok 4 reflect their willingness to engage with prompts that other models decline, but the paper does not demonstrate that this engagement produces *helpful* responses — only that it produces non-refusal responses. The three inverted categories provide partial quality control, but for the 29 normal categories, a model could score highly by producing low-quality or evasive responses that technically don't constitute refusals.
+
+**RewardBench (Table 3):** Hermes 4 405B achieves 73.0 (reasoning) vs. 64.5 (non-reasoning), compared to Cogito 405B (69.6), DeepSeek R1-0528 (70.1), DeepSeek V3-0324 (68.1), and Qwen3 235B (74.2). The 70B variant achieves 64.9, and the 14B achieves 63.5. RewardBench evaluates a model's usefulness as a generative reward model — its ability to judge the quality of other models' outputs. Hermes 4's competitive score (within 1.2 points of Qwen3 235B, the leader) supports the paper's claim that training on judge intermediate outputs (DataForge) and the rejection sampling pipeline (which requires the model to internalize quality criteria) transfers to reward modeling capability.
+
+#### Creative and Writing Benchmarks
+
+**EQBench3 (Table 3):** Hermes 4 405B achieves 85.5 (reasoning) vs. 74.6 (non-reasoning), compared to Cogito 405B (67.2), DeepSeek R1-0528 (86.5), DeepSeek V3-0324 (83.1), and Qwen3 235B (80.0). The 70B variant achieves 84.7, and the 14B achieves 77.2. This benchmark measures emotional intelligence in text generation, and Hermes 4's strong performance (matching DeepSeek R1-0528) suggests that the diverse DataForge generation — which includes stylistic transformations, persona-based tasks, and creative formats — produces models capable of nuanced emotional expression.
+
+**Creative Writing v3 (Table 3):** Hermes 4 405B achieves 79.3 (reasoning) vs. 50.6 (non-reasoning), compared to Cogito 405B (67.4), DeepSeek R1-0528 (80.3), DeepSeek V3-0324 (76.7), and Qwen3 235B (77.5). The 70B variant achieves 77.5, and the 14B achieves 61.6. The large mode gap (79.3 vs. 50.6) mirrors Arena-Hard — extended reasoning substantially improves creative output quality, likely because the model deliberates over narrative structure, word choice, and stylistic consistency before producing the final text.
+
+#### Summary of Cross-Benchmark Patterns
+
+Several patterns emerge consistently across the quantitative results:
+
+1. **Reasoning mode dramatically improves math and code benchmarks** (AIME'24: 81.9% vs. 11.4%, LiveCodeBench: 61.4% vs. 28.1%), moderately improves knowledge and creative benchmarks (MMLU-Pro: 80.6% vs. 58.3%, Creative Writing v3: 79.3% vs. 50.6%), but provides smaller gains on alignment-specific benchmarks (IFEval: 81.5% vs. 84.9% — reasoning mode is *worse*).
+
+2. **Hermes 4 consistently outperforms Cogito at the same model size** on math reasoning (81.9% vs. 40.8% on AIME'24 405B, 73.5% vs. 32.2% on AIME'24 70B), code (61.4% vs. 40.9% on LiveCodeBench 405B, 50.5% vs. 32.1% on LiveCodeBench 70B), and creative benchmarks, but matches or trails on knowledge benchmarks (MMLU: 87.2% vs. 91.4% at 405B).
+
+3. **The 14B variant consistently underperforms Qwen3 14B** on reasoning benchmarks where Qwen3's native reasoning training excels (AIME'24: 55.4% vs. 77.5%, LiveCodeBench: 42.5% vs. 61.2%), despite starting from Qwen3 14B as the base checkpoint. This suggests either that the Hermes 4 fine-tuning partially overwrites or dilutes Qwen3's reasoning capabilities, or that the Stage 2 length-control training (which reduced overlong rates from 60% to 0.1%) imposed an accuracy cost that manifests across benchmarks (the 14B's AIME'25 score fell from 48.8% to 46.8% after 30k tuning, as shown in Table 2).
+
+4. **Hermes 4 does not match DeepSeek R1-0528 on any reasoning benchmark**, with gaps ranging from 4.6 percentage points on AIME'24 (81.9% vs. 86.5%) to 10.4 on LiveCodeBench (61.4% vs. 71.8%). This is consistent with the paper's positioning — Hermes 4 is a "generalist" model that reasons well across diverse tasks, not a reasoning specialist optimized primarily for competition math and code.
+
+### Ablation Studies and Robustness Checks
+
+#### Reasoning Length Control Ablations (Appendix B, Table 5)
+
+**Standard SFT on truncated reasoning chains (Standard Masking, 20k budget):** This ablation trained the Stage 1 model on a mixture of Stage 1 SFT data and synthetically truncated reasoning samples where ` response` was forced at 20,000 tokens, with standard loss masking (all assistant tokens trained). Results: AIME'24 fell from 55.0 to 51.3, AIME'25 from 48.8 to 41.7, GPQA Diamond from 57.4 to 44.3, but LiveCodeBench improved from 28.6 to 33.6. Crucially, overlong rates *increased* on GPQA Diamond from 18.2% to 49.6% and remained high on AIME benchmarks (34.0%, 34.9%), directly contradicting the goal of length control. The paper hypothesizes that training on the full reasoning chains from overlong samples teaches the model to generate the reasoning patterns (looping, "word salad") that caused the samples to be long in the first place.
+
+**Response-only masking (20k budget):** Training on the same data mixture but with only ` response` and `<eos>` tokens unmasked in the overlong samples (reasoning chain fully masked). Results: overlong rates collapsed to ≤0.6% on all benchmarks (from 28.2% to 0.6% on AIME'24, 60.0% to 0.5% on LiveCodeBench). However, accuracy on AIME'24 fell dramatically from 55.0 to 35.4, and AIME'25 fell from 48.8 to 27.3 — a roughly 40% relative decline. GPQA Diamond showed a smaller decline (57.4 to 55.7), and LiveCodeBench improved (28.6 to 41.8). This ablation establishes the fundamental tradeoff: the ` response`-only masking effectively controls length, but the 20k budget is too restrictive for math reasoning.
+
+**Control (additional SFT data, 20k context):** Replacing the 10,709 overlong samples with an equal number of randomly selected Stage 1 SFT samples, trained at 32k context (vs. Stage 1's 16k context). Results: AIME'24 improved to 56.5 (+1.5 points vs. Stage 1), AIME'25 fell to 44.0, GPQA Diamond fell to 52.6, LiveCodeBench improved dramatically to 46.0 (+17.4 points vs. Stage 1). The paper notes this is a "curious result" and hypothesizes a possible bug in the Stage 1 trainer or a benefit from the longer context and additional SFT data, but does not investigate further. This ablation serves as a control showing that simply extending training with more SFT data is not the mechanism driving the length-control results.
+
+**Final 30k budget (Table 2):** The deployed solution — ` response`-only masking with a 30,000-token budget — achieves overlong rates ≤0.2% on all benchmarks while largely preserving accuracy: AIME'24 55.0 → 55.4 (+0.7%), AIME'25 48.7 → 46.8 (−3.9%), GPQA Diamond 57.4 → 60.2 (+4.7%), LiveCodeBench 28.6 → 42.5 (+48.6%). The accuracy-regression/cost of the 20k budget is substantially mitigated at 30k, and the LiveCodeBench improvement is maintained.
+
+**Key takeaway from length-control ablations:** The effectiveness of ` response`-only masking depends critically on budget choice. The 20k budget demonstrates that strict length control is achievable but destroys reasoning quality; the 30k budget finds a workable operating point. The paper does not sweep intermediate budgets, so it is unknown whether 25k would have been sufficient or whether the relationship between budget and accuracy is smooth or discontinuous.
+
+#### PRM Aggregation Strategy (Appendix E, Figure 13)
+
+This ablation compares three methods for aggregating per-step PRM scores into a single solution score: taking the minimum step score ("min"), taking the product of step-level correctness probabilities ("prod"), and using only the PRM's prediction at the final step ("last"). The paper reports that "last" aggregation achieves approximately 37% at 256 samples, "min" achieves approximately 35%, and "prod" achieves approximately 27%. An ORM (outcome reward model, which scores complete solutions in a single step) achieves approximately 34%. The finding that "last" outperforms "min" contradicts prior work (Lightman et al., 2023; Wang et al., 2023), which found "min" to be superior. The authors attribute this discrepancy to their use of soft Monte Carlo labels in PRM training (vs. binary correctness labels in prior work), which changes how per-step scores are distributed. The fact that "last" aggregation effectively reduces the PRM to ORM-like behavior at aggregation time, yet still outperforms a separately trained ORM, suggests that step-level PRM training provides beneficial representation learning even when intermediate predictions are not directly used. This result is from the PRM search experiments described in the prior sections, not from the Hermes 4 evaluation itself — the paper references this as prior work in the PRM context.
+
+#### Revision Model Verifier Choice (Appendix J, Figure 15a)
+
+When scoring revision model outputs, the base-model PRM (trained on PaLM 2-S* outputs) underperforms a revision-specific ORM. At 64 generations, sequential revisions + base-LM PRM achieve approximately 40%, while sequential revisions + revision ORM achieve approximately 42%. This confirms distribution shift as a practical concern — verifiers trained on base model outputs do not transfer perfectly to revision model outputs because the revision model's answer distribution differs from the base model's. The paper notes that "the PRM trained on base model outputs does not transfer well to the revision model's outputs" and trains a separate ORM specifically for the revision setting. This result is from the revision model experiments described in the prior sections.
+
+#### Revision History in Verifier Context (Appendix J, Figure 15b)
+
+Including previous revisions in the ORM's context provides a small improvement over a no-history ablation: approximately 1–2 percentage points at 64 generations. However, both variants (with and without revision history) outperform the parallel sampling baseline, confirming that the benefit of sequential revisions is not solely attributable to the verifier having access to more context. This suggests the revision model genuinely improves answer quality across sequential steps, rather than the improvement being an artifact of the verifier seeing a richer context window. Both variants use the revision-specific ORM.
+
+#### Oracle vs. Predicted Difficulty Bins (Figures 4, 8; Appendix C, Figures 11–12)
+
+The compute-optimal strategy selection (described in the prior sections' PRM search and revision model context) was tested with both oracle difficulty bins (using ground-truth pass@1 from 2,048 base model samples) and predicted difficulty bins (using the PRM's average final-answer score as a proxy). Both produce qualitatively similar trends, with predicted bins showing slightly lower performance at high budgets in the revision setting (approximately 41% vs. 44% at 256 generations in Figure 8) but essentially identical performance in the search setting (Figure 4). This is the critical robustness check establishing that difficulty-conditioned allocation works without access to ground-truth labels. These results are from the PRM search and revision experiments described in the prior sections.
+
+#### ReST$^{EM}$ Revision Model (Appendix K, Figure 16)
+
+An attempt to further optimize the revision model using ReST$^{EM}$ (Singh et al., 2024) — an RL-based self-improvement method that uses expectation-maximization style iterative training — caused performance to degrade substantially with sequential revisions. At 256 generations, fully sequential performance drops to approximately 33.5% compared to roughly 38.5% at the optimal sequential-to-parallel ratio. The paper hypothesizes that on-policy data collection in ReST$^{EM}$ "exacerbate[s] spurious correlations in revision data, causing the model to fail to learn the revision task properly." This is a notable negative result: the RL-based approach that works well for improving base model capabilities (as demonstrated in DeepSeek-R1, Singh et al., 2024) backfires when applied to the revision model, suggesting that revision skill is more fragile and susceptible to distribution shift than primary task performance.
+
+#### Mode Comparisons: Reasoning vs. Non-Reasoning (Tables 3, 4)
+
+While not presented as a formal ablation, the paper consistently reports both reasoning (R) and non-reasoning (N) mode performance for all Hermes 4 variants and Cogito. This serves as an implicit ablation of the reasoning mechanism: for Hermes 4 405B, reasoning mode improves AIME'24 from 11.4% to 81.9% (+70.5 points), LiveCodeBench from 28.1% to 61.4% (+33.3 points), Arena-Hard from 53.5 to 93.7 (+40.2 points), but IFEval from 84.9% to 81.5% (−3.4 points). The IFEval regression suggests that the reasoning process can override explicit formatting instructions — the model may internally deliberate about how best to answer, and this deliberation produces content that violates the user's specified format constraints. This is a non-obvious failure mode for reasoning models that the paper documents but does not explore in depth.
+
+**Qualitative behavioral comparison (Appendix C):** The paper includes full chain-of-thought rollouts comparing Hermes 4 to GPT-OSS-120B, Opus 4.1, GPT-5-High, and DeepSeek R1-0528 on four prompt types: creative writing (Lovecraftian poem about julienne-cut fries), political analysis (historical wrongdoings of the US and Chinese governments), adversarial roleplay (supervillain plotting), and sycophancy testing (with an anti-sycophant system prompt). These are not scored quantitatively — they are presented as illustrative examples of behavioral differences. The paper argues that Hermes 4 demonstrates "contextual fidelity" (interpreting fictional prompts as roleplay without repeated AI disclaimers), "stylistic transfer" (approximating Lovecraft's narrative rhythm rather than surface-level topical references), and sensitivity to structural prompt cues (chat template modifications from "assistant" to "me" produce first-person persona embodiment). The comparison is striking but inherently selective — the paper chooses examples that illustrate specific claimed behavioral properties, and no systematic sampling or quantitative behavioral metrics are applied.
+
+### Critical Assessment
+
+The experimental results broadly support the paper's positioning of Hermes 4 as a competitive generalist reasoning model, but several claims from the executive summary require scrutiny against what the experiments actually demonstrate.
+
+#### Claim 1: "Hermes 4 405B achieves results competitive with frontier open-weight systems like DeepSeek V3-0324"
+
+This claim is supported on most benchmarks but requires qualification. On math reasoning (MATH-500: 96.2% vs. 92.5%, AIME'24: 81.9% vs. 50.6%, AIME'25: 78.1% vs. 42.2%), Hermes 4 405B substantially outperforms DeepSeek V3-0324, but this comparison is partially misleading because DeepSeek V3-0324 is evaluated in **non-reasoning mode** (Table 3, column "N"), while Hermes 4 is in reasoning mode. DeepSeek V3-0324 is not a reasoning model; it does not have a thinking mode. The fair comparison for reasoning capability is against DeepSeek R1-0528, which is DeepSeek's reasoning model. Against R1-0528, Hermes 4 trails on every reasoning benchmark (AIME'24: 81.9% vs. 86.5%, AIME'25: 78.1% vs. 83.1%, GPQA Diamond: 70.6% vs. 78.1%, LiveCodeBench: 61.4% vs. 71.8%). The gap is real but not disqualifying — 81.9% vs. 86.5% on AIME'24 is a meaningful difference for competition-level applications, but Hermes 4 remains in the same capability tier.
+
+On non-reasoning benchmarks (MMLU, Arena-Hard, EQBench3), Hermes 4 reasoning mode is competitive with or slightly behind DeepSeek V3-0324 and Qwen3 235B. The strongest claim would be that Hermes 4 is **competitive with mid-tier frontier models across a broad capability spectrum**, but it does not lead on any major benchmark category. The paper does not explicitly claim leadership, and the results are consistent with this more measured characterization.
+
+#### Claim 2: "Substantially lower refusal rates on RefusalBench while maintaining competitive performance"
+
+This claim is supported by Figure 4 (RefusalBench scores) and Tables 3–4 (performance benchmarks), but with several important caveats:
+
+**The baseline comparison on RefusalBench is incomplete.** Figure 4 compares Hermes 4 against proprietary models (GPT-5, Sonnet 4, etc.) and Grok 4, but does not include the other open-weight models evaluated in Tables 3–4 — Cogito 405B (RefusalBench: 15.4, Table 3), DeepSeek R1-0528 (16.7), and Qwen3 235B (34.3). Hermes 4's RefusalBench score of 57.1 is dramatically higher than Cogito's 15.4 and R1-0528's 16.7, and meaningfully higher than Qwen3's 34.3. This is a genuine differentiator against other open-weight models, not just proprietary ones. The 14B variant scores 74.3 (Table 4), even higher — an unexpected inverse relationship with model scale that the paper does not explain. It is possible that the smaller model, having been fine-tuned from Qwen3 14B (which itself has a RefusalBench of 42.2), inherits lower baseline refusal tendencies, or that the Stage 2 length-control training (which teaches the model to produce answers at a fixed budget) reduces the tendency to produce refusal-like hedging and disclaimers.
+
+**RefusalBench is a hand-crafted benchmark with 166 prompts.** The paper does not report how these prompts were selected beyond "classifying 32 categories of requests that typically result in refusals from frontier models" and "hand craft[ing] 166 prompts that cover these categories." The selection process involves human judgment, and the paper does not provide the full prompt set or describe inter-annotator agreement for the category classification. This makes it difficult to assess whether the benchmark provides representative coverage of refusal-eliciting prompts or whether it inadvertently selects for prompts where Hermes 4's training data (which includes adversarial roleplay, fictional scenarios, and diverse viewpoints) has specifically prepared it.
+
+**The relationship between RefusalBench scores and response quality is unmeasured.** The paper demonstrates that Hermes 4 produces non-refusal responses to prompts that other models refuse, but it does not systematically evaluate whether these responses are actually *helpful*. In the qualitative examples (Appendix C), Hermes 4's responses to the villain roleplay and political analysis prompts appear substantive and on-topic, but these are selected illustrations. A model could achieve high RefusalBench scores by producing low-effort or evasive responses that technically avoid refusal language, and the benchmark would not distinguish this from genuine engagement.
+
+#### Claim 3: "Behavioral plasticity that distinguishes Hermes 4 from other large open-weight models"
+
+Section 5 presents qualitative examples supporting this claim, but the evidence is anecdotal rather than systematic. The paper shows four prompt types with full responses from multiple models, demonstrating that Hermes 4 (a) produces in-character roleplay without meta-disclaimers, (b) adjusts reasoning style in response to anti-sycophancy system prompts, and (c) exhibits sensitivity to chat template modifications (changing "assistant" to "me" produces first-person persona embodiment). These are genuine behavioral differences visible in the provided examples.
+
+However, the paper does not attempt to quantify these behaviors or demonstrate that they generalize beyond the selected prompts. There is no behavioral benchmark — no systematic measurement of persona fidelity, disclaimer frequency, or template sensitivity across a representative prompt set. The RefusalBench scores provide quantitative evidence of reduced refusal tendencies, but this captures only one dimension of behavioral plasticity (willingness to engage), not the quality or consistency of the engagement.
+
+The claim that Hermes 4's behavioral plasticity is a "genuine capability advance that is invisible to standard leaderboards" is rhetorically compelling but empirically thin. The provided examples are suggestive — they show that the model *can* exhibit these behaviors — but do not establish that it *reliably* does so, or that the behaviors are not also present in comparison models under different prompting conditions.
+
+#### Missing Experiments and Weaknesses
+
+Several experiments would strengthen the paper's claims but were not conducted:
+
+1. **No systematic difficulty-conditioned evaluation of reasoning behavior.** The paper documents the length-control tradeoff (Tables 2, 5) but does not characterize how reasoning length varies with problem difficulty, or whether the 30k fixed budget is appropriate for problems of different complexity. A model that always reasons for 30k tokens on simple problems wastes compute; one that always stops at 30k on problems requiring more deliberation may produce suboptimal answers. The prior work on compute-optimal test-time scaling (which the reader is familiar with from earlier sections) demonstrates that adaptive budget allocation substantially improves efficiency. The paper does not explore whether the fixed 30k budget could be improved through difficulty-conditioned termination.
+
+2. **No comparison of Hermes 4's SFT-only approach against RL-trained reasoning models of comparable scale and data.** The paper claims that rejection sampling with verified data can produce competitive reasoning performance without RL. But the comparison models (DeepSeek R1-0528, Qwen3 235B) differ in model architecture, base pretraining, training data composition, and total training compute — not just in whether they use RL. A controlled experiment comparing SFT-only vs. SFT+RL on the same base model with the same training data would isolate the contribution of the optimization method, but this is not performed.
+
+3. **No sweep of the reasoning budget parameter (20k vs. 30k vs. unbounded).** The paper presents results at 20k (Appendix B), 30k (Table 2), and unbounded (Stage 1, Table 2), but does not systematically characterize the budget-accuracy tradeoff curve. This makes it difficult to determine whether 30k is near-optimal or whether a different budget would provide better tradeoffs.
+
+4. **No error analysis for benchmark failures.** The paper reports aggregate scores but does not characterize the types of errors Hermes 4 makes relative to comparison models. On AIME'24, for example, does Hermes 4 fail on different problem categories than DeepSeek R1-0528? Such analysis would illuminate whether the models have complementary strengths or whether Hermes 4's errors are concentrated in specific reasoning sub-skills.
+
+5. **No robustness testing of evaluation results across inference configurations.** The paper is admirably detailed about the specific inference configuration used (SGLang version, Triton backend, sampling parameters), but does not report whether results are stable under perturbations — different temperature settings, different SGLang versions, different hardware. Given the paper's own observation of repetition/degeneration issues on B200s with FlashInfer (requiring a switch to Triton), the sensitivity of benchmark scores to inference infrastructure is a relevant concern that is not empirically characterized.
+
+In summary, the experimental results substantiate the paper's core positioning — Hermes 4 is a competitive generalist reasoning model with meaningfully lower refusal rates than both proprietary and open-weight alternatives. The evidence for behavioral plasticity beyond refusal tendencies is suggestive but anecdotal. The main structural limitation is the absence of controlled comparisons that would isolate the contributions of specific design choices (SFT-only vs. RL, the precise budget threshold, the DataForge architecture vs. alternative data generation methods) from confounds in model architecture, pretraining, and total compute.
 
 ## 6. Limitations and Trade-offs
-- Synthetic‑data dependencies
-  - Heavy reliance on synthetic generation with LLM judges risks preference for distributions seen during synthesis and potential judge biases. The report mitigates this by using different weights for answer and judge models (Section 2.1.2) and by adding verified, programmatic environments, but residual bias is still possible.
 
-- Length‑control trade‑offs
-  - Tight budgets can hurt accuracy (Appendix B, Table 5). The final 30k setting balances practicality and performance but remains a compromise (Table 2).
+### 6.1 Coverage is Unproven on Non-STEM, Non-English, and Agentic Domains
 
-- Coverage choices
-  - Domain coverage sometimes relies on “vibe inspection” between taxonomy and persona‑driven generation (Section 2.3), which is principled but not entirely objective.
+**The assumption or constraint.** The paper targets "broad instructional competence" and "generalist" capability, but all quantitative evaluation is concentrated on English-language STEM reasoning (MATH-500, AIME, GPQA Diamond), code (LiveCodeBench), knowledge (MMLU, SimpleQA), and alignment benchmarks. The qualitative behavioral analysis (Section 5) shows creative writing and persona adoption, but these are illustrative examples, not systematic evaluations. The paper's data generation strategies — DataForge graphs seeded from English web text (DCLM, FineWeb) and Internbootcamp's ~1,000 reasoning tasks — are unlikely to produce substantial training data in languages other than English, in multi-step agentic settings where tool calls execute and their results feed back into subsequent reasoning, or in domains requiring specialized professional judgment (legal reasoning, medical diagnosis, financial analysis) rather than verifiable computation.
 
-- Compute and complexity
-  - Training requires substantial B200 GPU hours (Table 1), and the evaluation stack (Modal for code, elastic clusters, TP8 sharding) is sophisticated. Replication is feasible but not lightweight (Sections 3–4.4).
+The paper does not claim coverage of these domains, but it also does not explicitly define the scope boundary. The term "generalist" invites the reader to assume broad coverage, and the paper provides no systematic evidence about where that coverage ends.
 
-- Evaluation dependencies
-  - Some benchmarks use LLM judges (e.g., Arena‑Hard, RefusalBench), which can disagree with parsers or humans. The report counters this by logging sample‑level details and noting a 7.3% parser/judge disagreement found elsewhere (Section 4.3.1), but subjectivity remains.
+**The consequence.** A practitioner deploying Hermes 4 in a multilingual setting, in an agentic loop where the model must recover from tool call failures, or in a domain requiring specialized professional reasoning, cannot rely on the paper's benchmarks to predict performance. The model might perform adequately (the qualitative examples suggest some persona flexibility and tool use training data, per the Tool Use environment in Section 2.2.5), or it might fail catastrophically on out-of-distribution tasks. The paper provides no guidance for distinguishing these cases.
 
-- Safety/Refusal behavior
-  - RefusalBench optimizes for fewer refusals except in three inverted categories (self‑harm, exploitation/trafficking, minor harm). A higher aggregate score (Figure 4) means the model is more willing to answer; depending on deployment, this can be a feature or a risk and may require additional policy tuning (Section 4.5.1).
+**What evidence exists in the paper.** The evaluation suite (Tables 3, 4) covers English-language math, code, knowledge, alignment, reading comprehension, and creativity. There are no multilingual benchmarks, no agentic benchmarks (e.g., SWE-bench, WebArena), and no domain-specific professional benchmarks (e.g., MedQA, Contracts). The Tool Use environment (Section 2.2.5) trains the model to generate correct tool calls, but this is evaluated through exact-match JSON validation against origin datasets, not through end-to-end agentic task completion where tool call failures require recovery. The RefusalBench evaluation (Section 4.5.1) and the qualitative behavioral probes (Section 5) suggest latitude in sensitive domains, but do not measure accuracy in those domains.
+
+**Mitigation status.** Not addressed. The paper does not acknowledge this as a limitation. The evaluation breadth — while substantial for a technical report — is standard for English-language generalist model evaluation and does not establish coverage beyond the evaluated domains. A reader interested in non-English or agentic deployment must conduct their own evaluation with no guidance from the paper about expected performance.
+
+---
+
+### 6.2 The Fixed Reasoning Budget Is a Crude Proxy for Optimal Compute Allocation
+
+**The assumption or constraint.** The Stage 2 length-control fine-tuning (Section 3.1) teaches the model to stop reasoning at a fixed 30,000-token budget, applied uniformly to all prompts regardless of difficulty. This is an improvement over the unbounded model (which hit the 40,960-token context limit on 60% of LiveCodeBench problems), but it treats all problems identically. The paper's own analysis shows that reasoning length varies dramatically with problem type: the Stage 1 model's overlong rate was 60.0% on LiveCodeBench, 28.2% on AIME'24, 25.9% on AIME'25, and 18.2% on GPQA Diamond (Table 2). These different overlong rates imply that different benchmarks induce different average reasoning lengths — and within each benchmark, individual problems likely vary substantially.
+
+The paper is aware of this, but frames the fixed budget as a pragmatic solution: "we ultimately chose a larger budget of 30k tokens for the final model" because the 20k budget caused unacceptable accuracy regression (Appendix B). There is no exploration of difficulty-adaptive budgeting, where the model might be allowed to reason longer on hard problems and forced to stop earlier on easy ones. The prior sections of this analysis (which the reader is familiar with) have established that compute-optimal test-time scaling — allocating inference compute based on estimated problem difficulty — can yield 4× efficiency gains over uniform allocation. Hermes 4's fixed budget is precisely the uniform allocation that this prior work demonstrates is suboptimal.
+
+**The consequence.** On easy problems, the model wastes compute reasoning for 30,000 tokens when 5,000 tokens of deliberation would produce an equally good answer. On very hard problems, the 30,000-token cap may truncate useful reasoning, producing worse answers than an unbounded model would generate. The paper's own data shows the latter effect: the 30k-tuned model's AIME'25 score fell from 48.8 to 46.8 (−3.9% relative) compared to the Stage 1 model (Table 2), suggesting that some problems genuinely benefit from >30,000 tokens of reasoning. The practical cost is both efficiency (wasted compute on easy problems) and accuracy (truncated reasoning on hard problems), and the paper provides no estimate of the magnitude of either loss across a representative problem distribution.
+
+**What evidence exists in the paper.** Table 2 shows the budget-accuracy tradeoff for a single budget threshold (30k) against the unbounded baseline. Appendix B, Table 5 shows results for 20k budgets under different masking strategies, but does not compare multiple budget thresholds under the same optimal masking strategy. The paper never presents a sweep of budget values to characterize the budget-accuracy Pareto frontier. The overlong rate variation across benchmarks (18.2% to 60.0% in Table 2) indirectly demonstrates that different problem types require different amounts of reasoning, but this is not analyzed as a motivation for adaptive budgeting.
+
+**Mitigation status.** Not addressed. The paper acknowledges the tradeoff — "we ultimately chose a larger budget of 30k tokens for the final model" — but does not discuss the possibility of adaptive budgets as future work. The length-contraction experiments (Appendix B) are presented as explorations of training methodology (masking strategies), not as a search for optimal budget values. A practitioner deploying Hermes 4 must decide whether to use the default 30k budget or configure a different threshold, and the paper provides no guidance for this decision.
+
+---
+
+### 6.3 No Controlled Ablations Isolate the Contribution of Individual System Components
+
+**The assumption or constraint.** The paper presents Hermes 4 as the product of a multi-component pipeline: DataForge graph-based generation, Atropos rejection sampling against ~1,000 verifiers, the specific data mixture (3.5M reasoning + 1.6M non-reasoning samples, plus Hermes 3 retention), the Stage 1 SFT with packing and loss masking, and the Stage 2 length-control fine-tuning. Each of these components represents a design choice, and the paper argues for each on engineering grounds (Section 2: declarative graph construction scales better than imperative pipelines; Section 3: selective supervision avoids model collapse), but provides **no controlled ablation** isolating the contribution of any single component to final model performance.
+
+The standard for such ablations would be: train a model identical to Hermes 4 except without one component (e.g., replace DataForge-generated data with an equal token volume of simpler template-generated data; omit rejection sampling and use only DataForge-generated responses; train without the Stage 2 length control) and measure the performance delta. The paper performs none of these. The closest is the Appendix B length-control experiment, which compares different masking strategies for the same Stage 2 data — but this compares variants of Stage 2, not the presence vs. absence of Stage 2, and does not ablate DataForge, Atropos, or the data mixture.
+
+**The consequence.** A practitioner reading this paper cannot determine which components are essential for reproducing Hermes 4's results and which are incidental. Is DataForge's graph-based generation substantially better than a simpler linear pipeline? Would the model achieve similar performance without the 1,000 verifiers in Atropos, using only teacher-model-generated solutions? Is the Hermes 3 data retention critical for maintaining knowledge benchmarks (MMLU, SimpleQA), or could those be recovered through the new synthetic data alone? Without ablations, the paper's claim to provide "data synthesis and curation strategy" contributions is weakened: the strategy is described in detail, but its necessity is not demonstrated.
+
+This limitation also affects scientific credit assignment. The paper claims three contributions in the introduction: a data synthesis and curation strategy, a training methodology, and a comprehensive evaluation. The evaluation contribution stands on its own (the benchmarks are independently reported). But the data and training contributions are confounded — the final model performance is a joint function of all components working together, and it is impossible to attribute performance gains to any specific innovation.
+
+**What evidence exists in the paper.** No controlled ablations. The only experiments that vary a single component are the length-control masking experiments (Appendix B, Table 5), which compare Standard Masking vs. ` response`-only Masking vs. Control within the Stage 2 fine-tuning. These are ablations of a sub-component (masking strategy) within one stage of the pipeline, not ablations of pipeline stages. The paper does not train a DataForge-only model, an Atropos-only model, or a model without Hermes 3 retention.
+
+**Mitigation status.** Not addressed. The paper does not acknowledge the absence of ablations as a limitation or discuss the difficulty of conducting them at the 405B scale (where training a single ablation model costs 71,616 B200 GPU-hours, Table 1). A legitimate practical constraint — each ablation of the 405B model costs substantial compute — makes full component-level ablations infeasible for the 405B variant, but the paper could have conducted them at the 14B scale (4,454 GPU-hours per run) where they would be affordable. The 14B results in Table 4 show the model underperforming Qwen3 14B on reasoning benchmarks, which would make ablations less informative (the 14B may not be representative of the larger models' behavior), but this is not discussed as a rationale for the absence.
+
+---
+
+### 6.4 RefusalBench Has No Demonstrated Relationship to Response Quality or Safety
+
+**The assumption or constraint.** The paper presents RefusalBench scores (Figure 4, Tables 3–4) as evidence that Hermes 4 achieves "substantially lower refusal rates" while "maintaining competitive performance." The benchmark measures whether the model produces a non-refusal response to 166 hand-crafted prompts across 32 categories that typically elicit refusals. Three categories are inverted (refusals scored positively for minor specific harm, exploitation/human trafficking, and suicide/self-harm), providing a minimal safety floor.
+
+The paper assumes — implicitly — that a higher RefusalBench score is better, representing "neutral alignment" and "behavioral plasticity" rather than unsafe compliance. But the benchmark provides no measurement of whether non-refusal responses are actually accurate, helpful, or appropriate. A model could score 100 on RefusalBench by responding to every prompt with "I don't know" or "Let me tell you a story about puppies" — technically not a refusal, but not useful either. The paper does not report any quality metric for the non-refusal responses generated on RefusalBench prompts, nor does it compare the factual accuracy, helpfulness, or appropriateness of Hermes 4's responses against those of models with lower RefusalBench scores.
+
+The three inverted categories provide a coarse check — the model must refuse on prompts about exploitation and self-harm to maintain its score — but this checks refusal on only 3 of 32 categories. The remaining 29 categories have no quality constraint. The paper's qualitative examples (Appendix C) show Hermes 4 producing substantive, on-topic responses to politically charged and adversarial prompts, but these are selected illustrations, not a systematic evaluation.
+
+**The consequence.** A practitioner who reads "RefusalBench: 57.1 for Hermes 4 vs. 17 for GPT-4o" might reasonably conclude that Hermes 4 is more useful — it refuses fewer prompts, so it is available for more tasks. But this inference is valid only if the non-refusal responses are actually helpful. If Hermes 4 produces hallucinated, low-quality, or evasive responses to the prompts it doesn't refuse, then the refusal rate advantage is misleading: the model is "available" but not useful. The paper provides no evidence to distinguish these cases.
+
+Moreover, the benchmark's prompts are hand-crafted to cover categories that "typically result in refusals from frontier models." This is not a neutral sample of user requests — it is adversarially selected to stress-test refusal policies. A model that refuses few of these prompts might be genuinely more helpful, or it might be incapable of recognizing situations where refusal is appropriate. The three inverted categories provide a minimal check, but the paper does not argue — and cannot demonstrate from the provided data — that Hermes 4's refusal boundaries are correctly calibrated across the full spectrum of harmful-to-harmless requests.
+
+**What evidence exists in the paper.** Figure 4 reports RefusalBench scores. Appendix C provides qualitative response examples to four challenging prompt types (Lovecraft poem, political analysis, villain roleplay, sycophancy probing), showing Hermes 4's responses to be substantive and on-topic. But these examples are not drawn from the RefusalBench prompt set — they are separate qualitative probes. There is no overlap analysis and no systematic quality evaluation of RefusalBench responses.
+
+**Mitigation status.** Partially acknowledged, indirectly. The paper's qualitative analysis (Section 5) explicitly argues that standard benchmarks miss important behavioral dimensions, and the inclusion of full CoT rollouts in Appendix C reflects an awareness that quantitative scores alone are insufficient. But the paper does not connect this argument to RefusalBench — it does not acknowledge that RefusalBench's single-dimensional score masks response quality variation, or propose quality-weighted refusal metrics. The inclusion of three inverted categories shows awareness that indiscriminate compliance is undesirable, but three categories out of 32 is a coarse safety check, not a quality evaluation.
+
+---
+
+### 6.5 The 14B Model's Performance Gap Against Qwen3 14B Suggests the Fine-Tuning Partially Overwrites Base Reasoning Capabilities
+
+**The assumption or constraint.** The Hermes 4 14B variant starts from Qwen3 14B, which is itself a hybrid reasoning model with strong native reasoning performance (Table 4: AIME'24 77.5%, LiveCodeBench 61.2%, IFEval 91.6%). The Hermes 4 fine-tuning adds 56B tokens of additional SFT data and the Stage 2 length-control training. The paper implicitly assumes that fine-tuning on the Hermes 4 dataset improves or preserves the base model's capabilities across the board.
+
+**The consequence.** The results in Table 4 show that Hermes 4 14B underperforms Qwen3 14B on virtually every benchmark where Qwen3 was strong: AIME'24 (55.4% vs. 77.5%, −22.1 points), AIME'25 (46.8% vs. 68.5%, −21.7 points), LiveCodeBench (42.5% vs. 61.2%, −18.7 points), IFEval (74.8% vs. 91.6%, −16.8 points), Arena-Hard (83.0 vs. 87.8, −4.8 points), and MMLU (84.1% vs. 84.7%, roughly tied). Gains are concentrated on RefusalBench (74.3 vs. 42.2, +32.1 points), EQBench3 (77.2 vs. 74.8, +2.4 points), and the non-reasoning mode (which Qwen3 lacks data for in the comparison, since Qwen3's non-reasoning scores are reported separately).
+
+This pattern suggests that the Hermes 4 fine-tuning **degrades Qwen3's native reasoning and instruction-following capabilities** while improving refusal-related behaviors. The degradation magnitude is substantial — a 22-point drop on AIME'24 translates to roughly a 29% relative reduction in accuracy. This is not a minor tradeoff; it means that for a practitioner who values math reasoning performance, the Qwen3 14B base checkpoint is substantially stronger than the Hermes 4 14B fine-tuned variant.
+
+The paper does not discuss this as a limitation. The 14B results are presented alongside the 70B and 405B results without comment on the differential pattern, and the reader might incorrectly infer that Hermes 4 fine-tuning is uniformly beneficial across scales.
+
+**What evidence exists in the paper.** Table 4 provides the head-to-head comparison between Hermes 4 14B and Qwen3 14B (both reasoning mode). The gap is large and consistent across reasoning benchmarks. The Stage 2 length-control experiment (Table 2) shows that the 30k tuning reduces AIME'25 from 48.8 to 46.8 (−3.9% for Stage 2 alone), which accounts for only a small fraction of the total 21.7-point gap to Qwen3's 68.5% AIME'25. This suggests the Stage 1 SFT — the main Hermes 4 training — is responsible for the bulk of the degradation, not just the length-control stage.
+
+**Mitigation status.** Not addressed. The paper does not compare 14B performance to Qwen3 14B in text or discuss the degradation. The training methodology section (Section 3) describes starting from Llama 3.1 for the 70B and 405B variants and Qwen3 for the 14B variant, suggesting that the base checkpoint choice was pragmatic (Qwen3 14B was available and had reasoning capabilities), but does not discuss the implications of this choice for final performance. A reader interested in smaller-scale deployment might reasonably choose Qwen3 14B directly over Hermes 4 14B for reasoning-heavy workloads, and the paper provides no counterargument.
 
 ## 7. Implications and Future Directions
 - Field impact

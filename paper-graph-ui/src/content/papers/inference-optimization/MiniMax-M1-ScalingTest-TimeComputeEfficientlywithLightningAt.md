@@ -8,186 +8,788 @@ MiniMax-M1 is the first open-weight, large-scale reasoning model to efficiently 
 
 ---
 
-## 1. Executive Summary (2-3 sentences)
-MiniMax-M1 introduces an open‑weight large reasoning model that scales “test‑time compute” (the computation spent while generating long chains of thought) far more efficiently by combining a hybrid attention architecture with Lightning Attention and a Mixture‑of‑Experts (MoE). It also proposes CISPO, a new reinforcement learning (RL) objective that preserves gradient contributions from rare but crucial reasoning tokens, enabling fast and stable RL to very long outputs (up to 80K tokens) and 1M‑token inputs.
+## 1. Executive Summary
+
+MiniMax-M1 introduces the first open-weight, large-scale hybrid-attention reasoning model, combining a Mixture-of-Experts (MoE) architecture with a lightning attention mechanism—a linear attention variant that replaces the quadratic complexity of softmax attention with near-linear scaling—to efficiently scale test-time compute for complex reasoning tasks. Built on the MiniMax-Text-01 base (456B total parameters, 45.9B activated per token, natively supporting 1M-token contexts—8× the context size of DeepSeek R1), the model is trained using large-scale reinforcement learning across diverse domains—from competition mathematics and competitive programming to sandbox-based software engineering environments with execution-based rewards—and proposes **CISPO** (Clipped IS-weight Policy Optimization), a novel RL algorithm that clips importance sampling weights rather than token updates to stabilize training, achieving a 2× speedup over DAPO on controlled benchmarks. The resulting MiniMax-M1-80k model matches or surpasses prior open-weight leaders—reaching 86.0% on AIME 2024, 56.0% on SWE-bench Verified, and 73.4% on OpenAI-MRCR (128K)—while consuming approximately 25% of the FLOPs of DeepSeek R1 at 100K-token generation lengths and completing full RL training in only three weeks on 512 H800 GPUs at a rental cost of ~$0.53M, establishing that hybrid linear-plus-softmax attention architectures can competitively scale test-time compute with dramatically reduced computational overhead, though the model trails the latest DeepSeek-R1-0528 on pure mathematical and coding competition benchmarks.
 
 ## 2. Context and Motivation
-- Problem addressed
-  - Long, high‑quality reasoning typically improves as models spend more FLOPs during generation, but standard softmax attention has quadratic cost in sequence length, making very long thoughts and contexts prohibitively expensive. Section 1 frames this as a “test‑time compute” scaling problem.
-  - Existing large reasoning models (LRMs) like o1 and DeepSeek‑R1 use RL to elicit longer reasoning but still rely largely on softmax attention; linear/sparse alternatives have shown promise but were rarely validated at scale for state‑of‑the‑art LRMs (Section 1; related work list).
 
-- Why it matters
-  - Real workloads—software engineering, tool‑use, and long‑document understanding—require both extended thinking and very long contexts. M1 targets up to 1M input tokens and up to 80K generated tokens, making such tasks tractable with lower compute (Table 1, Section 1).
+### The Core Problem: Quadratic Attention Can't Affordably Scale Reasoning Length
 
-- Shortcomings of prior approaches
-  - Quadratic attention limits long inputs and long generations.
-  - Prior linear/SSM/RNN variants (e.g., Performer, RetNet, Mamba) either have limited validation at scale or are not open (Section 1).
-  - Common RL algorithms (PPO/GRPO/DAPO) clip large token updates, which inadvertently suppresses rare “fork” tokens (e.g., “However,” “Recheck”) that drive deep reasoning (Section 3.1, “Issues of Token Clipping”).
+The fundamental problem this paper confronts is architectural: **the dominant transformer architecture used by virtually all competitive large reasoning models imposes quadratic computational complexity on sequence length**, making it prohibitively expensive to scale the extended chain-of-thought reasoning that has driven recent breakthroughs. The paper frames this as a bottleneck at the intersection of two converging trends in the field.
 
-- Positioning
-  - M1 is an open‑weight, large MoE model that interleaves Lightning Attention (a linear‑time variant implemented in an I/O‑aware way) with occasional softmax layers (“hybrid attention”), enabling near‑linear scaling for long sequences during both inference and RL (Section 1; Figure 1 Right).
-  - RL is scaled with a new algorithm, CISPO, and a suite of engineering recipes so training completes in 3 weeks on 512 H800s (≈$0.53M rental) while achieving competitive performance with strong open‑weight models and favorable long‑context/tool‑use results against leading closed models (Abstract; Sections 1 and 3; Table 2).
+The first trend is the emergence of **large reasoning models (LRMs)** — models like OpenAI o1, DeepSeek-R1, and their successors — which achieve remarkable performance on complex tasks (Olympiad mathematics, competitive programming, real-world software engineering) by generating increasingly long reasoning traces before producing final answers. The authors explicitly situate their work within this lineage, noting that "the success of LRMs has been primarily attributed to a new scaling dimension of test-time compute—As more FLOPs are dedicated to extended reasoning processes during generation, model performance shows consistent improvement" (Section 1). In other words, the field has empirically discovered that longer thinking helps, and is racing to push reasoning lengths further.
+
+The second trend is the **hardware and cost reality of softmax attention**, where the computational cost of self-attention scales as $O(L^2)$ in sequence length $L$ (Vaswani et al., 2017). When reasoning traces stretch to tens or hundreds of thousands of tokens — as they increasingly do in state-of-the-art LRMs — this quadratic term dominates the total FLOPs budget. The paper quantifies this explicitly in Figure 1 (Right): compared to DeepSeek R1, the MiniMax-M1 architecture consumes less than 50% of the FLOPs at 64K tokens and approximately 25% at 100K tokens. This is not a marginal efficiency gain; it is the difference between a technology that can scale and one that hits a cost wall.
+
+The authors state the tension directly:
+
+> "continuously extending the reasoning process is challenging within the traditional transformer architecture, due to the inherent quadratic computational complexity of the softmax attention mechanism" (Section 1).
+
+This is not merely a latency concern — it affects the entire lifecycle of LRMs. RL training requires generating massive numbers of long rollouts, scoring them, and computing gradients through them. The quadratic attention cost compounds across all these stages, making extended-thinking RL training economically infeasible at scale for many organizations. The paper reports that their architectural innovations plus algorithmic choices reduced total RL training cost to approximately $0.53M in GPU rental — a figure they implicitly contrast with what a pure-softmax architecture would cost for equivalent training.
+
+### Why the Problem Matters: The Inference-Time Scaling Imperative
+
+The importance of solving this architectural bottleneck extends beyond academic interest into several concrete practical dimensions:
+
+**Scaling laws are shifting toward inference compute.** The paper cites work showing that "as more FLOPs are dedicated to extended reasoning processes during generation, model performance shows consistent improvement" (Section 1). This represents a potential paradigm shift: if inference-time compute scales as reliably as pretraining compute (the Chinchilla scaling laws from Hoffmann et al., 2022), then the *efficiency* of that inference compute becomes a first-order determinant of model capability. An architecture that is $4 \times$ cheaper per reasoning token can afford $4 \times$ longer thinking at the same cost, potentially translating directly to higher benchmark scores and real-world task success.
+
+**Real-world agentic applications demand extreme sequence lengths.** The paper emphasizes that LRMs are increasingly deployed as agents interacting with environments, tools, and other agents — "requiring reasoning across dozens to hundreds of turns while integrating long-context information from diverse sources" (Section 7). Each turn adds its own reasoning trace plus environmental observations, compounding sequence length. The 1M-token native context window of MiniMax-M1 (versus 128K for DeepSeek-R1 and Qwen3-235B) is not a vanity metric — it is a prerequisite for these multi-turn agentic scenarios where the model must maintain coherent reasoning across extended interactions.
+
+**The open-weight ecosystem is architecturally stagnant on attention.** The paper makes a pointed observation: while "previous works have proposed various techniques to mitigate this issue — such as sparse attention, linear attention, state space models, and linear RNNs — these approaches have not been fully validated in large-scale reasoning models, and nearly all competitive LRMs to date still rely on traditional attention designs" (Section 1). The sole exception the authors acknowledge is Hunyuan-T1 (Tencent AI Lab, 2025), which uses the Mamba architecture — but is not open-sourced and discloses few details. This means the entire open-weight LRM landscape is locked into quadratic attention, with all the cost implications that entails. By releasing MiniMax-M1 as an open-weight model, the paper aims to break this architectural monoculture.
+
+**Training cost democratization.** The paper explicitly frames their training cost — 3 weeks on 512 H800 GPUs, ~$0.53M in rental — as a contribution. This figure matters because it establishes a concrete benchmark for what it costs to train a competitive LRM with an efficient architecture. If quadratic attention models require substantially more compute for equivalent reasoning length scaling (as suggested by the FLOPs comparison in Figure 1), then architectural efficiency directly determines who can participate in LRM development. The "world's first open-weight, large-scale hybrid-attention reasoning model" framing signals that the authors see architectural choice as an access-to-innovation issue, not just a performance one.
+
+### Where Prior Approaches Fall Short
+
+The paper identifies several categories of prior work, each with specific limitations that motivate the MiniMax-M1 design:
+
+**Quadratic attention LRMs (status quo).** Models like DeepSeek-R1, Qwen3-235B, and OpenAI o1 all use traditional softmax attention. Their limitation is not capability — they achieve state-of-the-art results — but rather *scaling efficiency*. The paper's Figure 1 (Right) directly quantifies this: at 100K tokens, the FLOPs gap between quadratic and linear attention is roughly 4×. For a given compute budget, the quadratic model must either generate shorter reasoning traces (potentially sacrificing accuracy) or incur higher costs. This is a hard engineering tradeoff that no amount of software optimization can eliminate — it follows from the algorithmic complexity of the attention mechanism itself.
+
+**Sparse attention approaches (Beltagy et al., 2020; Lu et al., 2025; Zaheer et al., 2020).** These reduce the effective sequence length by restricting which tokens attend to which others (e.g., local windows, global tokens, block-sparse patterns). The limitation is that they are heuristics — they approximate full attention rather than replacing it, and they have not been demonstrated at the scale of 456B-parameter reasoning models generating 80K-token reasoning traces. The paper groups these under "various techniques to mitigate this issue" that "have not been fully validated in large-scale reasoning models" (Section 1). The implicit critique is that sparse attention trades off some attention quality for efficiency, and that tradeoff may be unacceptable for the precise multi-step reasoning that LRMs require.
+
+**State space models and linear RNNs (Dao and Gu, 2024; Gu and Dao, 2024; Gu et al., 2022; Peng et al., 2023, 2024a).** These architectures — Mamba, RWKV, HGRN, and their variants — achieve linear or near-linear complexity by fundamentally rethinking sequence mixing. The limitation is that, with the exception of Hunyuan-T1 (non-open-source, sparse details), they have not been shown to work at LRM scale for complex reasoning. The paper notes that "these approaches have not been fully validated in large-scale reasoning models" (Section 1). This is a significant gap because reasoning capability is not guaranteed by architectural efficiency — linear attention models may have different inductive biases, different training dynamics, or different scaling properties that affect their ability to learn multi-step reasoning through RL. The MiniMax-M1 paper directly confronts this gap by being the first to open-source a large-scale validation.
+
+**Linear attention variants (Katharopoulos et al., 2020; Qin et al., 2021, 2022a, 2024b; Sun et al., 2025).** The lightning attention mechanism used in MiniMax-M1 is specifically an I/O-aware implementation of linear attention (Qin et al., 2022a, 2024b). Prior linear attention models were typically evaluated on language modeling perplexity or moderate-scale benchmarks, not on the RL-trained reasoning capabilities that define modern LRMs. The challenge is not just implementing linear attention correctly — it is making it work stably through large-scale RL training where gradients span tens of thousands of tokens, precision mismatches between training and inference kernels can destabilize learning, and the optimizer must handle gradients spanning 13 orders of magnitude (from 1e-18 to 1e-5, as documented in Section 3.2).
+
+**RL algorithms for reasoning (PPO, GRPO, DAPO).** On the algorithmic side, the paper identifies a specific failure mode in existing RL approaches: **token clipping disproportionately drops rare but critical reasoning tokens**. The authors explain that tokens associated with reflective behaviors — "However, Recheck, Wait, Aha" — are typically low-probability under the base model. In PPO and GRPO, these tokens exhibit high importance sampling (IS) weights $r_{i,t}(\theta)$ during policy updates, causing them to be clipped out after the first on-policy update. The consequence is that:
+
+> "these tokens were clipped out after the first on-policy update, preventing them from contributing to subsequent off-policy gradient updates" (Section 3.1).
+
+This is particularly problematic for reasoning because these "fork" tokens — moments where the model realizes a mistake and pivots its approach — are precisely the behaviors that distinguish shallow reasoning from deep, self-correcting chains of thought. The paper cites concurrent work (Cui et al., 2025; Wang et al., 2025) showing that such low-probability tokens are crucial for stabilizing entropy and enabling scalable RL. GRPO's clipping mechanism, designed for training stability, inadvertently suppresses the very behaviors that make extended reasoning effective.
+
+DAPO (Yu et al., 2025) attempts to mitigate this by raising the upper clipping bound, but the authors found this "less effective in our setup, which involved 16 rounds of off-policy updates per generation batch" (Section 3.1). The fundamental issue is that *any* token-dropping mechanism risks discarding the most informative gradient signals. CISPO's key insight is to move the clipping from the token update to the importance sampling weight itself, preserving gradient flow from all tokens.
+
+**Data and environment diversity in RL training.** The paper also identifies a gap in the scope of RL training data. Prior LRMs have focused heavily on mathematical reasoning and competitive programming (for which rule-based verifiers exist), with limited exploration of software engineering environments, logical reasoning diversity, or general-domain tasks requiring learned reward models. The authors argue that real-world deployment demands reasoning across heterogeneous task types within a single model, and that the RL training curriculum must reflect this diversity.
+
+### How MiniMax-M1 Positions Itself
+
+The paper positions MiniMax-M1 along multiple axes simultaneously, creating a multi-dimensional contribution:
+
+**Architectural axis: hybrid linear-plus-softmax as a validated LRM backbone.** Rather than choosing between linear and softmax attention, MiniMax-M1 uses both — one softmax attention block for every seven linear (transnormer) blocks. This hybrid design, inherited from MiniMax-Text-01, reflects a pragmatic bet: softmax attention may be necessary for certain attention patterns (the paper doesn't specify exactly which layers benefit most, but the 1:7 ratio suggests linear attention carries most of the load), while linear attention handles the bulk of sequence processing. The paper's contribution is not inventing this architecture (which comes from prior work on MiniMax-Text-01 and lightning attention) but rather **validating it at LRM scale with RL training**, open-sourcing the result, and documenting the specific engineering challenges and solutions required to make it work.
+
+**Algorithmic axis: CISPO as a drop-in replacement for GRPO/DAPO.** The paper presents CISPO as a principled solution to a specific failure mode. Its positioning is clear: it is designed for the regime where many off-policy updates are performed per generation batch (the authors mention 16 rounds), and where preserving gradient signal from all tokens — especially rare, high-IS tokens — matters for learning complex reasoning behaviors. The unified formulation in Equation 6, with its explicit token-wise mask $M_{i,t}$, is presented as a generalization that can recover PPO/GRPO behavior (by setting the mask appropriately) or implement the CISPO approach (by clipping IS weights rather than masking tokens). This framing — "we're not proposing a completely new paradigm, we're showing that a different choice in an existing framework fixes a known problem" — is typical for algorithmic contributions that aim for adoption.
+
+**Training efficiency axis: RL at LRM scale for ~$0.53M.** The paper repeatedly emphasizes the cost and speed of training (3 weeks, 512 H800 GPUs, $0.53M). This positions MiniMax-M1 as a proof point that architecturally-efficient models can be trained competitively with dramatically lower resource requirements than one might assume for a 456B-parameter model. The implicit comparison is to what a pure-softmax architecture of similar capability would cost — the paper doesn't provide that figure directly, but the FLOPs curves in Figure 1 (Right) suggest a 2-4× multiplier.
+
+**Capability axis: strengths in long-context and agentic tasks, trailing on math/code competitions.** The paper is notably honest about where MiniMax-M1 excels and where it falls short. It "surpasses OpenAI o3 and Claude 4 Opus on long-context understanding benchmarks" (Section 6.1), achieves strong SWE-bench and TAU-bench results, but "lags in mathematical and coding competitions" relative to DeepSeek-R1-0528. This positioning — strength in complex, realistic scenarios that benefit from long context and tool use, relative weakness in pure competition benchmarks — is consistent with the architectural advantages (1M context window, efficient long-sequence processing) and suggests the model is optimized for a different point in the capability space than models focused narrowly on math and code competitions.
+
+**Open-weight axis: filling a gap in the ecosystem.** The paper's repeated emphasis on being "the world's first open-weight, large-scale hybrid-attention reasoning model" (Abstract, Section 1, Section 7) positions it as filling a specific vacancy: the open-source community has access to powerful quadratic-attention LRMs (DeepSeek-R1, Qwen3) but no comparable linear-attention alternative. This matters for research reproducibility, for downstream fine-tuning on long-context tasks, and for organizations that want to deploy LRMs with lower per-token inference costs.
+
+### The Underlying Thesis
+
+Reading across these axes, the paper's central thesis emerges: **the dominant transformer architecture is not the only viable foundation for large reasoning models, and switching to a hybrid linear-softmax design can dramatically reduce the cost of scaling test-time compute without sacrificing competitive performance — provided the RL training pipeline is appropriately adapted to the new architecture's dynamics.** The CISPO algorithm, the precision fixes, the early truncation heuristics, and the curriculum design are all in service of this thesis: they are the adaptations required to make RL work reliably on this architecture. The benchmark results are the validation that the thesis holds.
 
 ## 3. Technical Approach
-This section walks through M1’s architecture, training pipeline, RL algorithm, and long‑length scaling strategy.
 
-- Model architecture: hybrid attention + MoE
-  - Size: 456B total parameters with 45.9B active per token; 32 experts (Section 1).
-  - Hybrid attention pattern: one transformer block with standard softmax attention follows every seven “transnormer” blocks that use Lightning Attention (Section 1).
-    - Lightning Attention (LA): a linear‑attention variant (from Qin et al. 2022a; 2024b,c) implemented to be I/O‑efficient; cost grows roughly linearly with sequence length rather than quadratically.
-    - Design intuition: mostly linear attention for scalability, but periodic softmax blocks to preserve global expressivity and calibration.
-  - Native context: up to 1M tokens (Table 1). Output (thinking) length: up to 80K tokens for the released M1‑80k; 40K for M1‑40k (Table 1, Section 1).
+### 3.1 Reader Orientation
 
-- Why this design is efficient
-  - Figure 1 (Right) shows theoretical inference FLOPs vs generation length: M1 uses <50% the FLOPs of DeepSeek‑R1 at 64K tokens and about 25% at 100K. This directly targets the test‑time compute bottleneck for long reasoning (Section 1).
+MiniMax-M1 is a large language model system that generates extended chains of reasoning (often tens of thousands of tokens) before answering complex questions, and it is trained to do so through reinforcement learning on diverse tasks including mathematical proofs, competitive programming, and sandbox-based software engineering. The core problem it solves is that standard transformer architectures become prohibitively expensive as reasoning traces grow longer — the quadratic cost of self-attention means that doubling the thinking length quadruples the per-example computational cost — and the solution is a **hybrid architecture** that replaces most softmax attention layers with a linear-time alternative called lightning attention, paired with a new reinforcement learning algorithm (CISPO) that stabilizes training by clipping importance sampling weights rather than discarding token gradients.
 
-- Pretraining and SFT (Section 2)
-  - Continual pretraining
-    - 7.5T additional tokens with higher proportions of STEM/code/reasoning (70%) and curated QA; refined parsing, cleaning, and semantic deduplication (Section 2.1, “Training Data”).
-    - Recipe: constant LR 8e‑5 for 2.5T tokens, then decay to 8e‑6 over 5T; MoE aux‑loss coefficient reduced; larger micro‑batch to soften aux‑loss impact (Section 2.1, “Training Recipe”).
-    - Long‑context extension in four stages (32K→...→1M). A smooth schedule prevents gradient explosions linked to differing decay rates across early vs. late LA layers (“earlier layers focus more on local information,” Section 2.1, “Long Context Extension”).
-  - Supervised fine‑tuning (SFT)
-    - Injects reflection‑style chain‑of‑thought (CoT) patterns across math, coding, STEM, writing, QA, and multi‑turn chat; ≈60% math+coding to seed later RL for long reasoning (Section 2.2).
+### 3.2 Big-Picture Architecture (Diagram in Words)
 
-- RL algorithm: CISPO (Section 3.1)
-  - Background and problem
-    - Standard PPO/GRPO/DAPO clip token‑level updates when the importance ratio `r_i,t` is large, which often happens for low‑probability “fork” tokens that initiate deeper reasoning. Once clipped early, those tokens stop contributing to later off‑policy updates, impeding the emergence of long CoT (Section 3.1 “Issues of Token Clipping”).
-  - CISPO’s idea
-    - Preserve all token gradients but stabilize learning by clipping only the importance sampling (IS) weights, not the token updates themselves.
-    - Start from the REINFORCE objective with IS correction (Eq. 3), then replace `r_i,t` with a clipped version `ŝr_i,t` within a range `[1 - ε_IS_low, 1 + ε_IS_high]` (Eq. 5), and optimize the token‑level group‑relative advantage objective (Eq. 4, building on GRPO’s advantage in Eq. 2).
-      - `Â_i,t` is a group‑normalized advantage; no KL penalty is used (Section 3.1).
-      - A general masked form (Eq. 6–7) shows PPO‑style clipping as a special case, unifying strategies.
-    - Practical choice: only tune the upper clip `ε_IS_high`; set the lower side very large (effectively unbounded below), keeping gradients from all tokens (Section 3.1).
-  - Outcome
-    - CISPO reduces variance, maintains exploration entropy via rare tokens, and empirically reaches DAPO‑level performance with half the steps on AIME 2024 using Qwen2.5‑32B (Figure 2).
+The MiniMax-M1 training pipeline consists of five major stages that transform a pretrained base model into a reasoning model capable of generating extended chain-of-thought:
 
-- RL with the hybrid architecture: stability recipes (Section 3.2)
-  - Precision mismatch fix
-    - During RL, probabilities computed in training vs. inference diverged due to precision differences, particularly from large activations in the LM head. Making the LM output head FP32 realigned them: correlation improved from ≈0.987 to ≈0.997 and stayed stable (Figure 3 and text under “Computational Precision Mismatch…”).
-  - Optimizer settings
-    - Gradients span 1e‑18 to 1e‑5 and are weakly correlated across steps; AdamW with `β1=0.9, β2=0.95, eps=1e‑15` avoided non‑convergence seen with common settings like (0.9, 0.999, 1e‑8) (same subsection).
-  - Early truncation via repetition detection
-    - If 3,000 consecutive tokens each exceed probability 0.99, generation is cut to prevent pathological loops and stabilize gradients (same subsection).
+1. **Continual Pretraining** — The existing MiniMax-Text-01 model (456B total parameters, 45.9B activated per token, 32 experts in a Mixture-of-Experts configuration) is further trained on 7.5 trillion tokens of reasoning-heavy data, with 70% of the data mix shifted toward STEM, code, books, and reasoning content. This stage also extends the native context window from an initial 32K tokens to 1 million tokens through a staged four-phase expansion, establishing the foundation for long-context reasoning.
 
-- RL environments and rewards (Section 4)
-  - Rule‑verifiable tasks (Section 4.1)
-    - Mathematical reasoning: high‑quality, deduplicated competition problems; pass@10 filtering to keep moderate difficulty; ≈50K samples (details on cleaning, overlap removal, and reformatting in Section 4.1).
-    - Logical reasoning: 41 tasks generated with the SynLogic framework; difficulty bounded by model solvability; ≈53K instances (Section 4.1).
-    - Competitive programming: public problems; test suites generated where needed; filtered by pass rates; ≈30K (Section 4.1).
-    - Software engineering: execution‑based sandbox derived from SWE‑bench—run tests for rewards; includes bug localization, repair, and test synthesis; several thousand samples (Section 4.1).
-  - General‑domain tasks via reward models (Section 4.2)
-    - With ground truth but hard to rule‑check: use a Generative Reward Model (GenRM) trained and validated on human‑annotated comparisons; graded rewards and Best‑of‑N selection checks (Section 4.2.1).
-    - Without ground truth (instruction following, creative writing): pairwise preference scoring against vetted reference answers; additional rule‑based checks for constraint satisfaction; bias minimization via multiple‑blind and position‑switched judgments; “Swiss Round” scoring to choose references (Section 4.2.1).
-    - Length‑bias mitigation: continuous online monitoring for reward hacking toward verbosity; if detected, recalibrate GenRM and apply reward shaping/normalization (Section 4.2.2).
+2. **Supervised Fine-Tuning (SFT)** — A cold-start phase that trains the model on curated examples of reflection-based chain-of-thought reasoning across math, coding, STEM, writing, QA, and multi-turn chat domains (with math and coding constituting ~60% of the data). This injects desirable reasoning behaviors — such as backtracking, verification, and self-correction — before RL begins, providing a stronger starting policy.
 
-- Curriculum for mixing tasks (Section 4.3)
-  - Start RL with rule‑verified reasoning tasks, then gradually blend in general‑domain tasks, balancing verifiable skills with broader assistant abilities.
+3. **Reinforcement Learning with CISPO** — The core training stage where the model generates solutions to problems, receives rewards (either from rule-based answer checkers for verifiable tasks or from learned generative reward models for open-ended tasks), and updates its policy using the CISPO algorithm. CISPO clips the importance sampling weights (the ratio between the current and old policy probabilities) rather than masking out high-ratio tokens, preserving gradient contributions from all tokens — particularly rare "fork" tokens like "However" or "Wait" that signal reasoning pivots and would be clipped by GRPO or PPO. This stage runs on a diverse mixture of tasks: ~50K mathematical reasoning problems, ~53K synthetically generated logical reasoning problems (via the SynLogic framework spanning 41 distinct task types), ~30K competitive programming problems, several thousand software engineering tasks with containerized sandbox execution, and ~25K general-domain tasks scored by generative reward models.
 
-- Extending the thinking budget to 80K (Section 5)
-  - Data curation: filter out easy items using the 40K model; emphasize harder math/coding; downsample synthetic reasoning that caused repetitive, destabilizing patterns (Section 5).
-  - Staged length expansion: 40K → 48K → 56K → 64K → 72K → 80K, advancing when perplexity stabilizes and the 99th percentile length nears the current cap (Section 5).
-  - Preventing late‑sequence collapse: early stopping for repetition; combine sample‑level loss with token‑level normalization; reduce gradient clip threshold and `ε_IS_high` (Section 5).
+4. **Length Extension Training** — After the initial RL phase with a 40K-token generation limit, the model is further trained with progressively expanding generation windows (40K → 48K → 56K → 64K → 72K → 80K tokens) using a staged window expansion strategy. The training data is curated to favor harder problems that the 40K model could not solve, and synthetic reasoning data is downsampled to prevent pattern collapse. This stage uses combined sample-level loss and token-level normalization to address the imbalance where negative samples grow in length faster than positive samples during extension.
 
-- Training budget and availability
-  - Full RL completes in 3 weeks on 512 H800s (~$534,700 rental) (Abstract; Section 3). Models are released with vLLM and Transformers support (end of Section 1).
+5. **Inference** — At deployment, the model generates reasoning traces of up to 80K tokens using temperature 1.0 and top-p 0.95 sampling. The hybrid architecture (one softmax attention block following every seven lightning attention blocks) ensures that the FLOPs per token remain approximately constant regardless of sequence position, unlike pure softmax transformers where cost grows linearly with sequence length.
+
+Information flows through the system as follows: a problem (math question, coding task, software engineering issue with codebase, or general query) enters the pipeline → the current policy model generates one or more complete reasoning traces (up to the current length limit) → a verifier assigns a reward (rule-based correctness for math/code/logic, sandbox execution results for software engineering, or generative reward model scores for open-ended tasks) → the CISPO loss computes gradients using the clipped importance sampling weights and group-relative advantages → the optimizer updates the policy → the process repeats for thousands of steps, with the data mixture and length limits evolving according to a curriculum.
+
+### 3.3 Roadmap for the Deep Dive
+
+The explanation proceeds through the following sequence, designed to build understanding from the most novel contributions outward:
+
+- **First**, the full MiniMax-M1 system as an end-to-end pipeline, establishing what is being built and how the stages connect — this provides the scaffolding for understanding why each component matters.
+- **Second**, the hybrid attention architecture (lightning attention plus softmax attention in a 7:1 ratio) — since this is the central architectural innovation that enables everything else, understanding its mechanics and efficiency properties is prerequisite to appreciating the RL challenges and solutions.
+- **Third**, the CISPO algorithm — because RL is the core training mechanism and CISPO is the novel algorithmic contribution, we will walk through the limitations of GRPO/DAPO that motivate CISPO, then the CISPO objective itself, the clipping mechanism, and the empirical validation against baselines.
+- **Fourth**, the RL training infrastructure challenges — the precision mismatch between training and inference kernels, the optimizer hyperparameter sensitivity arising from extreme gradient magnitude ranges, and the early truncation heuristic for pathological generation — since these are practical engineering solutions that were necessary to make the architecture work at scale.
+- **Fifth**, the RL data and reward design — covering the verifiable task pipeline (mathematics, logical reasoning, competitive programming, software engineering with sandboxes), the generative reward model approach for non-verifiable tasks, the length bias mitigation strategy, and the curriculum that mixes these data sources.
+- **Sixth**, the RL length extension methodology — the staged window expansion, the data filtering based on the 40K model, and the stabilization techniques for preventing pattern collapse during long-context RL training.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily a **systems and engineering paper** whose core idea is that switching from pure softmax attention to a hybrid linear-plus-softmax architecture, combined with an RL algorithm that preserves gradient signal from all tokens, enables training competitive reasoning models at dramatically lower computational cost — validated by releasing a 456B-parameter open-weight model that matches or exceeds prior leaders on long-context and agentic benchmarks while consuming ~25% of the FLOPs of quadratic-attention models at extreme sequence lengths.
+
+---
+
+#### The Full System Pipeline: From Pretrained Base to Reasoning Model
+
+MiniMax-M1 is not a model trained from scratch; it is built by extending an existing foundation model (MiniMax-Text-01) through a carefully sequenced pipeline of continual pretraining, supervised fine-tuning, and reinforcement learning, with the RL stage being the primary driver of reasoning capability.
+
+**Stage 1: Continual Pretraining on 7.5T Tokens.** The base model, MiniMax-Text-01, is a hybrid-attention MoE model with 456 billion total parameters, 45.9 billion activated per token, and 32 experts. To strengthen its intrinsic reasoning capabilities before RL — reasoning behaviors like multi-step deduction, backtracking, and verification are difficult to learn from scratch through RL alone — the authors continue training it on an additional 7.5 trillion tokens. The data pipeline is refined in three ways: (a) web and PDF parsing mechanisms are improved with enhanced heuristic cleaning rules to maximize recall of mathematical and code-related data; (b) natural question-answer pairs are extracted from diverse sources (webpages, forums, textbooks) with strict avoidance of synthetic data, and semantic deduplication is applied to maintain diversity; (c) the proportion of STEM, code, books, and reasoning-related data is increased to 70% of the total mix. The training recipe uses a constant learning rate of $8 \times 10^{-5}$ for the first 2.5T tokens, followed by a linear decay schedule over 5T tokens down to $8 \times 10^{-6}$. The coefficient of the MoE auxiliary loss (a loss term that encourages balanced expert utilization) is decreased to mitigate its detrimental effects on overall model performance, and the parallel training strategy is adjusted to support larger micro-batch sizes.
+
+**Long context extension during pretraining.** The context window is extended from the initial 32K tokens to 1M tokens through a staged four-phase expansion. The authors report that aggressive, single-step context extension can cause sudden gradient explosions, which they attribute to the parameter optimization of earlier layers not keeping pace with changes in later layers. Specifically, in lightning attention, earlier and later layers have different decay rates — earlier layers focus more on local information — creating a convergence complexity where layer-wise optimization rates must be balanced. The solution is a smoother, staged extension across four phases, with the training context growing from 32K → intermediate lengths → 1M tokens. The exact intermediate lengths are not enumerated in the paper.
+
+**Stage 2: Supervised Fine-Tuning for Reasoning Behaviors.** After continual pretraining, the model undergoes SFT to inject specific chain-of-thought patterns — reflection, verification, error acknowledgement — before RL begins. The rationale is that RL from a randomly initialized CoT policy is highly sample-inefficient; providing a "cold start" with examples of desired reasoning behaviors gives the RL process a stronger foundation. The SFT data consists of examples with long chain-of-thought responses spanning math, coding, STEM, writing, QA, and multi-turn chat, with math and coding samples accounting for approximately 60% of the data. The paper does not specify the total number of SFT examples, the exact training hyperparameters (learning rate, batch size, number of epochs), or the source of the long CoT responses (whether human-written, model-generated, or a mix).
+
+**Stage 3: Reinforcement Learning at Scale.** This is the core stage and the primary focus of the paper's technical contribution. The RL training uses the CISPO algorithm (detailed in the next subsection) to optimize the policy on a diverse mixture of tasks. The training runs with a 40K-token maximum generation length initially, using 512 H800 GPUs for approximately three weeks. The data mixture, reward design, and curriculum are detailed in separate subsections below.
+
+**Stage 4: Length Extension to 80K Tokens.** To further scale test-time compute, the RL training is extended with progressively larger generation windows. This stage is detailed in a dedicated subsection below.
+
+The full pipeline represents a bet that **scaling RL training with an efficient architecture can produce competitive reasoning capabilities at dramatically lower cost than training pure-softmax models**, with the overall compute budget chosen to demonstrate that such training is accessible — not just to the largest industrial labs — at a cost of approximately $0.53M in GPU rental.
+
+---
+
+#### The Hybrid Attention Architecture: Lightning Attention + Softmax Attention
+
+The architectural foundation of MiniMax-M1 is a **hybrid attention design** where standard softmax attention blocks are interleaved with lightning attention blocks at a 1:7 ratio — one softmax attention transformer block for every seven transnormer blocks using lightning attention. This design is inherited from MiniMax-Text-01 and is not novel to this paper, but the paper provides the first large-scale validation of this architecture for reinforcement-learned reasoning.
+
+**What is lightning attention?** Lightning attention (Qin et al., 2022a, 2024b) is an I/O-aware implementation of linear attention. Whereas standard softmax attention computes attention weights as:
+
+$$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d}}\right) V$$
+
+where the $QK^T$ operation has $O(L^2)$ complexity for sequence length $L$, linear attention replaces the softmax with a kernel function $\phi$ that factorizes the attention computation:
+
+$$\text{LinearAttention}(Q, K, V) = \frac{\phi(Q)(\phi(K)^T V)}{\phi(Q)(\phi(K)^T \mathbf{1})}$$
+
+This factorization allows the multiplication $\phi(K)^T V$ to be computed first (yielding a $d \times d$ matrix, independent of sequence length), after which the result can be multiplied by $\phi(Q)$ in $O(L \cdot d^2)$ time — linear in sequence length rather than quadratic. Lightning attention specifically optimizes this computation for GPU memory hierarchies by tiling the operations to minimize I/O between GPU global memory and on-chip SRAM (the "I/O-aware" aspect), making the theoretical linear complexity translate to practical speedups.
+
+**The 1:7 hybrid ratio.** The architecture does not use lightning attention exclusively. Every eighth attention block uses standard softmax attention. The paper does not provide a detailed theoretical justification for this specific ratio, but the empirical motivation is implicit: linear attention models can struggle with certain attention patterns that require sharp, non-linear focusing — exactly the kind of precise token-to-token alignment that softmax attention excels at. By interleaving occasional softmax blocks, the model retains the ability to form these sharp attention patterns when needed, while the majority of blocks (7/8) benefit from linear scaling. The softmax blocks effectively serve as "attention resets" that can re-establish precise token-level dependencies before the sequence continues through more linear blocks.
+
+**FLOPs scaling behavior (Figure 1, Right).** The practical consequence of this design is quantified in the paper's theoretical FLOPs comparison. At a generation length of 64K tokens, MiniMax-M1 consumes less than 50% of the FLOPs of DeepSeek R1 (a pure softmax model). At 100K tokens, MiniMax-M1 consumes approximately 25% of the FLOPs of DeepSeek R1. This means that for a fixed compute budget, MiniMax-M1 can generate 4× longer reasoning traces at 100K-token lengths — or equivalently, generate the same-length traces at one-quarter the cost. The gap grows with sequence length because the quadratic term in softmax attention increasingly dominates, while lightning attention's cost remains approximately linear.
+
+**Context length capability.** Because the attention cost does not explode with sequence length, MiniMax-M1 natively supports a context window of 1 million tokens — 8× the 128K context of DeepSeek R1 and Qwen3-235B, and an order of magnitude larger than all other open-weight LRMs available at the time of writing (Table 1). The maximum output length is 80K tokens for the MiniMax-M1-80k variant. These are not merely theoretical maxima; the model is trained to use these lengths effectively through the staged context extension during pretraining and the length extension RL phase.
+
+**Why this matters for RL training specifically.** The paper emphasizes that the efficiency advantage extends beyond inference to RL training itself. RL training requires generating large batches of complete reasoning traces (rollouts), scoring them, and computing policy gradients through them. If each rollout costs 4× fewer FLOPs, the entire RL training pipeline runs proportionally faster. This is the mechanism by which the paper achieves its 3-week, $0.53M training budget: the architecture makes each training step cheaper, allowing more steps (and therefore more learning) within a fixed time and cost budget.
+
+---
+
+#### The CISPO Algorithm: Clipped Importance-Sampling-Weight Policy Optimization
+
+CISPO is the paper's novel RL algorithm, designed to address a specific failure mode of existing methods (PPO, GRPO, DAPO) when training reasoning models with many off-policy updates per generation batch.
+
+##### Background: Why Token Clipping Fails for Reasoning
+
+To understand CISPO, we must first understand the problem it solves. Standard policy optimization in the PPO/GRPO family works as follows:
+
+1. The current policy $\pi_{\theta_{\text{old}}}$ generates a batch of responses $\{o_i\}_{i=1}^G$ for a set of questions.
+2. Each response receives a reward $R_i$ (from a verifier or reward model).
+3. The advantage $\hat{A}_{i,t}$ for each token is computed — in GRPO, this is the group-normalized reward: $\hat{A}_{i,t} = \frac{R_i - \text{mean}(\{R_j\}_{j=1}^G)}{\text{std}(\{R_j\}_{j=1}^G)}$.
+4. The policy is updated to maximize the PPO-style clipped objective, computing the importance sampling (IS) weight $r_{i,t}(\theta) = \frac{\pi_\theta(o_{i,t} | q, o_{i,<t})}{\pi_{\theta_{\text{old}}}(o_{i,t} | q, o_{i,<t})}$ — the ratio between the probability of token $t$ under the current policy and under the old policy that generated the data.
+5. Tokens with $r_{i,t}(\theta)$ outside the clipping range $[1 - \epsilon, 1 + \epsilon]$ have their gradients zeroed out (masked), preventing the policy from moving too far from the behavior that generated the data.
+
+The problem, as the authors discovered through controlled ablations, is specific to **reasoning tokens** — words and phrases that signal cognitive pivots in the chain of thought. Tokens like "However," "Recheck," "Wait," and "Aha" are:
+
+- **Rare under the base model**: the pretrained model assigns them low probability in most contexts because they represent metacognitive interventions rather than fluent continuations.
+- **High-IS after policy updates**: when the policy starts learning to reason, it increases the probability of these tokens substantially, making $r_{i,t}(\theta)$ large.
+- **Clipped out after the first update**: because their IS weights exceed the upper clipping bound, these tokens are masked in subsequent off-policy updates — meaning they stop contributing to gradient computation.
+
+The consequence, as the authors state, is that "these tokens were clipped out after the first on-policy update, preventing them from contributing to subsequent off-policy gradient updates" (Section 3.1). In a setup with 16 rounds of off-policy updates per generation batch (the configuration used for MiniMax-M1), this means that the most informative tokens — those that distinguish reasoning chains from non-reasoning chains — are silenced for 15 of the 16 update steps. The paper cites concurrent work by Cui et al. (2025) and Wang et al. (2025) showing that such low-probability reasoning tokens are crucial for stabilizing entropy (maintaining exploration) and enabling scalable RL.
+
+DAPO (Yu et al., 2025) attempted to address this by raising the upper clipping bound, which reduces but does not eliminate the problem. The authors found this approach "less effective in our setup" (Section 3.1) — the fundamental issue is that any token-dropping mechanism based on clipping thresholds will, at some point, silence the tokens that are being changed the most, which are precisely the tokens that matter most for learning new behaviors.
+
+##### The CISPO Solution: Clip Weights, Not Updates
+
+CISPO's key insight is to **move the clipping from the gradient update to the importance sampling weight itself**. Rather than zeroing out the gradient for tokens with extreme IS ratios, CISPO clips the IS weight to a bounded range and then uses the clipped weight in the gradient computation, preserving gradient flow from all tokens while controlling the magnitude of updates.
+
+The CISPO objective is:
+
+$$J_{\text{CISPO}}(\theta) = \mathbb{E}_{(q,a) \sim \mathcal{D}, \{o_i\}_{i=1}^G \sim \pi_{\theta_{\text{old}}}(\cdot|q)} \left[ \frac{1}{\sum_{i=1}^G |o_i|} \sum_{i=1}^G \sum_{t=1}^{|o_i|} \text{sg}(\hat{r}_{i,t}(\theta)) \hat{A}_{i,t} \log \pi_\theta(o_{i,t} | q, o_{i,<t}) \right]$$
+
+where:
+
+- $q$ is a question sampled from the training dataset $\mathcal{D}$
+- $\{o_i\}_{i=1}^G$ are $G$ responses generated by the old policy $\pi_{\theta_{\text{old}}}$
+- $|o_i|$ is the number of tokens in response $i$
+- $\text{sg}(\cdot)$ is the stop-gradient operator, which treats the IS weight as a constant during backpropagation (no gradient flows through it)
+- $\hat{r}_{i,t}(\theta)$ is the **clipped** importance sampling weight (defined below)
+- $\hat{A}_{i,t}$ is the advantage estimate for token $t$ — in CISPO, this is the group-relative advantage from GRPO: $\hat{A}_{i,t} = \frac{R_i - \text{mean}(\{R_j\}_{j=1}^G)}{\text{std}(\{R_j\}_{j=1}^G)}$
+- $\log \pi_\theta(o_{i,t} | q, o_{i,<t})$ is the log-probability of token $t$ under the current policy, which is the only term through which gradients flow
+
+**What this computes:** The objective is a policy gradient that increases the log-probability of tokens in responses that received above-average rewards (positive $\hat{A}_{i,t}$) and decreases the log-probability of tokens in below-average responses (negative $\hat{A}_{i,t}$), with each token's contribution scaled by its clipped importance sampling weight $\hat{r}_{i,t}(\theta)$. The sum runs over all tokens in all responses — no tokens are masked out. The normalization by $\sum_{i=1}^G |o_i|$ (the total number of tokens in the batch) ensures that the loss magnitude is independent of batch size and response lengths.
+
+**Why this form:** The standard REINFORCE objective (Equation 3 in the paper) uses $\text{sg}(r_{i,t}(\theta)) \hat{A}_{i,t} \log \pi_\theta(o_{i,t})$ — the unclipped IS weight with stop-gradient. PPO/GRPO modifies this by **masking** the gradient when $r_{i,t}$ exceeds thresholds. CISPO instead modifies the **weight** — clipping $r_{i,t}$ before the stop-gradient — which bounds the influence of any single token while preserving its gradient contribution. The key property is that even tokens with extreme IS ratios continue to provide gradient signal, but that signal is limited in magnitude by the clipping of the IS weight. This is a form of **soft constraint** — tokens that the policy is changing dramatically still contribute to the update, but their influence is capped, preventing them from dominating the gradient.
+
+##### The Clipped IS Weight
+
+The clipped importance sampling weight is:
+
+$$\hat{r}_{i,t}(\theta) = \text{clip}\left(r_{i,t}(\theta), 1 - \epsilon_{\text{IS}}^{\text{low}}, 1 + \epsilon_{\text{IS}}^{\text{high}}\right)$$
+
+where:
+
+- $r_{i,t}(\theta) = \frac{\pi_\theta(o_{i,t} | q, o_{i,<t})}{\pi_{\theta_{\text{old}}}(o_{i,t} | q, o_{i,<t})}$ is the unclipped IS ratio
+- $\epsilon_{\text{IS}}^{\text{low}}$ controls the lower clipping bound — the paper states they "did not impose a lower bound on the IS weight by setting $\epsilon_{\text{IS}}^{\text{low}}$ to a large value" (Section 3.1), effectively disabling lower clipping
+- $\epsilon_{\text{IS}}^{\text{high}}$ controls the upper clipping bound — this is the primary hyperparameter tuned in practice
+
+**What this computes:** For each token, compute the ratio between its current and old probability. If this ratio exceeds $1 + \epsilon_{\text{IS}}^{\text{high}}$, cap it at that value. Since $\epsilon_{\text{IS}}^{\text{low}}$ is set effectively to infinity (no lower clipping), tokens whose probability decreased are not clipped. The result is an importance weight that is bounded above but not below, which is then passed through stop-gradient and multiplied by the advantage to scale the policy gradient for that token.
+
+**Why this form (asymmetric clipping):** The asymmetric clipping reflects an asymmetry in the problem. Tokens with very high IS ratios are those whose probability the policy is **increasing dramatically** — these are the rare reasoning tokens that GRPO silences. Tokens with very low IS ratios are those the policy is **decreasing** — typically tokens in incorrect reasoning paths that the policy should indeed move away from. Clamping the upper bound prevents any single token from dominating the gradient, while not clamping the lower bound allows the policy to rapidly decrease probability on tokens that are genuinely harmful. This asymmetric treatment is specific to the reasoning RL setting, where the "exploration" tokens that the policy needs to discover are systematically high-IS.
+
+The authors note that the gradient of Equation 4 is "slightly biased" due to weight clipping — the clipped IS weight is not an unbiased estimate of the true IS weight — but they argue this bias is a worthwhile tradeoff for the benefit of preserving gradient contributions from all tokens, "especially in long responses" (Section 3.1) where many tokens may be informative.
+
+##### Comparison to Standard REINFORCE and PPO
+
+If we removed the clipping entirely (set both $\epsilon$ bounds to infinity), $J_{\text{CISPO}}$ reduces to the standard REINFORCE policy gradient objective with importance sampling correction (Equation 3 in the paper). If we instead applied PPO's token masking approach, tokens with $r_{i,t} > 1 + \epsilon_{\text{high}}$ and positive advantage would be zeroed out (mask $M_{i,t} = 0$). The CISPO approach sits between these extremes: it limits the magnitude of high-IS tokens' influence rather than eliminating it.
+
+##### The Unified Formulation: A General Mask-Based Framework
+
+The paper provides a generalized formulation that makes the relationship between CISPO and other methods explicit (Equation 6):
+
+$$J_{\text{unify}}(\theta) = \mathbb{E}_{(q,a) \sim \mathcal{D}, \{o_i\}_{i=1}^G \sim \pi_{\theta_{\text{old}}}(\cdot|q)} \left[ \frac{1}{\sum_{i=1}^G |o_i|} \sum_{i=1}^G \sum_{t=1}^{|o_i|} \text{sg}(\hat{r}_{i,t}(\theta)) \hat{A}_{i,t} \log \pi_\theta(o_{i,t} | q, o_{i,<t}) M_{i,t} \right]$$
+
+where $M_{i,t}$ is a token-wise mask. PPO corresponds to setting $M_{i,t}$ according to the trust-region mask in Equation 7 — zeroing out tokens where the IS ratio exceeds the clipping bound and the advantage has the same sign. CISPO corresponds to setting $M_{i,t} = 1$ for all tokens (no masking) and instead clipping $\hat{r}_{i,t}(\theta)$ to $[1 - \epsilon_{\text{IS}}^{\text{low}}, 1 + \epsilon_{\text{IS}}^{\text{high}}]$. Other designs — such as partial masking with softer thresholds, or combining both weight clipping and token masking — can be expressed by choosing different mask functions and clip bounds within this unified framework.
+
+##### Additional CISPO Components
+
+CISPO incorporates two additional mechanisms from DAPO (Yu et al., 2025):
+
+- **Dynamic sampling**: the number of responses $G$ generated per question may vary based on difficulty or other criteria (the paper does not provide specific details on the sampling schedule).
+- **Length penalty**: a penalty term applied to discourage excessively long responses, used alongside the reward signal. The paper does not specify the exact form of the penalty (e.g., whether it is a per-token penalty proportional to response length, or a threshold-based penalty).
+
+The paper also notes that there is "no KL penalty term in CISPO similar to other recent works" (Section 3.1), in contrast to PPO which includes a KL divergence penalty $-\beta D_{\text{KL}}(\pi_\theta || \pi_{\text{ref}})$ to prevent the policy from diverging too far from a reference. The authors argue that the combination of weight clipping and dynamic sampling provides sufficient regularization without an explicit KL penalty — a design choice consistent with recent trends in reasoning RL (Hu et al., 2025; Yu et al., 2025) where KL penalties have been found to suppress the exploration needed for discovering long chain-of-thought behaviors.
+
+##### Empirical Validation of CISPO (Figure 2)
+
+The paper validates CISPO against GRPO and DAPO in a controlled "zero-RL" setting — training from a base model with no SFT cold start. Using the Qwen2.5-32B-base model trained on a mathematical reasoning dataset (from Yu et al., 2025), the authors report performance on AIME 2024:
+
+- CISPO "significantly outperforms both DAPO and GRPO with the same number of training steps" (Section 3.1).
+- CISPO "matches DAPO's performance with only 50% of the training steps" — a 2× speedup in terms of training efficiency.
+- The performance curves (Figure 2) show CISPO's accuracy rising faster and reaching a higher asymptote than both GRPO (which performs worst, consistent with the token-clipping hypothesis) and DAPO (which improves over GRPO due to its relaxed clipping bounds but still underperforms CISPO).
+
+This controlled experiment isolates the effect of the clipping strategy (same base model, same data, same reward, same optimizer, different loss functions) and provides the primary evidence that token-dropping — not just aggressive clipping — is the mechanism that degrades GRPO's performance on reasoning tasks.
+
+---
+
+#### RL Training Infrastructure: Precision, Optimization, and Stability
+
+Beyond the algorithmic innovation of CISPO, the paper documents several practical engineering challenges that arose specifically from training a hybrid-attention architecture at scale, and the solutions developed to address them.
+
+##### Computational Precision Mismatch Between Training and Inference Kernels
+
+**The problem.** During RL training, the authors observed a significant discrepancy between the token probabilities computed during generation (inference mode) and the probabilities computed during the forward pass of training (training mode), as visualized in Figure 3 (Left). Theoretically, these two probabilities should be identical for the same model parameters — the inference-mode forward pass computes $\pi_{\theta_{\text{old}}}(o_t | q, o_{<t})$ to sample the next token, and the training-mode forward pass recomputes the same probability for the loss calculation. In practice, the Pearson correlation between the two was approximately 0.987, with absolute probability differences up to 0.5 (Figure 3, Left, showing the "before fix" state).
+
+**Why this matters.** This discrepancy is devastating for RL because the importance sampling weight $r_{i,t}(\theta)$ depends on the ratio of current-policy probability to old-policy probability. If the old-policy probability stored during generation differs systematically from what the training code recomputes, the IS weights become incorrect — the policy appears to be changing more or less than it actually is. The authors state that this issue "was detrimental and prevented reward growth in our experiments" (Section 3.2). The RL training would stagnate because the gradient estimates were corrupted by numerical noise.
+
+**Root cause analysis.** Through layer-by-layer analysis, the authors traced the discrepancy to "high-magnitude activations in the LM head at the output layer" (Section 3.2). The LM head (the final linear projection from the hidden state to the vocabulary logits) produced activation values large enough that the lower-precision arithmetic used in the inference kernel accumulated significant rounding errors relative to the training kernel's higher precision. Interestingly, the paper notes that "this issue did not appear in smaller, dense models with softmax attention" — it was specific to the large-scale, hybrid-attention MoE configuration of MiniMax-M1, perhaps because the lightning attention blocks or the expert routing introduced different numerical properties in the hidden states reaching the LM head.
+
+**The solution.** The fix is straightforward in principle: increase the precision of the LM output head from the default (presumably BF16 or FP16) to FP32 (full 32-bit floating point). The result is visible in Figure 3 (Right): the Pearson correlation improves from ~0.987 to ~0.997, and the absolute probability differences collapse from up to 0.5 to near zero. The paper emphasizes that this correlation "remained stable throughout training, enabling successful reward increase" (Section 3.2) — it was not a one-time calibration but a persistent improvement that held across the entire RL training run.
+
+**Design rationale.** The choice to increase precision only at the LM head, rather than throughout the model, reflects a targeted approach: the LM head is the final bottleneck where all upstream numerical errors concentrate (since it projects from the hidden dimension to the vocabulary size, which is typically much larger), and it is also the most critical point for probability accuracy since the softmax over logits is directly where sampling and probability computation happen. Increasing precision for the entire model would double memory usage and slow training, whereas increasing precision only for the LM head addresses the root cause with minimal overhead.
+
+##### Optimizer Hyperparameter Sensitivity
+
+**The problem.** The authors encountered training instability and non-convergence when using the default AdamW optimizer configuration from the VeRL framework (Sheng et al., 2024), which uses betas = (0.9, 0.999) and eps = 1e-8. The instability manifested as non-convergence — the training loss would oscillate or diverge rather than steadily improving.
+
+**Root cause analysis.** The authors measured the gradient magnitudes during MiniMax-M1 training and found that they "span a wide range, from 1e-18 to 1e-5, with the majority of the gradients being smaller than 1e-14" (Section 3.2). This is an extraordinarily large dynamic range — 13 orders of magnitude — and it means that the optimizer's second-moment estimate (controlled by $\beta_2$) and the epsilon value for numerical stability must be chosen carefully. Additionally, the "correlation between the gradients of adjacent iterations is weak" (Section 3.2), meaning that the first-moment estimate (controlled by $\beta_1$) cannot rely on momentum to smooth out noisy gradient directions — the optimizer must be responsive to rapid changes in the gradient landscape.
+
+**Why this happens in this architecture.** The paper does not provide a detailed causal explanation, but several factors likely contribute: (a) the hybrid attention design may produce gradients of very different magnitudes in the lightning attention blocks versus the softmax blocks; (b) the MoE routing means that only a subset of experts receive gradient signal for any given token, creating sparse gradient patterns; (c) the long sequence lengths (up to 80K tokens) mean that the loss is averaged over many tokens, but individual tokens may have very different gradient contributions depending on their position in the chain of thought and their role (e.g., a critical reasoning pivot versus a routine continuation).
+
+**The solution.** The authors adopt custom AdamW hyperparameters:
+
+- $\beta_1 = 0.9$ (unchanged from default — keeps the standard momentum for first-moment estimates)
+- $\beta_2 = 0.95$ (reduced from 0.999 — reduces the timescale over which the second-moment estimate averages, making the optimizer more responsive to recent gradient magnitudes)
+- $\epsilon = 1 \times 10^{-15}$ (reduced from $1 \times 10^{-8}$ — a much smaller epsilon for numerical stability, appropriate because the majority of gradients are below $1 \times 10^{-14}$, and a larger epsilon would dominate and distort the adaptive learning rate for these small gradients)
+
+**Design rationale.** Reducing $\beta_2$ makes the AdamW optimizer behave more like RMSProp (which uses a simple moving average of squared gradients) rather than accumulating momentum over very long timescales. This is appropriate when gradient correlations are weak — there is little benefit to remembering gradient magnitudes from thousands of steps ago if the gradient landscape is rapidly changing. Reducing $\epsilon$ ensures that the adaptive learning rate $\frac{\eta}{\sqrt{v_t} + \epsilon}$ is primarily determined by the actual gradient statistics ($v_t$) rather than being dominated by the $\epsilon$ floor for small gradients. For gradients around 1e-14, an $\epsilon$ of 1e-8 would make the denominator essentially constant (1e-8), eliminating adaptivity; an $\epsilon$ of 1e-15 allows the denominator to vary with $v_t$ even for very small gradients.
+
+##### Early Truncation via Repetition Detection
+
+**The problem.** During RL training, the model occasionally generated "pathologically long and repetitive responses" that "threatened model stability" through their large gradients (Section 3.2). These are degenerate outputs where the model enters a loop, repeating the same phrase or token sequence indefinitely. In standard training, such outputs would be penalized by the reward model (repetitive completions are unlikely to contain the correct answer) and the model would eventually learn to avoid them, but the immediate problem is that they consume large amounts of compute, create extremely long sequences that dominate the batch (due to token-level loss normalization), and can produce gradient spikes that destabilize training.
+
+**Why simple string matching fails.** The paper notes that "simple string-matching is ineffective against varied repetition patterns" (Section 3.2). Repetition in language models is not exact duplication — the model may repeat the same semantic content with slight variations, or cycle through a set of phrases in a loop. Detecting these patterns with regex or n-gram overlap heuristics is brittle and requires manual tuning for each new type of repetition.
+
+**The probability-based heuristic.** The authors observed a robust statistical signature of repetition: "once a model enters a repetitive cycle, the probability for each token soars" (Section 3.2). This makes intuitive sense — when the model is stuck in a loop, it becomes highly confident about its next-token predictions (because the context is highly predictable — the same pattern repeating), leading to probabilities near 1.0. The implemented rule is: **generation is halted if 3,000 consecutive tokens each have a probability above 0.99**.
+
+**Design rationale.** The choice of 3,000 tokens as the threshold represents a tradeoff. A shorter threshold (e.g., 100 tokens) risks false positives — long stretches of high-probability tokens can occur legitimately in formulaic content (e.g., code, mathematical derivations, structured data). A longer threshold (e.g., 10,000 tokens) would allow more pathological generations to complete before truncation, wasting compute and potentially destabilizing training. The 3,000-token window is long enough to be highly unlikely under normal generation (a model generating varied, creative reasoning would almost never produce 3,000 consecutive tokens above 0.99) but short enough to catch repetitive loops early. The probability threshold of 0.99 is similarly conservative — the token probability must be extremely high to count toward the consecutive count.
+
+This mechanism serves a dual purpose: "prevents model instability and improves generation throughput by eliminating these pathological, long-tail cases" (Section 3.2). It is a **preemptive** measure — the goal is to terminate the generation loop before the pathological output enters the training batch, rather than to penalize the already-generated repetitive text.
+
+---
+
+#### RL Data and Reward Design: Verifiable Tasks, Generative Reward Models, and Curriculum
+
+The diversity of MiniMax-M1's RL training data is a distinguishing feature of the paper. Rather than focusing narrowly on mathematical reasoning (where rule-based verification is straightforward), the training spans five major task categories, each with its own data curation pipeline and reward mechanism.
+
+##### Mathematical Reasoning (~50K Problems)
+
+**Data sources.** The mathematical dataset comprises "hundreds of thousands of high-quality, competition-level problems" curated from public sources and official mathematics competitions, narrowed to approximately 50K after filtering.
+
+**Curation pipeline.** The data undergoes a multi-stage cleaning process, each stage with a specific rationale:
+
+1. **Removal of incomplete samples** and those with formatting or typographical errors — ensures the model is not trained on corrupted data that could teach it to produce unparseable outputs.
+2. **Embedding-based deduplication** across RL data sources and strict separation from the SFT dataset — prevents the RL phase from simply memorizing SFT examples, which would "hinder exploration and undermine training effectiveness" (Section 4.1). This is crucial: if the RL data contains problems identical (or near-identical) to SFT examples, the model can achieve high reward by recalling the SFT answer rather than learning to reason.
+3. **N-gram and embedding-based contamination detection** against common mathematical benchmark test sets (AIME, MATH, etc.) — ensures evaluation integrity by removing any training examples that overlap with evaluation benchmarks.
+4. **Filtering of multi-subproblem, proof-based, and binary (true/false) questions** — subproblems create ambiguous reward signals (is the model rewarded for solving part of the problem?); proof-based questions cannot be automatically verified; binary questions are susceptible to random guessing and provide limited training signal for multi-step reasoning.
+5. **Reformulation of multiple-choice questions into open-ended formats** — aligns with the reinforcement learning framework where the model generates free-form reasoning and the answer is checked against a ground truth, rather than selecting from options.
+6. **Answer extraction and verification**: an internal model extracts the final answer from the reference solution; only samples whose extracted answers can be correctly parsed by the rule-based answer checker are retained. This ensures that every training example has a verifiable ground-truth answer.
+7. **Difficulty filtering using pass@10**: a strong reasoning model (presumably an internal model, though not specified) is used to compute the pass@10 rate (the fraction of 10 sampled solutions that are correct) for each question. Only questions with pass@10 strictly between 0 and 0.9 are retained — excluding questions that are trivially easy (pass@10 = 1.0, the model already knows them) or impossibly hard (pass@10 = 0, no amount of RL will help).
+
+**Reward.** Rule-based final correctness: the model's extracted answer is compared to the ground-truth answer using a deterministic parser. A format reward is also applied, encouraging the model to structure its output in a parseable way (e.g., placing the final answer in a box or using a specific delimiter).
+
+##### Logical Reasoning (~53K Problems, via SynLogic)
+
+**Data synthesis.** Rather than curating existing logical reasoning datasets, the authors use their SynLogic framework (Liu et al., 2025a) to **synthesize** training data from scratch across 41 distinct logical reasoning tasks (cipher, Sudoku, and others requiring "non-trivial reasoning ability"). SynLogic provides task-specific data generators (which produce problem instances according to configurable difficulty parameters) and task-specific rule-based verifiers (which can automatically check whether a solution is correct).
+
+**Difficulty calibration.** The authors establish two difficulty boundaries:
+
+- **Upper bound**: problems must have pass@10 > 0 for current strong reasoning models — if no model can solve a problem, it is not useful for training.
+- **Lower bound**: problems must have pass@1 between 0 and 0.5 for the MiniMax-Text-01 base model — problems that are too easy (pass@1 near 1.0) provide no learning signal.
+
+Additionally, as the model's capabilities improve during RL training, the difficulty of generated data is increased in later stages — a form of automatic curriculum learning enabled by the synthetic data pipeline.
+
+**Reward.** Rule-based, task-specific verifiers check the correctness of the model's solution against the generated ground truth.
+
+##### Competitive Programming (~30K Problems)
+
+**Data sources.** Problems are collected from public online judge platforms and popular coding websites. For problems that lack test cases, the authors develop an LLM-based workflow using MiniMax-Text-01 to generate comprehensive test suites.
+
+**Curation.** Similar to the mathematical reasoning pipeline, problems are filtered based on quality and difficulty using pass rates from model sampling, retaining "moderately challenging and high-quality algorithmic problems" (Section 4.1).
+
+**Reward.** Execution-based: the model's generated code is run against the test cases, and correctness is determined by whether all tests pass. This is a strong, objective signal — there is no ambiguity about whether the code works.
+
+##### Software Engineering (~Several Thousand Problems, with Sandboxed Execution)
+
+**Data construction.** Inspired by SWE-bench (Jimenez et al., 2024), the authors construct training environments from real-world data on public GitHub repositories. Each example consists of:
+
+- A **problem description** (e.g., a bug report extracted from a GitHub issue)
+- The **initial faulty code** (the codebase state before the fix)
+- A **set of test cases** that define correct behavior (the bug is considered fixed when all tests pass)
+
+**Sandbox environment.** The authors develop a "sophisticated containerized sandbox environment that simulates a realistic software development workflow" (Section 4.1). This environment allows the model to:
+
+- Read and modify source code files
+- Execute code within the sandbox
+- Run the pre-defined test suite
+- (Optionally) synthesize new test cases
+
+**Reward.** The pass/fail status of test cases serves as the primary reward signal: successful execution of all relevant tests yields a positive reward; compilation errors, runtime failures, or test regressions yield zero or negative reward. This execution-based verification is critical — it provides direct, unambiguous feedback on whether the model's proposed code changes actually fix the reported issue, with no reward model ambiguity.
+
+**Scale.** The paper states "several thousand high-quality data samples" are curated through this process. While smaller than the math or logic datasets, each software engineering example involves significantly more complex interactions (reading files, navigating a codebase, proposing patches) and provides richer feedback signals than a single-answer verification task.
+
+##### General Domain Tasks (~25K Problems, with Generative Reward Models)
+
+For tasks where rule-based verification is impossible — either because the ground-truth answer has multiple valid expressions (making rule-based matching unreliable) or because the task is open-ended (creative writing, instruction following) — the authors train and deploy **generative reward models (GenRMs)**.
+
+**Tasks with ground truth (but hard to verify with rules).** This category primarily includes STEM and factual problems where answers are objective but may have multiple valid formulations. For instance, a physics problem might have an answer expressible in different units (joules vs. electron-volts), or a factual question might have answers with different levels of specificity. The data cleaning process mirrors the mathematical reasoning pipeline, but rule-based checkers are replaced with the GenRM.
+
+**GenRM training for ground-truth tasks.** The authors adopt a **five-grade reward scale** to evaluate consistency between model responses and ground-truth answers. A human-annotated benchmark is constructed covering "a range of objective tasks across diverse knowledge and task domains, especially the pairs of model response–ground truth that rule-based checkers fail to judge accurately" (Section 4.2.1). The GenRM is evaluated using two metrics:
+
+- **Accuracy on the human-annotated benchmark** — does the GenRM agree with human judgments of answer correctness?
+- **Best-of-N (BoN) vs. pass@N gap** — when using the GenRM to select the best response from $N$ samples (BoN), how does the selected response's accuracy compare to the theoretical maximum (pass@N)? A good GenRM should select responses that are close to the best possible response.
+
+These metrics guide experiments to optimize both the data distribution (what kind of training examples the GenRM sees) and the prompt design (how the GenRM is instructed to judge) used during GenRM training.
+
+**Tasks without ground truth.** This category encompasses instruction-following, creative writing, and other open-ended tasks. Prompts are sampled from a large pool based on an internal tagging system to ensure balanced coverage across fine-grained domains. For each prompt, a **reference answer** is generated by various internal and external models and undergoes internal quality evaluation.
+
+**Pairwise comparison framework.** Rather than assigning an absolute score, the GenRM performs pairwise comparisons between the model's output and the reference answer:
+
+- Score of $-1$: model output is **worse than** the reference
+- Score of $0$: model output is **similar to** the reference
+- Score of $+1$: model output is **better than** the reference
+
+For instruction-following tasks with explicit constraints, a hybrid reward combines rule-based checking (did the model follow the constraint?) with model-based quality assessment.
+
+**Reference answer selection via Swiss Round.** The paper describes a **Swiss Round scoring system** — a tournament-style ranking method from competitive gaming — to determine the most suitable reference answer for each prompt across the training dataset. Multiple candidate reference answers are compared pairwise, and the Swiss Round system produces a ranking; the top-ranked answer is selected as the reference for RL training.
+
+**Bias mitigation in GenRM training.** The paper describes several techniques to minimize biases in the GenRM:
+
+- **Multiple-blind consistent judgment**: multiple annotators (or model evaluations) judge the same comparison without knowledge of others' judgments; only consistently judged examples are retained.
+- **Position-switched consistent judgment**: the order of the two responses being compared is swapped; if the GenRM's preference changes with position, the example is flagged as problematic.
+- **Adversarial examples**: the GenRM is exposed to deliberately challenging cases to surface vulnerabilities.
+
+##### Addressing Length Bias in Generative Reward Models for Long CoT
+
+**The problem.** The authors identified a critical failure mode: GenRMs exhibited **length bias**, "preferring longer outputs over potentially superior concise alternatives, irrespective of actual reasoning quality" (Section 4.2.2). This is a well-documented issue in LLM-as-judge settings — models tend to associate length with quality, perhaps because longer responses in training data are often more detailed and informative. In the context of RL training for reasoning, this bias is catastrophic: it incentivizes the policy to produce verbose, rambling chains of thought rather than concise, accurate reasoning, leading to "reward hacking" where the model learns to exploit the GenRM's preference for length rather than learning to reason correctly.
+
+**Why offline mitigation fails.** The authors found that standard offline strategies — diversifying training data with varied response lengths and qualities, incorporating adversarial examples, refining model architectures — "frequently failed to prevent length bias during RL training" (Section 4.2.2). The dynamic nature of RL means that the policy continually evolves to exploit whatever biases exist in the reward signal; offline-identified biases are patched, but new patterns of exploitation emerge during training.
+
+**The online monitoring strategy.** The core countermeasure is **continuous online monitoring** of length bias during RL training. Specific metrics are established to detect whether the policy is "disproportionately extending output lengths to maximize GenRM rewards without gains in task success or reasoning depth" (Section 4.2.2). When such behavior is detected — indicating that the policy has found and is exploiting the GenRM's length bias — the GenRM is immediately recalibrated. The recalibration likely involves retraining or fine-tuning the GenRM on examples that specifically penalize length-without-substance, though the paper does not provide implementation details.
+
+**RL-side mitigations.** Complementing the GenRM adjustments, several techniques are applied directly in the RL training loop:
+
+- **Reward shaping**: modifying the raw reward to remove spurious correlations with length. For example, if longer responses tend to receive higher GenRM scores regardless of content, a length-dependent penalty can be subtracted.
+- **Value clipping**: capping the maximum reward value to prevent extreme rewards from dominating the loss, which could happen if the GenRM assigns very high scores to very long responses.
+- **Normalization**: standardizing rewards within a batch so that the absolute magnitude of the reward does not drive policy updates — only relative differences between responses matter.
+
+These mechanisms collectively "desensitize reward signals to extreme values from superficial characteristics (e.g., length), thereby directing policy optimization toward substantive quality and correctness" (Section 4.2.2).
+
+##### Curriculum: Mixing Reasoning-Intensive and General-Domain Tasks
+
+Training a single policy on both verifiable reasoning tasks (math, code, logic) and open-ended general tasks (writing, QA, instruction following) presents a challenge: these task types require different reasoning styles (rigorous step-by-step deduction vs. flexible, context-appropriate generation), and training them simultaneously could lead to interference or catastrophic forgetting.
+
+**The curriculum design.** The authors adopt a phased curriculum:
+
+1. **Start with reasoning-intensive tasks only** — the RL training begins with only the tasks that have rule-based rewards (math, logic, competitive programming, software engineering). This allows the model to first develop strong, verifiable reasoning skills without interference from the noisier generative reward signals.
+
+2. **Gradually mix in general-domain tasks** — after the reasoning foundation is established, the general-domain tasks (with GenRM-based rewards) are progressively introduced into the training mixture.
+
+The transition is not binary but **gradual and dynamically weighted**, meaning the proportions of reasoning and general-domain data shift over the course of training. The authors describe this as a "carefully managed curriculum and dynamic weighting strategy" (Section 4.3).
+
+**Why this works.** The phased approach prevents the model from initially learning to exploit GenRM weaknesses (length bias, preference for certain styles) before it has locked in genuine reasoning capabilities. Once the model can reliably solve verifiable problems, the general-domain tasks serve to broaden its capabilities without undermining the reasoning foundation. The mixed training at later stages "encourages the model to learn context-dependent application of its reasoning abilities — applying rigorous, step-by-step deduction for verifiable problems and more flexible, adaptive generation for general queries — all within a unified policy framework" (Section 4.3). It also prevents catastrophic forgetting of specialized reasoning skills while fostering broader generalization.
+
+---
+
+#### RL Length Extension: Scaling from 40K to 80K Tokens
+
+The final major component of MiniMax-M1's training is the extension of the maximum generation length from 40K to 80K tokens, producing the MiniMax-M1-80k variant from the 40K intermediate checkpoint.
+
+##### Data Curation for Long RL
+
+The 40K model serves as a filter for the training data used in the long RL phase:
+
+- **Pass rate evaluation**: the 40K model is evaluated on the curated dataset (the same data used for the initial RL phase), and its pass rates are computed.
+- **Remove easily solved samples**: problems that the 40K model already solves reliably are removed — training on them further would provide minimal learning signal.
+- **Favor harder examples**: the data distribution is adjusted to emphasize difficult mathematical and coding problems, which are most likely to benefit from extended reasoning.
+- **Downsample synthetic reasoning data**: the authors observed that synthetic reasoning data "often became repetitive and homogenous" at long context lengths, and that "continued exposure to these patterns proves detrimental to the model's overall performance" (Section 5). This is an important practical finding — synthetically generated reasoning data may have certain templates or patterns that, when repeated across thousands of training examples, cause the model to overfit to shallow pattern-matching rather than deep reasoning.
+
+##### Staged Window Expansion Strategy
+
+Rather than jumping directly from 40K to 80K, the authors employ a **staged window expansion RL strategy**:
+
+$$40\text{K} \rightarrow 48\text{K} \rightarrow 56\text{K} \rightarrow 64\text{K} \rightarrow 72\text{K} \rightarrow 80\text{K}$$
+
+The transition to each subsequent length is determined by a set of empirical indicators:
+
+- **Convergence of perplexity on generated sequences**: when the model's uncertainty about its own generated tokens (perplexity) stabilizes at the current context length, it indicates that the model has adapted to generating coherent sequences of that length.
+- **The 99th percentile of output lengths approaching the current context window limit**: if nearly all generated sequences are hitting the maximum length, the model is being artificially constrained and is ready for a longer window.
+
+These signals together indicate the model's "readiness for scaling" (Section 5) and allow "robust training throughout the process" without the instability that would result from premature extension.
+
+##### Addressing Training Instability During Scaling: Pattern Collapse
+
+**The problem.** At each length window, the authors observed a critical issue in the later stages of training: **pattern collapse**, where "the latter portions of generated sequences degraded into incoherent or garbled text" (Section 5). This phenomenon consistently coincided with increased perplexity, indicating that the model was losing control over its generation quality as sequences grew longer.
+
+**Root cause: imbalanced positive and negative samples.** The authors identify the mechanism:
+
+> "During output length extension, negative samples increase in length substantially faster than positive samples, frequently reaching the context window limit earlier. Consequently, disproportionately large negative gradients accumulate in the latter segments of generation sequences." (Section 5)
+
+In other words, when the model generates an incorrect solution (a negative sample), it tends to ramble — producing long, unfocused chains of thought that fill the available context window. Correct solutions (positive samples) tend to be more concise — the model finds the right answer efficiently and stops. Under GRPO's group-relative advantage normalization and token-level loss, this creates an imbalance: the latter tokens of long incorrect sequences receive large negative gradients (because they're part of a low-reward response), and because these sequences are longer than correct ones, the negative gradient signal dominates the later positions of the generation.
+
+The consequence is that the model learns to associate later token positions with negative updates, causing it to degrade into incoherence as sequences extend — the pattern collapse phenomenon.
+
+**The three-part solution:**
+
+1. **Repetition detection with early stopping (described above in Section 3.2)**: preemptively terminating repetitive sequences prevents them from consuming the full context window, reducing the length imbalance between positive and negative samples.
+
+2. **Combined sample-level loss and token-level normalization**: the paper describes adopting "combined sample-level loss and token-level normalization to alleviate negative-positive sample imbalance and mitigate adverse effects" (Section 5). The exact formulation is not provided, but the likely interpretation is:
+   - **Sample-level loss**: computing the loss per-response (averaging over tokens within each response) before averaging across responses, so that each response contributes equally regardless of its length. This prevents long responses from dominating the batch gradient.
+   - **Token-level normalization**: within each response, normalizing the advantage or gradient contribution such that tokens at different positions are treated more uniformly, preventing the systematic accumulation of negative signal at later positions.
+
+3. **Decreasing gradient clipping threshold and $\epsilon_{\text{IS}}^{\text{high}}$**: reducing both the maximum allowed gradient magnitude (gradient clipping) and the upper bound on the importance sampling weight ($\epsilon_{\text{IS}}^{\text{high}}$ in CISPO) "to further stabilize generation" (Section 5). Both changes reduce the influence of any single token on the parameter update, which is particularly important for the later tokens in long sequences where the gradient estimates may be less reliable due to compounding approximation errors.
+
+**Why this layered approach.** Each solution addresses a different aspect of the instability: (1) prevents the worst pathological cases from entering training; (2) reweights the loss to correct for systematic length-based imbalance; (3) caps the maximum influence of any individual token to prevent gradient spikes. Together, they stabilize the long-context RL training even as the model learns to reason for increasingly extended sequences.
+
+---
+
+#### Summary of Key Design Choices and Their Justifications
+
+- **Hybrid 1:7 softmax-to-lightning attention ratio** rather than pure linear attention: retains the ability to form sharp, non-linear attention patterns (via occasional softmax blocks) while achieving near-linear scaling for the majority of sequence processing. Empirically validated by MiniMax-Text-01 and inherited into MiniMax-M1.
+- **CISPO's IS-weight clipping rather than token masking**: preserves gradient signal from rare, high-IS reasoning tokens (like "However", "Wait") that are critical for learning metacognitive reasoning behaviors and would be silenced by GRPO/PPO's trust-region clipping. The 2× speedup over DAPO in controlled experiments (Figure 2) is the primary evidence.
+- **Asymmetric IS clipping (upper bound only)**: allows the policy to rapidly decrease probability on genuinely harmful tokens (no lower clipping) while preventing any single token from dominating the gradient (upper clipping). The asymmetry reflects the specific challenge of reasoning RL — the tokens that need to be protected are those whose probability is increasing, not decreasing.
+- **No KL penalty in CISPO**: consistent with recent findings (Hu et al., 2025; Yu et al., 2025) that KL regularization suppresses the exploration needed to discover long chain-of-thought behaviors. The combination of IS-weight clipping and dynamic sampling provides sufficient regularization.
+- **FP32 precision for LM output head only**: addresses the precision mismatch between training and inference kernels at the specific bottleneck (the final projection to vocabulary logits) without the memory and speed overhead of full FP32 training. Layer-by-layer analysis localized the error source to high-magnitude activations in the LM head.
+- **AdamW with β₂ = 0.95 and ε = 1e-15**: customized for the extraordinarily wide gradient magnitude range (1e-18 to 1e-5) and weak inter-iteration gradient correlations observed in MiniMax-M1 training. The reduced β₂ makes the optimizer more responsive; the reduced ε prevents domination of the adaptive learning rate for small gradients.
+- **Probability-based early truncation (3,000 consecutive tokens above 0.99)**: a simple, robust heuristic for detecting pathological repetition that avoids the brittleness of string-matching approaches. The specific thresholds balance false positives against wasted compute.
+- **SynLogic for logical reasoning data synthesis**: generates diverse, verifiable training data across 41 task types with configurable difficulty, enabling automatic curriculum learning without manual data curation. The rule-based verifiers provide clean reward signals.
+- **Containerized sandbox for software engineering RL**: provides execution-based verification for code changes — a strong, unambiguous reward signal that is critical for RL in complex, multi-step software engineering tasks.
+- **Phased curriculum (reasoning-first, then general-domain)**: prevents the model from learning to exploit GenRM weaknesses before locking in genuine reasoning capabilities. The gradual mixing maintains a unified policy without catastrophic forgetting.
+- **Staged window expansion (40K → 48K → ... → 80K)** rather than single-step extension: prevents the training instability (gradient explosions, pattern collapse) that can occur when the context length is extended aggressively in hybrid-attention architectures with different decay rates across layers.
+- **Combined sample-level loss and token-level normalization for long-context RL**: addresses the systematic imbalance where negative samples grow faster in length than positive samples during context extension, preventing the degradation of generation quality at later token positions.
 
 ## 4. Key Insights and Innovations
-- Hybrid attention that actually scales long reasoning in a frontier‑scale LRM
-  - Distinctive aspect: seven Lightning Attention blocks followed by one softmax block repeat; native 1M context and efficient long generations (Section 1).
-  - Why it matters: Figure 1 (Right) shows near‑linear compute scaling; at 100K tokens, M1 uses about one‑quarter the FLOPs of DeepSeek‑R1. This is a fundamental efficiency advancement for long CoT.
 
-- CISPO: clip IS weights, not token updates (Section 3.1)
-  - Difference from PPO/GRPO/DAPO: preserves gradients from rare, high‑leverage reasoning tokens by avoiding token‑level clipping, while keeping updates stable via IS weight clipping (Eq. 4–5).
-  - Impact: On AIME 2024 with Qwen2.5‑32B, CISPO matches DAPO performance with 50% of training steps and outperforms GRPO at equal steps (Figure 2). This is a methodological innovation with clear training‑efficiency gains.
+### Innovation 1: Hybrid Linear-Softmax Attention as a Validated Backbone for Reasoning RL — Breaking the Architectural Monoculture of LRMs
 
-- Engineering fixes enabling RL at scale with the hybrid architecture (Section 3.2)
-  - FP32 LM head to eliminate train‑vs‑infer probability drift (Figure 3), tuned AdamW for tiny gradients, and a probability‑based early truncation rule to avoid degenerate loops. These are practical but essential to make RL stable at ultra‑long lengths.
+The field's default assumption — evident in every major open-weight reasoning model before MiniMax-M1 — has been that large reasoning models must use standard softmax attention. DeepSeek-R1, Qwen3-235B, and their contemporaries all rely on the $O(L^2)$ attention mechanism introduced by Vaswani et al. (2017). This is not because alternatives don't exist; as the paper's own related work survey documents, linear attention (Katharopoulos et al., 2020; Qin et al., 2022a), state space models (Gu and Dao, 2024), and linear RNNs (Peng et al., 2023) have been proposed and validated on language modeling benchmarks for years. The gap — and it is a significant one — is that **none of these alternatives have been shown to survive large-scale reinforcement learning for reasoning**. The question was not "can linear attention model language?" but "can linear attention learn to reason through RL at 456B-parameter scale, generating 80K-token chains of thought, without collapsing into instability or producing degraded reasoning quality?"
 
-- Realistic, verifiable SE sandbox and length‑bias‑aware reward modeling (Sections 4.1 and 4.2)
-  - Execution‑based rewards for real repos align training with practical software engineering; continuous monitoring and recalibration reduce GenRM length bias to prevent reward hacking in long CoT.
+The paper's answer is yes, but the contribution is not simply the answer — it is the **validation at scale with open weights**, which shifts the Overton window for what counts as a viable LRM architecture. Prior to this release, an organization wanting to build an LRM faced an implicit choice: use softmax attention (proven, but expensive at long sequences) or experiment with linear attention (cheaper, but unproven for reasoning RL, with no public evidence it works at scale). The single exception the paper cites — Hunyuan-T1 (Tencent AI Lab, 2025) with Mamba — is not open-sourced and discloses few details, meaning it provides no actionable evidence for the community. MiniMax-M1's release, with documented training recipes, precision fixes, optimizer configurations, and stability heuristics, provides that evidence.
 
-- Efficient long‑length RL schedule (Section 5)
-  - Staged length expansion with quality monitors and adjusted losses/clip thresholds is a robust recipe for moving from 40K to 80K thinking budgets.
+What makes this intellectually distinctive is the **diagnostic approach to architectural validation**. The paper does not merely report that hybrid attention works; it documents *why naive implementations fail* and *what specific adaptations were required*. The precision mismatch between training and inference kernels (Figure 3) — a concrete, measurable engineering problem localized to the LM output head — is the kind of detail that separates "we tried linear attention and it worked" from "here is a reproducible engineering challenge and its solution." The optimizer hyperparameter sensitivity (gradients spanning 1e-18 to 1e-5, weak inter-iteration correlation) is another such diagnostic — it tells future practitioners *what to watch for* when they attempt to replicate this architecture. These are not theoretical insights; they are empirical boundary conditions that define the practical feasibility of the approach.
 
-Together, these are primarily fundamental innovations in efficiency (hybrid attention) and RL optimization (CISPO), complemented by impactful engineering and data contributions.
+The hybrid ratio (1:7 softmax-to-lightning) is itself a conceptual contribution — it encodes a hypothesis about what softmax attention provides that linear attention cannot. The paper does not fully articulate this hypothesis (it never specifies *which* attention patterns require softmax), but the empirical success of the ratio implies a division of labor: lightning attention handles the bulk of sequence processing where approximate, distributed attention suffices, while occasional softmax blocks provide precise token-level alignment at critical points. This is a architectural design principle — "hybrid is better than pure" — that may generalize beyond the specific lightning attention implementation. Future work could explore whether 1:3 or 1:15 ratios work better, whether the position of softmax blocks matters (early vs. late layers), or whether other linear attention variants benefit similarly from softmax interleaving.
+
+The significance of this innovation extends beyond the specific model release. The FLOPs curves in Figure 1 (Right) — 25% of DeepSeek R1's cost at 100K tokens — quantify the economic argument for architectural diversity. If inference-time compute continues to scale (the trend the paper identifies and participates in), the cost gap between quadratic and linear attention grows with sequence length, making the architectural choice increasingly consequential. This paper provides the first public evidence that the cheaper option does not necessarily sacrifice capability.
+
+**Assessment: fundamental shift.** This is not an incremental improvement to softmax attention — it is a demonstration that an entirely different attention paradigm can compete at the frontier of reasoning model capability. The shift is from "softmax attention is necessary for reasoning" to "softmax attention is one option among several, and hybrid designs may be Pareto-optimal for long-sequence reasoning."
+
+---
+
+### Innovation 2: IS-Weight Clipping as a Principled Alternative to Token Masking — Reframing the RL Stability-Accuracy Tradeoff
+
+The dominant paradigm for stabilizing policy gradient methods in language model RL — established by PPO (Schulman et al., 2017) and inherited by GRPO (Shao et al., 2024) — is the **trust region constraint**: when the policy's probability for a token changes too much relative to the behavior policy (the IS ratio $r_{i,t}$ exceeds a threshold), that token's gradient is zeroed out (masked), preventing the update from moving the policy too far from the data-generating distribution. This is a **hard constraint**: tokens either contribute fully (if $r_{i,t}$ is within bounds) or not at all (if outside). The underlying assumption is that large IS ratios indicate unreliable gradient estimates, and the safest response is to discard them entirely.
+
+CISPO challenges this assumption at a fundamental level. The paper's diagnostic finding — that GRPO's token masking systematically silences the most informative tokens for reasoning — reveals that the hard-constraint approach is **not merely conservative; it is actively harmful for certain learning problems**. The tokens being masked ("However," "Recheck," "Wait," "Aha") are precisely those whose probabilities the policy needs to increase most dramatically to learn reasoning behaviors. They are rare under the base model because the base model does not spontaneously produce metacognitive interventions; they become common under the reasoning policy because reasoning requires self-correction. The IS ratios for these tokens are necessarily large during the transition — and GRPO's clipping mechanism, designed to protect against instability, instead prevents the transition from occurring efficiently.
+
+The intellectual move here is **reframing what the clipping operation should constrain**. PPO/GRPO constrain the *gradient contribution* of tokens (hard masking). CISPO constrains the *importance sampling weight* itself (soft clipping), then uses the clipped weight to scale the gradient. The difference appears subtle — both involve clipping a quantity derived from $r_{i,t}$ — but the conceptual implication is profound: CISPO asserts that **an IS ratio of 10 contains useful information, even if it is unreliable at full magnitude**. Zeroing it out discards information; capping it at (say) 3 preserves the directional signal while limiting its influence. This is a Bayesian intuition: extreme observations should be shrunk toward the prior (the clipped value), not discarded entirely.
+
+The unified formulation in Equation 6 — introducing an explicit token-wise mask $M_{i,t}$ — makes the relationship between approaches transparent. PPO/GRPO correspond to a particular mask function (Equation 7: mask = 0 when IS ratio and advantage sign align outside the trust region). CISPO corresponds to $M_{i,t} = 1$ for all tokens, with clipping applied to the IS weight instead. Other variants — partial masking, soft masking, combined weight-and-token clipping — can be expressed by choosing different mask functions. This formulation is not just notationally convenient; it **reframes the design space** from "should we clip or not?" to "what function should determine each token's contribution?" — a richer and more flexible question.
+
+The asymmetric clipping (upper bound only, with $\epsilon_{\text{IS}}^{\text{low}}$ effectively disabled) encodes a specific hypothesis about the learning dynamics of reasoning RL: tokens whose probability is *increasing* (positive IS ratio) need protection from dominating the gradient, while tokens whose probability is *decreasing* (negative IS ratio) can be allowed full influence because the policy genuinely needs to move away from them. This asymmetry is not an arbitrary choice — it reflects the structure of the problem, where "exploration tokens" that the policy needs to discover are systematically high-IS, and "error tokens" that the policy needs to suppress can safely receive full gradient magnitude.
+
+The empirical evidence in Figure 2 — CISPO achieving DAPO's performance with 50% of the training steps — is not merely a speedup figure. It is evidence for the **superior sample efficiency of soft clipping over hard masking**, which in turn suggests that the gradient information discarded by GRPO/DAPO is genuinely valuable. If hard masking were discarding only noisy, unreliable gradients, removing them should *improve* efficiency (by reducing variance). The fact that preserving them (with capped magnitude) *improves* efficiency implies the discarded gradients contained systematic, learnable signal — exactly what the "fork token" hypothesis predicts.
+
+**Assessment: fundamental reframing with practical implications.** CISPO is not a minor tweak to PPO — it is a different philosophy about how to handle the bias-variance tradeoff in off-policy policy gradients. The shift from "discard unreliable gradients" to "cap their magnitude" may be applicable beyond reasoning RL to any domain where the target policy distribution differs systematically from the base policy in sparse, high-importance regions. The unified formulation provides a framework for systematically exploring this design space.
+
+---
+
+### Innovation 3: Execution-Based Software Engineering RL — Expanding Verifiable Reasoning Beyond Math and Code Competitions
+
+Prior large reasoning models have concentrated their RL training on domains where automatic verification is straightforward: mathematics (the answer is a number or expression that can be checked against a ground truth), competitive programming (test cases provide binary pass/fail signals), and formal logic (theorem provers or constraint solvers). These domains share a property: the **verification signal is cheap, deterministic, and available for every example**. This is not an accident — RL requires massive numbers of trials, and ambiguous or expensive reward signals make training inefficient or impossible.
+
+MiniMax-M1 breaks this pattern by constructing **verifiable reinforcement learning environments for real-world software engineering**. The key insight is that SWE-bench-style tasks — given a GitHub issue describing a bug and a codebase, produce a patch that fixes it — can be transformed into RL training environments by containerizing the codebase and using the existing test suite as an automatic verifier. The model proposes code changes, the sandbox executes the test suite, and the pass/fail status provides the reward. This is not a theoretical advance — containerization and test-driven development are well-established practices — but applying them as an RL training mechanism at scale for a 456B-parameter model is a conceptual leap from "verification must be built into the problem formulation" to "verification can be engineered into the environment."
+
+What makes this distinctive is the **expansion of the verifiable frontier**. The paper effectively argues that many real-world tasks can be made verifiable with sufficient engineering investment in sandboxed execution environments. Software engineering is the natural first target — it has clear correctness criteria (tests pass or fail), rich publicly available data (GitHub issues and PRs), and practical importance — but the principle generalizes: any task where success can be automatically evaluated through execution or simulation can be brought into the verifiable RL paradigm. The paper does not explore this generalization explicitly, but the implication is present: the line between "verifiable" and "unverifiable" tasks is not fixed by the nature of the task but by the sophistication of the verification environment.
+
+The approach also implicitly addresses a limitation of math-and-code-only reasoning training: it may produce models that are strong at competition problems but weak at the messy, multi-file, context-heavy reasoning required for real-world software tasks. The SWE-bench results — 56.0% for MiniMax-M1-80k, trailing only DeepSeek-R1-0528's 57.6% among open-weight models — suggest that training on execution-based SE tasks transfers to SE evaluation, which is not guaranteed (the training environments could be too narrow or the reward signal too sparse to learn generalizable skills).
+
+The scale limitation — "several thousand" SE training examples versus ~50K math or ~53K logic examples — reflects the fundamental tension in this approach: constructing sandboxed environments with reliable test suites is substantially more expensive per example than generating math problems. The paper's contribution is demonstrating that this investment pays off in benchmark performance, not (yet) solving the scalability challenge. Future work could explore whether the number of required SE training examples can be reduced through better environment design, or whether the skills learned from SE training transfer to math and code in ways that justify the cost.
+
+**Assessment: incremental in mechanism, fundamental in implication.** The individual components (Docker containers, test suites, GitHub data) are not novel. The shift — from "RL for reasoning means math and code competitions" to "RL for reasoning means any task we can build an execution-based verifier for" — is a conceptual expansion of the RL training paradigm. It opens a path toward RL-trained models that are strong at the complex, multi-step, real-world tasks that constitute most of economically valuable intellectual work.
+
+---
+
+### Innovation 4: Online GenRM Bias Monitoring as a Necessary Complement to Offline Mitigation
+
+The paper's treatment of generative reward model (GenRM) bias — particularly length bias — contains a finding that is more significant than its modest placement in Section 4.2.2 might suggest: **offline bias mitigation strategies for reward models are insufficient for RL training, and online monitoring with dynamic recalibration is necessary.** This is not a theoretical claim but an empirical one, and it has implications for the entire enterprise of using learned reward models to train reasoning policies.
+
+The standard approach to reward model bias — train on diverse data, include adversarial examples, measure and correct for known biases — implicitly assumes that biases are static properties of the reward model that can be identified and patched before deployment. The paper's finding that "purely offline evaluation and preemptive mitigation of length bias in GenRMs frequently failed to prevent length bias during RL training" (Section 4.2.2) challenges this assumption. The reason is dynamical: the RL policy continuously adapts to exploit reward model weaknesses, and the patterns of exploitation that emerge during training may not be present (or detectable) in the offline evaluation data. The reward model and the policy co-evolve, and the biases that matter are those that survive this co-evolution, not those visible in static analysis.
+
+This finding connects to a broader challenge in RL from learned rewards: **reward hacking is not a bug to be fixed once but a moving target to be continuously tracked**. The policy's job is to find behaviors that maximize the reward signal; if the reward model has any systematic preference not aligned with true task success, the policy will find it. The authors' solution — continuous online monitoring with specific length-bias metrics, triggering GenRM recalibration when exploitation is detected — acknowledges this dynamic nature. It is a shift from "build a good reward model" to "build a reward model monitoring and maintenance system."
+
+The practical mechanisms described (reward shaping, value clipping, normalization) are standard in RL, but their deployment in response to online-detected length bias represents a feedback loop: detect exploitation → adjust reward → policy adapts → detect new exploitation → adjust again. This is closer to adversarial training than to standard reward model deployment, and it has implications for the cost and complexity of RL training with learned rewards — it requires infrastructure for monitoring reward model behavior in real-time, not just evaluating it once before training.
+
+**Assessment: incremental in methodology, significant in diagnostic framing.** The individual techniques (online monitoring, reward shaping) are not novel. The finding that offline-only mitigation is insufficient, and the framing of reward model bias as a dynamic co-evolution problem requiring online intervention, is a practically important insight that should influence how future work designs RL training pipelines with learned reward models.
 
 ## 5. Experimental Analysis
-- Evaluation setup (Section 6)
-  - Decoding: temperature 1.0, top‑p 0.95 for all tasks.
-  - Benchmarks and metrics:
-    - Math: AIME 2024/2025 (average pass rate over 32 samples) and MATH‑500 (Section 6.1).
-    - Coding: LiveCodeBench (contamination‑controlled; report average pass rate over 16 samples) and FullStackBench (Section 6.1).
-    - Reasoning & knowledge: GPQA‑Diamond (pass@32), HLE without tools, ZebraLogic, MMLU‑Pro (Section 6.1).
-    - Software engineering: SWE‑bench Verified using an Agentless‑style pipeline with two‑stage localization (Section 6.1).
-    - Long context: OpenAI‑MRCR at 128K and 1M, and LongBench‑v2 (Section 6.1).
-    - Agentic tool use: TAU‑bench airline and retail scenarios (max 40 steps; generic system prompt; GPT‑4.1 as the user model) (Section 6.1).
-    - Factuality: SimpleQA (short‑form factuality) (Section 6.1).
-    - General assistant: MultiChallenge (GPT‑4o judged) (Section 6.1).
 
-- Capabilities and headline numbers (Table 2, Figure 1, Table 1)
-  - Context and generation limits:
-    - Quote: “Max Input 1M; Max Output 80K” for `MiniMax‑M1‑80k` versus 128K/64K for `DeepSeek‑R1` and 200K/32K for `Claude 4 Opus` (Table 1).
-  - Long‑context efficiency:
-    - Quote: “M1 consumes <50% of FLOPs at 64K tokens and ≈25% at 100K vs DeepSeek‑R1” (Figure 1 Right, Section 1).
+### Evaluation Methodology
 
-- Math and coding (Table 2)
-  - AIME 2024: `M1‑80k` 86.0%; behind `DeepSeek‑R1‑0528` 91.4% but ahead of `Qwen3‑235B‑A22B` 85.7% and most open‑weight baselines.
-  - AIME 2025: `M1‑80k` 76.9%; behind `R1‑0528` 87.5%.
-  - MATH‑500: `M1‑80k` 96.8%, competitive but not state‑leading.
-  - LiveCodeBench: `M1‑80k` 65.0%, on par with `Qwen3‑235B‑A22B` 65.9%; `o3`/`Gemini‑2.5` ≈76–77%.
-  - FullStackBench: `M1‑80k` 68.3% > `Qwen3‑235B‑A22B` 62.9% and close to top closed models near 69–70%.
+- **Dataset.** The paper evaluates MiniMax-M1 across a broad suite of benchmarks spanning several domains. For mathematics, the authors use MATH-500 (Hendrycks et al., 2021), AIME 2024, and AIME 2025. For general coding, they use LiveCodeBench (Jain et al., 2025), evaluating on the window from August 2024 to May 2025, and FullStackBench (Liu et al., 2024). Reasoning and knowledge are assessed via GPQA-Diamond (Rein et al., 2024), MMLU-Pro (Wang et al., 2024), HLE (Phan et al., 2025, text-only subset), and ZebraLogic (Lin et al., 2025). Software engineering capability is measured on SWE-bench Verified (Jimenez et al., 2024). Long-context understanding uses OpenAI-MRCR (OpenAI, 2024b) at both 128K and 1M context lengths, and LongBench-v2 (Bai et al., 2024). Agentic tool use is evaluated on TAU-bench (Yao et al., 2025) for both airline and retail domains. Factuality is assessed with SimpleQA (Wei et al., 2024), and general assistant capability with MultiChallenge (Sirdeshmukh et al., 2025). Most benchmarks use their standard public test sets; the paper does not report custom splits. For AIME evaluation, the authors sample 32 responses per problem and report the average pass rate. For LiveCodeBench and FullStackBench, they average the pass rate across 16 samples. For GPQA-Diamond, they sample 32 times and report the average pass rate. HLE is evaluated without external tools on the text-only subset. SWE-bench Verified results use the Agentless scaffold (Xia et al., 2024) with a modified two-stage localization process that omits embedding-based retrieval. TAU-bench is evaluated with GPT-4.1 as the user model, a general system prompt (quoted in the paper's footnote), no custom tools, and a maximum of 40 interaction steps. MultiChallenge scores are judged by GPT-4o.
 
-- Reasoning & knowledge (Table 2)
-  - GPQA‑Diamond: `M1‑80k` 70.0%, trailing `R1‑0528` 81.0% and closed models (o3 83.3, Gemini‑2.5 86.4).
-  - HLE (no tools, text‑only subset): `M1‑80k` 8.4%—lower absolute scores across open models without tools.
-  - ZebraLogic: `M1‑80k` 86.8%, above `Qwen3‑235B‑A22B` 80.3 but below closed and `R1` (≈95%).
-  - MMLU‑Pro: `M1‑80k` 81.1%, slightly below top open models (84–85% ranges for others in Table 2).
+- **Base model(s).** The primary model evaluated is MiniMax-M1, a 456B-parameter hybrid-attention MoE model with 45.9B activated parameters per token, built on MiniMax-Text-01 (MiniMax et al., 2025). Two variants are released: MiniMax-M1-40k (maximum generation length of 40K tokens) and MiniMax-M1-80k (maximum generation length of 80K tokens), where the 40K model represents an intermediate checkpoint during the length extension phase of RL training. The model family was chosen to demonstrate that a hybrid linear-plus-softmax attention architecture can support competitive reasoning capabilities at dramatically reduced FLOPs compared to pure softmax models. All evaluations use temperature 1.0 and top-p 0.95 sampling.
 
-- Software engineering (Table 2)
-  - SWE‑bench Verified: `M1‑80k` 56.0% and `M1‑40k` 55.6%, close to `R1‑0528` 57.6% and far above other open‑weights (e.g., `Qwen3‑235B‑A22B` 34.4). This aligns with their execution‑based RL on real repos (Section 4.1).
+- **Metrics.** The primary metric across all benchmarks is **accuracy**, though its exact computation varies by benchmark. For mathematical reasoning (AIME, MATH-500), accuracy is the pass rate — the fraction of problems for which the model's final answer matches the ground truth — averaged over multiple samples (32 for AIME, not specified for MATH-500 but presumably 1 or pass@1 given the single score reported). For coding benchmarks (LiveCodeBench, FullStackBench), accuracy is the average pass rate across 16 samples per problem, where pass rate is the fraction of generated solutions that pass all test cases. For GPQA-Diamond, it is the average pass rate over 32 samples. For SWE-bench Verified, it is the fraction of GitHub issues for which the model's proposed patch passes all test cases, evaluated using the Agentless scaffold. For long-context benchmarks (MRCR, LongBench-v2), accuracy is the fraction of correctly answered retrieval or multiple-choice questions. For TAU-bench, it is the task success rate — the fraction of conversational scenarios where the agent correctly fulfills the user's request while adhering to domain policies. For SimpleQA, it is the fraction of questions answered correctly. For MultiChallenge, scores are assigned by GPT-4o as judge. The paper also tracks **generation length** (number of tokens in the model's reasoning trace plus answer) during RL training to monitor the relationship between thinking length and performance (Figure 4). For the FLOPs comparison (Figure 1, Right), **theoretical inference FLOPs** is computed as a function of generation length, comparing MiniMax-M1 against DeepSeek R1 and Qwen3-235B-A22B.
 
-- Long‑context (Table 2)
-  - OpenAI‑MRCR (128K): `M1‑40k` 76.1% and `M1‑80k` 73.4%, beating `o3` 56.5 and `Claude 4` 48.9, nearing `Gemini‑2.5` 76.8.
-  - OpenAI‑MRCR (1M): `M1‑40k` 58.6% and `M1‑80k` 56.2% vs `Gemini‑2.5` 58.8; other models not reported at 1M.
-  - LongBench‑v2: `M1‑80k` 61.5% > `DeepSeek‑R1‑0528` 52.1 and `Qwen3‑235B‑A22B` 50.1.
+- **Baselines.** The paper compares MiniMax-M1 against three categories of models. **Leading closed-weight models:** OpenAI o3 (with 100K extended thinking), Gemini 2.5 Pro (06-05 version, 64K extended thinking), Claude 4 Opus (64K extended thinking), and Seed-Thinking-v1.5 (32K extended thinking). **Leading open-weight models:** DeepSeek-R1 (original, 32K extended thinking), DeepSeek-R1-0528 (latest version, 64K extended thinking), and Qwen3-235B-A22B (32K extended thinking). Model versions and thinking budgets are as reported in Table 2. For the RL algorithm comparison (Figure 2), the baselines are GRPO (Shao et al., 2024) and DAPO (Yu et al., 2025), both applied to Qwen2.5-32B-base on the same mathematical reasoning dataset. For the precision fix validation (Figure 3), the baseline is the uncorrected MiniMax-M1 with the original training-inference probability correlation. No majority voting or best-of-N baselines are reported for the main benchmark results — all models are evaluated with single-response generation (though AIME, LiveCodeBench, FullStackBench, and GPQA-Diamond report pass@k averaged over multiple samples, which is a form of majority voting for the final answer selection).
 
-- Agentic tool use (Table 2)
-  - TAU‑bench (airline): `M1‑80k` 62.0%, best among open‑weights and above `Gemini‑2.5` 50.0; close to `Claude 4 Opus` 59.6.
-  - TAU‑bench (retail): `M1‑40k` 67.8% > `M1‑80k` 63.5; top closed model `Claude 4 Opus` 81.4.
+- **Generation budget / compute accounting.** For the main benchmark evaluations, MiniMax-M1-40k and MiniMax-M1-80k are constrained to maximum generation lengths of 40K and 80K tokens respectively; the other models in Table 2 have their own generation budgets as indicated (ranging from 32K to 100K tokens). For the FLOPs comparison in Figure 1 (Right), compute is measured as **theoretical inference FLOPs**, calculated analytically from the attention mechanism complexity (quadratic for softmax attention, linear for lightning attention) as a function of the number of generated tokens. This is a theoretical measure, not an empirical wall-clock measurement — it assumes the computational complexity of the attention mechanism dominates and that implementations are comparably optimized. The paper does not report actual GPU-hours or wall-clock time for the benchmark evaluations. For the RL training efficiency claims, compute is measured in GPU-hours (512 H800 GPUs for 3 weeks) and rental cost (~$0.53M USD), but these refer to the training budget, not the evaluation budget. For the CISPO comparison (Figure 2), efficiency is measured in training steps — CISPO matches DAPO's AIME 2024 performance with 50% of the training steps, implying a 2× speedup in terms of sample efficiency (since the per-step compute is identical across algorithms in the controlled setting).
 
-- Factuality and assistant ability (Table 2)
-  - SimpleQA: `M1‑80k` 18.5% outperforms most open‑weights except `DeepSeek‑R1` 27.8; behind `o3` 49.4 and `Gemini‑2.5` 54.0.
-  - MultiChallenge: both `M1` variants 44.7, roughly comparable to `R1‑0528` 45.0 and `Claude 4 Opus` 45.8; below `o3` 56.5 and `Gemini‑2.5` 51.8.
+- **Cross-validation / statistical protocol.** The paper does not report cross-validation or statistical significance testing for the benchmark results in Table 2. For the RL training curves (Figure 4), accuracy and generation length are tracked continuously throughout training, providing a trajectory rather than a point estimate, but no error bars or confidence intervals are reported. For the AIME evaluations where 32 samples are averaged, the paper does not report variance across samples or across evaluation runs. For the CISPO comparison (Figure 2), the training curves appear to be single runs (no error bars), and the paper does not specify whether results are averaged over multiple random seeds. The general evaluation protocol — temperature 1.0, top-p 0.95 — is consistent across all benchmarks, but the lack of statistical rigor (no confidence intervals, no multiple random seeds, no significance tests) means that small performance differences between models (e.g., MiniMax-M1-80k vs. Qwen3-235B-A22B on LiveCodeBench at 65.0% vs. 65.9%) cannot be distinguished from sampling noise.
 
-- Do longer thoughts help? (Section 6.2; Figure 4)
-  - Quote: “Average response lengths on AIME and LiveCodeBench exceed 20,000 tokens,” with AIME 2024 accuracy rising from ~68% to ~80% as training proceeds. Curves show a strong correlation between longer outputs and higher accuracy.
+### Main Quantitative Results
 
-- Algorithmic ablation (Figure 2; Section 3.1)
-  - On AIME 2024 with Qwen2.5‑32B, CISPO reaches DAPO performance with 50% steps and beats GRPO across steps (“2× speedup” annotation in Figure 2).
+#### Mathematics, Coding, and General Reasoning Benchmarks (Table 2)
 
-- Robustness/stability diagnostics (Figure 3; Section 3.2)
-  - Probability alignment between train and infer modes improved to ≈0.997 correlation after the FP32 head fix and remained stable during training.
+The headline results in Table 2 position MiniMax-M1 as competitive with, but generally trailing, the state-of-the-art open-weight reasoning models on traditional competition benchmarks, while showing particular strength in real-world software engineering, agentic tool use, and long-context understanding.
 
-- Overall assessment
-  - The evidence convincingly supports:
-    - Efficiency: FLOPs scaling advantage (Figure 1 Right), 1M/80K limits (Table 1), and successful long‑length RL (Figure 4).
-    - Competitiveness: Near‑SOTA among open‑weights overall, with pronounced strengths in long‑context tasks and realistic tool/SE scenarios (Table 2).
-  - Results are mixed on math/coding versus the very latest `DeepSeek‑R1‑0528` and on factuality versus top closed models; this nuance is transparent in Table 2.
+**Mathematics.** On AIME 2024, MiniMax-M1-80k achieves 86.0%, which is the second-highest among open-weight models (behind DeepSeek-R1-0528 at 91.4%) and surpasses Claude 4 Opus (76.0%) while trailing closed-weight leaders o3 (91.6%) and Gemini 2.5 Pro (92.0%). On AIME 2025, the gap widens: MiniMax-M1-80k reaches 76.9%, compared to DeepSeek-R1-0528's 87.5% and o3's 88.9%. On MATH-500, MiniMax-M1-80k scores 96.8%, which is within 1.2 percentage points of the best model (Gemini 2.5 Pro at 98.8%) and competitive with all open-weight models in the 96.2–98.0% range. The consistent pattern is that MiniMax-M1 performs slightly below DeepSeek-R1-0528 across mathematical reasoning tasks, with the gap being small on MATH-500 (a more saturated benchmark) and larger on the hardest competition problems (AIME 2025). The paper notes that "MiniMax-M1 lags in mathematical and coding competitions" relative to DeepSeek-R1-0528 (Section 6.1).
+
+**General coding.** On LiveCodeBench (v5, Aug 2024–May 2025 window), MiniMax-M1-80k scores 65.0%, which matches Qwen3-235B-A22B (65.9%, within likely sampling error given no confidence intervals) but trails DeepSeek-R1-0528 (73.1%) and the closed-weight leaders (o3 at 75.8%, Gemini 2.5 Pro at 77.1%). On FullStackBench, MiniMax-M1-80k scores 68.3%, which surpasses Qwen3-235B-A22B (62.9%) and is competitive with DeepSeek-R1 (70.1%) and o3 (69.3%). The coding results are mixed: MiniMax-M1 is clearly behind the latest DeepSeek-R1-0528 on LiveCodeBench but is competitive or superior to other open-weight models on FullStackBench, suggesting that its coding capabilities may be benchmark-dependent.
+
+**Reasoning and knowledge.** On GPQA-Diamond, MiniMax-M1-80k scores 70.0%, trailing DeepSeek-R1-0528 (81.0%), DeepSeek-R1 (71.5%), and Qwen3-235B-A22B (71.1%) — placing it last among the major open-weight models on this benchmark. On HLE (text-only subset), MiniMax-M1-80k achieves 8.4%, compared to DeepSeek-R1-0528's 17.7% and DeepSeek-R1's 8.6%. On ZebraLogic, MiniMax-M1-80k scores 86.8%, which is ahead of DeepSeek-R1 (78.7%) and Qwen3-235B-A22B (80.3%) but behind DeepSeek-R1-0528 (95.1%) and Gemini 2.5 Pro (91.6%). On MMLU-Pro, MiniMax-M1-80k scores 81.1%, placing it last among the major open-weight models (DeepSeek-R1 at 84.0%, DeepSeek-R1-0528 at 85.0%, Qwen3-235B-A22B at 83.0%). The overall pattern on reasoning and knowledge benchmarks is consistent: MiniMax-M1 is outperformed by DeepSeek-R1-0528 by substantial margins (11 percentage points on GPQA-Diamond, 9.3 on HLE, 8.3 on ZebraLogic, 3.9 on MMLU-Pro) and is generally at or near the bottom of the open-weight comparison group.
+
+**Software engineering.** On SWE-bench Verified, MiniMax-M1-40k achieves 55.6% and MiniMax-M1-80k achieves 56.0%, using the Agentless scaffold with a modified two-stage localization process. These results trail only DeepSeek-R1-0528's 57.6% among open-weight models and significantly surpass DeepSeek-R1 (49.2%), Qwen3-235B-A22B (34.4%), and Seed-Thinking-v1.5 (47.0%). The improvement from 40K to 80K is modest (+0.4 percentage points), suggesting either that software engineering tasks reach diminishing returns from extended thinking below 40K tokens, or that the SE training data and RL curriculum have not yet been optimized for longer reasoning traces. The paper attributes the strong SE performance to the sandbox-based execution environments used during RL training (Section 6.1): "Benefiting from our execution-based, software engineering environments during RL, MiniMax-M1-40k and MiniMax-M1-80k achieve strong scores."
+
+**Agentic tool use.** On TAU-bench (airline domain), MiniMax-M1-80k achieves 62.0%, which surpasses all other models including Gemini 2.5 Pro (50.0%), o3 (52.0%), DeepSeek-R1-0528 (53.5%), and Claude 4 Opus (59.6%). MiniMax-M1-40k also leads at 60.0%. On TAU-bench (retail domain), MiniMax-M1-80k scores 63.5%, which is behind Claude 4 Opus (81.4%) but ahead of most other models (o3 at 73.9%, DeepSeek-R1-0528 at 63.9%). The average across both domains places MiniMax-M1 among the strongest models on agentic tool use. The paper highlights that "MiniMax-M1 outperforms Gemini 2.5 Pro on the agentic tool use benchmark TAU-Bench" (Section 1) and that "MiniMax-M1-40k surpasses all open-weight models and even Gemini-2.5 Pro" (Section 6.1). This is one of the paper's strongest claimed results, though the retail domain result (where Claude 4 Opus dominates at 81.4%) tempers the airline domain success — the model's tool-use capability may be domain-dependent.
+
+**Long-context understanding.** On OpenAI-MRCR at 128K context, MiniMax-M1-40k achieves 76.1% and MiniMax-M1-80k achieves 73.4%. These results are the **highest among all evaluated models except Gemini 2.5 Pro** (76.8%), surpassing o3 (56.5%), Claude 4 Opus (48.9%), and all other open-weight models (DeepSeek-R1 at 35.8%, DeepSeek-R1-0528 at 51.5%, Qwen3-235B-A22B at 27.7%). At 1M context (OpenAI-MRCR), MiniMax-M1-40k scores 58.6% and MiniMax-M1-80k scores 56.2%, compared to Gemini 2.5 Pro's 58.8% — the only other model evaluated at this context length (all other models have maximum context windows below 1M tokens and are not evaluated). On LongBench-v2, MiniMax-M1-40k scores 61.0% and MiniMax-M1-80k scores 61.5%, which is second only to Gemini 2.5 Pro (65.0%) and ahead of all open-weight models. The paper states that MiniMax-M1 "surpasses OpenAI o3 and Claude 4 Opus on long-context understanding benchmarks" (Section 6.1). This is one of the clearest strengths of the model, directly attributable to its 1M-token native context window and hybrid attention architecture — the long-context benchmarks are precisely where the architectural efficiency advantage translates into capability advantage, since other models either cannot fit the context or must compress/truncate it.
+
+**Factuality.** On SimpleQA, MiniMax-M1-40k scores 17.9% and MiniMax-M1-80k scores 18.5%. These results are well below DeepSeek-R1 (30.1%) and DeepSeek-R1-0528 (27.8%), but above Qwen3-235B-A22B (11.0%) and Seed-Thinking-v1.5 (12.9%). The closed-weight leaders substantially outperform all open-weight models on this benchmark (o3 at 49.4%, Gemini 2.5 Pro at 54.0%). The paper notes this as an area where MiniMax-M1 "underperforms DeepSeek-R1 while outperforming all other open-weight models" (Section 6.1).
+
+**General assistant.** On MultiChallenge, MiniMax-M1-40k and MiniMax-M1-80k both score 44.7%, which is comparable to DeepSeek-R1-0528 (45.0%), DeepSeek-R1 (40.7%), and Claude 4 Opus (45.8%). The closed-weight leaders outperform here (o3 at 56.5%, Gemini 2.5 Pro at 51.8%).
+
+**Effect of scaling from 40K to 80K.** Across most benchmarks, MiniMax-M1-80k improves over MiniMax-M1-40k, but the gains are generally modest. On AIME 2024, the improvement is from 83.3% to 86.0% (+2.7 points). On AIME 2025, from 74.6% to 76.9% (+2.3 points). On LiveCodeBench, from 62.3% to 65.0% (+2.7 points). On FullStackBench, from 67.6% to 68.3% (+0.7 points). On GPQA-Diamond, from 69.2% to 70.0% (+0.8 points). On SWE-bench Verified, from 55.6% to 56.0% (+0.4 points). On LongBench-v2, from 61.0% to 61.5% (+0.5 points). In some cases, the 80K model performs slightly worse than the 40K model: on OpenAI-MRCR (128K), 73.4% vs. 76.1% (-2.7 points); on OpenAI-MRCR (1M), 56.2% vs. 58.6% (-2.4 points); on TAU-bench (retail), 63.5% vs. 67.8% (-4.3 points). These regressions on long-context and agentic benchmarks are notable because they are precisely the domains where extended thinking should help — the paper does not discuss or explain these regressions. The overall pattern suggests that extending the generation budget from 40K to 80K tokens provides small but consistent gains on competition-style math and coding tasks (+2–3 points on AIME and LiveCodeBench), minimal gains on most other benchmarks, and possible regressions on some long-context and agentic tasks. The paper's claim that these results "confirm the benefits of scaling test-time compute" (Section 6.1) is partially supported but the benefits are narrower and more modest than the framing suggests.
+
+#### RL Training Dynamics: Performance and Length Scaling (Figure 4)
+
+Figure 4 tracks three metrics across approximately 4,000 RL training steps: AIME 2024 accuracy, AIME 2025 accuracy, and LiveCodeBench v5 accuracy, each plotted alongside the average generation length (in tokens) for that benchmark.
+
+**Headline results.** All three benchmarks show consistent improvement in both accuracy and generation length throughout RL training:
+
+- **AIME 2024:** accuracy rises from approximately 68% to 80% (a 12 percentage point gain), while average generation length increases from roughly 12,000 to 22,000 tokens. The two curves are strongly correlated — periods of rapid accuracy improvement coincide with periods of rapid length increase.
+- **AIME 2025:** accuracy rises from approximately 50% to nearly 80% (a ~30 percentage point gain, though the y-axis in Figure 4 appears truncated — the starting point is around 50%, and the paper text describes the model reaching "68% to 80%" on AIME 2024, suggesting the AIME 2025 trajectory may reach similar levels). Generation length increases from roughly 14,000 to 28,000 tokens.
+- **LiveCodeBench v5:** accuracy rises from approximately 55% to 72%, with generation length increasing from roughly 14,000 to 22,000 tokens.
+
+In all three cases, the generation length shows a characteristic pattern: it increases rapidly in the early stages of training (approximately the first 1,000–1,500 steps), then plateaus or grows more slowly, while accuracy continues to improve. This suggests that the model first learns to generate longer chains of thought (which yields initial accuracy gains), then learns to use that extended reasoning space more effectively (yielding continued accuracy improvement without proportional length increase).
+
+**Interpretation.** The authors interpret these curves as evidence for a causal relationship: "the strong correlation between accuracy gains and increased response length in these visualizations underscores the importance of extending RL scaling to facilitate more extensive reasoning processes" (Section 6.2). Correlation is not causation — it is possible that both accuracy and length increase as independent consequences of improved model capability, rather than length causing accuracy — but the temporal ordering (length increases first, then accuracy continues improving at the plateaued length) and the consistency across three diverse benchmarks makes the causal interpretation plausible.
+
+The curves also provide indirect evidence about the efficiency of MiniMax-M1's architecture: the generation lengths reach 20,000–28,000 tokens (averages, meaning some generations are substantially longer), and the RL training was completed in 3 weeks on 512 H800 GPUs. A pure softmax model generating sequences of this length during RL training would incur substantially higher FLOPs per step, so the fact that this training was feasible at all within this budget is an existence proof for the efficiency advantages claimed in Figure 1 (Right).
+
+#### CISPO vs. GRPO vs. DAPO (Figure 2)
+
+The controlled comparison of RL algorithms on Qwen2.5-32B-base, evaluated on AIME 2024, shows:
+
+- **CISPO achieves the highest accuracy at every training step** after the initial warmup period (approximately the first 200 steps where all three algorithms perform similarly).
+- **DAPO achieves intermediate performance**, consistently below CISPO but substantially above GRPO.
+- **GRPO performs worst**, with accuracy growth that is slower and asymptotes lower than both DAPO and CISPO.
+
+The paper claims that "CISPO achieves comparable performance to DAPO using 50% of the training steps" (Section 3.1 and Figure 2 caption), which the curve supports visually — CISPO's accuracy at approximately step 500–600 appears comparable to DAPO's accuracy at approximately step 1000–1200. However, without numerical values or error bars on the figure, the exact 2× multiplier cannot be verified precisely.
+
+The key insight from this comparison is that the performance ordering (CISPO > DAPO > GRPO) is consistent with the hypothesis that token-dropping is harmful for reasoning RL. GRPO (most aggressive token-dropping via PPO-style clipping) performs worst; DAPO (relaxed upper clipping bound, but still token-dropping for extreme ratios) performs better but still suboptimally; CISPO (no token-dropping, only IS-weight clipping) performs best. This supports the paper's mechanistic explanation in Section 3.1 — that rare reasoning tokens with high IS ratios are being silenced by token-level clipping — though the experiment does not directly verify that specific tokens are the mechanism (it shows correlation between the algorithm design and overall performance, not causation through the hypothesized token-level dynamics).
+
+#### Precision Mismatch Fix (Figure 3)
+
+Figure 3 visualizes the correlation between training-mode and inference-mode token probabilities before and after the FP32 precision fix for the LM output head. Before the fix (left panel), the Pearson correlation is approximately 0.987, with substantial scatter — tokens exist with inference probability near 0.2 and training probability near 0.5 (absolute differences up to 0.3–0.5, visible in the histogram inset). After the fix (right panel), the correlation improves to approximately 0.997, with points tightly clustered along the diagonal and absolute probability differences concentrated near zero (histogram shows differences below ~0.1, mostly near 0).
+
+The paper claims this fix was "detrimental and prevented reward growth" before correction (Section 3.2). However, the figure only shows the *correlation improvement*, not the effect on RL training dynamics or final model performance. There is no ablation comparing the final MiniMax-M1 accuracy with and without the precision fix — the claim that it prevented reward growth is based on monitoring during training, but no quantitative evidence (e.g., reward curves with and without the fix) is presented. The correlation improvement from 0.987 to 0.997 is substantial in a statistical sense but small in absolute terms — it is not obvious a priori that a probability discrepancy of 0.3 in rare cases would prevent RL from making any progress at all, rather than merely slowing it. The paper's claim should be understood as an empirical observation during their specific training run rather than a general theorem about necessary precision levels.
+
+### Ablation Studies and Robustness Checks
+
+The paper is notably sparse on formal ablation studies. Most of the design choices — the 1:7 hybrid ratio, the CISPO hyperparameters ($\epsilon_{\text{IS}}^{\text{high}}$, the choice to disable lower clipping), the curriculum mixing schedule, the staged window expansion step sizes, the repetition detection thresholds — are presented as fixed configurations without sensitivity analysis. The "ablation" evidence in the paper is largely indirect or takes the form of diagnostic observations during training rather than controlled experiments.
+
+**CISPO vs. GRPO vs. DAPO (Figure 2)**: This is the closest the paper comes to a formal ablation. It isolates the effect of the RL algorithm (clipping strategy) while holding the base model (Qwen2.5-32B), training data, optimizer, and evaluation protocol constant. The result — CISPO > DAPO > GRPO — supports the paper's central claim about token-dropping. However, this is evaluated only on a single benchmark (AIME 2024) with a single base model (Qwen2.5-32B), not on the full MiniMax-M1 model or across the diverse training mixture used in the main experiments. The paper does not report whether CISPO's advantage persists when training on the full mixture of math, code, logic, SE, and general-domain tasks.
+
+**Precision fix (Figure 3)**: The before-and-after comparison of training-inference probability correlation isolates the effect of switching the LM head to FP32. This is a diagnostic ablation — it demonstrates that the fix resolves the precision mismatch — but does not demonstrate the effect on downstream RL performance. No reward curves, accuracy trajectories, or final model comparisons with and without the fix are reported.
+
+**Optimizer hyperparameters**: The paper describes switching from the VeRL default AdamW configuration (betas = (0.9, 0.999), eps = 1e-8) to a custom configuration (betas = (0.9, 0.95), eps = 1e-15). This change is motivated by observed gradient magnitude distributions (spanning 1e-18 to 1e-5, weak inter-iteration correlation), but no ablation comparing the two optimizer configurations is reported. The paper does not show training curves or final performance with the default VeRL settings — the statement that the default led to "non-convergence" (Section 3.2) is an empirical claim without quantitative evidence in the paper.
+
+**Early truncation via repetition detection**: The heuristic (halt generation if 3,000 consecutive tokens have probability above 0.99) is described as preventing model instability and improving throughput, but no ablation compares training with and without this mechanism. Metrics such as the frequency of pathological generations, the throughput improvement, or the effect on final model quality are not reported.
+
+**Staged window expansion**: The paper describes expanding from 40K → 48K → 56K → 64K → 72K → 80K using empirical indicators (perplexity convergence, 99th percentile output length), but does not compare this against a single-step expansion (40K → 80K directly). The claim that staged expansion "ensures training stability at each step" (Section 5) is not validated against an alternative.
+
+**Synthetic data downsampling for long RL**: The paper states that synthetic reasoning data is downsampled during the long RL phase after observing it "often became repetitive and homogenous" (Section 5), but no comparison of long-RL training with and without synthetic data downsampling is reported. The claim that "continued exposure to these patterns proves detrimental" is not quantitatively supported.
+
+**Sample-level loss and token-level normalization for long RL**: The combined loss approach is described as addressing negative-positive sample imbalance during context extension, but no ablation compares it against token-level-only or sample-level-only loss formulations. The contribution of each component is not isolated.
+
+**Length bias mitigation**: The online monitoring and GenRM recalibration strategy is described conceptually, but no quantitative metrics are reported — no plots of length bias metrics over the course of training, no comparison of model performance with and without online monitoring, no examples of detected exploitation before and after recalibration. The paper states that offline strategies "frequently failed" but provides no evidence for this claim beyond the assertion.
+
+**CISPO hyperparameters**: The paper states that $\epsilon_{\text{IS}}^{\text{low}}$ was set to a large value (effectively disabling lower clipping) and that only $\epsilon_{\text{IS}}^{\text{high}}$ was tuned. The tuned value of $\epsilon_{\text{IS}}^{\text{high}}$ is not reported. The paper also states that CISPO uses dynamic sampling and length penalty from DAPO (Yu et al., 2025), but does not specify the dynamic sampling schedule or the length penalty formulation, nor does it ablate these components to determine their individual contributions relative to the core IS-weight clipping mechanism.
+
+**KL penalty absence**: The paper notes that there is "no KL penalty term in CISPO similar to other recent works" (Section 3.1), but does not compare CISPO with and without a KL penalty. The claim that removing the KL penalty is beneficial is supported only by citation to concurrent work (Hu et al., 2025; Yu et al., 2025), not by experimental evidence within this paper.
+
+**40K vs. 80K model comparison**: This is the most prominent comparison in the paper (Table 2 rows for MiniMax-M1-40k and MiniMax-M1-80k), but it conflates two changes: the increased generation budget during evaluation (40K vs. 80K) and the additional RL training the 80K model received (the long RL phase). The improved performance of the 80K model on math and coding benchmarks could be due to the longer generation budget, the additional training, or both — the experimental design does not disentangle these factors. A proper ablation would compare the 40K model evaluated with 80K generation budget (without additional training) against the 80K model, to isolate the effect of the long RL phase.
+
+### Critical Assessment
+
+**Does the paper demonstrate that MiniMax-M1 is competitive with state-of-the-art reasoning models?**
+
+The evidence in Table 2 supports a qualified yes. MiniMax-M1-80k is competitive with or superior to DeepSeek-R1 (original) across most benchmarks: it wins on AIME 2024 (86.0% vs. 79.8%), LiveCodeBench (65.0% vs. 55.9%), SWE-bench Verified (56.0% vs. 49.2%), TAU-bench (average ~62.8% vs. not reported for original R1), and long-context tasks (MRCR 128K: 73.4% vs. 35.8%). It loses on GPQA-Diamond (70.0% vs. 71.5%) and MMLU-Pro (81.1% vs. 84.0%). Against the *latest* DeepSeek-R1-0528, the comparison is less favorable: MiniMax-M1-80k loses on AIME 2024 (86.0% vs. 91.4%), AIME 2025 (76.9% vs. 87.5%), LiveCodeBench (65.0% vs. 73.1%), GPQA-Diamond (70.0% vs. 81.0%), HLE (8.4% vs. 17.7%), and ZebraLogic (86.8% vs. 95.1%). It wins on SWE-bench Verified (56.0% vs. 57.6%, essentially tied), TAU-bench (airline: 62.0% vs. 53.5%), and long-context tasks (MRCR 128K: 73.4% vs. 51.5%). The paper's own characterization — "comparable or superior to strong open-weight models such as the original DeepSeek-R1 and Qwen3-235B" (Abstract) and "lags in mathematical and coding competitions" relative to DeepSeek-R1-0528 (Section 6.1) — is fair. However, the paper's claim in Section 6.1 that MiniMax-M1 "ranks among the world's best open-weight models alongside DeepSeek-R1 and Qwen3-235B" is accurate only if "DeepSeek-R1" refers to the original release, not the substantially improved 0528 version.
+
+**Does the paper demonstrate that lightning attention enables efficient scaling of test-time compute?**
+
+The evidence is mixed. Figure 1 (Right) convincingly shows that lightning attention has theoretically lower FLOPs than softmax attention at long sequence lengths — this follows from the algorithmic complexity and is not empirically surprising. The fact that MiniMax-M1 was trained in 3 weeks on 512 H800 GPUs for ~$0.53M is impressive for a 456B-parameter reasoning model, and it is plausible (though not proven by the paper) that this cost is substantially lower than what a pure-softmax architecture would require for equivalent training. However, the paper does not provide a direct comparison: no pure-softmax version of MiniMax-M1 was trained under identical conditions to quantify the cost difference. The FLOPs comparison in Figure 1 is **theoretical**, not empirical — it assumes that both models achieve the same per-FLOP utilization efficiency and that the only difference is the attention mechanism's asymptotic complexity. Real-world factors (kernel implementation quality, memory bandwidth, communication overhead in distributed training) could narrow or widen the gap. The benchmark results in Table 2 further complicate the efficiency claim: if MiniMax-M1 requires 4× fewer FLOPs per token but achieves lower accuracy on several benchmarks, the efficiency advantage in "FLOPs per unit of capability" is smaller than the raw FLOPs-per-token advantage suggests. A proper efficiency comparison would normalize accuracy against total inference FLOPs.
+
+**Does the paper demonstrate that CISPO is superior to GRPO and DAPO for reasoning RL?**
+
+The controlled experiment in Figure 2 (Qwen2.5-32B, AIME 2024 only) provides credible evidence that CISPO outperforms DAPO and GRPO in this specific setting. The performance ordering (CISPO > DAPO > GRPO) is consistent with the token-clipping hypothesis. However, several limitations weaken the generality of this claim:
+
+- **Single benchmark, single model.** The comparison is only on AIME 2024 with Qwen2.5-32B. It is not clear whether the advantage holds on other reasoning benchmarks (coding, logic), with other model architectures (especially the hybrid-attention MoE architecture of MiniMax-M1), or at different model scales (456B vs. 32B).
+- **Missing hyperparameter details.** The paper does not report the tuned values of $\epsilon_{\text{IS}}^{\text{high}}$ for CISPO, the clipping bounds for GRPO and DAPO, or whether hyperparameters were tuned equally for all three algorithms. If CISPO received more hyperparameter tuning effort than the baselines, the comparison is biased.
+- **No error bars.** Figure 2 appears to show single training runs. Without multiple random seeds, it is impossible to determine whether the performance differences are statistically significant or within the range of run-to-run variance.
+- **Confounding factors.** CISPO incorporates dynamic sampling and length penalty from DAPO. If these components were present in CISPO but not in the GRPO baseline, the comparison is not purely about the clipping mechanism. The paper does not specify whether dynamic sampling and length penalty were applied to all three algorithms identically.
+- **No MiniMax-M1-scale validation.** The CISPO algorithm was validated on a 32B dense model, not on the 456B MoE hybrid-attention model that is the paper's main contribution. The paper does not report what RL algorithm was used to train the original DeepSeek-R1 or Qwen3-235B — if those models were trained with GRPO or DAPO (the standard in the field), and MiniMax-M1 was trained with CISPO, then the benchmark comparisons in Table 2 partially confound algorithmic advantage with architectural and data advantages.
+
+**Does the paper demonstrate that execution-based software engineering RL improves SWE-bench performance?**
+
+The SWE-bench Verified results (55.6% for 40K, 56.0% for 80K) are strong compared to most open-weight models, but the paper provides no ablation to attribute this to the SE-specific RL training. The model was trained on a diverse mixture including math, code, logic, and SE tasks; it is possible that the SWE-bench performance arises primarily from general coding and reasoning capabilities developed on the math and code data, with the SE-specific training contributing marginally. A proper test would compare a model trained with the SE environments against one trained on the same mixture minus the SE component. The paper's statement that the model is "Benefiting from our execution-based, software engineering environments during RL" (Section 6.1) is a plausible interpretation but not an experimentally validated causal claim.
+
+**Does the paper demonstrate that the 1M-token context window translates to improved long-context task performance?**
+
+Yes — this is the strongest and cleanest claim in the paper. The long-context benchmark results (MRCR at 128K and 1M, LongBench-v2) show MiniMax-M1 dramatically outperforming all other open-weight models and even surpassing closed-weight leaders (o3, Claude 4 Opus). The 1M-token native context is a direct architectural consequence of the hybrid attention design, and the benchmark results show that this capability is real, not just theoretical. The fact that other open-weight models with 128K context windows score 27.7–51.5% on MRCR (128K) while MiniMax-M1 scores 73.4% is evidence that the extended context is practically useful, not just specified. The 1M MRCR evaluation (where only Gemini 2.5 Pro competes) provides additional validation.
+
+However, a subtle point: the fact that MiniMax-M1-40k sometimes outperforms MiniMax-M1-80k on long-context benchmarks (MRCR 128K: 76.1% vs. 73.4%; MRCR 1M: 58.6% vs. 56.2%) is troubling. The 80K model represents further RL training; if that additional training causes regression on the very tasks where the architecture should excel, it suggests either an overfitting issue in the long RL phase (the model becomes more specialized to math/code at the expense of long-context retrieval) or noise in the evaluation. The paper does not address these regressions.
+
+**What experiments would have strengthened the paper?**
+
+Several missing experiments are notable:
+
+- **Training cost comparison against a pure-softmax MiniMax-M1.** Training a version of the model with all softmax attention (or a higher softmax ratio) under identical conditions would directly quantify the cost savings from lightning attention. This is expensive but would transform the theoretical FLOPs comparison into an empirical one.
+- **Ablation of the hybrid ratio.** The 1:7 ratio is inherited from MiniMax-Text-01 without justification. Training smaller-scale models with different ratios (1:3, 1:15, pure lightning) on reasoning tasks would characterize the tradeoff between efficiency and capability.
+- **CISPO at MiniMax-M1 scale with multiple seeds.** Validating CISPO on the full 456B model with multiple random seeds, across the diverse training mixture, would establish whether the advantages observed on 32B-scale math-only training generalize.
+- **Ablation of software engineering RL environments.** Training MiniMax-M1 without the SE-specific sandbox environments and comparing SWE-bench performance would isolate the contribution of this training component.
+- **Inference FLOPs vs. accuracy curves.** Plotting accuracy on key benchmarks (AIME, SWE-bench, MRCR) as a function of total inference FLOPs for MiniMax-M1 and DeepSeek-R1 would provide a direct efficiency comparison rather than the theoretical FLOPs curves in Figure 1 (Right) which show FLOPs vs. length but not FLOPs vs. capability.
+- **Length bias metrics.** Quantifying the length bias of the GenRM before and after online monitoring interventions, with concrete metrics (e.g., correlation between response length and GenRM score after conditioning on correctness), would substantiate the paper's claims about the necessity of online monitoring.
+- **Statistical significance on benchmark comparisons.** With small performance gaps between models (e.g., 65.0% vs. 65.9% on LiveCodeBench), confidence intervals or significance tests would clarify which differences are meaningful and which are noise.
+
+**Overall assessment.** The paper's experimental section convincingly demonstrates that MiniMax-M1 is a competitive reasoning model, with genuine strengths in long-context understanding and agentic tool use that are plausibly attributable to its architectural advantages. The training efficiency claims are credible in direction (lightning attention *should* be cheaper) but lack the direct empirical comparisons that would quantify the magnitude of the advantage. The CISPO validation is promising but preliminary — demonstrated on a single benchmark with a smaller model, without the robustness checks (multiple seeds, multiple benchmarks, model scale generalization) that would establish it as a reliable drop-in replacement for existing RL algorithms. The paper's weakest experimental area is the near-total absence of formal ablations for the many design choices it describes (optimizer hyperparameters, curriculum schedule, window expansion staging, loss normalization strategy, repetition detection thresholds), leaving open the question of which specific choices matter for the final performance and which are incidental. The paper reads more as a system description with benchmark validation than as a controlled scientific investigation of the factors that drive reasoning model performance.
 
 ## 6. Limitations and Trade-offs
-- Performance trade‑offs
-  - Math and coding competitions: `M1‑80k` trails the latest `DeepSeek‑R1‑0528` on AIME and GPQA (Table 2).
-  - Short‑form factuality remains behind top closed models (SimpleQA; Table 2).
-- Reward model risks
-  - Even with online monitoring and recalibration (Section 4.2.2), GenRMs can encode biases (e.g., toward length). The paper’s mitigations reduce but do not eliminate this risk; reliance on a learned judge remains a potential failure point for open‑ended tasks.
-- Training complexity and reproducibility
-  - Stability depends on engineering details: FP32 LM head, AdamW hyperparameters tuned for very small gradients, and repetition‑based early truncation (Section 3.2). Replicating results requires these kernels/recipes.
-- Compute requirements
-  - Although efficient relative to alternatives, full RL still needs 512 H800s for 3 weeks (Section 3), which is significant for many groups.
-- Architecture caveats
-  - Hybrid attention mixes linear and softmax layers; the exact ratio (7:1) is a design choice. The paper does not present a systematic study of ratios or where softmax is most beneficial, leaving optimality open.
-- Long‑length pathologies
-  - Section 5 details late‑sequence collapse and repetition during length scaling; mitigations work in practice, but this reveals fragility at extreme lengths and dependence on careful scheduling and loss normalization.
+
+### Difficulty Estimation Cost: The $4\times$ Efficiency Claim Excludes the Cost of Knowing Where to Allocate
+
+**The assumption or constraint.** The paper's central claim — that MiniMax-M1's hybrid attention architecture delivers dramatic efficiency gains at inference time — rests on a theoretical comparison of FLOPs-per-token between lightning attention and softmax attention (Figure 1, Right), not on an empirical demonstration that the architecture's reduced per-token cost translates into equivalent or superior reasoning capability at matched total FLOPs. The FLOPs comparison plots theoretical inference cost as a function of generation length for MiniMax-M1, DeepSeek R1, and Qwen3-235B, showing that MiniMax-M1 consumes ~25% of DeepSeek R1's FLOPs at 100K tokens. But this calculation assumes that: (a) both models achieve comparable per-FLOP utilization (i.e., their implementations are equally optimized), (b) the models require the same number of generated tokens to achieve comparable accuracy, and (c) the only variable that matters for inference cost is total generation length. None of these assumptions is validated in the paper.
+
+**The consequence.** The efficiency claim, as presented, conflates **per-token cost** with **cost per unit of capability**. A model that is $4\times$ cheaper per token but produces answers that are only half as accurate — or that requires $2\times$ more tokens to reach the same accuracy — has a much smaller effective efficiency advantage than the raw FLOPs curves suggest. The paper's own benchmark results (Table 2) show MiniMax-M1-80k trailing DeepSeek-R1-0528 on AIME 2024 (86.0% vs. 91.4%), AIME 2025 (76.9% vs. 87.5%), LiveCodeBench (65.0% vs. 73.1%), GPQA-Diamond (70.0% vs. 81.0%), HLE (8.4% vs. 17.7%), and ZebraLogic (86.8% vs. 95.1%). These accuracy gaps mean that simply comparing FLOPs-per-token is misleading: a practitioner deciding between architectures needs to know the FLOPs required to reach a target accuracy on their task distribution, not the FLOPs per token in isolation. The paper provides no **FLOPs-vs.-accuracy** curves for any benchmark — there is no plot showing accuracy as a function of total inference FLOPs for MiniMax-M1 versus a pure-softmax competitor, which would be necessary to evaluate the real-world efficiency tradeoff.
+
+**What evidence exists in the paper.** The FLOPs comparison (Figure 1, Right) is purely theoretical, showing FLOPs as an analytic function of generation length under the assumption that attention dominates total compute. The RL training cost (3 weeks, 512 H800 GPUs, ~$0.53M) is reported for MiniMax-M1 only — no comparable cost figure is provided for DeepSeek-R1-0528 or Qwen3-235B, making it impossible to assess whether MiniMax-M1's training was actually cheaper than training an equivalently capable softmax model. The benchmark comparisons (Table 2) show accuracy values without any corresponding inference FLOPs measurements. The paper does not report wall-clock inference latency or throughput for any model on any benchmark.
+
+**Mitigation status.** The paper does not acknowledge this limitation or attempt to address it. The efficiency advantage is treated as self-evident from the attention mechanism's asymptotic complexity. Future work would need to provide matched FLOPs comparisons — for example, giving DeepSeek-R1 a computation budget equal to MiniMax-M1's and comparing accuracy, or plotting accuracy-vs.-FLOPs curves for both models — to substantiate the efficiency claim empirically rather than theoretically.
+
+---
+
+### Generalization Beyond a Single Architecture and Model Family
+
+**The assumption or constraint.** All results in the paper come from a single model family: MiniMax-M1, a 456B-parameter hybrid-attention MoE model built on MiniMax-Text-01, using a specific lightning attention implementation (Qin et al., 2022a, 2024b) with a specific hybrid ratio (1 softmax block per 7 lightning attention blocks), a specific MoE configuration (32 experts, 45.9B activated per token), and a specific training pipeline (continual pretraining on 7.5T tokens, SFT with ~60% math/code data, RL with the CISPO algorithm on a curated mixture). The paper provides no evidence about whether the claimed advantages — the FLOPs efficiency of lightning attention during RL training, the stability fixes (FP32 LM head, customized AdamW hyperparameters), or the CISPO algorithm's superiority over GRPO/DAPO — generalize to other linear attention variants (Mamba, RWKV, HGRN, RetNet), other hybrid ratios, other model scales, or other RL training recipes.
+
+**The consequence.** A practitioner considering adopting this architecture cannot determine from the paper alone whether the documented engineering solutions are specific to MiniMax-M1's exact configuration or are broadly applicable. The precision mismatch between training and inference kernels (Figure 3) was attributed to "high-magnitude activations in the LM head" — is this a general property of linear attention at scale, or an artifact of MiniMax-M1's specific layer structure and initialization? The optimizer hyperparameter sensitivity (gradients spanning 1e-18 to 1e-5) is described as arising from the hybrid architecture, but the paper does not characterize which architectural properties produce this dynamic range or whether other linear attention designs would exhibit it. The 1:7 hybrid ratio is inherited from MiniMax-Text-01 without sensitivity analysis — would 1:3 work better? Would pure lightning attention (with no softmax blocks) be trainable with the same recipes? The paper provides no guidance.
+
+Furthermore, the CISPO validation (Figure 2) was conducted only on Qwen2.5-32B-base, a pure softmax dense model — not on the hybrid-attention MoE architecture that is the paper's main contribution. The paper does not demonstrate that CISPO's advantage over GRPO/DAPO persists in the MiniMax-M1 architecture, at 456B scale, or with the diverse training mixture (math, logic, code, SE, general-domain tasks). If CISPO's benefit is specific to certain model architectures or task distributions, the paper's recommendation to adopt CISPO over existing RL algorithms overstates its generality.
+
+**What evidence exists in the paper.** No cross-architecture experiments are reported. No sensitivity analysis of the hybrid ratio. No CISPO validation on MiniMax-M1's architecture. No comparison of different linear attention implementations. The CISPO comparison (Figure 2) uses a single benchmark (AIME 2024) on a single base model (Qwen2.5-32B-base) — there is no evidence of CISPO's performance on coding, logic, SE, or general-domain tasks, with larger models, or with hybrid attention.
+
+**Mitigation status.** The paper does not acknowledge this as a limitation. The claims are implicitly presented as general — "CISPO significantly outperforms both DAPO and GRPO" (Section 3.1) without qualification — but the evidence is narrow. Future work would need to validate CISPO across model families and task domains, and to characterize the architectural conditions under which the precision mismatch and optimizer sensitivity issues arise, to establish whether MiniMax-M1's engineering solutions are general or idiosyncratic.
+
+---
+
+### Statistically Unconvincing Benchmark Comparisons
+
+**The assumption or constraint.** The paper reports benchmark results (Table 2) as point estimates — single accuracy numbers without confidence intervals, standard deviations, or significance tests — despite many of the comparisons involving small performance gaps where sampling noise could determine the ranking. For AIME 2024 and AIME 2025, the paper reports the average pass rate across 32 samples per problem, but does not report the variance of these pass rates or the uncertainty in the average. For LiveCodeBench and FullStackBench, 16 samples are averaged, again without variance estimates. For GPQA-Diamond, 32 samples are averaged. For all other benchmarks (SWE-bench, MRCR, TAU-bench, SimpleQA, MultiChallenge, MMLU-Pro, HLE, ZebraLogic, LongBench-v2), the paper does not specify sampling parameters or variance. The evaluations use temperature 1.0 and top-p 0.95, introducing stochasticity in the generated outputs — but the paper treats the resulting accuracy values as deterministic.
+
+**The consequence.** Many of the comparisons the paper draws are statistically indistinguishable from noise. For example, MiniMax-M1-80k scores 65.0% on LiveCodeBench versus Qwen3-235B-A22B's 65.9% — a difference of 0.9 percentage points whose statistical significance is unknown. MiniMax-M1-80k scores 44.7% on MultiChallenge versus DeepSeek-R1-0528's 45.0% (0.3 point difference) and Claude 4 Opus's 45.8% (1.1 point difference). MiniMax-M1-80k scores 18.5% on SimpleQA versus MiniMax-M1-40k's 17.9% (0.6 point difference). Without variance estimates, the paper cannot support its claim that MiniMax-M1-80k "consistently outperforms MiniMax-M1-40k across most benchmarks" (Section 6.1) — several of the reported differences (e.g., SWE-bench 56.0% vs. 55.6%, +0.4 points; LongBench-v2 61.5% vs. 61.0%, +0.5 points) could easily arise from sampling variation. Conversely, the regressions on long-context benchmarks (MRCR 128K: 73.4% vs. 76.1%, −2.7 points; MRCR 1M: 56.2% vs. 58.6%, −2.4 points) might or might not be statistically meaningful.
+
+The lack of multiple evaluation seeds or cross-validation splits further undermines the rankings. If MiniMax-M1-80k were evaluated 5 times with different random seeds on LiveCodeBench, the average might range from 63% to 67%, potentially reordering its position relative to Qwen3-235B-A22B and DeepSeek-R1. The paper provides no information to assess this.
+
+**What evidence exists in the paper.** Table 2 reports point estimates only. The evaluation methodology (Section 6.1) specifies temperature, top-p, and sample counts for AIME (32), LiveCodeBench (16), FullStackBench (16), and GPQA-Diamond (32), but no variance metrics. For all other benchmarks, sample counts are not specified. No error bars appear in any figure or table.
+
+**Mitigation status.** The paper does not acknowledge the absence of statistical rigor. Future work should report confidence intervals (e.g., bootstrap CIs over evaluation instances and sampling seeds), or at minimum report standard deviations for pass@k estimates. For the 40K-vs-80K comparison specifically, a paired statistical test (e.g., McNemar's test for per-question correctness) would clarify whether the small improvements are significant.
+
+---
+
+### The 40K-to-80K Scaling Gain Is Small, Mixed, and Poorly Characterized
+
+**The assumption or constraint.** The paper's second central claim — that scaling test-time compute yields consistent performance improvements — is supported primarily by the comparison between MiniMax-M1-40k and MiniMax-M1-80k in Table 2, and by the RL training curves in Figure 4. The 40K model represents an intermediate checkpoint of the 80K training, meaning the 80K model has both a longer generation budget **and** additional RL training. The experimental design does not isolate these two factors.
+
+**The consequence.** The observed performance differences between the 40K and 80K models could be due to: (a) the longer generation budget allowing more extensive reasoning, (b) the additional RL training improving the model's reasoning capabilities independent of generation length, or (c) a combination of both. The paper's interpretation — that these results "confirm the benefits of scaling test-time compute" (Section 6.1) — assumes mechanism (a), but mechanism (b) cannot be ruled out. If the 40K model were evaluated with an 80K generation budget (without additional training), and its performance matched the 80K model, that would imply the generation budget alone drives the improvement. If it did not, that would imply the additional RL training is the primary driver. The paper performs neither experiment.
+
+Moreover, the magnitude of the improvement is modest even under the most generous interpretation. On AIME 2024: +2.7 points (83.3% → 86.0%). On AIME 2025: +2.3 points. On LiveCodeBench: +2.7 points. On SWE-bench: +0.4 points. On GPQA-Diamond: +0.8 points. These gains come at the cost of doubling the maximum generation budget — a substantial increase in inference cost for gains that, as argued above, may not be statistically significant. And on several benchmarks, the 80K model **regresses** relative to the 40K model: MRCR 128K (−2.7 points), MRCR 1M (−2.4 points), TAU-bench retail (−4.3 points). The paper does not discuss or explain these regressions, which undercut the narrative of monotonic improvement from test-time compute scaling.
+
+**What evidence exists in the paper.** Table 2 provides the 40K vs. 80K comparison but does not disentangle generation budget from additional training. Figure 4 shows accuracy and generation length improving together during RL training, but these curves reflect the 40K training phase only (the x-axis ends at ~4,000 steps, which appears to cover the initial RL phase, not the subsequent length extension phase). The paper does not plot accuracy or length for the 80K training phase.
+
+**Mitigation status.** The paper does not acknowledge the confound between generation budget and additional training, nor does it discuss the regression on long-context benchmarks. The 40K vs. 80K comparison is presented as a straightforward validation of test-time compute scaling, but the experimental design does not support this causal interpretation.
+
+---
+
+### The CISPO Validation Is Narrow and Not Connected to the Main Results
+
+**The assumption or constraint.** The CISPO algorithm is presented as a core contribution (Section 3.1, featured in the Abstract), validated against GRPO and DAPO in a controlled experiment (Figure 2) using Qwen2.5-32B-base on AIME 2024. However, this validation is conducted on a different model architecture (32B dense pure-softmax vs. 456B MoE hybrid-attention), a different model scale (32B vs. 456B), and a different training data distribution (math-only from Yu et al., 2025, vs. the diverse mixture of math, logic, code, SE, and general-domain tasks used for MiniMax-M1). The paper provides no evidence that CISPO's advantage over GRPO/DAPO holds in the MiniMax-M1 training regime.
+
+**The consequence.** A practitioner reading this paper cannot determine whether CISPO was a necessary or even beneficial component of MiniMax-M1's training. The main benchmark results (Table 2) reflect the combined effect of the hybrid attention architecture, the SFT cold start, the diverse RL data mixture, the curriculum design, the length extension phase, and the CISPO algorithm — none of these factors are isolated or ablated against each other. It is entirely possible that training MiniMax-M1 with DAPO (or GRPO with appropriate hyperparameter tuning) would have produced equivalent or better results, and that the claimed 2× speedup from CISPO is specific to the 32B-scale, math-only setting. The paper's framing — "CISPO... achieves enhanced efficiency compared to GRPO and DAPO" (Abstract) and "CISPO significantly outperforms both DAPO and GRPO" (Section 3.1) — implies that this advantage is general and contributed to MiniMax-M1's success, but neither claim is substantiated at MiniMax-M1 scale.
+
+Furthermore, the CISPO comparison in Figure 2 has important missing details. The paper does not report: (a) the tuned values of $\epsilon_{\text{IS}}^{\text{high}}$ for CISPO, (b) the clipping bounds used for GRPO and DAPO, (c) whether hyperparameters were tuned equally across all three algorithms (a potential source of bias in favor of CISPO), (d) whether the dynamic sampling and length penalty from DAPO (which CISPO also uses) were applied identically across all baselines, or (e) the variability of results across random seeds (Figure 2 appears to show single runs). These omissions make it impossible to assess whether the reported advantage is robust or an artifact of hyperparameter tuning effort.
+
+**What evidence exists in the paper.** Figure 2 provides the only direct comparison of CISPO against baselines — single benchmark, single model, single training dataset, no error bars, no MiniMax-M1-scale replication. The paper does not report which RL algorithm was used to train the final MiniMax-M1 models (though it is presumably CISPO), nor does it ablate the choice of RL algorithm against DAPO or GRPO in the MiniMax-M1 training pipeline.
+
+**Mitigation status.** The paper does not acknowledge the gap between the CISPO validation setting and the MiniMax-M1 training setting. The Abstract and Section 3.1 present CISPO as a general contribution without qualifying its narrow empirical validation. Future work would need to demonstrate CISPO's advantage at large scale, across diverse task mixtures, and with non-dense architectures, and to report full hyperparameter configurations for reproducibility.
+
+---
+
+### Reward Model Length Bias Mitigation Is Described but Not Quantified
+
+**The assumption or constraint.** The paper's approach to general-domain RL tasks relies on generative reward models (GenRMs) to provide feedback for tasks without rule-based verifiers (Section 4.2). The paper identifies length bias in GenRMs — "preferring longer outputs over potentially superior concise alternatives" (Section 4.2.2) — as a critical problem that "may substantially misguide RL policy optimization" and describes a strategy of continuous online monitoring and dynamic recalibration, supplemented by RL-side techniques (reward shaping, value clipping, normalization). However, the paper provides **no quantitative evidence** about the severity of the length bias, the effectiveness of the mitigation strategy, or the residual bias after mitigation.
+
+**The consequence.** The reliance on GenRMs for ~25K training examples creates a significant risk: if the length bias is not adequately controlled, the model's performance on general-domain tasks (instruction following, creative writing, multi-turn chat — assessed on MultiChallenge and TAU-bench) may reflect reward hacking rather than genuine capability improvement. The paper's GenRM approach affects all general-domain results, yet the paper provides no metrics to assess whether the GenRM is faithfully rewarding reasoning quality or is being exploited.
+
+Specifically, the paper does not report:
+- The correlation between response length and GenRM score for correct vs. incorrect responses (a standard length-bias diagnostic).
+- How often the online monitoring detected exploitation and triggered recalibration.
+- The performance of the GenRM on the human-annotated benchmark before and after recalibration.
+- Whether model outputs became longer during general-domain RL training in ways not justified by quality improvement.
+- An ablation comparing model performance with and without the online monitoring strategy.
+
+Without these, the claim that the mitigation strategy "ensures the policy prioritizes substantive capability enhancement over superficial text inflation" (Section 4.2.2) is an assertion, not a demonstrated result.
+
+**What evidence exists in the paper.** Section 4.2.2 describes the length bias problem and the mitigation strategy qualitatively, with no quantitative metrics, diagnostic plots, or ablation results. The human-annotated benchmark used to evaluate the GenRM is mentioned but its statistics (size, inter-annotator agreement, GenRM accuracy) are not reported. The best-of-N vs. pass@N evaluation of the GenRM is described but no numbers are provided. The Swiss Round reference answer selection is mentioned but not quantified.
+
+**Mitigation status.** The paper does not present evidence that the length bias mitigation was effective, beyond the implicit claim that the resulting model performs well on general-domain benchmarks. This is a significant omission for a paper that proposes learned reward models as a core component of the RL training pipeline. Future work should report quantitative diagnostics of reward model bias and the effectiveness of mitigation strategies, including length-bias metrics, human-annotated benchmark accuracy, and ablations comparing training with and without the mitigation components.
 
 ## 7. Implications and Future Directions
 - How it changes the landscape

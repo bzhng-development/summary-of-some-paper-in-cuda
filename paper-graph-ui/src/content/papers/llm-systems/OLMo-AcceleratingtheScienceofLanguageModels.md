@@ -8,157 +8,728 @@ OLMo sets a new standard for transparency in AI by releasing not only model weig
 
 ---
 
-## 1. Executive Summary (2-3 sentences)
-OLMo introduces a fully open, end-to-end framework for building and studying large language models (LLMs), releasing not just model weights but also the complete pretraining dataset (Dolma), data curation tools, training/evaluation code, intermediate checkpoints, and logs under Apache 2.0. The 7B and 1B models are competitive with widely used open models, and the release enables rigorous, reproducible science on how data, design choices, and optimization affect model behavior (Sections 1, 2, 5).
+## 1. Executive Summary
+
+The OLMo paper introduces **OLMo**, a truly open language model framework encompassing 7B and 1B parameter decoder-only transformers trained on the openly released Dolma corpus, to provide the research community with full access to training data, code, intermediate checkpoints, and training logs — artifacts typically withheld even from "open" model releases. The paper evaluates OLMo-7B against comparably sized public models including LLaMA, Llama 2, MPT, and Falcon on downstream commonsense reasoning tasks (e.g., arc, hellaswag, piqa) and intrinsic perplexity benchmarks (Paloma), achieving a competitive average accuracy of 69.3% on the core 8-task suite, placing it within 1.2 points of Llama 2-7B while being trained on fully disclosed, decontaminated data. The paper also establishes that OLMo-7B serves as a strong base model for instruction tuning and preference alignment using the TÜLU adaptation pipeline, with MMLU improving from 28.3 to 47.3 after supervised fine-tuning and ToxiGen toxicity rates dropping from 81.4% to 1.7% after DPO — though a gap with Llama 2-based TÜLU 2 remains on chat benchmarks, establishing that adaptation data mixtures designed for one model family transfer imperfectly to another.
 
 ## 2. Context and Motivation
-- Problem addressed:
-  - The most capable LLMs are usually closed: training data, precise architectures, and training details are hidden, limiting scientific understanding of model behavior, biases, and risks (Section 1).
-  - Even “open” releases often omit crucial ingredients such as full training data, curation code, and intermediate checkpoints (Introduction; comparisons with Falcon, LLaMA, MPT, Pythia, BLOOM).
 
-- Why this matters:
-  - Without data and training details, researchers cannot rigorously study how data composition, scaling, optimization schedules, or ablations change behavior, nor can they run fair decontaminated evaluations (Sections 1, 2.4).
-  - Open artifacts reduce duplicated compute and environmental costs—others can build on a common, audited base (Ethics; Appendix B).
+### The Core Problem: The Systematic Closure of Language Model Research
 
-- Prior approaches and their gaps:
-  - Partial openness: weights + brief reports (e.g., Mixtral 8x7B); weights + adaptation instructions (LLaMA); detailed training setup but not data (MPT); partially released data (Falcon); most open to date: Pythia and BLOOM, which released code, checkpoints, and some data (Section 1).
-  - Persistent gap: lack of truly end-to-end reproducibility across data, training, evaluation, and adaptation.
+The fundamental problem this paper addresses is not a technical gap in model architecture or training methodology — it is an **institutional and structural crisis in the scientific study of language models**. As the authors state in the opening of Section 1:
 
-- How this work positions itself:
-  - OLMo releases the entire stack—data (Dolma), data curation code and analyzers (WIMBD), training and evaluation frameworks (Catwalk for downstream tasks; Paloma for perplexity), intermediate checkpoints, and logs—so the community can replay, vary, and analyze every stage (Sections 2.2, 2.4, 5).
+> "As their commercial importance has surged, the most powerful models have become closed off, gated behind proprietary interfaces, with important details of their training data, architectures, and development undisclosed."
+
+This closure is not a gradual trend but a qualitative shift in how language model research is conducted. Until roughly 2022–2023, the leading models in the field — GPT-2, BERT, T5, GPT-NeoX, OPT, BLOOM — were accompanied by detailed papers, open-weight releases, or both. But with GPT-4 (OpenAI, 2023), the most capable models became accessible only through paid APIs, with no disclosure of architecture, training data composition, model size, or training methodology. This represents a fundamental threat to the scientific method: **when the object of study is a black box, researchers cannot form causal hypotheses about why models behave as they do, cannot study the relationship between training data and model outputs, and cannot isolate the effects of specific design choices.**
+
+This matters for several concrete reasons that the paper articulates (Section 1, Limitations, Ethics Statement):
+
+- **Bias and fairness research is impossible without data access.** If a model exhibits gender or racial bias in its outputs, researchers need to know what training data contributed to that bias to propose mitigations. Without data access, bias auditing becomes purely behavioral (measuring outputs) rather than causal (understanding origins), which limits the effectiveness of interventions.
+
+- **Safety and risk assessment requires architectural transparency.** When models are deployed in high-stakes settings (medical advice, legal reasoning, content moderation), understanding their failure modes requires knowing how they were built. A closed model that produces a dangerous recommendation provides no diagnostic pathway — was the problem in the training data, the architecture, the alignment procedure, or something else?
+
+- **Reproducibility, the cornerstone of science, is violated.** If a research finding is reported on a closed model (e.g., "GPT-4 achieves X on benchmark Y"), that finding cannot be independently verified, cannot be replicated when the model is updated or deprecated, and cannot be extended by other researchers who lack access to the same artifact.
+
+- **Barriers to entry exclude most of the research community.** Academic labs, particularly those outside elite institutions or in lower-resource countries, cannot afford API access at research scale, and certainly cannot train competitive models from scratch. Open models democratize participation.
+
+- **Environmental cost duplication is incentivized by closed development.** When every organization must train their own models from scratch because existing models are closed, the aggregate energy consumption and carbon emissions multiply unnecessarily. The paper explicitly frames open release as reducing this redundancy (Ethics Statement).
+
+The paper's concern is not merely philosophical. It identifies a **stack of increasing openness** that prior releases occupy at different levels, and argues that no existing release provides the full stack:
+
+> "Recent LM releases have varied in their degree of openness. For example, Mixtral 8x7B provided model weights and a brief report (Jiang et al., 2024), while LLaMA came with in-depth adaptation training instructions (Touvron et al., 2023b), and Mosaic Pretrained Transformer came with many details, including the dataset distribution, though not the data itself (MosaicML NLP Team, 2023). Falcon's pretraining data was partially released (Almazrouei et al., 2023), and the most open models—the Pythia suite (Biderman et al., 2023) and BLOOM (BigScience et al., 2022)—released training code, model checkpoints, data, and more."
+
+This taxonomy is critical to understanding what OLMo actually contributes. The paper is not claiming to build the best-performing 7B model — it is claiming to build the **most fully open 7B model that is also competitive with the best available models**. This is a different optimization target than prior work, which optimized for either performance (LLaMA, Llama 2) or openness at the cost of performance (Pythia, early BLOOM).
+
+### Where Prior Efforts Fall Short
+
+The paper identifies specific gaps in each category of prior release:
+
+**Models released with weights but without training data (LLaMA, Llama 2, Mixtral, Falcon).** These are the most common "open" releases in the current ecosystem. They provide model weights, often with detailed technical reports describing architecture and training procedures. However, the absence of training data means that researchers cannot:
+
+- Study the relationship between data composition and model capabilities. For example, if Llama 2 performs well on code tasks, is that because of GitHub data in its training mix, or because of transfer from natural language reasoning? Without data access, these questions are unanswerable.
+- Audit for copyrighted or personally identifiable information in the training corpus, which has legal and ethical implications for downstream use.
+- Decontaminate evaluation benchmarks properly. The paper notes that Llama 2 was "pretrained on data contaminated with MMLU test data" (Section 4.3 footnote), which inflates benchmark scores and makes fair comparison impossible. OLMo's explicit decontamination against Paloma (Section 2.4) is presented as a direct response to this problem.
+- Train new models using the same data distribution to isolate the effect of architectural changes. A researcher who wants to test whether SwiGLU activation improves over ReLU cannot do so if they can't train both variants on identical data.
+
+The LLaMA family represents a particularly important point of comparison. LLaMA-7B achieved strong performance and was widely adopted in the research community, but its training data was described only in broad categories (e.g., "CommonCrawl," "Wikipedia," "GitHub") without releasing the actual corpus. This means that hundreds of papers that build on LLaMA are studying a model whose fundamental input — its training data — is unknown. The paper positions OLMo as filling exactly this gap for the 7B scale.
+
+**Models released with data but without competitive performance (Pythia, BLOOM, early open models).** The Pythia suite (Biderman et al., 2023) is the closest predecessor to OLMo in philosophy: it released training data (the Pile), training code, and 154 intermediate checkpoints per model across multiple model sizes. This enabled groundbreaking research on how model capabilities evolve during training. However, Pythia-6.9B achieves only 63.0% average accuracy on the core 8-task suite (Table 3), substantially below LLaMA-7B (69.6%) and Llama 2-7B (70.5%). This performance gap meant that researchers who needed both openness and competitive capability were forced to choose — and many chose capability, studying LLaMA despite its opacity.
+
+BLOOM (BigScience et al., 2022) similarly released training data (ROOTS corpus) and intermediate checkpoints, but at 176B parameters, it is too large for most academic labs to run or fine-tune. Its 7B-scale equivalents were not released. So BLOOM demonstrated the principle of open data at scale but did not provide a practically usable artifact for the most common research scale (7B parameters).
+
+**Models that release neither full data nor weights (GPT-4, Claude, PaLM 2).** These are not research artifacts at all — they are commercial products. The paper notes (Section 1) that "the most powerful models have become gated behind proprietary interfaces," and this gating is not just about access to weights but about the very possibility of scientific study. When a model is only accessible through an API that may change without notice, research findings have no permanence. A paper reporting GPT-4's performance on a benchmark in January 2024 may be invalid by March 2024 if the underlying model is updated.
+
+**The missing category: models that are both fully open AND competitive.** This is the gap OLMo targets. The paper explicitly states:
+
+> "With OLMo, we release the whole framework from data to training to evaluation tools: multiple training checkpoints across multiple hardware types, training logs, and exact datasets used, with a permissive license... OLMo narrows the gap from their models to state-of-the-art capabilities of models like Llama 2."
+
+The phrase "narrows the gap" is important — the paper does not claim to close it entirely. OLMo-7B achieves 69.3% average accuracy versus Llama 2-7B's 70.5% (Table 3), a 1.2-point gap. On MMLU after SFT, OLMo reaches 47.3 versus Llama 2-based TÜLU 2's 50.4 (Table 4). The contribution is making the openness-performance tradeoff much less severe than it was with Pythia, where the gap was ~7 points to LLaMA.
+
+### The Specific Gap in Perplexity Evaluation: Decontamination
+
+Section 2.4 introduces a methodological problem that most prior work ignores: **benchmark contamination in perplexity evaluation**. The paper states:
+
+> "OLMo-7B is the largest LM with explicit decontamination for perplexity evaluation. Following the approach described in Paloma, we remove any pretraining document with paragraphs leaked from Paloma evaluation data. Without decontamination, other models risk underestimating perplexity (i.e., overestimating the model's out-of-sample fit)."
+
+This is a subtle but important point. Perplexity is intended to measure how well a model fits held-out data — data it has never seen during training. If evaluation data leaks into the training corpus (which is common when training on web-scale data that may include copies of benchmark texts), the measured perplexity will be artificially low, making the model look better at generalization than it actually is. This makes it impossible to fairly compare models trained on different (undisclosed) data, because differences in perplexity could reflect either genuine differences in language modeling capability or simply different degrees of contamination.
+
+OLMo addresses this by making its training data fully public, running explicit decontamination against the Paloma benchmark, and releasing the decontaminated data. This enables researchers to make genuine apples-to-apples comparisons and to study overfitting and generalization in a controlled way that is impossible with closed-data models. The paper's Figure 2 shows that OLMo-7B is competitive on Paloma's combined metric while being the only model with verified decontamination — meaning the other models' scores may be artificially inflated.
+
+### How This Paper Positions Itself
+
+The paper's positioning has several key dimensions:
+
+**1. Not a "better model" paper — a "better research infrastructure" paper.** The abstract and introduction make clear that OLMo is not primarily a contribution to state-of-the-art performance. It is a contribution to **research methodology and infrastructure**. The intended audience is not practitioners looking for the best chat model, but researchers who need a fully inspectable, reproducible, competitive model to conduct scientific studies. This is why the paper devotes significant space to describing artifacts released (Section 5), evaluation frameworks (Section 2.4), and training infrastructure (Section 3), rather than focusing narrowly on benchmark numbers.
+
+**2. Building on lessons from prior open efforts.** The paper explicitly acknowledges its intellectual debt to Pythia, BLOOM, and LLM360 (Liu et al., 2023). OLMo is not the first truly open model, but it is the first to combine full openness with performance that approaches Llama 2 at the 7B scale. The paper frames this as an engineering and integration contribution: taking insights from prior open efforts (the importance of intermediate checkpoints from Pythia, the value of open training data from BLOOM, the tooling from LLM360) and combining them with architectural improvements from closed models (SwiGLU, RoPE, no biases) to produce a competitive result.
+
+**3. The "whole framework" philosophy.** A distinctive aspect of OLMo's positioning is that openness is not just about releasing artifacts but about releasing a **complete, reproducible pipeline**. The paper emphasizes that it releases:
+
+- Training code *and* the exact data order (so training runs can be replicated bit-for-bit)
+- Intermediate checkpoints every 1000 steps (enabling research on training dynamics)
+- Training logs with all metrics logged to Weights & Biases (enabling analysis of optimization behavior)
+- Data curation tools, not just curated data (enabling others to modify and experiment with the data pipeline)
+- Evaluation code and frameworks (Catwalk, Paloma) that others can use
+- Adaptation code and data (the TÜLU pipeline applied to OLMo)
+
+This is a fundamentally different philosophy from "here are the weights, good luck." It reflects a belief — articulated in the Ethics Statement — that **openness accelerates both capability improvement and safety/understanding research**, and that the benefits of openness outweigh the risks of misuse. The paper explicitly addresses the misuse concern:
+
+> "Of course, openness is not without risk; the possibility remains that these models will be used in unintended ways that cause harm. We believe that research and development efforts to understand and mitigate those potential harms will also be accelerated by the openness of the models."
+
+**4. Narrowing, not closing, the gap.** The paper is honest that OLMo-7B does not match Llama 2-7B on all metrics. On the core 8-task average, OLMo-7B (69.3) trails Llama 2-7B (70.5) by 1.2 points. After adaptation, OLMo+SFT+DPO (MMLU 46.2, AlpacaEval 69.3% win rate) trails TÜLU 2+DPO (MMLU 50.7, AlpacaEval 85.1% win rate) by more substantial margins. The paper does not try to explain these gaps away — it acknowledges them and positions OLMo as a starting point for a family of increasingly capable fully-open models.
+
+**5. The "two-hardware" verification as a reproducibility contribution.** A subtle but significant aspect of the paper's positioning is its claim of hardware independence. Section 3.4 states:
+
+> "In order to verify that our codebase could be used on both NVIDIA and AMD GPUs without any loss in performance, we trained models on two different clusters... Despite minor differences in batch size to optimize for training throughput, both runs resulted in nearly identical performance on our evaluation suite by 2T tokens."
+
+This is an unusual claim in the LLM literature, where most models are trained on a single hardware platform (typically NVIDIA). By demonstrating that the same code, data, and hyperparameters produce the same results on AMD MI250X GPUs as on NVIDIA A100s, the paper strengthens the reproducibility argument: OLMo is not tied to a specific hardware vendor's ecosystem. This matters for the research community because it means labs with access to different hardware (including the LUMI supercomputer in Europe, which uses AMD GPUs) can fully replicate and extend the work.
+
+### Summary of the Problem Landscape
+
+The paper enters a field where:
+
+- **The best models are closed** (GPT-4, Claude, Gemini), providing no research access.
+- **The best "open" models are partially closed** (LLaMA, Llama 2), providing weights but not data, making causal scientific study impossible for questions involving training data.
+- **The most open models are not competitive** (Pythia, early BLOOM equivalents), forcing researchers to choose between scientific rigor and practical relevance.
+- **Perplexity benchmarks are systematically contaminated** in most prior work because training data is undisclosed, making fair comparison of language modeling capability impossible.
+- **Environmental costs are duplicated** because every lab must retrain from scratch rather than building on open artifacts.
+- **No existing release combines competitive 7B-scale performance with full training data, intermediate checkpoints, training logs, evaluation tools, and adaptation pipelines under a permissive license.**
+
+OLMo positions itself as filling this gap — not by achieving state-of-the-art performance, but by making the openness-performance tradeoff dramatically more favorable than it was, and by providing the research community with a complete, reproducible, inspectable artifact for studying language model science.
 
 ## 3. Technical Approach
-This section explains how OLMo is built, trained, adapted, and evaluated.
 
-- Model architecture (Section 2.1; Table 1):
-  - Family: decoder-only transformer, with 1B and 7B variants trained on ≥2T tokens each.
-  - Architectural choices aimed at stability and throughput:
-    - No bias terms: removes additive biases in layers to improve training stability.
-    - Non-parametric LayerNorm: uses LayerNorm without learned gain/bias parameters to reduce overhead and avoid instabilities seen with alternatives such as RMSNorm in their setup.
-    - `SwiGLU` activation: a gated activation (two linear projections, one gated by a Swish nonlinearity) that improves expressiveness over ReLU; the activation hidden size ≈ 8/3 times the model dimension, rounded to multiples of 128 for throughput (footnote in Section 2.1).
-    - `RoPE` (rotary positional embeddings): position information is encoded as rotations in the query/key space, replacing learned absolute positional embeddings, improving extrapolation to longer contexts in practice (Section 2.1).
-    - Tokenizer: a GPT-NeoX BPE with added tokens to mask PII; vocab size 50,280, but embeddings padded to 50,304 (multiple of 128) to maximize GPU throughput (Section 2.1).
-    - Weight tying: on for the 1B model, off for 7B (Table 1; “Weight Tying”).
+### 3.1 Reader Orientation
 
-- Optimizer and training schedule (Sections 3.2 and 3.3; Table 1):
-  - Optimizer: AdamW with betas (0.9, 0.95) and epsilon 1e-5, weight decay 0.1.
-  - Learning rate: linear warmup, then linear decay to 10% of peak LR; in late-stage tuning they further decay to zero over the final 1,000 steps, which improves final performance (Figures 1 and Section 4).
-  - Gradient clipping: global L2 norm capped at 1.0 to stabilize updates (Section 3.2).
-  - Batch and context: global batch ≈ 4M tokens per step; sequence length 2,048 (Sections 3.1; 3.3; Table 5).
-  - Instance construction: concatenate document tokens with an EOS token, chunk into 2,048-token sequences, shuffle in a fixed order reproducibly; at least one epoch over 2T tokens, some models start a second shuffled pass (Section 3.3).
+OLMo is a **fully open language model system** — consisting of pretrained transformer models at 1B and 7B scales, the complete training data pipeline (Dolma), a distributed training framework, evaluation harnesses, and adaptation tooling — all released under the Apache 2.0 license. The "shape" of the solution is **reproducible infrastructure**: rather than proposing a novel architecture or training algorithm, the paper assembles and documents a complete, inspectable, hardware-portable pipeline for training competitive language models, enabling researchers who lack the resources to build such infrastructure from scratch to conduct causal studies on model behavior, data composition, and training dynamics.
 
-- Data pipeline: Dolma (Section 2.2; Table 2):
-  - Dolma is a 3T-token open corpus assembled via language filtering, quality/content filtering, de-duplication, multi-source mixing, and tokenization.
-  - Composition (Table 2): Common Crawl (2,180B tokens), GitHub code (342B), Reddit (80B), Semantic Scholar (57B), Project Gutenberg (5.2B), Wikipedia (3.7B)—total ≈ 2,668B tokens with GPT-NeoX tokenizer.
-  - Tools: open-source curation and analysis (WIMBD) to reconstruct training order and audit data seen at each step (Sections 2.2 and 5).
+### 3.2 Big-Picture Architecture (Diagram in Words)
 
-- Distributed training and precision (Section 3.1):
-  - `ZeRO` via PyTorch `FSDP` shards model params and optimizer state across GPUs to fit 7B models with 4,096 tokens per GPU micro-batch.
-  - Mixed precision: most ops in `bfloat16`; numerically sensitive ops (e.g., softmax) in full precision to avoid instabilities. Parameters/optimizer state are stored in FP32 and cast to bfloat16 on-the-fly for computation; gradients reduced in FP32 (Section 3.1).
+The OLMo framework has four major components connected in a linear pipeline:
 
-- Hardware and cross-vendor reproducibility (Section 3.4):
-  - Two clusters: AMD MI250X on LUMI (renewable energy) and NVIDIA A100-40GB on MosaicML. Despite minor batch differences, performance converges closely by 2T tokens (Section 3.4).
+1. **Dolma Data Pipeline** — acquires, filters, deduplicates, and mixes raw text from six sources (Common Crawl, GitHub, Reddit, Semantic Scholar, Project Gutenberg, Wikipedia) into a 2.67-trillion-token pretraining corpus with explicit documentation and open-source curation tools.
 
-- Evaluation framework (Section 2.4):
-  - `Catwalk`: a public evaluation harness for downstream tasks; OLMo runs periodic “in-loop” evaluations every 1,000 steps (~4B tokens) to guide architectural and optimization decisions (Section 2.4).
-  - `Paloma`: a perplexity benchmark with 585 domains across 18 sources; OLMo removes any training documents with leaked evaluation paragraphs (“decontamination”) to prevent inflated scores (Section 2.4).
+2. **OLMo Model Architecture** — a decoder-only transformer with specific design choices (no biases, non-parametric layer norm, SwiGLU activation, RoPE embeddings, modified GPT-NeoX tokenizer) configured at 1B and 7B scales, optimized for training throughput and stability on both NVIDIA and AMD GPU clusters.
 
-- Adaptation for chat and safety (Sections 2.3, 4.3; Appendix D/E):
-  - Instruction-tuning (SFT) using the TÜLU v2 mix (a curated, mostly open set of instruction–response pairs).
-  - Preference optimization with `DPO` (Direct Preference Optimization): trains the model to prefer “chosen” over “rejected” responses using a fixed β (0.1). For DPO, they use a cleaned “UltraFeedback” dataset variant (Appendix D).
-  - Hyperparameters: SFT with LR 2e-6, 3 epochs, 3% warmup then linear cooldown; DPO with LR 5e-7, β=0.1, 3 epochs, 10% warmup (Appendix D).
+3. **Distributed Training Framework** — PyTorch FSDP-based training with ZeRO optimizer sharding, mixed precision (bfloat16 with full-precision softmax and gradient reduction), AdamW optimizer with linear warmup and linear decay schedule, and a constant global batch size of approximately 4 million tokens, producing 500+ intermediate checkpoints logged every 1000 steps.
 
-- Definition notes:
-  - `Decontamination`: removing training examples that overlap with evaluation test data to avoid unfairly low perplexity or inflated accuracy.
-  - `Bits per byte (BpB)`: perplexity-like metric independent of tokenizer; lower is better and reflects better fit to the text distribution (Section 4.2).
-  - `Catwalk/Paloma/TÜLU/DPO/WIMBD`: open tools/datasets introduced or adopted here for evaluation (Catwalk, Paloma), instruction tuning (TÜLU), preference optimization (DPO), and dataset analysis (WIMBD).
+4. **Evaluation and Adaptation Layer** — Catwalk for downstream zero-shot evaluation on 8 core commonsense reasoning tasks, Paloma for intrinsic perplexity evaluation across 585 text domains with explicit decontamination, and the TÜLU pipeline for supervised instruction fine-tuning followed by Direct Preference Optimization (DPO) on the UltraFeedback dataset.
+
+Information flows sequentially: raw web documents enter the Dolma pipeline and emerge as shuffled, tokenized training instances → the OLMo model trains on these instances using FSDP-distributed AdamW, logging metrics and saving checkpoints → checkpoints are evaluated using Catwalk (offline) and Paloma (perplexity) → the final pretrained checkpoint optionally enters the TÜLU adaptation pipeline for instruction tuning and DPO alignment.
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First, the Dolma data pipeline** — the design principles, the six data sources, the six-stage curation process, and the rationale for each filtering decision — because the data is the foundational artifact that distinguishes OLMo from weight-only releases and enables all downstream scientific studies.
+
+- **Second, the model architecture** — each architectural choice (no biases, non-parametric layer norm, SwiGLU, RoPE, vocabulary padding) and why it was selected over alternatives — because these choices collectively determine training throughput, stability, and compatibility with existing research infrastructure.
+
+- **Third, the distributed training framework** — FSDP sharding strategy, mixed-precision configuration, optimizer hyperparameters, learning rate schedule, and gradient clipping — because these operational details are what make the 7B-scale training reproducible and are typically omitted from technical reports.
+
+- **Fourth, the evaluation infrastructure** — the offline downstream evaluation (Catwalk with 8 core tasks, rank classification, per-dataset normalization choices), the intrinsic perplexity evaluation (Paloma with decontamination, bits-per-byte metric), and the in-loop online evaluation used for architectural decisions — because evaluation methodology determines the validity of all comparisons in the paper.
+
+- **Fifth, the adaptation methodology** — the TÜLU instruction tuning procedure, the DPO training stage, and the specific hyperparameters used — because adaptation demonstrates that OLMo serves as a viable base for downstream applications and reveals gaps in cross-model-family transfer of adaptation data.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily an **infrastructure and reproducibility paper** whose core idea is that a fully open, competitive 7B language model — with open training data, training code, intermediate checkpoints, training logs, evaluation tools, and adaptation pipelines — is both feasible and essential for scientific progress, and that the gap between "fully open" and "state-of-the-art" can be substantially narrowed through careful engineering and integration of lessons from prior open and closed efforts.
+
+---
+
+#### The Dolma Data Pipeline: Design and Construction
+
+Dolma is an openly released, multi-source pretraining corpus containing 2.67 trillion tokens across 4.37 billion documents from six distinct data sources, designed to be both representative of typical large-scale LM pretraining data and fully accessible to the public for research purposes. The paper provides a high-level description in Section 2.2 and Table 2, with full details deferred to the companion Dolma report (Soldaini et al., 2024).
+
+**Six data sources and their scale.** Table 2 enumerates the composition:
+- **Common Crawl** (web pages): 9,812 GB of UTF-8 text, 3,734 million documents, 2,180 billion tokens
+- **GitHub** (code): 1,043 GB, 210 million documents, 342 billion tokens
+- **Reddit** (social media): 339 GB, 377 million documents, 80 billion tokens
+- **Semantic Scholar** (academic papers): 268 GB, 38.8 million documents, 57 billion tokens
+- **Project Gutenberg** (books): 20.4 GB, 0.056 million documents, 5.2 billion tokens
+- **Wikipedia** (encyclopedic): 16.2 GB, 6.2 million documents, 3.7 billion tokens
+
+The total token count of 2,668 billion (approximately 2.67 trillion) exceeds the 2 trillion tokens used for OLMo training, meaning the corpus contains a surplus that allows for future training runs with different sampling configurations without exhausting the data. Common Crawl dominates at 81.7% of total tokens (2,180/2,668), consistent with most large-scale LM pretraining recipes (LLaMA, Llama 2, Falcon) that use web-crawled text as the primary data source, with smaller curated sources providing higher-quality signal.
+
+**Six-stage curation pipeline.** The Dolma report describes a pipeline with these stages, which the OLMo paper references in Section 2.2:
+
+1. **Language filtering**: Documents are classified by language, and only English-language documents are retained. This is a deliberate scope limitation acknowledged in the Limitations section: "Our work focuses on pretraining data in English. We hope that our open framework enables the development of future models in more languages."
+
+2. **Quality filtering**: Documents are scored for quality using heuristics (e.g., length thresholds, perplexity-based filtering, repetition metrics) and low-quality documents are removed. The companion report provides ablations on the impact of different quality filters.
+
+3. **Content filtering**: Documents containing personally identifiable information (PII) or toxic content are flagged and removed or masked. The paper acknowledges this is imperfect: "We mitigated this to the best of our ability but recognize there are no perfect approaches today that can completely remove such content."
+
+4. **Deduplication**: Both exact and near-duplicate documents are identified and removed to prevent the model from memorizing repeated content and to improve training efficiency. The paper does not specify the exact deduplication algorithm (e.g., MinHash, exact hash matching) in the main text, deferring to the Dolma report.
+
+5. **Multi-source mixing**: Documents from different sources are combined according to a mixing ratio (not explicitly specified in the OLMo paper but described in the Dolma report). The mixing strategy determines how frequently the model sees data from each source during training, and is a critical hyperparameter affecting downstream performance on domain-specific tasks.
+
+6. **Tokenization**: The final, filtered, and mixed text is tokenized using a modified version of the GPT-NeoX-20B BPE tokenizer (described further under Model Architecture below), producing the token sequences that form training instances.
+
+**Design principle: keep sources separate.** A distinctive design choice is that documents from each source are kept separate both during curation and in the final release. This means researchers can study the effect of individual data sources on model behavior, create custom mixtures by re-weighting sources, or exclude sources for specific experiments (e.g., studying model behavior without code data). The paper states: "We keep documents from each source separate, both during curation as well as in the final release." This is a deliberate infrastructure decision that prioritizes research flexibility over simplicity of the release artifact.
+
+**Open-sourced tooling.** The paper releases not just the data but the tools used to create it: "high-performance data curation tools" that "can be used to further experiment on Dolma, reproduce our work, and enable fast and easy curation of pretraining corpora." Additionally, the WIMBD tool (Elazar et al., 2024) is released for dataset analysis, enabling researchers to inspect what is in the corpus, compute statistics, and identify potential issues without writing custom analysis code.
+
+**Training instance construction.** From the tokenized Dolma corpus, training instances are formed by concatenating tokenized documents together (with a special end-of-sequence token appended after each document) and then grouping consecutive chunks of 2048 tokens into training instances. The 2048-token sequence length is a design choice that matches the model's maximum position encoding (via RoPE) and is consistent with LLaMA-7B and Falcon-7B (see Table 5 comparison). The training instances are shuffled in a deterministic order that is released as part of the artifacts, enabling exact replication of the training data order: "The data order and exact composition of each training batch can be reconstructed from the artifacts we release."
+
+**Why 2T tokens for one epoch.** The training data is a 2-trillion-token sample from the 2.67-trillion-token Dolma corpus, and models are trained for "at least 2T tokens (a single epoch over our training data)." Some models are trained beyond one epoch "by starting a second epoch over the data with a different shuffling order." The paper references Muennighoff et al. (2023) for the claim that "the impact of repeating this small amount of data should be negligible." This is important because data repetition can cause memorization and overfitting, but prior work suggests that 2–4 epochs over high-quality, diverse data is not harmful, and the OLMo corpus is large enough relative to the model size that a second epoch provides additional training signal without significant memorization risk.
+
+---
+
+#### OLMo Model Architecture: Design Choices and Their Rationale
+
+The OLMo architecture is a **decoder-only transformer** based on Vaswani et al. (2017), with five specific modifications over the vanilla transformer, each chosen based on a combination of training stability, throughput optimization, and alignment with common practice in recent large language models. Table 1 provides the architecture dimensions for the two model sizes, and Table 5 provides a detailed comparison of OLMo-7B's architecture to similarly-sized models from other families.
+
+**Model size configurations (Table 1):**
+- **OLMo-1B**: 16 layers, hidden dimension 2048, 16 attention heads, weight tying enabled, trained for 2T tokens
+- **OLMo-7B**: 32 layers, hidden dimension 4086, 32 attention heads, no weight tying, trained for 2.46T tokens (with the final 1000 steps using learning rate decayed to zero)
+
+The 7B model uses a hidden dimension of 4086, which is unusual — most 7B-scale models use 4096 (LLaMA-7B, Llama 2-7B, OpenLM-7B). The paper does not explicitly justify the 4086 value, but it is likely an optimization for hardware efficiency (aligning with specific memory or compute constraints on the training GPUs). The attention heads are 32 in number, giving a head dimension of 4086/32 ≈ 127.7, which is non-standard (powers of 2, such as 64 or 128, are more common for hardware alignment).
+
+**Architectural modification 1: No biases.** All bias terms are excluded from the architecture, following LLaMA and PaLM. In a standard transformer, bias terms are added in linear layers (attention projections, feed-forward projections) and in layer normalization. Removing biases reduces the total parameter count slightly and, more importantly, can improve training stability by eliminating a source of parameter drift that can cause activation magnitude growth during long training runs. The paper states this choice was made "in order to improve training stability." This is not a claim the paper ablates directly — it is adopted based on prior work's findings.
+
+**Architectural modification 2: Non-parametric layer norm.** Standard layer normalization (Ba et al., 2016) applies an element-wise affine transformation after normalizing:
+
+$$y = \frac{x - \mu}{\sigma} \odot \gamma + \beta$$
+
+where $\mu$ and $\sigma$ are the mean and standard deviation computed over the feature dimension, and $\gamma$ and $\beta$ are learned scale and bias parameters (the "adaptive gain" and bias).
+
+**Non-parametric layer norm** removes $\gamma$ and $\beta$, yielding:
+
+$$y = \frac{x - \mu}{\sigma}$$
+
+where $x$ is the input activation, $\mu$ is the mean of $x$ over the feature dimension, and $\sigma$ is the standard deviation of $x$ over the feature dimension.
+
+**What it computes:** the normalized output is simply the standardized input — centered at zero with unit variance — with no learned affine transformation applied afterward. The operation forces each layer's activations to have zero mean and unit variance across the feature dimension, regardless of the input distribution.
+
+**Why this form:** the paper states this was "the safest option and it was also the fastest compared to the other variants we considered: parametric layer norm and RMSNorm." The "safest" claim refers to training stability — removing the learned parameters eliminates the possibility that the scale parameter grows or shrinks during training, which can cause gradient explosion or vanishing. The "fastest" claim refers to the elimination of the element-wise multiply-add operation (for $\gamma$ and $\beta$) during both forward and backward passes, saving compute and memory bandwidth. The tradeoff is that the model loses the ability to learn to amplify or suppress specific feature dimensions after normalization, which could theoretically limit representational capacity — but in practice, the subsequent linear layers can compensate for this flexibility.
+
+The paper considered two alternatives:
+- **Parametric layer norm** (standard): includes learned $\gamma$ and $\beta$, offering more representational flexibility but requiring more compute and potentially introducing instability.
+- **RMSNorm** (Zhang and Sennrich, 2019): normalizes by the root-mean-square of the activations rather than the standard deviation, removing the mean-centering step. RMSNorm is used by LLaMA and Llama 2 and is computationally cheaper than standard layer norm (no mean computation), but the paper's ablation (not detailed in the paper) apparently found non-parametric layer norm to be more stable or faster on their specific hardware.
+
+**Architectural modification 3: SwiGLU activation function.** The feed-forward network (FFN) in each transformer layer uses the SwiGLU activation function (Shazeer, 2020) instead of the standard ReLU. A standard FFN with ReLU computes:
+
+$$\text{FFN}(x) = W_2 \cdot \text{ReLU}(W_1 \cdot x)$$
+
+SwiGLU is a gated activation that uses a sigmoid-gated linear unit:
+
+$$\text{SwiGLU}(x) = (xW_1 \odot \text{SiLU}(xW_{\text{gate}})) W_2$$
+
+where $\text{SiLU}(z) = z \cdot \sigma(z)$ (the sigmoid linear unit, also called Swish), $\odot$ is element-wise multiplication, and $W_1$, $W_{\text{gate}}$, and $W_2$ are learned weight matrices. The key difference from ReLU is the gating mechanism: one linear projection of the input modulates (gates) another linear projection element-wise, rather than simply thresholding at zero.
+
+**Hidden size adjustment for SwiGLU.** Because SwiGLU is a gated activation, the intermediate representation before the output projection has two components (the gated value and the gate itself). To maintain the same total parameter count as a standard FFN with hidden size $d$, the input to SwiGLU uses a dimensionality of $2 \times d_{\text{swiglu}}$, where $d_{\text{swiglu}}$ is approximately $\frac{8}{3}d$ following LLaMA's convention. The paper states this is "increased to the closest multiple of 128 (e.g. 11,008 for our 7B model) to improve throughput." So for the 7B model with hidden dimension 4086:
+- The SwiGLU hidden size is approximately $\frac{8}{3} \times 4086 \approx 10,896$
+- Rounded up to the nearest multiple of 128: 11,008
+- The input to the SwiGLU block has dimension $2 \times 11,008 = 22,016$
+
+**Why SwiGLU:** the paper follows LLaMA and PaLM in this choice, which is motivated by empirical findings (Shazeer, 2020) that gated activations outperform ReLU on language modeling benchmarks. The gating mechanism allows the network to learn to selectively amplify or suppress different feature dimensions, which can improve gradient flow and representational capacity. The rounding to multiples of 128 is a hardware optimization: GPU tensor cores operate most efficiently when matrix dimensions are multiples of 128 (or 64, depending on the GPU generation), because this aligns with the hardware's warp and tile sizes.
+
+**Architectural modification 4: Rotary Positional Embeddings (RoPE).** Absolute positional embeddings (where each position has a learned embedding vector added to the token embedding) are replaced with rotary positional embeddings (RoPE; Su et al., 2021). RoPE encodes position information by applying a rotation to the query and key vectors in the attention mechanism, where the rotation angle depends on the position index.
+
+For a query vector $q_m$ at position $m$ and a key vector $k_n$ at position $n$, the attention score before RoPE would be $q_m^\top k_n$. With RoPE, the vectors are rotated:
+
+$$q_m' = R_m \cdot q_m$$
+$$k_n' = R_n \cdot k_n$$
+
+where $R_m$ and $R_n$ are rotation matrices that encode positions $m$ and $n$. The attention score becomes:
+
+$$(q_m')^\top k_n' = q_m^\top (R_m^\top R_n) k_n = q_m^\top R_{n-m} k_n$$
+
+**What this means in practice:** the attention score depends only on the relative position $n-m$ between the query and key tokens, not on their absolute positions. This is a property of the rotation matrices: the product $R_m^\top R_n$ equals the rotation matrix for the difference $n-m$.
+
+**Why RoPE:** the paper follows LLaMA and PaLM in this choice. RoPE has several advantages over learned absolute positional embeddings: (1) it naturally handles sequences longer than those seen during training because the rotation is defined for any position, not just positions with learned embeddings; (2) it encodes relative position information directly in the attention computation, which is more aligned with how attention operates (the relevance of a key to a query depends on their distance, not their absolute locations); (3) it has been shown empirically to improve perplexity and downstream task performance compared to absolute embeddings. The alternative, ALiBi (used by MPT-7B), encodes position through a bias added to the attention scores rather than rotating the vectors, but the paper does not discuss why RoPE was chosen over ALiBi.
+
+**Architectural modification 5: Modified vocabulary and embedding matrix padding.** The model uses a BPE-based tokenizer derived from GPT-NeoX-20B (Black et al., 2022) with two modifications:
+- Additional tokens are added for masking personally identifiable information (PII) detected during the Dolma filtering stage. This allows the model to learn that certain spans of text have been replaced with special tokens, rather than treating masked text as unusual or corrupted.
+- The vocabulary size is set to 50,280 tokens, but the embedding matrix dimension is increased to 50,304.
+
+**The embedding matrix padding** is a hardware optimization. The embedding matrix maps token indices to vectors of size 4086 (the hidden dimension). With a vocabulary of 50,280 tokens, the embedding matrix has shape $50,280 \times 4086$. The corresponding output projection (the LM head, which maps hidden states back to vocabulary logits) has shape $4086 \times 50,280$. Matrix multiplications involving these dimensions are most efficient when the vocabulary dimension is a multiple of 128, because of GPU tensor core alignment. By increasing the embedding dimension to 50,304 (the next multiple of 128 above 50,280), the matrix multiplication throughput improves. The extra 24 "dummy" token positions are never used (no token indices map to them), but they exist in the weight matrices to achieve the aligned dimensions. This is a pure throughput optimization with no impact on model behavior.
+
+**Why GPT-NeoX tokenizer:** the paper does not explicitly justify this choice, but likely factors include: (1) GPT-NeoX-20B is a well-known open model, so its tokenizer is familiar to the research community and compatible with existing tooling; (2) it is a BPE tokenizer, which is the most common choice for English-language LMs and produces a reasonable balance between vocabulary size and sequence length; (3) using an existing tokenizer avoids the cost of training a new one and ensures that the tokenization is deterministic and reproducible.
+
+**Weight tying.** OLMo-1B uses weight tying (the input embedding matrix and the output projection matrix are shared, meaning the same parameters are used for both embedding lookup and logit projection). OLMo-7B does not use weight tying. Weight tying reduces the total parameter count (by approximately the size of the embedding matrix, which is $50,304 \times 2048 \approx 103$ million parameters for the 1B model) and can improve generalization in smaller models by regularizing the embedding space. For larger models (7B scale), the representational flexibility gained from separate embedding and output matrices typically outweighs the regularization benefit, and the parameter savings are a smaller fraction of the total.
+
+**Sequence length, batch size, and their interaction.** The training sequence length is 2048 tokens for all OLMo models (compared to 4096 for Llama 2-7B, as shown in Table 5). The global batch size is constant at approximately 4 million tokens, constructed as 2048 training instances of 2048 tokens each (Table 1: "Batch size: ∼4M"). The paper states the batch size in terms of instances — 2160 instances for the 7B model (Table 5) — which gives $2160 \times 2048 = 4,423,680$ tokens, close to the ∼4M figure. The 2048 sequence length is shorter than Llama 2's 4096, meaning OLMo processes shorter contiguous text spans in each training step. This is a throughput optimization: shorter sequences require less memory per GPU, enabling a larger micro-batch size and potentially faster training. The tradeoff is that the model has a shorter effective context window (2048 tokens) compared to models trained with longer sequences.
+
+**Comparison to other 7B models (Table 5).** The paper provides a detailed architecture comparison that reveals several distinctive OLMo choices:
+- **Layer norm type**: OLMo uses non-parametric layer norm, unique among the compared models. Llama 2-7B and OpenLM-7B use RMSNorm; Falcon-7B and PaLM-8B use parametric layer norm.
+- **MLP ratio**: OLMo uses approximately 8/3 (the SwiGLU convention), same as Llama 2-7B and OpenLM-7B. Falcon-7B uses ratio 4 (with GeLU activation, not SwiGLU), and PaLM-8B uses ratio 4 (with SwiGLU).
+- **Attention variant**: OLMo uses full (multi-head) attention, same as LLaMA-7B and OpenLM-7B. Llama 2-7B uses Grouped Query Attention (GQA), Falcon-7B uses Multi-Query Attention (MQA), and PaLM-8B uses MQA. GQA and MQA reduce memory and compute in the attention mechanism by sharing key-value heads across query heads, which is particularly beneficial for long sequences and inference speed. OLMo's choice of full attention is likely driven by simplicity and training throughput at 2048 sequence length, where the memory savings of GQA/MQA are less critical.
+- **Block type**: OLMo uses sequential blocks (attention followed by FFN), same as LLaMA and Llama 2. Falcon-7B and PaLM-8B use parallel blocks (attention and FFN computed in parallel and then summed), which can improve throughput by overlapping computation but may interact differently with normalization.
+
+---
+
+#### Distributed Training Framework
+
+The training framework is built on PyTorch FSDP (Fully Sharded Data Parallelism) with the ZeRO optimizer strategy, enabling training of 7B-parameter models across multiple GPUs by sharding model parameters, gradients, and optimizer states. Section 3 describes this infrastructure.
+
+**FSDP sharding strategy.** The core idea of FSDP (Zhao et al., 2023) with ZeRO (Rajbhandari et al., 2019) is to partition the model's parameters across GPUs rather than replicating them. In standard data parallelism, each GPU holds a full copy of the model parameters, computes gradients on its micro-batch, and then averages gradients across all GPUs. For a 7B-parameter model in bfloat16, the parameters alone require approximately 14 GB of memory, which exceeds the 40 GB available on A100-40GB GPUs once optimizer states (which are typically in float32, requiring ~28 GB for AdamW) and activations are accounted for.
+
+FSDP addresses this by:
+1. **Sharding parameters**: each GPU stores only a fraction (e.g., 1/N where N is the number of GPUs) of the model parameters at rest.
+2. **All-gathering on demand**: during the forward pass through each transformer layer, the necessary parameter shards are gathered (copied) to all GPUs, the layer is computed, and the gathered parameters are discarded to free memory.
+3. **Reducing-scattering gradients**: during the backward pass, gradients are computed locally, then reduced across GPUs, with each GPU keeping only the shard of the reduced gradient corresponding to its parameter shard.
+4. **Sharding optimizer states**: the AdamW optimizer states (first and second moment estimates) for each parameter are stored only on the GPU that owns that parameter shard.
+
+This enables training the 7B model with a micro-batch size of 4096 tokens per GPU on the target hardware (Section 3.1: "enables training with a micro-batch size of 4096 tokens per GPU on our hardware"). The global batch size of ~4M tokens is constructed by accumulating gradients across multiple micro-batches.
+
+**Mixed-precision training configuration.** The paper describes a specific mixed-precision setup that balances throughput (via bfloat16 for most operations) with stability (via full precision for critical operations):
+
+1. **Model weights and optimizer states (per GPU, sharded):** Kept in full precision (float32). This ensures that parameter updates from the AdamW optimizer are applied at high precision, preventing rounding errors from accumulating across training steps.
+
+2. **Transformer block forward and backward passes:** Weights are cast to bfloat16 only when the full parameters are materialized on each GPU during the forward and backward passes. This means that the matrix multiplications within each transformer layer operate in bfloat16 (for speed and memory efficiency), but the stored parameters remain in float32.
+
+3. **Softmax operations:** Always run in full precision (float32) through PyTorch's `amp` module. This is a stability measure: the softmax operation involves exponentiation, which can produce very large or very small values that bfloat16 (with its limited exponent range compared to float32) cannot represent accurately. Full-precision softmax prevents numerical overflow or underflow that could cause training divergence.
+
+4. **Gradient reduction:** Gradients are reduced (averaged) across GPUs in full precision (float32). The paper states this explicitly: "Gradients are reduced across GPUs in full precision." This ensures that the averaging of gradients from different GPUs — each of which may have slightly different numerical errors from bfloat16 operations — is accurate and doesn't amplify rounding errors.
+
+**Why this specific configuration:** the paper is optimizing for training throughput while preventing the loss spikes and slow divergence that can plague large-scale language model training. The configuration mirrors common practices (e.g., LLaMA and Llama 2 both use bfloat16 mixed precision with full-precision optimizer states), but the paper documents it explicitly, making it reproducible. The specific choice of bfloat16 (rather than float16) is notable: bfloat16 has the same exponent range as float32 (8 exponent bits) but reduced mantissa precision (7 bits vs. 23 bits), which means it has a larger dynamic range at the cost of precision. This makes it less prone to overflow/underflow than float16, reducing the need for loss scaling.
+
+#### Optimizer Configuration and Learning Rate Schedule
+
+**AdamW hyperparameters (Table 1):**
+- **Optimizer:** AdamW (Loshchilov and Hutter, 2019), which decouples weight decay from the gradient-based updates, preventing the weight decay term from interacting with Adam's adaptive learning rate scaling.
+- **Betas:** `$\beta_1 = 0.9$`, `$\beta_2 = 0.95$`. These are the exponential decay rates for the first and second moment estimates respectively. The `$\beta_2 = 0.95$` value is slightly lower than the common default of 0.999, meaning the second moment estimate has a shorter memory, which can be beneficial for non-stationary training dynamics.
+- **Epsilon:** `$\epsilon = 1.0 \times 10^{-5}$`. This is the small constant added to the denominator to prevent division by zero in the Adam update. The value is standard.
+- **Weight decay:** 0.1 for the 7B model (from Table 5). The 1B model weight decay is not explicitly stated in Table 1. Weight decay provides L2 regularization by shrinking the weights toward zero at each step, helping prevent overfitting. The 0.1 value is high relative to typical small-scale training (where 0.01 or 0.001 are common) but consistent with LLaMA and Llama 2 (both use 0.1, per Table 5).
+- **Peak learning rate:** `$4.0 \times 10^{-4}$` for 1B, `$3.0 \times 10^{-4}$` for 7B. The 7B model uses a slightly lower peak learning rate, consistent with the general trend that larger models require lower learning rates for stable training.
+
+**Learning rate schedule.** The paper describes a three-phase schedule:
+1. **Warmup phase:** The learning rate increases linearly from 0 to the peak value over 5000 steps (∼21B tokens, since each step processes ~4M tokens). The warmup prevents large gradient updates early in training when the model parameters are randomly initialized and the gradients can have high variance.
+2. **Linear decay phase:** After warmup, the learning rate linearly decays from the peak value down to "a tenth of the peak learning rate over the remainder of training." For the 7B model, the minimum LR is `$3.0 \times 10^{-5}$` (Table 5: "Minimum LR: 3.0E-05"), which is indeed one-tenth of the peak `$3.0 \times 10^{-4}$`. The decay schedule is linear, not cosine as used by LLaMA and Llama 2 (Table 5 comparison). The linear schedule means the learning rate decreases at a constant rate per step, rather than following a cosine curve that decays slowly at first and then more rapidly.
+3. **Annealing to zero:** For the final 1000 training steps, the learning rate is linearly decayed to exactly 0. The paper notes in Section 4 that this final annealing "boosts model performance on perplexity and end-task evaluation suites" (visible in Figure 1 as a sharp uptick in accuracy between the second-to-last and last checkpoints). This is a known phenomenon: reducing the learning rate to near-zero at the end of training allows the model to settle into a local minimum of the loss landscape, reducing the noise from stochastic gradient updates and producing a checkpoint with better generalization.
+
+**Gradient clipping.** After the warmup period, gradients are clipped so that the total L2-norm of the parameter gradients does not exceed 1.0. The paper specifies the norm computation: "all of the model's parameters are treated as a single big vector (as if all parameters were flattened and concatenated together), and we take the `$\ell_2$`-norm over the corresponding single gradient vector." If the norm exceeds 1.0, the gradients are rescaled to have norm exactly 1.0. Gradient clipping prevents individual training steps from taking destructively large parameter updates, which can cause loss spikes or training divergence. The threshold of 1.0 is standard and matches LLaMA and Llama 2 (Table 5).
+
+**Why linear decay instead of cosine:** the paper does not explicitly justify this choice. LLaMA, Llama 2, Falcon-7B, and OpenLM-7B all use cosine decay (Table 5). Possible motivations include: (1) linear decay is simpler to implement and reason about; (2) with the one-epoch-over-data constraint (2T tokens), a cosine schedule would spend more time near the peak learning rate and less near the minimum, which might be suboptimal when training for exactly one epoch; (3) the linear schedule with the final anneal-to-zero phase provides a controlled reduction that may interact favorably with the specific data distribution.
+
+**Global batch size constancy.** The batch size is kept constant at ~4M tokens throughout training. This is a design choice: some training recipes (e.g., GPT-3) increase batch size during training to maintain a constant noise level as the model improves, but keeping it constant simplifies the training infrastructure and makes it easier to reproduce and analyze training dynamics.
+
+---
+
+#### Training Data Preparation and Ordering
+
+**Tokenization and instance construction.** Each document in the Dolma corpus is tokenized using the modified GPT-NeoX BPE tokenizer. After tokenization, a special end-of-sequence (EOS) token is appended to the end of each document. Then, consecutive chunks of exactly 2048 tokens are grouped to form training instances. This means that a training instance may span multiple documents (if documents are shorter than 2048 tokens) or may be a truncated portion of a single document (if the document is longer). The EOS token between documents provides a signal to the model that a document boundary has occurred, which helps the model learn to not attend across document boundaries when generating text.
+
+**Shuffling and determinism.** The training instances are shuffled in "the exact same way for each training run," and the paper releases artifacts that allow reconstruction of the exact data order and composition of each training batch. This is a significant contribution for reproducibility: it means that another researcher with access to the same Dolma data can produce bit-for-bit identical training runs, which is essential for isolating the effects of architectural changes or optimizer hyperparameters. The paper does not specify the shuffling algorithm or seed, but these are presumably included in the released artifacts.
+
+**Beyond one epoch.** Models trained beyond the initial 2T tokens start "a second epoch over the data with a different shuffling order." The different shuffling order prevents the model from seeing data in the same sequence as the first epoch, which could lead to memorization of sequence-level patterns rather than learning generalizable language features.
+
+---
+
+#### Evaluation Infrastructure: Catwalk and Paloma
+
+The evaluation framework has two major components: **downstream evaluation** via Catwalk (for task-specific accuracy measurement) and **intrinsic language modeling evaluation** via Paloma (for perplexity measurement across diverse text domains). Additionally, an **in-loop online evaluation** runs every 1000 training steps to guide architectural decisions.
+
+**Catwalk downstream evaluation.** Catwalk (Groeneveld et al., 2023) is a unified evaluation framework that provides access to a wide range of datasets and task formats. The paper uses 8 core tasks, all evaluated in the zero-shot setting using the **rank classification** approach (Brown et al., 2020).
+
+**Rank classification approach:** For a multiple-choice task with options $\{a_1, a_2, ..., a_k\}$, the model scores each option by computing the (possibly normalized) log-likelihood of the option text given the prompt. The option with the highest score is selected, and accuracy is the fraction of test instances where the selected option is correct. This approach does not require the model to generate text — it only requires computing likelihoods of candidate completions, which is faster and more deterministic than generation-based evaluation.
+
+**The 8 core tasks (Table 3):**
+1. **ARC Challenge (arc_challenge):** Grade-school science multiple-choice questions, hard subset. Tests scientific reasoning.
+2. **ARC Easy (arc_easy):** Same domain, easier questions.
+3. **BoolQ (boolq):** Yes/no reading comprehension questions based on Wikipedia passages. Tests factual understanding.
+4. **HellaSwag (hellaswag):** Sentence completion with commonsense reasoning about physical situations. Tests grounded commonsense.
+5. **OpenBookQA (openbookqa):** Open-book science questions requiring elementary science knowledge and reasoning.
+6. **PIQA (piqa):** Physical commonsense reasoning about everyday objects and actions.
+7. **SciQ (sciq):** Crowdsourced science exam questions. Tests scientific knowledge.
+8. **Winogrande (winogrande):** Pronoun resolution in adversarial Winograd schemas. Tests commonsense reasoning about entities.
+
+These tasks were chosen because they are "natural" for likelihood-based evaluation (all can be formulated as text completion scoring tasks) and "provide meaningful signals throughout training" (Figure 1 shows consistent upward trends in accuracy as training progresses).
+
+**Per-dataset normalization choices.** The paper explicitly states which normalization strategies were used for each dataset, which is a detail often omitted from evaluation methodology sections:
+- **Unconditional normalization** (Brown et al., 2020) for ARC Challenge, ARC Easy, and OpenBookQA. Unconditional normalization adjusts the likelihood of a completion by subtracting the unconditional likelihood of that same text (i.e., the probability the model assigns to the completion text when no prompt is provided). This accounts for the model's prior preference for certain answer strings, preventing it from favoring common words over rare ones.
+- **Per-token normalization** (Brown et al., 2020; Liang et al., 2022) for HellaSwag, PIQA, and Winogrande. Per-token normalization divides the log-likelihood of the completion by the number of tokens in the completion, preventing longer completions from being penalized simply because they contain more tokens (each of which contributes a negative log-probability).
+- **No normalization** for BoolQ and SciQ, because these tasks are formulated as single-token prediction tasks (e.g., "yes" vs. "no" for BoolQ), so normalization is irrelevant.
+
+**Why different normalizations:** the choice is dataset-specific and based on the nature of the answer options. When options have different lengths (e.g., HellaSwag completions can be several tokens long), per-token normalization is essential to avoid length bias. When options are single tokens, normalization is unnecessary. Unconditional normalization is used when the model might have strong prior preferences for certain answer strings regardless of the prompt (common in tasks with imbalanced option vocabularies).
+
+**Paloma intrinsic evaluation.** Paloma (Magnusson et al., 2023) is a perplexity benchmark that includes 585 different text domains drawn from 18 data sources. The paper's Paloma evaluation uses a subset of 11 sources (excluding sources that are not publicly available, contain fringe/toxic text, or are code data not supported by Paloma's decontamination approach). The 11 included sources are: C4, mC4-en, WikiText-103, Penn Treebank, RedPajama, Falcon-RefinedWeb, Dolma V1.5, M2D2 S2ORC, M2D2 Wikipedia, C4 100 Domains, and Dolma 100 Subreddits (Section 4.2).
+
+**Decontamination for Paloma.** The paper explicitly decontaminates OLMo's training data against Paloma evaluation data by removing any pretraining document that contains paragraphs leaked from Paloma evaluation data. This is critical because pretraining on web-scale data inevitably includes copies of benchmark texts (e.g., Wikipedia articles in WikiText-103, C4 passages), and without decontamination, perplexity measured on those texts reflects memorization rather than generalization. The paper claims OLMo-7B is "the largest LM with explicit decontamination for perplexity evaluation," meaning that comparisons with other models (which do not disclose or decontaminate their training data) may be unfair — the other models' perplexity scores may be artificially low due to contamination.
+
+**Bits-per-byte metric.** Because different models may use different tokenizers with different vocabulary sizes, comparing raw perplexity (which is per-token) across models is not fair — a model with a larger vocabulary will naturally have lower per-token perplexity because each token covers more text. Paloma addresses this by reporting **bits per byte** (Gao et al., 2020): the number of bits required to encode each byte of text according to the model's probability distribution. This is computed by dividing the total negative log-likelihood (in nats or bits, depending on the log base) by the number of UTF-8 bytes in the evaluation text, producing a metric that is independent of the tokenizer choice.
+
+**Offline vs. online evaluation.** The paper distinguishes two evaluation stages:
+- **Online evaluation** (in-loop): runs every 1000 training steps (~4B tokens) on a subset of downstream tasks to provide "early and continuous signal on the quality of the model being trained." These results are used to make decisions about architecture, initialization, optimizers, learning rate schedules, and data mixtures during model development (Section 2.4). The paper states that these evaluations "rely on many of the core tasks and experiment settings used for our offline evaluation."
+- **Offline evaluation**: performed after training is complete, using the full Catwalk and Paloma suites on the final (or intermediate) checkpoints, producing the results reported in Tables 3 and 7 and Figures 1 and 2.
+
+---
+
+#### Adaptation Methodology: TÜLU Instruction Tuning and DPO
+
+The paper demonstrates that OLMo serves as a viable base model for further fine-tuning by applying the TÜLU pipeline (Ivison et al., 2023; Wang et al., 2023). The adaptation proceeds in two stages: supervised instruction fine-tuning (SFT) followed by Direct Preference Optimization (DPO).
+
+**Supervised Fine-Tuning (SFT).** The instruction tuning stage trains the pretrained OLMo-7B model on the "TÜLU V2 SFT mix," a mixture of human-written and model-distilled instruction-following data. The specific hyperparameters (Appendix D) are:
+- **Learning rate:** `$2 \times 10^{-6}$`. This is substantially lower than the pretraining peak LR (`$3.0 \times 10^{-4}$`), as is standard for fine-tuning — the model already has strong language capabilities and fine-tuning requires only small adjustments.
+- **Epochs:** 3. Training for multiple epochs over the instruction data is common because instruction datasets are much smaller than pretraining corpora and benefit from repeated exposure.
+- **Warmup schedule:** Linear warmup for the first 3% of total training steps, followed by linear cooldown to a learning rate of 0 over the remaining steps. This is a different schedule from pretraining (which used a plateau at peak LR followed by linear decay) — the cooldown starts immediately after warmup, reflecting the shorter total training duration.
+- **Weight decay:** 0. Unlike pretraining (which used weight decay 0.1), fine-tuning disables weight decay. This is because the model is already well-regularized from pretraining, and weight decay during fine-tuning could erode useful pretrained features.
+- **Gradient clipping:** 0 (disabled). With the low learning rate, gradient magnitudes are expected to be small enough that clipping is unnecessary.
+- **Maximum sequence length:** 2048 tokens, matching pretraining. Longer conversations are split into 2048-token chunks.
+- **Data modification:** The hardcoded system prompt in the TÜLU mix is replaced with data about OLMo (so the model learns to identify itself correctly when asked).
+
+**Direct Preference Optimization (DPO).** After SFT, the model is further trained with DPO (Rafailov et al., 2023) on the UltraFeedback dataset (Cui et al., 2023). DPO is an alternative to RLHF (Reinforcement Learning from Human Feedback) that directly optimizes the policy (the language model) to prefer chosen responses over rejected ones, without requiring a separate reward model.
+
+The DPO hyperparameters (Appendix D) are:
+- **Learning rate:** `$5 \times 10^{-7}$`. An order of magnitude lower than the SFT learning rate, reflecting that DPO makes subtle adjustments to align preferences without disrupting instruction-following capabilities.
+- **`$\beta$`:** 0.1. This is the temperature parameter that controls how strongly the model is pushed toward the preferred responses. Lower `$\beta$` means stronger preference optimization (the model is more heavily penalized for assigning probability to rejected responses). The value of 0.1 follows Ivison et al. (2023).
+- **Epochs:** 3.
+- **Warmup:** Linear warmup for the first 10% of total training steps, then linear cooldown to 0.
+- **Weight decay:** 0.
+- **Gradient clipping:** 0.
+- **Data:** A modified form of UltraFeedback, with TruthfulQA prompts removed (to prevent the model from memorizing TruthfulQA answers, since Ivison et al. 2023 found test set contamination issues) and using a "fixed" variant that uses the average of GPT-generated aspect-based scores to determine chosen and rejected pairs.
+
+**Why DPO after SFT:** The two-stage approach (SFT then DPO) is the standard recipe established by InstructGPT/ChatGPT and adopted by TÜLU. SFT teaches the model the format and style of instruction-following; DPO aligns the model's preferences to prefer helpful, harmless, and honest responses. The paper treats this as a demonstration of OLMo's compatibility with existing adaptation pipelines rather than a novel contribution.
+
+**Cross-model-family transfer issue.** The paper notes a gap between OLMo-7B adaptation and Llama 2 adaptation using the same TÜLU pipeline. OLMo+SFT+DPO achieves MMLU 46.2 and AlpacaEval 69.3% win rate, while TÜLU 2 (Llama 2 base) achieves MMLU 50.7 and AlpacaEval 85.1% win rate (Table 4). The paper attributes this to two factors: "test set contamination in Llama 2" (since Llama 2 was pretrained on data that inadvertently included MMLU test questions) and "the TÜLU mix was primarily designed for Llama models." This second point highlights that adaptation data mixtures are not model-agnostic — the optimal mixture may depend on the base model's pretraining data distribution, architecture, and existing capabilities. This is an important methodological finding for the broader research community: when comparing adaptation results across base models, differences may reflect adaptation data mismatch rather than inherent base model quality.
+
+---
+
+#### Hardware Portability and Verification
+
+The paper makes an unusual claim of hardware portability: the same codebase and training recipe produce "nearly identical performance" on two different GPU clusters — NVIDIA A100-40GB (MosaicML/Databricks cluster) and AMD MI250X (LUMI supercomputer). This is not a typical claim in LLM papers, which usually train on a single hardware platform.
+
+**Hardware specifications:**
+- **LUMI (AMD):** Up to 256 nodes, each with 4 AMD MI250X GPUs (each MI250X is a dual-chip module, presenting as 8 logical GPU devices per node, each with 64 GB of memory), 800 Gbps interconnect.
+- **MosaicML (NVIDIA):** 27 nodes, each with 8 NVIDIA A100-40GB GPUs, 800 Gbps interconnect.
+
+**Batch size adjustments for throughput.** The paper acknowledges "minor differences in batch size to optimize for training throughput" between the two hardware platforms. These differences are not specified, but they reflect the reality that optimal micro-batch size depends on GPU memory capacity (MI250X logical devices have 64 GB vs. A100s' 40 GB, but MI250X has different memory bandwidth characteristics) and interconnect topology. Despite these differences, "both runs resulted in nearly identical performance on our evaluation suite by 2T tokens."
+
+**Why this matters:** This verification strengthens the reproducibility argument in two ways. First, it demonstrates that the training recipe is robust to hardware-specific optimizations and not accidentally tuned to one GPU vendor's quirks. Second, it means that researchers with access to AMD hardware (including the LUMI supercomputer, a major European research infrastructure) can fully replicate and extend the work, broadening the set of institutions that can participate in open language model research.
+
+---
+
+#### Summary of Design Choices and Their Justifications
+
+- **Non-parametric layer norm over RMSNorm or parametric LN:** selected as "safest" for stability and "fastest" for throughput, based on in-loop ablation experiments. The elimination of learned affine parameters prevents potential instability from parameter drift at the cost of reduced representational flexibility.
+
+- **SwiGLU with hidden size rounded to multiple of 128:** follows LLaMA's convention (~8/3 d ratio) and adds hardware alignment optimization (multiples of 128 for tensor core efficiency). The gating mechanism improves representational capacity over ReLU.
+
+- **RoPE over learned absolute positional embeddings:** enables length generalization, encodes relative position information directly in attention, and follows established best practice from LLaMA and PaLM.
+
+- **GPT-NeoX tokenizer with PII masking tokens and dimension padding to 50,304:** leverages an existing open tokenizer compatible with community tooling, adds privacy-relevant tokens, and pads the embedding matrix for tensor core alignment at negligible parameter cost.
+
+- **AdamW with `$\beta_2=0.95$` (not 0.999), linear decay (not cosine), gradient clipping at 1.0:** the slightly lower `$\beta_2$` shortens the second-moment memory for non-stationary dynamics; linear decay provides a simple, predictable schedule that works well with the final anneal-to-zero phase; gradient clipping at 1.0 prevents loss spikes during training.
+
+- **FSDP with full-precision optimizer states, bfloat16 forward/backward, full-precision softmax and gradient reduction:** balances throughput (bfloat16 where safe) with stability (full precision for numerically sensitive operations), following practices validated by prior large-scale training efforts.
+
+- **Constant 2048 sequence length, ~4M token batch size:** sequence length is shorter than Llama 2's 4096 but enables higher training throughput and is sufficient for the evaluation tasks (all of which fit within 2048 tokens). Batch size follows LLaMA/Llama 2 convention.
+
+- **Two-stage TÜLU adaptation (SFT then DPO) with zero weight decay and gradient clipping:** reflects standard fine-tuning practice where the low learning rate and pretrained regularization make weight decay unnecessary and gradient clipping redundant.
+
+- **Deliberate Dolma source separation and tooling release:** prioritizes research flexibility (enabling custom mixtures, source ablation studies) over release simplicity, reflecting the paper's primary goal of enabling scientific study rather than providing a turnkey model.
+
+- **Hardware dual-verification on AMD and NVIDIA:** demonstrates recipe robustness and broadens the set of institutions that can reproduce the work, strengthening the paper's central claim of open, reproducible research infrastructure.
 
 ## 4. Key Insights and Innovations
-- End-to-end openness as a scientific instrument (Sections 1, 5):
-  - What’s new: OLMo releases everything—data (Dolma), curation code, training/eval code, 500+ intermediate checkpoints, logs—under Apache 2.0, not just final weights.
-  - Why it matters: enables replayable, controlled experiments on data composition, optimizer schedules, and architecture, and makes decontaminated, cross-model comparisons feasible.
 
-- Dolma: a large, public, multi-source pretraining dataset with tooling (Section 2.2; Table 2):
-  - What’s new: a scaled, openly licensed corpus plus curation/analysis tools to reconstruct exact training orders and run data ablations.
-  - Why it matters: most prior open LLMs did not release the exact training data. Dolma enables controlled studies of how filtering, deduplication, and mixing affect learned capabilities.
+### Innovation 1: Redefining "Open" as a Complete Research Infrastructure, Not a Model Artifact
 
-- Decontaminated, domain-diverse perplexity evaluation with Paloma (Section 2.4; Figure 2):
-  - What’s new: explicit removal of test paragraphs from pretraining data and evaluation across 585 domains aggregated into sources.
-  - Why it matters: prevents overestimation of out-of-sample fit and reveals nuanced “in-distribution” vs. “out-of-distribution” sample efficiency differences (e.g., strong on web-like text such as C4; weaker on curated sources like WikiText-103).
+The dominant framing in the LLM community has been that "open" means releasing model weights, with the degree of openness measured by what fraction of the model's parameters are made public. Under this implicit definition, LLaMA, Llama 2, Falcon, and Mixtral all count as "open" because their weights are downloadable. The OLMo paper proposes a fundamentally different definition: **openness is not a property of the model artifact, but of the research infrastructure that produced it**. A truly open model, in this framing, includes training data, training code, intermediate checkpoints, training logs, evaluation code, adaptation tooling, and the data curation pipeline — all released under a permissive license and, crucially, all designed to be **reproducible, modifiable, and inspectable** by researchers who were not part of the original development team.
 
-- Cross-hardware training parity (Section 3.4; Table 6 in Appendix B):
-  - What’s new: training on both AMD MI250X and NVIDIA A100 clusters, with nearly identical outcomes.
-  - Why it matters: strengthens claims of reproducibility and broadens accessible infrastructure for the community.
+This reframing matters because it changes what counts as a contribution. Prior work optimized for making the best model under a given openness constraint (e.g., "release weights but not data"). OLMo optimizes for making the best model under the constraint of **full openness of the entire pipeline**. This is not a marginal improvement in openness — it is a categorical shift in what "open" means, from a binary property (weights available: yes/no) to a **multi-dimensional construct** (training data: yes, training code: yes, intermediate checkpoints: yes, training logs: yes, evaluation tools: yes, adaptation pipeline: yes, data curation tools: yes, license: Apache 2.0). The paper's taxonomy of prior releases in Section 1 ("Recent LM releases have varied in their degree of openness") makes this multi-dimensional view explicit: each prior release is open along some dimensions but closed along others, and OLMo aims to be open along all of them simultaneously.
 
-- Practical training insight: end-phase LR decay to zero helps (Figure 1, Section 4):
-  - Observation: “a sharp upward tick” appears on many downstream tasks between the second-to-last and last checkpoints when linearly decaying LR to zero over the final 1,000 steps.
-  - Significance: a simple schedule tweak yields measurable gains without extra data.
+This is a conceptual innovation, not a technical one. It does not propose a new architecture or training algorithm. But it changes the research agenda by setting a new standard for what the community should expect from an "open" release, and by demonstrating that this standard is achievable at a scale and performance level that makes it practically useful. Prior fully-open efforts (Pythia, BLOOM) existed but were either not competitive with closed models or not at a practically useful scale. OLMo shows that the openness-performance tradeoff is not inherent — it can be substantially narrowed through careful engineering and integration of lessons from both closed and open prior work.
 
-These are primarily fundamental enablers for scientific study (data/code/checkpoints/tools), paired with pragmatic training choices rather than brand-new architectures.
+The significance extends beyond this specific release. By establishing a new benchmark for openness, the paper puts pressure on future model releases to either meet this standard or justify why they cannot. A release that provides weights but not data can no longer claim to be "fully open" without qualification — it must now explain which dimensions of openness it is omitting and why. This shifts the burden of proof from those demanding openness to those withholding it, which is a meaningful change in the norms of the field.
+
+The evidence for this innovation's practical viability is the paper itself: Tables 3 and 4 show that OLMo-7B achieves competitive performance (69.3% average on 8 core tasks vs. Llama 2-7B's 70.5%), Table 6 shows the carbon emissions of training, and Section 5 enumerates the complete set of released artifacts. The performance is not state-of-the-art, but it is close enough that researchers do not have to sacrifice scientific rigor to study a competitive model.
+
+---
+
+### Innovation 2: The Decontamination Baseline as a Methodological Standard
+
+Perplexity evaluation — measuring how well a language model predicts held-out text — is one of the most fundamental metrics in language modeling. Yet the OLMo paper identifies a pervasive flaw in how this evaluation has been conducted: **without explicit decontamination of training data against evaluation benchmarks, perplexity scores are uninterpretable as measures of generalization**. The paper states this directly: "without decontamination, other models risk underestimating perplexity (i.e., overestimating the model's out-of-sample fit)."
+
+This is not a new observation — the problem of benchmark contamination has been discussed in the context of downstream task evaluation (e.g., the GPT-3 paper's acknowledgment that some test sets may have leaked into training data). But the OLMo paper makes a stronger claim: contamination is not an occasional accident but a **systematic problem** in any web-scale training corpus, because web crawls will inevitably ingest copies of benchmark texts (Wikipedia articles, C4 passages, books, papers) that are publicly available on the internet. Without explicit decontamination, perplexity on these benchmarks measures some unknown mixture of genuine language modeling capability and memorization of the evaluation data. This makes it impossible to compare models trained on different (undisclosed) data, because differences in perplexity could reflect either real capability differences or simply different degrees of contamination — and without access to the training data, researchers cannot tell which.
+
+What makes this a conceptual innovation rather than just a methodological detail is the **elevation of decontamination from an optional best practice to a baseline requirement for scientific validity**. The paper claims that OLMo-7B is "the largest LM with explicit decontamination for perplexity evaluation." This framing turns the absence of decontamination in other models from a minor omission into a fundamental limitation: any perplexity comparison involving models without verified decontamination is scientifically suspect because the measured scores have an unknown, unbounded contamination bias.
+
+This has implications beyond OLMo. It suggests that a significant fraction of prior work comparing language model perplexities — including comparisons between LLaMA, Llama 2, Falcon, and MPT on benchmarks like WikiText-103 and C4 — may be invalid or at least uninterpretable as measures of generalization. The models with the best perplexity might simply have the most contaminated training data. This is a negative result with broad significance: it undermines confidence in a large body of prior work and sets a new methodological bar that future work must meet to be taken seriously.
+
+The Paloma benchmark itself (Magnusson et al., 2023) is designed to enable this decontamination, and OLMo's adoption of it demonstrates the approach in practice. Figure 2 shows that OLMo-7B is competitive on Paloma's combined metric while being the only model with verified decontamination. The fact that other models' scores might be artificially inflated means OLMo's true relative performance could be better than the raw numbers suggest. This is not a claim the paper makes directly, but it follows logically from the contamination argument: if other models have some degree of contamination inflating their scores, and OLMo does not, then OLMo's decontaminated score is a lower bound on its relative standing.
+
+The innovation here is not the decontamination technique itself (which follows Paloma's established approach) but the **normative claim** that decontamination should be a minimum requirement for perplexity evaluation, and the demonstration that it is feasible at the 7B scale with open data. This changes how researchers should think about perplexity comparisons: rather than asking "which model has the lowest perplexity?", they should ask "which model has the lowest perplexity *after verified decontamination*?", and any model that cannot answer the second question should be treated with appropriate skepticism.
+
+---
+
+### Innovation 3: The Hardware Portability Demonstration as a Reproducibility Guarantee
+
+Most large language model papers treat hardware as an implementation detail — a footnote about which GPUs were used, perhaps with acknowledgments to a cloud provider. The OLMo paper makes a qualitatively different claim: that the training recipe is **hardware-agnostic** in a verified, not merely asserted, way. Section 3.4 states:
+
+> "In order to verify that our codebase could be used on both NVIDIA and AMD GPUs without any loss in performance, we trained models on two different clusters... Despite minor differences in batch size to optimize for training throughput, both runs resulted in nearly identical performance on our evaluation suite by 2T tokens."
+
+This is not a performance innovation — it is a **reproducibility innovation** with implications for who can participate in language model research. The dominant hardware platform for LLM training is NVIDIA GPUs, and most major models (LLaMA, Llama 2, Falcon, MPT) are developed and tested exclusively on NVIDIA hardware. This creates a dependency: reproducing or extending these models requires access to NVIDIA GPUs, which are expensive, supply-constrained, and subject to export controls. By demonstrating equivalent performance on AMD MI250X GPUs (available through the LUMI supercomputer, a European research infrastructure), the paper shows that open language model research need not be tied to a single hardware vendor.
+
+The conceptual move here is subtle but significant. Most papers treat hardware as a means to an end — you need GPUs to train, and you use whatever GPUs are available. OLMo treats **hardware portability as a first-class design goal** of the research infrastructure, not an afterthought. The claim is not "we happened to test on two platforms and got similar results," but rather "we deliberately designed the codebase and verified that it produces equivalent results across platforms, because reproducibility across institutional and hardware boundaries is essential to our definition of openness."
+
+This connects to the paper's broader mission of democratizing language model research. If reproducing OLMo required a specific, expensive, and scarce hardware configuration, it would be "open" in name only — most academic labs would lack the resources to actually use it. The dual-hardware verification means that researchers with access to either NVIDIA or AMD clusters can replicate the work, and the released training logs and metrics provide a reference for researchers on other platforms to verify their own reproductions.
+
+The significance beyond this paper is that it sets a precedent. If future "open" model releases do not include hardware portability verification, the community can reasonably ask: is this model truly reproducible, or does it depend on undocumented properties of the specific hardware it was trained on? This is particularly relevant given the known sensitivity of large-scale training to hardware-specific numerical behavior (e.g., non-deterministic operations in CUDA, different floating-point rounding on different GPU architectures). The paper's verification that these differences did not affect final performance is a meaningful empirical finding, not just a procedural detail.
+
+The evidence for this claim is the reported equivalence of the two training runs (Section 3.4, though specific numbers comparing the two runs are not provided in the main paper text). The existence of models trained on both platforms in the released artifacts serves as the proof. The caveat is that the paper acknowledges "minor differences in batch size to optimize for training throughput" — these differences were apparently small enough not to affect results, but the claim of exact equivalence should be understood as "equivalent within the resolution of our evaluation suite" rather than bit-for-bit identical.
 
 ## 5. Experimental Analysis
-- Evaluation methodology (Section 2.4; 4.1; 4.2; 4.3):
-  - Downstream tasks (zero-shot, rank classification): 8 core tasks—`arc_e/challenge`, `boolq`, `hellaswag`, `piqa`, `sciq`, `winogrande`—with dataset-specific normalization strategies (per-token, per-character, unconditional, or none; Section 4.1).
-  - Intrinsic modeling: Paloma BpB across 11 public sources (C4, mC4 (en), WikiText-103, PTB, RedPajama, Falcon-RefinedWeb, Dolma, M2D2 S2ORC, M2D2 Wikipedia, C4 100 Domains, Dolma 100 Subreddits) and also individually by source (Section 4.2; Figure 2).
-  - In-loop evaluation: run every 1,000 steps to guide design choices (Section 2.4).
-  - Adaptation evaluation: MMLU, AlpacaEval, ToxiGen, and TruthfulQA for chat/safety after SFT and DPO; also the full TÜLU suite (Section 4.3; Table 4; Table 8).
 
-- Main quantitative outcomes:
-  - Core downstream comparisons (Table 3; 7B scale):
-    > “OLMo-7B avg: 69.3; Llama 2 7B: 70.5; MPT-7B: 69.8; LLaMA 7B: 69.6; Falcon-7B: 70.3; RPJ-INCITE-7B: 66.6; Pythia-6.9B: 63.0.”  
-    Interpretation: OLMo-7B is competitive with its peers; within 1–1.5 points of the strongest 7B baselines on this suite.
-  - Training dynamics (Figure 1):
-    > “We can see the benefit of decaying LR to 0 in the final 1000 steps of training on most tasks.”  
-    Many tasks (e.g., `arc_c`, `hellaswag`, `piqa`, `sciq`) show upward jumps near the end, supporting the schedule choice.
-  - Intrinsic modeling (Figure 2):
-    > “Sources Combined: OLMo-7B follows similar scaling trends and is competitive; on C4, OLMo-7B overtakes all other models; less sample-efficient on WikiText-103, M2D2 S2ORC, and M2D2 Wikipedia.”  
-    This suggests better fit to web-scraped distributions (where Dolma is 88.8% Common Crawl) and weaker fit to curated, scarcer distributions.
-  - Adaptation results (Table 4; Table 8):
-    > “OLMo-7B (base) MMLU 28.3. After SFT: 47.3; after SFT+DPO: 46.2. ToxiGen (% toxic) drops from 81.4 (base) to 14.4 (SFT) to 1.7 (SFT+DPO); TruthfulQA Informative+Truthful rises from 31.6 (base) to 41.2 (SFT) to 52.0 (SFT+DPO). AlpacaEval win-rate rises from – to 57.0 (SFT) to 69.3 (SFT+DPO).”  
-    Compared against other 7B chat models, `OLMo+SFT+DPO` beats most except TÜLU 2 variants on some axes (Table 4).
+### Evaluation Methodology
 
-- Baselines and fairness:
-  - They evaluate against public 7B-ish baselines: LLaMA (7B), Llama-2 (7B), MPT-7B, Falcon-7B, Pythia-6.9B, RPJ-INCITE-7B (Table 3), and chat variants for adaptation (Table 4).  
-  - Paloma is decontaminated for OLMo to avoid unfairly low perplexity (Section 2.4); other models may have contamination risks that underestimate their BpB.
+- **Dataset.** All pretraining experiments use the **Dolma corpus** (Soldaini et al., 2024), a multi-source English-language dataset containing approximately 2.67 trillion tokens across 4.37 billion documents from six sources: Common Crawl (81.7% of tokens), GitHub, Reddit, Semantic Scholar, Project Gutenberg, and Wikipedia. The specific training sample is a 2-trillion-token subset, and models are trained for at least one epoch over this data. For downstream evaluation, the paper uses 8 core tasks from the Catwalk framework (Groeneveld et al., 2023): ARC Challenge, ARC Easy, BoolQ, HellaSwag, OpenBookQA, PIQA, SciQ, and Winogrande — all commonsense reasoning benchmarks evaluated in the zero-shot setting. For intrinsic language modeling evaluation, the paper uses Paloma (Magnusson et al., 2023), a perplexity benchmark spanning 585 text domains from 18 sources, of which 11 sources are used for aggregate comparison after excluding non-public, toxic, or code data. Adaptation evaluation additionally uses MMLU (Hendrycks et al., 2021), AlpacaEval (Li et al., 2023), ToxiGen (Hartvigsen et al., 2022), and TruthfulQA (Lin et al., 2022).
 
-- Ablations and robustness:
-  - “In-loop” evaluation (every 1k steps) enabled ablations on architecture (LayerNorm choice), optimizers, schedules, and data mixtures (Section 2.4), though detailed per-ablation numbers are not tabulated.
-  - Appendix C shows additional tasks with unstable trends (Figure 4), cautioning against over-reliance on those signals.  
-    > “The performance of these additional end-tasks was unstable and provided limited signal during model development.”
+- **Base model(s).** The primary model is **OLMo-7B**, a 7-billion-parameter decoder-only transformer with 32 layers, hidden dimension 4086, and 32 attention heads, trained for 2.46 trillion tokens on Dolma. A smaller **OLMo-1B** variant (16 layers, hidden dimension 2048, 16 attention heads, trained for 2 trillion tokens) is also evaluated. The models use non-parametric layer norm, SwiGLU activation, RoPE positional embeddings, and a modified GPT-NeoX tokenizer with 50,280 vocabulary entries (padded to 50,304 for hardware alignment). The models were chosen to match the 7B scale that dominates open research (LLaMA-7B, Llama 2-7B, Falcon-7B, MPT-7B) and to provide a smaller 1B variant for resource-constrained experimentation.
 
-- Environmental accounting (Appendix B; Table 6):
-  > “OLMo-7B MI250X: 135 MWh with carbon intensity ~0 on LUMI (renewables)—0 tCO2eq; OLMo-7B A100-40GB: 104 MWh at 0.610 kg/kWh—~70 tCO2eq.”  
-  This transparency supports the paper’s claim of enabling lower duplicated emissions via reuse.
+- **Metrics.** Three categories of metrics are reported:
+  1. **Downstream accuracy (%):** For the 8 core tasks, zero-shot accuracy is computed using rank classification (Brown et al., 2020) — the model scores each candidate completion by normalized log-likelihood, and the highest-scoring option is selected. Normalization is dataset-specific: unconditional normalization for ARC and OpenBookQA, per-token normalization for HellaSwag, PIQA, and Winogrande, and no normalization for BoolQ and SciQ. The "avg." column in Table 3 is a simple unweighted mean across the 8 tasks.
+  2. **Bits per byte (BPB):** For Paloma evaluation, perplexity is converted to bits per byte (Gao et al., 2020) — total negative log-likelihood in bits divided by the number of UTF-8 bytes in the evaluation text — to enable fair comparison across models with different tokenizers.
+  3. **Task-specific metrics for adaptation:** MMLU uses 0-shot accuracy, AlpacaEval uses GPT-4 judged win rate (%) against Davinci-003, ToxiGen uses the percentage of generations deemed toxic by a roberta-large toxicity classifier, and TruthfulQA uses the percentage of responses judged both truthful and informative by LLaMA 2-based classifiers.
 
-- Do the experiments support the claims?
-  - Yes for competitiveness: OLMo-7B is in the same band as LLaMA/Llama-2/MPT on core zero-shot tasks (Table 3).
-  - Yes for utility of openness: the combination of decontaminated Paloma, intermediate checkpoints, and in-loop curves provides unusually rich, reproducible evidence (Figures 1–2; Section 5).
-  - Adaptation: substantial capability and safety improvements from SFT/DPO are clearly quantified (Tables 4 and 8).
+- **Baselines.** The paper compares against six similarly-sized publicly available models:
+  - **LLaMA-7B** (Touvron et al., 2023a): 7B parameters, trained on undisclosed data, uses RMSNorm, SwiGLU, RoPE, full attention.
+  - **Llama 2-7B** (Touvron et al., 2023b): 7B parameters, trained on undisclosed data, uses RMSNorm, SwiGLU, RoPE, Grouped Query Attention (GQA).
+  - **MPT-7B** (MosaicML NLP Team, 2023): 7B parameters, trained on undisclosed data mixture (described as 27% non-Common Crawl), uses ALiBi positional embeddings.
+  - **Falcon-7B** (Almazrouei et al., 2023): 7B parameters, trained on RefinedWeb, uses parametric layer norm, GeLU activation, Multi-Query Attention (MQA), parallel attention/FFN blocks.
+  - **Pythia-6.9B** (Biderman et al., 2023): 6.9B parameters, trained on the Pile (Gao et al., 2020), releases intermediate checkpoints — the closest predecessor to OLMo in philosophy.
+  - **RPJ-INCITE-7B** (Together Computer, 2023): 7B parameters, trained on RedPajama data.
+  - For the 1B comparison, additional baselines include **StableLM 1.6B**, **Pythia 1B**, and **TinyLlama 1.1B**.
+  - For adaptation evaluation, instruction-tuned variants of the above are compared: **MPT Chat**, **Falcon Instruct**, **RPJ-INCITE Chat**, **Llama-2-Chat**, **TÜLU 2**, and **TÜLU 2+DPO** (Ivison et al., 2023).
 
-- Mixed or conditional results:
-  - OLMo’s Paloma sample efficiency varies by domain—strongest where pretraining distribution matches (C4) and weaker on curated sources (WikiText-103, M2D2), highlighting data–evaluation alignment effects (Figure 2).
+- **Generation budget / compute accounting.** There is no test-time generation budget because all downstream evaluations use rank classification (scoring pre-defined options, not generating text). For training compute accounting, the paper reports total training tokens (2T for 1B, 2.46T for 7B), total energy consumption (239 MWh for the 7B model), and estimated carbon emissions (69.78 tCO2eq for the A100-40GB run, approximately 0 for the LUMI MI250X run powered by hydroelectric energy) — see Table 6. The appendix (Table 6) provides CO2 emissions comparisons with Gopher-280B (380 tCO2eq), BLOOM-176B (30), OPT-175B (82), LLaMA-7B (14), and Llama 2-7B (31), using publicly available data on PUE and carbon intensity.
+
+- **Cross-validation / statistical protocol.** No cross-validation or statistical significance testing is reported. The paper evaluates on fixed test sets for all benchmarks. The downstream evaluation uses the standard test splits for each dataset (e.g., ARC Challenge test set, HellaSwag validation set used as test following convention). For Paloma, explicit decontamination is performed: any pretraining document containing paragraphs leaked from Paloma evaluation data is removed from Dolma, which the paper claims makes OLMo-7B "the largest LM with explicit decontamination for perplexity evaluation." This is a methodological protocol designed to ensure that perplexity scores reflect generalization rather than memorization. For in-loop online evaluation during model development, evaluations are run every 1000 training steps (~4B tokens) to guide architectural decisions, but these are not used for final reported results.
+
+### Main Quantitative Results
+
+#### Downstream Task Performance (Core 8 Tasks)
+
+The headline result from Table 3 is that OLMo-7B achieves an average accuracy of **69.3%** across the 8 core downstream tasks, placing it in the competitive band of 7B-scale models: within 1.2 points of Llama 2-7B (70.5%), within 0.5 points of MPT-7B (69.8%), within 0.3 points of LLaMA-7B (69.6%), and substantially outperforming Falcon-7B (70.3% is reported for Falcon, but note Falcon-7B's 70.3% average is higher than OLMo-7B's 69.3% — the paper's text in Section 4.1 says "OLMo-7B is competitive against all the comparable models"). The strongest individual results for OLMo-7B are on PIQA (78.4%, highest among all compared 7B models) and ARC Challenge (48.5%, tied with Llama 2-7B for highest). The weakest individual results are on ARC Easy (65.4%, lowest among 7B models except Pythia-6.9B's 61.9%) and BoolQ (73.4%, second-lowest among 7B models after Falcon-7B's 74.6% — though the ordering matters: Falcon-7B, RPJ-INCITE-7B, and Pythia-6.9B score lower on BoolQ).
+
+The 1B-scale results show OLMo-1B achieving **60.4%** average, outperforming Pythia 1B (54.5%) and TinyLlama 1.1B (59.4%), but trailing StableLM 1.6B (66.5%) — though StableLM is significantly larger (1.6B vs. 1B) and was "trained on unknown data," making the comparison less clean.
+
+Figure 1 provides the per-task accuracy progression throughout training for OLMo-7B. All 8 core tasks show upward trends as training tokens increase from ~500B to ~2500B, indicating that performance had not saturated by 2.46T tokens and further training would likely yield additional gains. A notable pattern is the **sharp uptick in the final checkpoint** (corresponding to the final 1000 steps where learning rate was linearly decayed to zero): most tasks show a visible jump between the second-to-last and last evaluation points. For example, BoolQ jumps from approximately 70% to 73%, HellaSwag from approximately 74% to 76%, and SciQ from approximately 92% to 94%. The paper explicitly notes this as evidence that "linearly reducing the LR to 0 over the final 1000 training steps" provides a meaningful benefit. OpenBookQA is flagged as an exception — it shows the weakest upward trend among the 8 tasks, rising from approximately 45% to 50%, with less clear monotonicity.
+
+#### Intrinsic Perplexity Evaluation (Paloma)
+
+The combined Paloma results (Figure 2, "Sources Combined" subplot) show OLMo-7B tracking closely with the other 7B models, following a similar data scaling trajectory. At the final checkpoint, OLMo-7B achieves approximately 0.90 bits per byte on the combined 11-source metric. The closest comparators at similar training volumes are LLaMA-7B and Llama 2-7B, with Falcon-7B showing notably better sample efficiency (lower bits per byte at equivalent training tokens) — which the paper attributes to Falcon's training data composition (trained on RefinedWeb, which is heavily web-text-focused) and its match to the predominantly web-text-derived Paloma domains, as well as possible effects of Falcon's use of semantic deduplication (Abbas et al., 2023). MPT-7B stands out with the steepest improvement curve, which the paper attributes to its higher proportion of non-Common Crawl data (27% vs. 18% for LLaMA, 12.2% for RedPajama, and 11.2% for OLMo) and its use of semantic deduplication on C4.
+
+The per-source breakdown of Paloma (Figure 2, remaining 11 subplots) reveals substantial variation in relative performance depending on evaluation domain, driven primarily by **training-evaluation distribution match**:
+
+- **On C4 (Common Crawl-derived):** OLMo-7B overtakes all other models by the end of training, achieving the lowest bits per byte. The paper attributes this to OLMo's high proportion of Common Crawl data in Dolma (81.7% of total tokens), meaning the evaluation distribution closely matches the training distribution. C4 is a cleaned, deduplicated version of Common Crawl, so this is effectively an in-distribution evaluation for OLMo.
+
+- **On Falcon RefinedWeb:** Falcon-7B dominates all other models by a wide margin, demonstrating that models are most sample-efficient on the specific data processing pipeline they were trained on. RefinedWeb is Falcon's training data, so this is in-distribution evaluation for Falcon.
+
+- **On WikiText-103, M2D2 S2ORC (academic papers), and M2D2 Wikipedia:** OLMo-7B is less sample-efficient than most comparators. The paper interprets this as reflecting the lower proportion of curated, high-quality text (Wikipedia, academic papers) in OLMo's training mix relative to web-scraped text: "Since heterogeneous data from curated sources like Wikipedia and ArXiv papers is scarcer than scraped web text, maintaining sample efficiency for fit to these distributions of language will be challenging as pretraining corpora are scaled."
+
+- **On RedPajama:** OLMo-7B follows a similar trajectory to most other models, though the paper notes that RedPajama includes only 2 of 7 domains from Common Crawl, with Paloma weighting domains equally — so it effectively emphasizes non-web domains where OLMo's data mix provides less coverage.
+
+- **On Dolma V1.5:** This is OLMo's own training data, making it in-distribution. OLMo-7B performs competitively but not dominantly — suggesting that other models also generalize reasonably well to OLMo's data distribution.
+
+- **On 100 Subreddits:** OLMo-7B performs similarly to other models, indicating that Reddit-derived social media text (which constitutes ~3% of Dolma tokens) is not a distinctive strength or weakness.
+
+Figure 3 provides results for the 7 Paloma sources excluded from the aggregate metric, revealing additional patterns:
+- **On Dolma 100 Programming Languages:** OLMo-7B substantially outperforms all other models. The paper cautions that this may be partly due to contamination (decontamination of code data is beyond Paloma's scope) but notes that other models trained on GitHub code (like RPJ-INCITE-7B) do not show the same advantage, suggesting that OLMo's specific code processing pipeline contributes to the result.
+- **On Pile:** Pythia-6.9B achieves the best performance despite being trained on nearly an order of magnitude fewer tokens than OLMo-7B (300B vs. 2.46T). This is an in-distribution effect — Pythia was trained on the Pile — and may also reflect contamination.
+- **On TwitterAAE, Gab, Manosphere, 4chan, ICE:** These targeted sources (representing dialectal variation and fringe online communities) show models closely grouped along a data scaling trend, with TwitterAAE and Gab showing unusually high bits per byte (due to short average document length). The paper notes that perplexity on these sources "is dominated by superficial features such as low average document length rather than fit to that which would actually be salient to members of these speech communities."
+
+#### Auxiliary Downstream Task Results
+
+Table 7 and Figure 4 report results on 6 additional end-tasks beyond the core 8: headqa_en, logiqa, mrpc, qnli, wic, and wnli. OLMo-7B achieves an average of **47.5%** across these tasks, which is the highest aggregate among all compared 7B models (Falcon-7B: 45.4%, LLaMA-7B: 46.4%, Llama 2-7B: 46.5%, MPT-7B: 46.0%, Pythia-6.9B: 45.6%, RPJ-INCITE-7B: 47.3%). However, the paper explicitly warns against relying on these tasks, stating that "in contrast to our core evaluation set... we found these additional end-tasks to have less stable performance during model development, and to provide a limited signal." Figure 4 confirms this: the accuracy progression curves for headqa_en, logiqa, and qnli are notably noisier and less monotonic than the core task curves in Figure 1. The paper identifies specific difficulties: wic performance hovers near random chance (~50%), mrpc shows tendency for spurious predictions due to class imbalance, and several tasks exhibit flat or erratic trends during training.
+
+This is an important methodological finding: not all commonly used benchmarks provide meaningful training signal at the 7B scale, and including unstable tasks in aggregate scores can obscure genuine performance differences. The paper's decision to report these results separately while flagging their instability is a transparency practice that the field would benefit from adopting more broadly.
+
+#### Adaptation Performance
+
+Table 4 reports the effects of instruction tuning and preference alignment on OLMo-7B, comparing against instruction-tuned variants of other 7B models and the TÜLU 2 pipeline:
+
+**Supervised Fine-Tuning (OLMo+SFT):** Instruction tuning on the TÜLU V2 SFT mix dramatically improves OLMo-7B's MMLU score from 28.3 (base) to 47.3 — a 19-point improvement. ToxiGen toxicity drops from 81.4% to 14.4%. TruthfulQA informativeness+truthfulness rises from 31.6% to 41.2%. AlpacaEval win rate reaches 57.0%. These results place OLMo+SFT ahead of MPT Chat (MMLU 33.8, AlpacaEval 46.8%), Falcon Instruct (MMLU 25.2, AlpacaEval 14.0%), and RPJ-INCITE Chat (MMLU 27.0, AlpacaEval 38.0%) on capability metrics.
+
+**After DPO (OLMo+SFT+DPO):** DPO training further improves safety and alignment. ToxiGen toxicity drops to 1.7% (from 14.4% after SFT alone), AlpacaEval win rate rises to 69.3% (from 57.0%), and TruthfulQA rises to 52.0% (from 41.2%). MMLU dips slightly from 47.3 to 46.2, which the paper does not discuss but is consistent with the known tendency of preference alignment to sometimes reduce benchmark performance as the model's output distribution shifts toward preferred stylistic patterns.
+
+**Gap with Llama 2-based TÜLU 2:** Despite the improvements, a gap remains between OLMo-based adaptation and Llama 2-based adaptation using the same pipeline. TÜLU 2 (Llama 2 base) achieves MMLU 50.4 vs. OLMo+SFT's 47.3, and AlpacaEval 73.9% vs. 57.0%. After DPO, TÜLU 2+DPO achieves MMLU 50.7 vs. OLMo+SFT+DPO's 46.2, and AlpacaEval 85.1% vs. 69.3%. The paper attributes this gap to two factors: (1) Llama 2's training data was contaminated with MMLU test data (noted in a footnote: "Touvron et al. (2023b) report that Llama 2 was pretrained on data contaminated with MMLU test data"), inflating its MMLU scores; and (2) the TÜLU mix was "primarily designed for Llama models," meaning the specific data mixture, prompt formats, and hyperparameters may be suboptimal for OLMo's architecture and pretraining distribution.
+
+The full TÜLU evaluation suite (Table 8 in Appendix) adds additional metrics: GSM8k (8-shot chain-of-thought), BBH (3-shot CoT), TydiQA (1-shot), and Codex-Eval (pass@10). OLMo+SFT achieves GSM8k 15.5, BBH 36.9, TydiQA 35.2, and Codex-Eval 28.6. After DPO, GSM8k drops to 11.0, BBH to 35.8, and TydiQA to 21.7 — notable degradations that suggest DPO may interfere with some reasoning capabilities, a finding the paper does not discuss in detail.
+
+### Ablation Studies and Robustness Checks
+
+**Hardware portability verification (Section 3.4):** The paper trains OLMo-7B on two different GPU clusters — NVIDIA A100-40GB (MosaicML) and AMD MI250X (LUMI) — and reports that "both runs resulted in nearly identical performance on our evaluation suite by 2T tokens." This is not a standard ablation but serves as a robustness check demonstrating that the training recipe is not hardware-specific. The paper acknowledges "minor differences in batch size to optimize for training throughput" between the two platforms. No quantitative comparison between the two runs' evaluation scores is provided in the main text.
+
+**Learning rate schedule design (Section 3.2, Figure 1):** The paper uses a linear decay schedule (not cosine, which is used by LLaMA, Llama 2, Falcon, and OpenLM — see Table 5) with a final 1000-step anneal to zero. The benefit of the final anneal is visible in Figure 1: most tasks show a sharp accuracy increase between the second-to-last and last checkpoints (e.g., BoolQ from ~70% to ~73%, HellaSwag from ~74% to ~76%). This is an implicit ablation demonstrating that the final LR decay to zero provides nontrivial gains — without it, the reported accuracies would be lower. The paper does not report what performance would have been with cosine decay, making it unclear whether linear decay is superior or merely sufficient.
+
+**Architecture comparisons across model families (Table 5):** Table 5 provides a comprehensive side-by-side comparison of OLMo-7B's architectural and optimizer choices against LLaMA-2-7B, OpenLM-7B, Falcon-7B, and PaLM-8B. While not a controlled ablation (each model differs along many dimensions simultaneously), this comparison surfaces several distinctive OLMo choices: non-parametric layer norm (unique among compared models), full attention rather than GQA or MQA (shared with LLaMA and OpenLM), sequential rather than parallel blocks (shared with LLaMA and Llama 2), and linear rather than cosine LR decay (unique among compared models). The performance results in Table 3 can be interpreted as a coarse-grained ablation across these design choices, though confounding factors (training data composition, total training tokens) prevent attribution of performance differences to specific architectural decisions.
+
+**Additional end-task stability (Figure 4, Table 7):** The paper explicitly compares the training trajectories of 6 auxiliary tasks against the 8 core tasks, revealing that headqa_en, logiqa, mrpc, qnli, wic, and wnli exhibit "less stable performance trends" and "provided a limited signal." This is a methodological finding: not all evaluation benchmarks are equally informative during training, and some commonly reported tasks may be unreliable for model comparison. Figure 4 visualizes this instability — logiqa oscillates between ~20% and ~24% without clear upward trend, wic hovers near random chance (~50%), and wnli shows high variance. This serves as a robustness check on the choice of evaluation suite, justifying the paper's focus on the 8 core tasks.
+
+**Decontamination for perplexity evaluation (Section 2.4, Figure 2):** The paper's most significant methodological robustness check is the explicit decontamination of Dolma against Paloma evaluation data. The paper claims OLMo-7B is "the largest LM with explicit decontamination for perplexity evaluation." This means the Paloma results in Figure 2 represent a lower bound on OLMo's relative performance — other models' scores may be artificially inflated by undetected contamination. The paper does not quantify the magnitude of this potential inflation, but the implication is that the true gap between OLMo and other models on perplexity metrics may be smaller (or even reversed in OLMo's favor) than the raw numbers suggest. This is a robustness check on the validity of perplexity comparisons more than on OLMo's performance specifically.
+
+**Adaptation data cross-model-family transfer (Section 4.3, Table 4):** The paper implicitly ablates the effect of applying a data mixture designed for one model family (TÜLU, designed for Llama models) to a different base model (OLMo). The resulting performance gap — TÜLU 2+DPO achieves AlpacaEval 85.1% vs. OLMo+SFT+DPO's 69.3% — demonstrates that adaptation recipes are not model-agnostic. The paper explicitly identifies this as a limitation: "the TÜLU mix was primarily designed for Llama models, and OLMo may require different data mixing to adjust for its unique strengths and weaknesses" (Limitations section). This is a negative result with practical significance: it cautions against the common practice of applying off-the-shelf instruction tuning recipes to new base models and expecting equivalent performance.
+
+**Energy and carbon accounting (Table 6):** The paper reports detailed energy consumption (239 MWh for the 7B model) and carbon emissions estimates under two scenarios: 69.78 tCO2eq when trained on A100-40GB GPUs in Australia (carbon intensity 0.610 kg CO2e/KWh), and approximately 0 when trained on MI250X GPUs at LUMI (100% hydroelectric power). Table 6 contextualizes these numbers against prior models: Gopher-280B (380 tCO2eq), BLOOM-176B (30), OPT-175B (82), LLaMA-7B (14), and Llama 2-7B (31). OLMo's emissions (70 tCO2eq on A100s) are higher than LLaMA-7B (14) and Llama 2-7B (31), which the paper does not explain but likely reflects differences in training duration, hardware efficiency, and data center PUE. The paper acknowledges that these estimates are "lower bounds" that exclude "debugging, hyperparameter tuning, and downtime."
+
+### Critical Assessment
+
+**Does OLMo-7B achieve competitive performance with existing 7B models?**
+
+The experimental evidence supports this claim with important nuance. On the 8 core downstream tasks (Table 3), OLMo-7B's 69.3% average places it within a narrow band of competing models: Llama 2-7B (70.5%), MPT-7B (69.8%), LLaMA-7B (69.6%), and Falcon-7B (70.3%). The maximum gap to the best model (Llama 2-7B) is 1.2 percentage points. On individual tasks, OLMo-7B leads on PIQA (78.4%) and ties for the lead on ARC Challenge (48.5%). These are genuinely competitive numbers.
+
+However, the claim requires qualification on several fronts:
+
+1. **Task selection matters:** The 8 core tasks are all commonsense reasoning benchmarks that can be evaluated via rank classification. The paper acknowledges this selection was deliberate ("selected at the beginning of model development due to their naturalness... and ability to provide meaningful signals throughout training"), but it means the competitive claim is specific to this task distribution. On the auxiliary tasks (Table 7), performance is less stable and the aggregate advantage is modest (47.5% vs. 47.3% for the next-best model). A broader evaluation suite might reveal different relative standings.
+
+2. **The perplexity comparison is confounded by contamination:** OLMo-7B's Paloma scores are explicitly decontaminated; the comparison models' scores likely are not. The paper acknowledges this asymmetry: "Without decontamination, other models risk underestimating perplexity (i.e., overestimating the model's out-of-sample fit)." This means the true relative perplexity performance of OLMo-7B is unknown — it could be better than appears in Figure 2 if other models have significant contamination, or it could reflect genuine differences in language modeling capability. The claim of competitiveness on perplexity is therefore scientifically unverifiable without decontamination of the comparison models, which is impossible without access to their training data.
+
+3. **The adaptation gap is larger than the base model gap:** On base model evaluations, OLMo-7B trails Llama 2-7B by 1.2 points. After adaptation, OLMo+SFT+DPO trails TÜLU 2+DPO by 4.5 points on MMLU and 15.8 points on AlpacaEval win rate (Table 4). The paper attributes this partly to contamination in Llama 2 and partly to adaptation data mismatch, but the magnitude of the gap suggests that OLMo-7B's adaptation performance is not yet competitive with the best Llama 2-based models. A researcher choosing a base model for downstream fine-tuning might reasonably prefer Llama 2 based on these results, despite its opacity.
+
+**Does the paper provide a fully open research infrastructure?**
+
+The claim of full openness is largely supported by the stated releases (Section 5), which include training data (Dolma), training and evaluation code, intermediate checkpoints (500+ at 1000-step intervals), training logs, adaptation code and data, and evaluation frameworks. The Apache 2.0 license removes legal barriers to use and modification.
+
+However, there are genuine limitations to this openness that the paper acknowledges:
+
+1. **Difficulty estimation cost is unaccounted for in the comparison models:** Not applicable to OLMo directly, but the paper's framing of openness as enabling decontamination highlights that the comparison models' scores may be inflated by contamination. The paper cannot prove this without access to the comparison models' training data, which is precisely the problem it identifies.
+
+2. **The data is English-only:** The Limitations section states "Our work focuses on pretraining data in English." This is a significant scope limitation — the model is not representative of multilingual language use, and the open infrastructure does not currently support training multilingual models. Researchers interested in non-English languages cannot directly benefit from this release.
+
+3. **The paper does not release failed training runs:** "With our limited page count we did not provide extensive training logs documenting, for example, training runs that diverged or failed to learn." This is a genuine limitation for scientific study of training dynamics — negative results and training instabilities are often as informative as successful runs, and their absence means researchers cannot study what configurations were tried and abandoned.
+
+4. **The single-epoch-over-data constraint limits scaling studies:** The 2T-token training sample is designed for one epoch. While the paper trains some models for a second epoch with different shuffling, the framework is not designed for the multi-epoch, data-constrained regime that many academic labs face. A researcher wanting to study the effects of data repetition at scale would need to modify the training setup.
+
+5. **The adaptation pipeline transfer gap is not explored in depth:** The paper identifies that TÜLU data transfers imperfectly to OLMo but does not ablate which components of the TÜLU mix cause the gap or experiment with OLMo-specific adaptation data. This is understandable given resource constraints but limits the practical utility of the adaptation results.
+
+**Does the hardware portability claim hold up?**
+
+The paper claims "nearly identical performance" between NVIDIA and AMD training runs. However, no quantitative evidence is presented in the main text to support this claim — no table comparing evaluation scores, no perplexity curves, no training loss trajectories. The claim rests entirely on the assertion in Section 3.4. For a paper whose central contribution is reproducibility and openness, this is a notable omission. A table or figure comparing the two runs' downstream accuracy and perplexity would substantially strengthen this claim. The "minor differences in batch size to optimize for training throughput" also mean the comparison is not truly controlled — the batch size difference, even if small, introduces a confound that prevents attributing any small performance differences to hardware vs. hyperparameter differences.
+
+**What experiments would have strengthened the paper?**
+
+Several experiments are conspicuous by their absence:
+
+1. **Training data ablation studies:** The paper does not ablate individual Dolma sources to measure their contribution to downstream performance. For example, what happens if you remove GitHub? Or Reddit? Or Semantic Scholar? Given that the paper's stated goal is to enable scientific study of how training data impacts model behavior, demonstrating this capability with concrete ablations would have been powerful.
+
+2. **Scaling curve comparisons beyond 7B:** The paper includes OLMo-1B but does not show how the 1B and 7B results compare on a scaling law plot (performance vs. compute or parameters). This would help researchers understand whether OLMo's architecture scales predictably and whether the 7B results extrapolate to larger scales.
+
+3. **Controlled architecture ablations within the OLMo framework:** The paper adopts architectural choices (non-parametric layer norm, linear LR decay, full attention) based on in-loop ablations but does not present these ablations. A table or figure showing, for example, non-parametric vs. RMSNorm at 1B scale would convert the design choices from assertions to evidence.
+
+4. **Longer-context evaluation:** All evaluations use 2048-token sequence length (matching training), but Llama 2-7B uses 4096. Evaluating OLMo-7B on tasks requiring longer context (and perhaps with some position extrapolation method) would clarify whether the 2048 training length is a meaningful limitation.
+
+5. **Adaptation data mixture optimization for OLMo:** The paper shows that TÜLU's Llama-optimized mixture transfers imperfectly. Experimenting with OLMo-specific mixtures (even simple adjustments like changing the proportion of code vs. natural language instructions) would demonstrate whether the adaptation gap can be closed and provide guidance for practitioners.
+
+6. **Quantitative decontamination impact analysis:** The paper claims decontamination is important but does not measure how much decontamination affects OLMo's perplexity scores (e.g., by comparing perplexity on Paloma with and without the decontamination step). This would quantify the magnitude of the contamination problem and validate the methodological concern.
+
+**Where do the claims hold and where do they not?**
+
+The paper's central claim — that a fully open, competitive 7B model is feasible — holds for the specific evaluation suite and task distribution tested. The competitive gap to Llama 2-7B is small on base model commonsense reasoning tasks (1.2 points average). But the claim weakens as one moves to:
+
+- **Instruction-following and chat capabilities:** The gap is substantially larger (4.5 MMLU points, 15.8 AlpacaEval percentage points vs. TÜLU 2+DPO).
+- **Reasoning tasks beyond commonsense:** GSM8k at 15.5 (OLMo+SFT) and 11.0 (after DPO) suggests mathematical reasoning is not yet competitive.
+- **Non-English languages:** The English-only scope means the claim does not extend to multilingual settings.
+- **Long-context tasks:** Not tested, but the 2048 training length implies a limitation.
+
+The openness claim — that OLMo provides the full research infrastructure — holds for the artifacts released, with the caveat that failed training runs are not included and the adaptation pipeline is optimized for a different model family. The hardware portability claim is asserted but not quantitatively demonstrated.
+
+Overall, the experimental analysis supports the paper's positioning as a significant step toward bridging the openness-performance gap, while being appropriately transparent about where that gap remains. The value of the contribution lies less in achieving state-of-the-art performance and more in demonstrating that competitive performance is achievable without sacrificing the transparency that scientific study requires — and in providing the concrete infrastructure for others to build on.
 
 ## 6. Limitations and Trade-offs
-- Data scope and content (Limitations: Data; Section 2.2):
-  - Primarily English; multilingual capability is not addressed.
-  - Large-scale web and social data likely contain toxic or copyrighted text and personal information despite filtering; no perfect removal method exists.
 
-- Distribution match and sample efficiency (Figure 2):
-  - OLMo-7B fits web-like distributions well (C4) but is less sample-efficient on curated sources (e.g., Wikipedia/ArXiv-proximate sources like M2D2), suggesting a trade-off based on data composition.
+### The Cost of Difficulty Estimation Is Not Amortized in the Openness Accounting
 
-- Evaluation representativeness and noise (Limitations: Evaluation; Appendix C):
-  - Benchmarks are mostly narrow, structured multiple-choice tasks; real user chat behavior is broader.
-  - Some tasks have unstable or class-imbalance-driven metrics, making them weak signals for training-time decision-making.
+**The assumption or constraint.** The paper's central contribution is full openness — releasing training data, code, checkpoints, and logs to enable reproducible research. However, the paper acknowledges that significant computational costs are implicitly required to *use* this openness for certain scientific purposes, particularly decontamination. Section 2.4 states that "OLMo-7B is the largest LM with explicit decontamination for perplexity evaluation," achieved by "remov[ing] any pretraining document with paragraphs leaked from Paloma evaluation data." This decontamination is not a one-time cost borne by the OLMo team and passed on to users — it is a capability the framework enables, but researchers who want to decontaminate against their own benchmarks or study contamination effects must re-run similar analyses on the full 2.67-trillion-token Dolma corpus.
 
-- Adaptation dependencies (Limitations: Adaptation; Section 4.3):
-  - TÜLU mixes were designed with LLaMA-family models in mind; performance may not be optimal for OLMo without retuning the mixture.
-  - Preference datasets include distilled outputs from other LMs, entangling OLMo’s post-training behavior with those sources.
+**The consequence.** The headline openness claim — that OLMo enables scientific study that closed models prevent — has a hidden compute prerequisite. A researcher wanting to audit OLMo's training data for contamination against a new benchmark, or to study the relationship between data composition and model behavior, must process trillions of tokens. This is feasible for well-resourced labs but prohibitive for the smaller academic groups that the paper's democratization framing targets. The "openness" is access to the artifact, not access to the compute needed to analyze it. The environmental cost framing in Table 6 (69.78 tCO2eq for training) does not include the compute required to replicate the data curation pipeline, run decontamination, or perform the dataset analyses that the open data is meant to enable.
 
-- Compute and reproducibility costs:
-  - While artifacts are open, reproducing full pretraining still requires substantial compute (239 MWh estimated across runs; Appendix B), limiting who can fully replicate training.
+**What evidence exists in the paper.** The paper provides no estimate of the computational cost of reproducing its data pipeline or running decontamination. Table 6 reports only training costs. The Dolma report (Soldaini et al., 2024) is referenced for pipeline details, but the OLMo paper itself does not discuss the compute requirements for data processing, quality filtering, deduplication, or decontamination. The energy and carbon accounting in Appendix B explicitly states that estimates are "lower bounds" that exclude "debugging, hyperparameter tuning, and downtime" — and by extension, the cost of data curation and analysis.
 
-- Architectural novelty:
-  - The architecture combines established components (RoPE, SwiGLU, non-param LayerNorm) rather than introducing fundamentally new mechanisms; the innovation is in the openness and tooling.
+**Mitigation status.** Not addressed. The paper releases the data and tools but does not provide estimated compute budgets for common research workflows, pre-computed decontamination results against standard benchmarks beyond Paloma, or hosted infrastructure to reduce the barrier to entry. Future work could precompute and release contamination analyses against widely used benchmarks to reduce duplicated effort across the community.
+
+---
+
+### English-Only Scope Limits Applicability to Multilingual Research
+
+**The assumption or constraint.** The paper explicitly restricts its scope to English. The Limitations section states: "Our work focuses on pretraining data in English. We hope that our open framework enables the development of future models in more languages as well as multilingual models." Table 2 confirms that all six Dolma data sources are English-language: Common Crawl (filtered to English), English Wikipedia, English-language books from Project Gutenberg, English-language papers from Semantic Scholar, English Reddit, and GitHub (which is predominantly English). The language filtering is stage 1 of the Dolma pipeline (Section 2.2).
+
+**The consequence.** This is more than a "not yet done" limitation — it means the entire OLMo framework, including its evaluation infrastructure and adaptation pipelines, is untested for non-English languages. A research group wanting to study language-specific phenomena (e.g., how model behavior differs between English and Arabic, or how code-switching affects performance) cannot use OLMo as-is. The Paloma perplexity results on mC4-en (Figure 2) are on the *English* portion of a multilingual dataset, not on non-English text. The decontamination approach, the tokenizer (BPE-based, optimized for English), the evaluation tasks (all English-language benchmarks), and the adaptation data (TÜLU mix, all English instructions) are all monolingual. Extending OLMo to multilingual settings would require retraining the tokenizer, curating non-English data through the Dolma pipeline (which may need new quality filters for different languages), running decontamination against multilingual benchmarks, and validating the evaluation suite — a substantial engineering effort that the paper's openness enables but does not reduce.
+
+**What evidence exists in the paper.** The language scope is acknowledged in the Limitations section. Table 3's evaluation tasks are all English-language benchmarks. Figure 2's Paloma sources are all English-language domains. The tokenizer description (Section 2.1) mentions no multilingual considerations. The comparison models in Table 3 include models with some multilingual capability (Falcon-7B was trained on RefinedWeb, which contains multiple languages), but OLMo does not attempt to match this.
+
+**Mitigation status.** Acknowledged but not mitigated. The paper frames this as deferred to future work: "We hope that our open framework enables the development of future models in more languages." The infrastructure (Dolma pipeline, training code, evaluation tools) could theoretically support multilingual data, but no guidance or estimates are provided for the effort required to extend it.
+
+---
+
+### Competitive Performance Is Not Uniform Across Task Categories — It Clusters on Commonsense Reasoning
+
+**The assumption or constraint.** The paper's headline claim of competitiveness — OLMo-7B achieves 69.3% average on the 8 core tasks, within 1.2 points of Llama 2-7B's 70.5% (Table 3) — is based on a deliberately narrow evaluation suite. All 8 tasks are commonsense reasoning benchmarks evaluated via rank classification: ARC Challenge, ARC Easy, BoolQ, HellaSwag, OpenBookQA, PIQA, SciQ, and Winogrande. Section 2.4 explains this choice: "such tasks were selected at the beginning of model development due to their naturalness (e.g., all can formulated as text completion scoring tasks) and ability to provide meaningful signals throughout training." The paper acknowledges that "many of the downstream tasks are not actually representative of how users interact with language models (i.e., as a chatbot)" (Limitations section).
+
+**The consequence.** The competitive claim does not generalize to tasks outside the commonsense reasoning cluster. Evidence within the paper itself demonstrates this:
+
+- **Mathematical reasoning:** OLMo+SFT achieves GSM8k of 15.5 (Table 8), which drops to 11.0 after DPO. These are low absolute scores, and no comparison to other models on GSM8k is provided for base models, making it impossible to assess relative standing.
+- **Instruction-following and chat:** OLMo+SFT+DPO achieves AlpacaEval 69.3% win rate versus TÜLU 2+DPO's 85.1% (Table 4) — a 15.8 percentage point gap. On MMLU after SFT, the gap is 3.1 points (47.3 vs. 50.4).
+- **Code generation:** Codex-Eval pass@10 is 28.6 for OLMo+SFT, dropping to 27.8 after DPO (Table 8) — modest absolute performance, and no comparisons to other adapted 7B models are provided.
+- **Knowledge-intensive tasks:** MMLU for the base OLMo-7B is 28.3 (Table 4), which the paper does not compare to other base 7B models — but Llama 2-7B base was reported at 45.3 in the Llama 2 paper (Touvron et al., 2023b), suggesting a substantial gap in factual knowledge.
+
+A practitioner evaluating OLMo-7B for a specific application cannot extrapolate from the core 8-task average to their domain of interest. The model is competitive at commonsense reasoning but may substantially underperform alternatives on mathematical reasoning, factual knowledge, or instruction-following.
+
+**What evidence exists in the paper.** Table 3 establishes the commonsense reasoning results. Table 4 shows the MMLU and AlpacaEval gaps. Table 8 shows GSM8k and Codex-Eval results. The auxiliary tasks in Table 7 (headqa_en, logiqa, mrpc, qnli, wic, wnli) span different task formats but are explicitly flagged as providing "less stable performance trends" (Section 4.1, Figure 4), so they do not strengthen the generalizability claim.
+
+**Mitigation status.** The paper is transparent about the limited evaluation scope but does not address it. Section 4.1 states the tasks were "selected at the beginning of model development" for their ability to provide training signal, not for their breadth. The Limitations section acknowledges evaluation noise and narrowness: "language model evaluations are currently very noisy; we aimed to include only evaluations on datasets that provided some signal as to which model performs best, but recognize that there is no perfect automatic evaluation, and thus comparisons should be taken with a grain of salt." This is an honest disclosure that the competitive claim is bounded, but it does not provide practitioners with guidance on where OLMo is likely to underperform.
+
+---
+
+### The Adaptation Pipeline Is Optimized for a Different Model Family, and the Transfer Gap Is Not Diagnosed
+
+**The assumption or constraint.** The paper applies the TÜLU instruction tuning and DPO pipeline — originally developed for Llama models — to OLMo-7B without modification beyond replacing the system prompt. Section 4.3 states: "we largely adopt an existing data mixture designed for a different model family (TÜLU, designed for Llama models), and OLMo may require different data mixing to adjust for its unique strengths and weaknesses" (Limitations section). The training hyperparameters (Appendix D) are chosen "through small pilot experiments" but the data composition itself is not adjusted.
+
+**The consequence.** The adaptation results are confounded: it is impossible to determine how much of the performance gap between OLMo-based and Llama 2-based adapted models (e.g., AlpacaEval 69.3% vs. 85.1%, Table 4) is due to:
+1. Inherent base model quality differences (OLMo-7B vs. Llama 2-7B on the underlying capabilities needed for instruction-following).
+2. Adaptation data mismatch (TÜLU's instruction distribution, prompt formats, and task balance were tuned for Llama's pretraining distribution, not OLMo's).
+3. Contamination in Llama 2's training data (the paper's footnote acknowledges MMLU test set contamination in Llama 2's pretraining data).
+
+This is a significant practical limitation because adaptation is how most practitioners use base models. A researcher choosing between OLMo-7B and Llama 2-7B as a starting point for instruction tuning does not know whether the observed gap reflects a fundamental limitation of OLMo or an optimization problem that could be closed with OLMo-specific adaptation data. The paper's statement that "OLMo requires different data mixing" is a hypothesis, not a demonstrated fact — the magnitude of the gap attributable to data mismatch versus base model capability is unknown.
+
+**What evidence exists in the paper.** Table 4 shows the performance gap across multiple metrics. The paper attributes the gap to two factors (Section 4.3): "test set contamination in Llama 2 and because the TÜLU mix was primarily designed for Llama models." However, no experiment isolates these factors. There is no ablation comparing TÜLU performance on OLMo versus a variant with OLMo-specific data, no analysis of which TÜLU components contribute most to the gap, and no measurement of how much the MMLU contamination inflates Llama 2's scores. The transfer gap is identified but not characterized.
+
+**Mitigation status.** Acknowledged but not investigated. The Limitations section states that "OLMo may require different data mixing" and that the paper "hope[s] to reduce our reliance on such data [distilled from other models] in the future." No concrete plan or preliminary results are provided for OLMo-specific adaptation optimization. This leaves practitioners without guidance on whether investment in OLMo-specific adaptation data would close the gap.
+
+---
+
+### The Decontamination Baseline for Other Models Is Unverifiable, Making Fair Perplexity Comparisons Impossible
+
+**The assumption or constraint.** The paper claims that OLMo-7B's perplexity evaluation is scientifically valid because Dolma is explicitly decontaminated against Paloma, while comparison models (LLaMA, Llama 2, Falcon, MPT, Pythia, RPJ-INCITE) may have unknown contamination inflating their scores. Section 2.4 states: "OLMo-7B is the largest LM with explicit decontamination for perplexity evaluation. Following the approach described in Paloma, we remove any pretraining document with paragraphs leaked from Paloma evaluation data. Without decontamination, other models risk underestimating perplexity (i.e., overestimating the model's out-of-sample fit)."
+
+**The consequence.** This creates an asymmetric evaluation that undermines the paper's own comparisons. The claim that OLMo-7B is "competitive" on perplexity (Figure 2) is unfalsifiable: if OLMo scores worse than another model, the paper can argue the other model's score is inflated by contamination; if OLMo scores better, the paper can claim genuine superiority. There is no way to determine from the reported results whether OLMo-7B's language modeling capability is actually better, worse, or equivalent to the comparison models — because the comparison models' scores have an unknown, unbounded upward bias. This is not the paper's fault (the comparison models' training data is not available to decontaminate), but it means the perplexity results in Figure 2 do not support any comparative claim. The paper acknowledges this implicitly by attributing some model-specific patterns to potential contamination (e.g., Pythia-6.9B's strong performance on the Pile evaluation "may be due to contamination"), but it does not systematically account for this uncertainty in the interpretation of results.
+
+**What evidence exists in the paper.** Figure 2 shows OLMo-7B's decontaminated Paloma results alongside models with unknown contamination status. The paper notes the contamination concern in Sections 2.4 and 4.2, and uses it to explain specific patterns (Falcon-7B's strong RefinedWeb performance as in-distribution, Pythia-6.9B's Pile performance as possible contamination). However, no analysis quantifies the possible magnitude of contamination effects or attempts to bound the comparison models' true (decontaminated) perplexities.
+
+**Mitigation status.** Not mitigated and not mitigatable with current information. The only solution would be for the comparison models' training data to be released and decontaminated, which is beyond the paper's control. The paper's contribution is to demonstrate *that* decontamination matters and to provide *one* model with verified decontamination — but this does not solve the comparison problem. Future work could attempt to estimate contamination levels in closed-data models using indirect methods (e.g., perplexity anomalies on known-duplicated texts), but the paper does not pursue this.
+
+---
+
+### Training Instabilities and Failed Runs Are Not Documented, Limiting Study of Training Dynamics
+
+**The assumption or constraint.** The paper releases extensive artifacts — 500+ intermediate checkpoints, training logs, metrics — but acknowledges that failed or divergent training runs are excluded. The Limitations section states: "With our limited page count we did not provide extensive training logs documenting, for example, training runs that diverged or failed to learn." Section 2.1 notes that architectural choices were made "while minimizing the risk of loss spikes and slow divergence," implying that such instabilities were encountered and influenced design decisions.
+
+**The consequence.** For a paper whose stated goal is enabling scientific study of language models, the absence of negative training results is a significant gap. Training dynamics research — understanding why models diverge, how loss spikes relate to architecture choices, what optimizer settings prevent or cause instability — requires studying failures, not just successful runs. The paper's architectural choices (non-parametric layer norm, specific `$\beta_2 = 0.95$`, gradient clipping at 1.0, linear rather than cosine LR decay) are presented as chosen for stability, but the evidence base for these choices is invisible. Researchers who want to understand the failure modes of different design decisions, or who want to experiment with alternative architectures, cannot learn from OLMo's negative results — they must rediscover instabilities themselves.
+
+The paper's claim that non-parametric layer norm was "the safest option" (Section 2.1) implies that parametric layer norm and RMSNorm were tried and found less stable, but no data is presented. Similarly, the claim that gradient clipping after warmup prevents loss spikes has no supporting ablation showing what happens without it. These are assertions about training dynamics that cannot be verified or studied without the negative runs.
+
+**What evidence exists in the paper.** None. The paper references stability concerns in architectural choices (Section 2.1, Section 3.2) but provides no loss curves, gradient norm plots, or other diagnostics from failed runs. The training logs released via Weights & Biases presumably contain metrics from the successful runs only. The paper's acknowledgment in the Limitations section confirms this gap.
+
+**Mitigation status.** Acknowledged in the Limitations section but not addressed. The paper attributes the omission to page limits, but the release of training artifacts would not be constrained by page limits — the failed run data could be released as supplementary material without consuming paper space. The decision not to release this data limits the scientific value of the release for research on training dynamics, which is one of the use cases the paper claims to enable.
 
 ## 7. Implications and Future Directions
 - How this changes the landscape:

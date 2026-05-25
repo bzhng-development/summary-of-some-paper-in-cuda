@@ -9,161 +9,757 @@ This paper introduces DRAG and IterDRAG, two novel strategies for systematically
 ---
 
 ## 1. Executive Summary
-This paper shows how to turn the “long context” capability of modern language models into predictable, scalable gains for retrieval-augmented generation (RAG). It introduces two inference-time strategies—`DRAG` (Demonstration-based RAG) and `IterDRAG` (Iterative Demonstration-based RAG)—and a simple predictive model that tells you how to allocate a fixed inference budget across retrieved documents, in-context examples, and iterative steps to maximize quality.
+
+This paper systematically studies how inference computation scaling affects retrieval augmented generation (RAG) performance for long-context LLMs, exploring two complementary strategies—**DRAG** (demonstration-based RAG, which scales by increasing both retrieved documents and in-context examples within a single generation call) and **IterDRAG** (iterative demonstration-based RAG, which further scales by decomposing queries into sub-queries with interleaved retrieval across multiple generation steps)—on multi-hop QA benchmarks (Bamboogle, HotpotQA, MuSiQue, 2WikiMultiHopQA) using Gemini 1.5 Flash. The core contribution is the empirical discovery of **inference scaling laws for RAG**, demonstrating that when test-time compute is optimally allocated across documents, demonstrations, and generation iterations, RAG performance scales nearly linearly with the order of magnitude of effective context length, yielding up to 58.9% accuracy gains over standard RAG baselines. The paper further develops a **computation allocation model** that quantitatively predicts RAG performance from inference parameters (number of documents, shots, and iterations), enabling the selection of near-optimal configurations for a given compute budget, establishing that long-context RAG can achieve consistent and predictable improvements from increased inference compute when the allocation adapts to the task and strategy, though gains diminish beyond approximately 1M tokens of effective context length.
 
 ## 2. Context and Motivation
-- The problem/gap
-  - Long-context language models can read millions of tokens, so a natural idea in RAG is to “stuff more knowledge” by retrieving more documents. In practice, this often plateaus or even hurts accuracy once you go past soft thresholds (e.g., top-10) because extra context introduces noise and distraction (Section 1; Related Work 2.3).
-  - Long-context models also struggle to reliably locate relevant information in ultra-long sequences and frequently do not reach their best performance at the maximum context length (Section 1).
-  - Two unanswered questions guide the paper (Section 1): 
-    1) How much does RAG benefit when you scale inference compute if you allocate that compute well? 
-    2) Can we predict the best way to spend a given inference budget?
 
-- Why it matters
-  - RAG underpins many knowledge-intensive applications (search assistants, enterprise Q&A, ops copilots). If gains from larger contexts are unpredictable or saturate, users waste compute. Predictable scaling and principled budget allocation translate directly into better latency/price-performance trade-offs.
+### The Core Problem: Naïve Scaling of Retrieval Quantity Hits a Wall
 
-- Where prior approaches fell short
-  - Most prior “scaling” work increased only the quantity or length of retrieved documents (Section 1; Related Work 2.3). That helps recall but can hurt generation due to irrelevant content (Appendix A: Figure 7 shows Recall keeps improving with more docs while ranking metrics plateau early).
-  - Chain-of-thought style prompting without interleaved retrieval often underperforms on knowledge-heavy, multi-hop questions (Appendix B, Table 6).
+The central problem this paper tackles is deceptively simple: **when you give a long-context LLM more retrieved documents, why doesn't performance keep improving?** And more importantly, **how should we spend inference computation in RAG to get consistent gains instead of hitting a plateau?**
 
-- How this paper positions itself
-  - It treats inference compute as a budget that can be spent on three knobs—number of documents, number of demonstrations (“shots”), and number of iterative steps—and studies the entire configuration space rather than just “more documents.” It then models performance as a function of these knobs to predict optimal settings (Sections 3–5).
+Long-context LLMs like Gemini 1.5 Pro (with context windows up to 2M tokens) have created a new possibility space for retrieval augmented generation. In principle, you can stuff hundreds or thousands of retrieved documents into the prompt, giving the model enormous amounts of external knowledge. The natural expectation—and a motivating hope in much of the RAG literature—is that more knowledge should translate to better answers. But as the paper documents, this expectation breaks down in practice.
+
+The paper identifies a specific failure pattern (Section 1, Section 6):
+
+> "only emphasizing on the knowledge quantity without providing further guidance presents certain limitations"
+
+This matters because RAG systems are deployed across knowledge-intensive applications where correctness depends on accessing and synthesizing information that the model cannot memorize—open-domain QA, enterprise search, scientific literature review, legal document analysis. If throwing more documents at the problem stops helping after some threshold, then simply buying more inference compute (longer context windows, more retrieval) becomes a wasteful investment. Organizations need to know *how* to spend their inference budget, not just *that* they can spend more.
+
+### A Puzzle in Prior Work: Conflicting Signals About Context Scaling
+
+The paper is motivated by a genuine tension in the literature. On one side, several works demonstrate that increasing the quantity of retrieved documents improves RAG performance—at least up to a point. Jiang et al. (2024), Ram et al. (2023), and Xu et al. (2024) all show that retrieving more or longer documents benefits downstream task accuracy. On the other side, these same studies and others reveal that the benefits saturate and can even reverse:
+
+> "numerous studies show that retrieving over soft thresholds (e.g., top-10 documents) leads to a performance plateau and may even cause declines" (Section 1, citing Kuratov et al., 2024; Lee et al., 2024a; Ram et al., 2023)
+
+The paper identifies two specific mechanisms behind this plateau. First, **distraction from irrelevant context**: when you retrieve many documents, the noisy, tangential, or redundant passages can overwhelm the model's attention, causing it to lose track of the genuinely relevant information (Leng et al., 2024; Yoran et al., 2024; Zhang et al., 2024). Second, **long-context LLMs struggle to effectively locate relevant information in ultra-long sequences** (Kuratov et al., 2024; Li et al., 2024), a phenomenon sometimes called the "needle in a haystack" problem. Even if the correct answer is somewhere in the 100 retrieved documents, the model may fail to find and use it.
+
+These two tensions—more documents help but also hurt—create a fundamental allocation problem. You can't just max out the context window and call it a day. You need to decide: for a given inference budget, how many documents should I retrieve? And critically, is there something else I could spend that budget on *besides* more documents that would help more?
+
+### Where Existing Approaches Fall Short
+
+The paper builds its case by identifying specific limitations in prior approaches across several axes:
+
+**RAG baselines only scale one dimension.** Standard RAG operates by retrieving $k$ documents, stuffing them into the prompt, and generating an answer in a single forward pass. Scaling inference compute in this paradigm means exactly one thing: increase $k$. Section 2.2 and Section 3.2 explicitly contrast this with what the paper proposes—that there are *multiple* knobs to turn (documents, demonstrations, generation steps), and only scaling documents is leaving performance on the table.
+
+**In-context learning (ICL) for RAG exists but is under-explored with long contexts.** While many-shot ICL has been shown to improve performance on various tasks (Agarwal et al.; Bertsch et al., 2024), and while in-context RAG approaches exist that prepend documents and QA examples (Press et al., 2023; Ram et al., 2023), these prior efforts do not systematically study how scaling demonstrations *combined with* scaling documents affects RAG performance. The paper's DRAG strategy (Section 3.2) explicitly fills this gap: each in-context example includes not just a query and answer, but also the full set of retrieved documents that support that answer. This teaches the model *how* to extract and use relevant information from a document-heavy context, not just *what* the answer looks like. The paper distinguishes DRAG from prior in-context RAG by emphasizing that:
+
+> "DRAG incorporates extensive retrieved documents within the demonstrations, enabling long-context LLMs to learn to extract relevant information and answer questions using a rich input context" (Section 3.2)
+
+**Iterative retrieval exists but hasn't been combined with demonstration-based scaling.** Prior work on iterative RAG methods—such as IRCoT (Trivedi et al., 2023), Self-Ask (Press et al., 2023), and robust RAG methods that iteratively refine retrieval (Yoran et al., 2024)—has shown that breaking complex queries into sub-queries and retrieving multiple times can help. However, these methods have not been studied in conjunction with the demonstration-scaling approach. They typically use zero-shot or few-shot prompting rather than many-shot demonstrations with full document contexts. The paper's IterDRAG (Section 3.3) combines both ideas: it uses many-shot demonstrations that include both the decomposition logic (sub-queries and intermediate answers) *and* the supporting documents, and it applies this interleaved retrieval-generation process iteratively at test time. This creates a new axis of scaling (number of iterations) that is orthogonal to document count and demonstration count.
+
+**No systematic framework for inference-time resource allocation in RAG.** Perhaps the most critical gap the paper identifies is the absence of any principled method for deciding how to allocate inference computation across different mechanisms. Prior work either (a) treats inference compute as a single knob (increase $k$), (b) studies different strategies in isolation without comparing their scaling properties, or (c) provides heuristics ("use top-10 documents") that don't generalize across tasks, models, or budgets. The paper draws an explicit parallel to the broader inference scaling literature:
+
+> "Concurrent to our work, long-document retrieval and datastore scaling are proposed to optimize RAG performance (Jiang et al., 2024; Shao et al., 2024). Despite such progress, inference scaling remains under-explored for long-context RAG methods." (Section 2.3)
+
+This gap is what the computation allocation model (Section 5) aims to fill—a predictive framework that, given a compute budget and a task, tells you how to split your spending across documents, shots, and iterations.
+
+**Multi-hop QA remains challenging despite long contexts.** The paper focuses on multi-hop QA datasets (HotpotQA, MuSiQue, 2WikiMultiHopQA, Bamboogle) because they represent the hardest case for RAG: questions that require synthesizing information from multiple documents, often with compositional reasoning (e.g., "What is the population of the country where the director of film X was born?"). Section 6 identifies four persistent error categories—inaccurate retrieval, incorrect reasoning, hallucination, and evaluation issues—that standard RAG fails to address. The compositionality gap (Press et al., 2023)—where models struggle to chain together facts across multiple retrieval steps—is specifically targeted by IterDRAG's query decomposition mechanism.
+
+### How This Paper Positions Itself
+
+The paper frames its contribution not as inventing entirely new components, but as **providing the first systematic study of how different inference-scaling strategies combine and trade off against each other in long-context RAG**. The key intellectual move is to treat inference compute as a *multi-dimensional budget* rather than a single scalar:
+
+- **Effective context length** is the paper's unified unit of computation: the total number of input tokens across all LLM calls before producing the final answer. This lets the paper compare strategies that consume compute in fundamentally different ways—a single long prompt (DRAG at 1M tokens) vs. multiple shorter prompts (IterDRAG with five iterations of 200k tokens each) vs. many-shot QA with no retrieval—on a common scale.
+
+- The paper identifies **three orthogonal scaling axes** that have not been studied jointly: (1) number of retrieved documents $k$, (2) number of in-context demonstrations $m$, and (3) number of iterative generation steps $n$. The key insight is that these axes are not equally helpful across all settings, and the optimal allocation depends on the task, the method, and the total budget. This is what drives the need for the computation allocation model (Equation 2, Section 5.1).
+
+- The paper explicitly positions itself against the narrative that "more documents = better RAG." Figure 1 (reproduced in the paper as "Figure 1 | Normalized performance vs. effective context lengths on MuSiQue") is the paper's centerpiece argument: standard RAG (scaling only documents) plateaus early, while DRAG and IterDRAG achieve **near-linear scaling** when the budget is allocated across multiple dimensions. This is the "inference scaling laws for RAG" the paper claims to discover—a direct conceptual parallel to the training scaling laws literature (Hoffmann et al., 2022) and the test-time compute scaling laws for math reasoning (Snell et al., 2024), but applied to the retrieval setting.
+
+The paper also positions itself at a specific point in the LLM capability landscape. By using Gemini 1.5 Flash (a relatively compact model with a 1M-token context window) rather than the largest available models, the paper demonstrates that inference-time strategies can extract strong performance from smaller, more cost-efficient models—a finding with practical implications for deployment economics. The 58.9% gain over standard RAG (Section 1, quantified in Table 1 across datasets and budget levels) is achieved not by training a bigger model, but by spending inference compute more intelligently within the same model's context window.
+
+### The Practical and Theoretical Stakes
+
+The paper addresses both immediate practical concerns and longer-term theoretical questions:
+
+**Practically**, organizations deploying RAG systems face an allocation problem every day: given a latency budget, a context window limit, and a cost per token, how should they configure their retrieval and prompting to maximize answer quality? Without a framework like the computation allocation model, this is done through ad-hoc grid search or heuristics. The paper's finding that the model generalizes across domains (Table 3: 96.6% of optimal performance when parameters are learned from other datasets) and extrapolates to unseen context lengths (Table 4) suggests that a single calibration—learn once per model, apply to many downstream tasks—is feasible.
+
+**Theoretically**, the paper asks whether inference scaling laws exist for RAG in the same way they exist for pretraining. The near-linear relationship between log-effective-context-length and performance (Figures 4 and 11) suggests that RAG is in a **compute-rich regime** where growth is still possible, even as standard RAG saturates. The finding that different methods dominate at different scales (DRAG excels at shorter budgets, IterDRAG at longer ones—Table 1) mirrors similar phase-transition phenomena in other areas of ML, where the optimal algorithm changes as resources increase. This has implications for how we think about long-context LLM capabilities: perhaps the limitation is not the context window itself, but the strategies we use to fill and exploit it.
 
 ## 3. Technical Approach
-This section explains the two strategies (`DRAG`, `IterDRAG`), how compute is measured, and how optimal allocations are modeled.
 
-- Key definitions
-  - `RAG` (Retrieval-Augmented Generation): before answering a query, retrieve relevant documents from a corpus and insert them into the model’s prompt.
-  - `In-context learning (ICL)`: at test time, give the model a few task examples (“shots”) inside the prompt so it can imitate the pattern.
-  - `Effective context length`: the total number of input tokens the model consumes across an entire answer, including all iterations if the method runs multiple rounds (Section 3.1). Output tokens and retrieval costs are excluded because answers in these datasets are short and ANN retrieval is comparatively cheap.
-  - Budget `L_max`: an upper bound on effective context length you are allowed to spend for an answer (Section 4.1).
-  - Inference parameters `θ`: three integers—`k` (number of retrieved documents per example), `m` (number of in-context examples), `n` (number of generation iterations). In `DRAG`, `n=1`. In `IterDRAG`, `n` can be >1 (Section 4.1).
+### 3.1 Reader Orientation
 
-- DRAG: demonstration-based RAG (Section 3.2; Figure 3 left)
-  - Pipeline
-    1) For each in-context example and for the test query, retrieve the top-`k` documents from a large corpus (Wikipedia from KILT; Appendix H).
-    2) Build a long prompt that interleaves these document sets with example “Question → Answer” pairs, then the test documents and test question.
-    3) Reverse the order of retrieved docs in each set so the highest-ranked documents sit closest to the question (Section 3.2).
-    4) Do a single generation call to produce the answer.
-  - Why this helps: instead of only enlarging the context, the examples “teach” the model how to use retrieved evidence inside long contexts—how to pick relevant snippets and apply them to a new question (Section 3.2).
+This paper models and optimizes **how to spend inference computation in retrieval augmented generation (RAG)**—that is, given a long-context LLM, a set of retrieved documents, a few example question-answer pairs, and optionally the ability to ask multiple follow-up questions, how do you configure all the knobs (how many documents, how many examples, how many rounds of retrieval-and-reasoning) to maximize the chance of getting the right answer for a given computation budget? The system is an **empirical scaling framework combined with a predictive allocation model**: it systematically measures how RAG performance changes as you vary three orthogonal parameters (documents, demonstrations, iteration steps), discovers that optimal performance scales nearly linearly with the logarithm of effective context length, and then fits a mathematical model that can predict—for a new task or budget level—which combination of parameters will work best, without requiring an exhaustive new grid search.
 
-- IterDRAG: iterative demonstration-based RAG (Section 3.3; Figure 3 right)
-  - Motivation: on multi-hop questions, one-shot retrieval often misses intermediate facts. IterDRAG decomposes the question and interleaves retrieval and reasoning.
-  - Pipeline
-    1) Create demonstrations in a constrained “Self-Ask” style so each example shows a sequence like “Follow up: … → Intermediate answer: … → So the final answer is: …” (Section 3.3; Appendix H).
-    2) At test time, start with initial retrieval and the demonstrations in the prompt. The model either emits a sub-question (“Follow up: …”) or an intermediate/final answer.
-    3) When a sub-question appears, retrieve additional documents for it and append them; then the model produces the intermediate answer. Repeat up to 5 iterations (Section 3.3).
-    4) Stop when the model outputs “So the final answer is: …”
-  - Why this helps: targeted retrieval for simpler sub-queries raises the chance the right evidence enters the context and reduces distraction from unrelated documents (Appendix A, Table 5 shows large gains in ranking metrics over one-shot retrieval).
+### 3.2 Big-Picture Architecture (Diagram in Words)
 
-- Measuring and searching for the best use of compute
-  - For a fixed budget `L_max`, the method searches over many combinations of `(k, m, n)` whose token count is ≤ `L_max` and selects the configuration with the best average metric (Equation 1 in Section 4.1).
-  - Experimental budgets: `L_max` ∈ {16k, 32k, 128k, 1M, 5M} tokens (Section 4.1). Grid: `k` ∈ {0, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000}; `m` ∈ {0, 1, 2, 4, …, 256}; `n` up to 5 (Section 4.1).
+The framework has four major components that interact in a measurement-prediction-application pipeline:
 
-- Modeling performance to predict optimal allocations (Section 5)
-  - The paper introduces a simple “computation allocation model.” Informally, it says: if you take the log of the three knobs `(k, m, n)`, performance behaves almost linearly after a sigmoid-like transformation.
-  - Equation 2 (Section 5.1): apply an inverse-sigmoid to the metric `P`, then approximate it by a linear function of `log(k)`, `log(m)`, and `log(n)`. Coefficients depend on the base model and on a task-specific “informativeness” vector `i = (i_doc, i_shot, 0)`. 
-    - `i_doc` is measured as the performance gain from adding one document vs zero-shot QA on that task; `i_shot` is the gain from adding one example vs zero-shot (Section 5.1).
-  - Estimation: ordinary least squares on observed runs to learn parameters `a, b, c`. Once fitted on some tasks or shorter budgets, it predicts the best `(k, m, n)` for new tasks or longer budgets (Sections 5.2, Table 3 and Table 4).
+1. **RAG Strategy Implementations (DRAG and IterDRAG)** — concrete algorithms that take a query, retrieve documents, construct prompts with in-context examples, and call the LLM to produce an answer. DRAG does this in one shot; IterDRAG does it iteratively, decomposing the query into sub-queries with interleaved retrieval. These are the "engines" whose performance is being studied.
 
-- System and implementation details (Appendix H)
-  - Retriever: Gecko-1B embeddings over Wikipedia passages; documents truncated to 1024 tokens; top-`k` per step; documents listed nearest to the question in descending rank (Appendix H).
-  - LLM: Gemini 1.5 Flash (1M token window) for efficiency (Section 4.1; Appendix H).
-  - Constrained decoding for `IterDRAG` forces the Self-Ask output prefixes (“Follow up: …”, “Intermediate answer: …”, “So the final answer is: …”) to control the iteration (Appendix H).
+2. **Inference Parameter Configuration Space** — a structured grid of choices defined by three knobs: $k$ (number of retrieved documents, from 0 to 1000), $m$ (number of in-context demonstrations, from 0 to $2^8 = 256$), and $n$ (number of iterative generation steps, up to 5 for IterDRAG, fixed at 1 for DRAG). Each configuration produces a specific effective context length $l(x_i; \theta)$, the total number of input tokens consumed across all LLM calls for that query.
+
+3. **Compute Budget Envelope and Optimal Performance Measurement** — for each fixed maximum effective context length $L_{\text{max}}$ (chosen from {16k, 32k, 128k, 1M, 5M} tokens), the framework enumerates all configurations whose effective context lengths stay within that budget, evaluates them on benchmark datasets, and records the best accuracy achieved at each budget level. This produces the curve $P^*(L_{\text{max}})$, the optimal performance achievable for a given computation allowance.
+
+4. **Computation Allocation Model** — a parametric equation that predicts RAG performance $\sigma^{-1}(P(\theta)) \approx (a + b \odot i)^T \log(\theta) + c$ from the inference parameters $\theta = (k, m, n)^T$ and task-specific informativeness measures $i = (i_{\text{doc}}, i_{\text{shot}}, 0)^T$. Once the parameters $a, b, c$ are fitted on a set of evaluated configurations (one time, per model), the model can predict optimal configurations for new tasks (requiring only the cheap-to-measure $i$ values) and extrapolate to unseen budget levels.
+
+Information flows as follows: a query enters the system → a retriever (Gecko-1B) fetches top-$k$ documents from a Wikipedia corpus → in-context examples are constructed (each containing its own retrieved documents, query, and answer) → the full prompt is assembled and fed to Gemini 1.5 Flash → for DRAG, this produces the final answer in one call; for IterDRAG, generated sub-queries trigger additional retrieval-and-generation cycles → the effective context length is measured by summing input tokens across all calls → performance is evaluated against ground truth → the allocation model fits the observed (configuration, performance) pairs to predict what would happen at untested configurations or budgets.
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First, the formal definition of effective context length**, the paper's unified unit of inference computation, and why it's chosen over alternatives (Section 3.1). This is the foundation because all budget constraints, comparisons, and scaling analyses operate in this unit.
+- **Second, DRAG—the demonstration-based RAG strategy** (Section 3.2)—how the prompt is constructed, what each in-context example contains, how documents are ordered, and what scaling axes it exposes ($k$ and $m$). This is the simpler strategy and introduces the core prompt architecture.
+- **Third, IterDRAG—the iterative extension** (Section 3.3)—how query decomposition works, how in-context examples are generated to teach decomposition, the constrained decoding mechanism (Self-Ask format), and the additional scaling axis it introduces ($n$, the number of iterations). This builds naturally on DRAG because it reuses the same demonstration structure but adds iterative reasoning.
+- **Fourth, the compute-optimal objective** (Section 4.1, Equation 1)—the formal definition of $P^*(L_{\text{max}})$, how it is computed empirically through grid search, and what it means operationally. This is the target quantity that the rest of the paper studies.
+- **Fifth, the computation allocation model** (Section 5.1, Equation 2)—the parametric form, how each term captures a different effect (model-specific scaling, task-specific informativeness, and sub-linearity correction), how the parameters are estimated, and how the model is used for prediction. This is the paper's prescriptive contribution that turns empirical observations into a usable tool.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily an **empirical measurement paper with a predictive modeling component** whose core idea is that RAG performance scales nearly linearly with the logarithm of effective context length when inference compute is allocated optimally across multiple dimensions, and that this scaling relationship can be captured by a simple parametric model that generalizes across tasks and budget levels.
+
+---
+
+#### Effective Context Length as the Unified Unit of Inference Computation
+
+The paper needs a way to compare strategies that consume computation in fundamentally different ways. A one-shot DRAG call with 1M input tokens and a five-iteration IterDRAG run with 200k tokens per iteration both consume substantial compute, but in different patterns (one large forward pass vs. five smaller ones). To make meaningful comparisons and to define budget constraints, the paper introduces **effective context length** as the common currency:
+
+> "We measure inference computation with effective context length, defined as the total number of input tokens across all iterations before the LLM outputs the final answer." (Section 3.1)
+
+For strategies that call the LLM exactly once (DRAG, standard RAG, many-shot QA), the effective context length is simply the number of tokens in the input prompt. For IterDRAG, it is the sum of input tokens across all iterative calls—the initial call, plus each subsequent interleaved retrieval-and-generation step, until the final answer is produced.
+
+**What the paper explicitly excludes from this computation budget:**
+
+- **Output tokens:** The paper states that "LLMs typically generate significantly fewer tokens (fewer than 10) in knowledge-intensive tasks" (Section 3.1). This is a design choice justified by the nature of QA tasks: answers are short (entity names, numbers, short phrases), so output costs are negligible relative to input costs when processing thousands of tokens of retrieved documents.
+- **Retrieval costs:** The paper argues that "retrieval is generally much less computationally expensive than LLM inference, especially with scalable matching methods" (Section 3.1, citing Sun et al., 2024). This means the cost of nearest-neighbor search over embedding vectors is treated as negligible compared to running a transformer over long contexts.
+
+**Why this definition:** The choice of effective context length rather than, say, FLOPs or wall-clock time, reflects a deliberate focus on the **LLM's information processing burden**. The paper's core question is about how the model's ability to use retrieved knowledge changes as you give it more input to process, either in a single forward pass or spread across multiple reasoning steps. Token count is a direct proxy for the model's "reading load" and is easily measurable without access to model internals or hardware profiling. It also maps naturally to practical constraints: cloud APIs charge per input token, and context windows impose hard token limits.
+
+**What is not captured:** The paper acknowledges two important omissions. First, latency is not modeled—IterDRAG's sequential retrieval-generation steps introduce serial dependencies that wall-clock timing would penalize even if the total token count is the same as a parallel approach. Second, the effective context length for IterDRAG can "be extended indefinitely depending on the strategy" (Section 3.1), meaning the budget constraint is soft rather than hardware-imposed, which makes the comparison to DRAG (hard-limited by context window size) somewhat asymmetric.
+
+---
+
+#### DRAG: Demonstration-Based RAG
+
+DRAG is the simpler of the two proposed strategies. It extends standard RAG by incorporating **multiple full demonstrations** into the prompt, where each demonstration includes not just a query and its answer, but also the complete set of retrieved documents that provide the supporting evidence for that answer. This teaches the model, through in-context learning, how to extract relevant information from a potentially large and noisy document set.
+
+**Prompt construction (Figure 15, Appendix H):** The prompt consists of three parts arranged in a specific order:
+
+1. **In-context examples ($m$ of them):** Each example contains three elements in sequence—the retrieved documents for that example's query, the example query itself, and the example answer. The number of examples $m$ is swept from 0 to $2^8 = 256$.
+2. **Test documents:** The $k$ documents retrieved for the current test query.
+3. **Test query:** The actual question to answer.
+
+Within each example and for the test documents, the retrieved documents are **ordered in reverse**, placing the highest-ranked documents (those most similar to the query according to the retriever) closest to the query text. This follows Liu et al. (2024b):
+
+> "We reverse the order of the retrieved documents, placing higher-ranked documents closer to the query."
+
+The rationale is a recency bias in transformer attention: tokens near the end of the sequence (right before the model generates the answer) have the strongest influence on the output distribution, so putting the most relevant documents there gives them the most "signal."
+
+**Retrieval mechanism:** For both the in-context examples and the test query, retrieval is performed using the Gecko-1B embedding model (Lee et al., 2024b) against Wikipedia passages from the KILT benchmark (Petroni et al., 2020). The query is embedded, compared against all passage embeddings via nearest-neighbor search, and the top-$k$ passages are selected. Each retrieved passage is then "truncated on the right side to a maximum of 1024 tokens using whitespace tokenization" (Appendix H). This truncation is a practical necessity: Wikipedia passages can be long, and without a cap, a few long documents could blow up the context budget unpredictably. The 1024-token limit ensures each document contributes a bounded amount to the effective context length, making the relationship between $k$ and token count more linear and controllable.
+
+**Instructions and formatting (Figures 16, Appendix H):** The prompt uses a specific template for instruction-tuned models. The key design elements include:
+
+- An instruction framing the task: "You are an expert in question answering. I am going to give you one or more example triples of context, question and answer, in which the context may or may not be relevant to the question."
+- Explicit separation markers: "Context (which may or may not be relevant):" precedes the retrieved documents, "Question:" precedes each query, and "Answer:" precedes each answer.
+- A transition to the test instance: "After the examples, I am going to provide another pair of context and question... I want you to answer the question."
+- A constraint on output format: "Give only the answer, and no extra commentary, formatting, or chattiness."
+
+The instruction explicitly acknowledges that the retrieved documents "may or may not be relevant"—this is important because it teaches the model to selectively attend to useful information rather than assuming all provided documents are authoritative.
+
+**What makes DRAG different from standard RAG and prior in-context RAG:** Standard RAG prepends only retrieved documents (no demonstrations) to the query. Prior in-context RAG approaches (e.g., Ram et al., 2023) prepend QA examples, but those examples typically do not include the full set of retrieved documents—they show the model *what the answer looks like* but not *how to find it in a sea of documents*. DRAG's inclusion of retrieved documents within each demonstration teaches both skills simultaneously: each example shows (documents, query, answer) as a complete unit, so the model learns the full mapping from "messy document pile + question" to "extracted answer."
+
+**Scaling axes exposed by DRAG:** DRAG exposes exactly two independent scaling knobs:
+
+- $k$ (number of documents): varied across {0, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000}
+- $m$ (number of in-context examples/shots): varied across {$0, 2^0, 2^1, ..., 2^8$} = {0, 1, 2, 4, 8, 16, 32, 64, 128, 256}
+
+The effective context length for a given configuration is approximately:
+
+$$\text{effective context length}(k, m) \approx m \times (k \times \text{avg\_doc\_tokens} + \text{query\_overhead}) + (k \times \text{avg\_doc\_tokens} + \text{test\_overhead})$$
+
+where `avg_doc_tokens` is roughly 1024 (the truncation limit) times a compression factor depending on how much of the 1024-token budget each document actually uses. Since both $m$ and $k$ grow, the context length grows multiplicatively, which is why a $k=1000, m=256$ configuration can quickly exceed even a 1M-token context window.
+
+**Why demonstrations with documents (not just answers):** A natural alternative would be to simply show the model correct answers (many-shot QA) or to show the model just the query-answer pairs without documents. These baselines are evaluated in Table 1. The paper's argument is that showing the model *how the answer is derived from the documents*—by including the documents in the demonstrations—enables it to generalize the extraction skill rather than just memorizing question-answer associations. This is consistent with the broader in-context learning literature showing that demonstrations teach task structure, not just input-output mappings.
+
+---
+
+#### IterDRAG: Iterative Demonstration-Based RAG
+
+IterDRAG extends DRAG by adding a third scaling axis: iterative query decomposition with interleaved retrieval. Instead of producing the final answer in a single generation step, IterDRAG generates sub-queries, retrieves additional documents for each sub-query, generates intermediate answers, and finally synthesizes everything into the final answer. This breaks complex multi-hop questions into manageable single-hop sub-questions that are individually easier to answer, then chains the results.
+
+**The compositionality gap motivation:** Multi-hop questions require chaining multiple facts from different documents. For example: "What is the population of the country where the director of film X was born?" requires (1) finding the director of film X, (2) finding their birthplace country, (3) finding that country's population. Standard RAG retrieves documents, but if the query is answered in a single generation step, the model must perform all this reasoning internally. The "compositionality gap" (Press et al., 2023) refers to the observation that models are substantially worse at this internal chaining than at answering the individual sub-questions separately. IterDRAG addresses this by making the reasoning steps explicit and retrievable.
+
+**Training data for decomposition demonstrations (Section 3.3):** Since benchmark datasets provide only queries and final answers (not sub-queries and intermediate answers), the paper must generate the demonstration data. The procedure works as follows:
+
+1. For each training query, prompt an LLM with constrained decoding to follow the Self-Ask format (Press et al., 2023; Koo et al., 2024).
+2. The LLM generates either a sub-query, an intermediate answer, or the final answer at each step. The Self-Ask format enforces this structure: sub-queries begin with "Follow up:", intermediate answers with "Intermediate answer:", and final answers with "So the final answer is:".
+3. When a sub-query is generated, additional documents are retrieved (using the sub-query as the retrieval query, not the original query) and interleaved into the prompt before the intermediate answer is produced.
+4. This continues until the final answer is generated or a maximum number of iterations is reached, at which point the model is forced to produce the final answer.
+5. Only examples with correct final answers are retained for use as in-context demonstrations.
+
+**How the demonstrations teach decomposition:** Each retained demonstration includes the full chain: the original retrieved documents, the sub-queries (with their retrieved documents), the intermediate answers, and the final answer. When these demonstrations are prepended to the test query, they teach the model *both* how to decompose queries (by showing the sub-query patterns) *and* how to use retrieval at each step (by showing the interleaved document retrieval).
+
+**Inference procedure (Figure 3, right):** At test time, IterDRAG operates as follows:
+
+1. The initial prompt is constructed the same way as DRAG: $m$ in-context examples (each now containing decomposition chains with interleaved documents) followed by the test documents and test query.
+2. The LLM is called with constrained decoding. If the output starts with "Follow up:", it is treated as a sub-query. If it starts with "Intermediate answer:", it is treated as an intermediate answer. If it starts with "So the final answer is:", the process terminates.
+3. When a sub-query is generated, additional documents are retrieved for that sub-query (using the same Gecko-1B retriever against the same Wikipedia corpus). These new documents are merged with the existing ones in the prompt.
+4. The intermediate answer is then generated, conditioned on both the original documents and the freshly retrieved documents.
+5. Steps 2-4 repeat until either the final answer is produced or a maximum of 5 iterations is reached. If 5 iterations are exhausted without a final answer, the model is "forced to generate the final answer" (Section 3.3) by constraining the decoding to the final-answer format.
+
+**The three scaling knobs of IterDRAG:**
+
+- $k$ (number of documents per retrieval): same as DRAG, but applied at each retrieval step (initial retrieval and each sub-query retrieval)
+- $m$ (number of in-context demonstrations): same as DRAG, with the same exponential sweep
+- $n$ (number of iterative steps): up to 5, implicitly controlled by the model's decision to continue decomposing vs. produce the final answer
+
+**How IterDRAG's compute budget grows:** Each iteration consumes additional input tokens—for the sub-query, the newly retrieved documents, and the intermediate answer—so the effective context length accumulates across steps. This means IterDRAG can spend far more total computation than DRAG without requiring a longer context window per individual call (since each call only needs to process the current step's prompt, not the full history of all previous steps—though in practice, prior context is included). This is why IterDRAG can "extend the effective context length indefinitely" (Section 3.1) beyond the LLM's context window limit: the total tokens consumed across all calls can exceed 1M even though no single call's prompt exceeds 1M tokens.
+
+**Why constrained decoding (Self-Ask format):** The paper uses the Automata-based constraints of Koo et al. (2024) to enforce the Self-Ask output format. Without this, the model might generate free-form reasoning that is harder to parse and does not reliably trigger the retrieval mechanism. The format also makes it deterministic whether the model is decomposing (outputting a follow-up question), answering a sub-question (outputting an intermediate answer), or concluding (outputting the final answer), which enables the system to correctly route the output to the next retrieval step.
+
+**Comparison to chain-of-thought (CoT):** (Appendix B, Table 6) The paper compares IterDRAG against CoT prompting, where the model is given reasoning chains as demonstrations but does not perform interleaved retrieval. Across HotpotQA, MuSiQue, and 2WikiMultiHopQA, IterDRAG substantially outperforms CoT (e.g., 57.5 vs. 33.0 EM on 2WikiMultiHopQA, 17.9 vs. 8.9 EM on MuSiQue). The paper attributes this to three factors: (1) CoT relies on the initial retrieval only, while IterDRAG retrieves fresh documents for each sub-query, improving recall; (2) Gemini 1.5 Flash is "relatively small and may not perform well in free-form reasoning" compared to constrained decomposition; and (3) the generated CoT examples are "less informative than handcrafted ones" and underperform compared to the Self-Ask format.
+
+**IterDRAG's retrieval advantage:** (Appendix A, Table 5) At $k=50, m=2$, IterDRAG's iterative retrieval improves recall over DRAG's one-shot retrieval by an average of 21.7% across datasets, and improves ranking-discounted metrics (NDCG and MRR) by 30.7% and 39.9% respectively. The improvement is largest on 2WikiMultiHopQA, where recall jumps from 0.722 (DRAG) to 0.935 (IterDRAG). The paper explains this as a consequence of query decomposition: "Iterative retrieval based on query decomposition often yields simpler sub-queries, facilitating more effective retrieval." Instead of trying to find documents that jointly satisfy a complex multi-hop constraint (which embedding models struggle with), IterDRAG breaks the retrieval into independent single-hop lookups that are individually easier for the retriever.
+
+---
+
+#### The Compute-Optimal Objective: $P^*(L_{\text{max}})$
+
+The paper's central empirical question is: **given a maximum allowed effective context length $L_{\text{max}}$, what is the best RAG performance we can achieve?** This is formalized in Equation 1 (Section 4.1):
+
+$$P^*(L_{\text{max}}) := \max_{\theta \in \Theta} \left\{ \frac{1}{|\mathcal{X}|} \sum_i P(y_i, f(x_i; \theta)) \;\middle|\; \forall i, l(x_i; \theta) \leq L_{\text{max}} \right\}$$
+
+where:
+
+- $\mathcal{X}$ is the evaluation dataset, with each instance consisting of a query $x_i$ and its ground-truth answer $y_i$
+- $\theta$ is a vector of inference parameters: the specific configuration of $(k, m, n)$ being evaluated
+- $\Theta$ is the full discrete search space of configurations (e.g., for DRAG: $k \in \{0, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000\}$, $m \in \{0, 1, 2, 4, ..., 256\}$, and $n=1$)
+- $f(x_i; \theta)$ is the model's prediction when running the RAG strategy with configuration $\theta$ on query $x_i$
+- $l(x_i; \theta)$ is the effective context length consumed by that inference
+- $P(y_i, f(x_i; \theta))$ is the performance metric (exact match, F1, or accuracy) comparing the prediction to ground truth
+- $P^*(L_{\text{max}})$ is the maximum achievable average performance when no query exceeds the budget $L_{\text{max}}$
+
+**What this computes operationally:** For each budget level $L_{\text{max}}$ (chosen from {16k, 32k, 128k, 1M, 5M} tokens), the evaluation procedure works as follows:
+
+1. Enumerate all configurations $\theta \in \Theta$.
+2. For each configuration, compute the effective context length $l(x_i; \theta)$ for every query in the dataset. If any query exceeds $L_{\text{max}}$, the configuration is invalid for this budget and is discarded.
+3. For each surviving configuration, run the RAG strategy on all test queries and compute the average performance metric (EM, F1, or accuracy).
+4. Take the maximum average performance across all surviving configurations. This maximum is $P^*(L_{\text{max}})$.
+
+**The key constraint:** "$\forall i, l(x_i; \theta) \leq L_{\text{max}}$" means the budget constraint is a **hard per-query ceiling**, not an average. If a configuration causes even one query to exceed $L_{\text{max}}$ tokens, it is eliminated entirely. This models a practical deployment constraint where the LLM has a maximum context window or where a cost budget is enforced per-request.
+
+**Why this specific definition:** The paper needs a definition of "optimal" that is (a) empirically measurable through grid search, (b) fair across strategies (by enforcing the same token budget), and (c) practical (a hard ceiling matches real API limits). The alternative—constraining the *average* context length across queries—would allow some queries to massively exceed the budget as long as others were shorter, which would be unrealistic for rate-limited APIs and would not test the model's ability to stay within a fixed window.
+
+**What $P^*(L_{\text{max}})$ curves reveal:** By computing $P^*(L_{\text{max}})$ for multiple budget levels and plotting them, the paper discovers the "inference scaling laws"—the relationship between optimal performance and allowed compute. The near-linear relationship in log-space (Figures 4, 11) is an empirical finding, not a theoretical derivation: it emerges from measuring $P^*$ at the sampled $L_{\text{max}}$ values and fitting a line.
+
+**Computational cost of measuring $P^*$:** The paper notes that this is expensive. For DRAG alone, the parameter sweep over $k \in \{0, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000\}$ (11 values) and $m \in \{0, 1, 2, 4, 8, 16, 32, 64, 128, 256\}$ (10 values) yields 110 configurations. Across 4 datasets, 3 metrics, and ∼1.2k sampled examples per dataset, this is a substantial evaluation campaign. The paper does not explicitly state the total cost but acknowledges using sampling and a compact model (Gemini 1.5 Flash) to manage it.
+
+---
+
+#### The Computation Allocation Model
+
+After establishing that $P^*(L_{\text{max}})$ scales near-linearly with $\log(L_{\text{max}})$ under optimal allocation, the paper addresses a harder question: **can we predict performance for an arbitrary configuration $\theta$, not just the optimal one, and can we generalize this prediction to new tasks and budget levels without exhaustive grid search?** The computation allocation model (Section 5.1, Equation 2) is the answer.
+
+**Model formulation:**
+
+$$\sigma^{-1}(P(\theta)) \approx (a + b \odot i)^T \log(\theta) + c$$
+
+where:
+
+- $P(\theta)$ is the predicted average performance metric (EM, F1, or accuracy) for configuration $\theta$
+- $\theta = (k, m, n)^T$ is the vector of inference parameters: number of documents $k$, number of demonstrations $m$, number of iterations $n$ (fixed to 1 for DRAG, varied up to 5 for IterDRAG)
+- $\sigma^{-1}$ is an inverse sigmoidal mapping applied to compress the performance values before linear modeling
+- $a \in \mathbb{R}^3$ is a learned vector capturing **model-specific scaling behavior**—how much the LLM's performance improves per unit increase in $\log(k)$, $\log(m)$, and $\log(n)$, independent of the task
+- $b \in \mathbb{R}^3$ is a learned vector capturing **how task informativeness modulates the scaling**—how much the benefit of adding documents, shots, or iterations depends on how informative those elements are for the specific task
+- $i = (i_{\text{doc}}, i_{\text{shot}}, 0)^T$ is a **task-specific informativeness vector**: $i_{\text{doc}}$ measures how much performance improves from adding one document (vs. zero-shot), and $i_{\text{shot}}$ measures how much performance improves from adding one in-context example (vs. zero-shot). The third component is set to 0 because "applying $i_{\text{iter}}$ does not yield improved accuracy" (Section 5.1)
+- $\odot$ denotes element-wise multiplication: $(b \odot i)_j = b_j \cdot i_j$
+- $c \in \mathbb{R}$ is a scalar intercept
+- The logarithm is applied element-wise to $\theta$
+
+**What the equation computes, term by term:**
+
+- $\log(\theta) = (\log k, \log m, \log n)^T$ converts the counts into a log scale. This reflects the empirical finding that performance scales with the *order of magnitude* of documents and shots, not with their raw counts—doubling from 1 to 2 documents helps much more than doubling from 500 to 1000.
+- $a^T \log(\theta)$ is the **model-intrinsic scaling**: it captures how the specific LLM (Gemini 1.5 Flash) improves as you give it more of each resource, averaged across tasks. A large $a_1$ means the model benefits strongly from additional documents in general; a small $a_2$ means demonstrations help less (or not at all) on average.
+- $b \odot i$ provides the **task-specific modulation**: if a task has high $i_{\text{doc}}$ (meaning documents are very informative for that task), then $(b_1 \cdot i_{\text{doc}}) \cdot \log(k)$ will be larger, predicting a steeper improvement curve as documents increase. If a task has low $i_{\text{shot}}$, the slope for demonstrations will be shallower.
+- $c$ is a baseline offset: performance when $\theta = (1, 1, 1)$ (or more precisely, when $\log(\theta) = (0, 0, 0)$ after the shift by $\epsilon$), after accounting for model-intrinsic and task-specific effects.
+- $\sigma^{-1}(P(\theta))$ applies an inverse sigmoid to the raw performance metric before fitting the linear model. The fitted sigmoid is $\sigma(x) = \frac{3.30}{1 + e^{-1.81(x + 0.46)}} - 2.18$ (Appendix F), which effectively compresses the extremes (very low and very high performance) into a more linear range. This addresses the empirical observation that performance improvements become sub-linear at very long contexts (above 1M tokens) and at very short contexts (approaching zero-shot baselines).
+
+**Design choices and alternatives considered (Ablation study, Table 2):**
+
+- **Why include $b$ and $i$ (vs. Exclude $b$):** Without the task-specific modulation term, the model assumes all tasks benefit identically from documents and shots. The ablation shows $R^2$ drops from 0.903 to 0.866 and MSE increases from 0.085 to 0.116 when $b$ is removed. This confirms that task-specific informativeness matters—a dataset with highly relevant retrieval results benefits more from adding documents than one where retrieval is noisy.
+- **Why log-linear form (vs. Quadratic $\theta$):** A quadratic form in $\log(\theta)$ would capture curvature in the scaling relationship but adds parameters and risks overfitting. The ablation (Table 2) shows essentially identical $R^2$ (0.866 vs. 0.867) and MSE (0.116 vs. 0.117), so the simpler log-linear form is preferred (the paper's full model with inverse sigmoid achieves 0.903, but the improvement comes from the sigmoid, not the quadratic terms).
+- **Why inverse sigmoid $\sigma^{-1}$ (vs. Linear $\sigma$):** Without the sigmoidal transformation, the model must fit a straight line to performance values that empirically saturate at both ends. The linear variant achieves $R^2 = 0.876$, MSE = 0.109 compared to the sigmoidal variant's $R^2 = 0.903$, MSE = 0.085. The sigmoid substantially improves fit because it linearizes the inherently S-shaped relationship between log-compute and performance.
+- **Why shift $\theta$ by $\epsilon$:** "To prevent numerical issues with $\log(0)$" (Section 5.1 footnote). Since $\theta$ can be 0 (no documents, no demonstrations), and $\log(0)$ is undefined, a small constant $\epsilon = 0.01$ is added to all components of $\theta$ before taking the log. This means a configuration with $k=0$ is effectively treated as $k \approx 0.01$ for modeling purposes.
+
+**Estimating the model parameters (Appendix H, Section 5.1):**
+
+The parameters $a, b, c$ are estimated via ordinary least squares regression on evaluated (configuration, performance) pairs. The procedure:
+
+1. Grid-search over combinations of $k$, $m$, and for IterDRAG also $n$, evaluating the actual RAG performance on each dataset.
+2. Normalize the performance metrics "by subtracting the mean and dividing by the standard deviation for each dataset and metric" (Appendix H). This puts all metrics (EM, F1, accuracy) on a common scale for joint fitting.
+3. Compute $i_{\text{doc}}$ and $i_{\text{shot}}$ for each task as:
+   - $i_{\text{doc}} = P(k=1, m=0, n=1) - P(k=0, m=0, n=1)$: the performance gain from retrieving one document with no demonstrations, compared to a zero-shot baseline.
+   - $i_{\text{shot}} = P(k=0, m=1, n=1) - P(k=0, m=0, n=1)$: the performance gain from adding one in-context example with no retrieved documents.
+4. Apply the inverse sigmoid transformation $\sigma^{-1}$ to all normalized performance values.
+5. Perform OLS to estimate $a$, $b$, $c$, with the constraint that the last element of $b$ (corresponding to iterations) is set to 0 (since $i_{\text{iter}}$ is 0).
+
+**Reported parameter values for Gemini 1.5 Flash (Appendix F, Table 8):**
+
+- $a = (0.325, 0.101, 0.177)$: The model benefits from all three resources, with documents providing the largest per-log-unit improvement ($a_1 = 0.325$), followed by iterations ($a_3 = 0.177$) and shots ($a_2 = 0.101$). This aligns with the empirical finding that increasing documents usually yields the largest gains (Figure 5b).
+- $b = (-0.067, -0.008, 0)$: The negative values for $b_1$ and $b_2$ indicate that when a task already has high baseline informativeness (high $i_{\text{doc}}$ or $i_{\text{shot}}$), the *additional* benefit per log-unit is slightly reduced—the model is already near saturation for that resource on that task. The $p$-value for $b_1$ is 0.06 (slightly above 0.05), but the paper retains it because "retaining $b_1$ improves generalization in many cases, such as IterDRAG on multi-hop datasets" (Appendix F).
+- $c = -0.730$: The baseline intercept after normalization and inverse sigmoid transformation.
+- $R^2 = 0.903$, $\text{MSE} = 0.085$: The model explains 90.3% of the variance in the normalized inverse-sigmoid performance across all evaluated configurations.
+
+**Using the model for prediction (Section 5.2):** Once $a, b, c$ are estimated (once per model, e.g., Gemini 1.5 Flash), predicting performance for a new task or configuration requires only:
+
+1. Evaluate two cheap configurations on the target task: $(k=0, m=0)$ (zero-shot) as a baseline, $(k=1, m=0)$ (one document), and $(k=0, m=1)$ (one shot).
+2. Compute $i_{\text{doc}}$ and $i_{\text{shot}}$ from these evaluations.
+3. For any candidate configuration $\theta$, compute the predicted inverse-sigmoid performance as $(a + b \odot i)^T \log(\theta) + c$, then apply $\sigma$ to map back to a normalized performance value, and un-normalize to get the raw metric prediction.
+
+**Domain generalization (Table 3):** The model is tested by learning $a, b, c$ from three datasets and predicting performance on the held-out fourth. At $L_{\text{max}} = 1\text{M}$ tokens, the predicted configurations achieve 96.6% of the oracle's performance on average, with the largest gaps on MuSiQue (predicted 19.3 EM vs. oracle 22.2 EM) and 2WikiMultiHopQA (predicted 60.8 EM vs. oracle 65.7 EM). The paper notes that "Bamboogle and HotpotQA exhibit highly similar target results, with the performance metrics varying by less than 2.5% from the oracle," suggesting that the model is more reliable for tasks with similar retrieval characteristics to the training tasks.
+
+**Length extrapolation (Table 4):** The model is trained on configurations at one $L_{\text{max}}$ and used to predict optimal configurations at a larger $L_{\text{max}}$. For example, training on data up to 128k tokens and predicting at 1M tokens yields predictions within 2.8% of the oracle on average. However, extrapolating from 32k to 128k is "challenging" because "DRAG performs best around 32k, while IterDRAG typically excels at a long context of 128k"—the optimal strategy class changes, and the model trained only on DRAG data cannot predict IterDRAG's performance. Extrapolating to 5M tokens is also less reliable (5.6% gap), likely because the sub-linearity at extreme lengths is not fully captured by the fitted sigmoid.
+
+**Why this specific parametric form:** The paper's modeling choices reflect a set of empirically grounded assumptions:
+
+- **Log-linear scaling:** Performance improvements from adding documents, shots, or iterations exhibit diminishing marginal returns—each additional unit helps less than the previous one. A log relationship captures this: $\log(1000) - \log(500) \ll \log(10) - \log(5)$.
+- **Separability of model and task effects:** The additive decomposition $(a + b \odot i)^T \log(\theta)$ assumes that the *shape* of scaling (log-linear) is the same across tasks, and only the slopes differ based on task informativeness. This is a strong assumption, but it enables generalization: only two cheap evaluations ($i_{\text{doc}}, i_{\text{shot}}$) are needed to adapt to a new task.
+- **Inverse sigmoid for boundary effects:** Performance is bounded between 0 and 1 (or a task-specific max), which creates S-shaped curves when plotted against log-compute: flat at the bottom (approaching random/baseline), steep in the middle, flat at the top (approaching ceiling). The inverse sigmoid linearizes this S-curve, making it fit a standard linear regression. Without this transformation, the linear model would systematically underpredict at mid-range budgets and overpredict at extremes.
+- **Ignoring interactions between axes:** The model treats the effect of documents, shots, and iterations as additive in log-space. This means it assumes, for example, that the benefit of adding documents is the same whether you have 1 shot or 256 shots. This is an approximation: in practice, the heatmaps (Figures 5a, 8) show some interaction (the optimal $m$ depends on $k$), but the additive model evidently captures the dominant trends well enough to achieve $R^2 = 0.903$.
+
+**What the model does NOT capture:** The paper is explicit about limitations. The model is fitted to DRAG and IterDRAG separately (they have different $\theta$ spaces and different scaling behaviors), and it does not predict the transition between strategies—it cannot tell you whether to use DRAG or IterDRAG at a given budget. The optimal strategy selection is done empirically via the $P^*(L_{\text{max}})$ measurement, not via the allocation model. Additionally, the model's prediction quality degrades at extreme budgets (5M tokens) and when the optimal strategy class changes across budget levels (32k to 128k transition). The paper also notes that "noisy data" from "peak and valley outliers" is excluded when computing $R^2$ and MSE, but included for generalization experiments, which may slightly flatter the reported fit statistics.
+
+---
+
+#### Retrieval Setup and Experimental Configuration Details
+
+While not a conceptual contribution, the retrieval and experimental setup contains specific implementation choices that affect all results. These are documented in Section 4.1 and Appendix H.
+
+**Retriever:** Gecko-1B (Lee et al., 2024b), a compact embedding model, encodes both queries and documents into dense vectors. The document corpus is Wikipedia passages from the KILT benchmark (Petroni et al., 2020). Retrieval is performed via exact nearest-neighbor search over all passage embeddings, selecting the top-$k$ based on cosine similarity.
+
+**Document truncation:** Each retrieved passage is "truncated on the right side to a maximum of 1024 tokens using whitespace tokenization" (Appendix H). This means the last 1024 tokens of each passage are kept, and any content beyond that is discarded. The paper does not explain why right-side truncation rather than left-side or extractive truncation, but it is likely because Wikipedia passages often have the most specific information near the end (the body of the article rather than the introductory sentences).
+
+**Datasets and sampling:** The paper evaluates on four multi-hop QA datasets:
+- **Bamboogle** (Press et al., 2023)
+- **HotpotQA** (Yang et al., 2018)
+- **MuSiQue** (Trivedi et al., 2022)
+- **2WikiMultiHopQA** (Ho et al., 2020)
+
+> "To manage the computational costs of extensive experiments, we follow Gutiérrez et al. (2024); Wu et al. (2024) and sample 1.2k examples from each dataset for evaluation." (Section 4.1)
+
+This sampling is a practical necessity given the size of the grid search. It introduces some variance that the paper does not quantify (no confidence intervals are reported).
+
+**Evaluation metrics:**
+- **Exact Match (EM):** The predicted answer string must exactly match the ground-truth answer string after normalization.
+- **F1 Score (F1):** Token-level overlap between prediction and ground truth, computed as the harmonic mean of precision and recall.
+- **Accuracy (Acc):** "Assesses whether the ground truth is located within the prediction" (Section 4.1)—a softer metric than EM, treating the prediction as correct if it contains the correct answer string anywhere within it, even if extra text is present.
+
+The paper uses all three metrics because they capture different aspects of answer quality. EM is the strictest and most commonly reported; Acc is the most lenient and useful when models tend to produce verbose or explanatory answers; F1 is intermediate.
+
+**Model:** All experiments use Gemini 1.5 Flash with "default generation parameters" (Appendix H). The context window is 1M tokens, which constrains the maximum effective context length for DRAG and standard RAG (IterDRAG can exceed this through multiple calls, each staying within the window). The paper does not report the generation temperature, top-p, or other sampling parameters, which is a minor omission—these could affect the reproducibility of results, especially for IterDRAG where constrained decoding is used.
+
+**Generation for IterDRAG example creation:** The demonstrations used for IterDRAG are generated by prompting an LLM (unspecified which one, but presumably Gemini 1.5 Flash or a similar model) to produce decomposition chains in the Self-Ask format, with constrained decoding via the Automata library (Koo et al., 2024). The paper retains only examples with correct final answers, which introduces a selection bias: the demonstrations are filtered to be successful decompositions, so the model sees only "correct" patterns during in-context learning, which may overestimate real-world performance where decompositions can fail.
+
+**Grid search configuration space (Section 4.1):**
+- For DRAG: $k \in \{0, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000\}$ (11 values), $m \in \{0, 2^0, 2^1, ..., 2^8\} = \{0, 1, 2, 4, 8, 16, 32, 64, 128, 256\}$ (10 values), $n = 1$ fixed.
+- For IterDRAG: Same $k$ and $m$ sweeps, with $n$ up to 5 (implicitly controlled by the model's decomposition decisions, not preset—the model can choose to stop earlier, and is forced to conclude after 5 iterations).
+- Budget levels $L_{\text{max}}$: {16k, 32k, 128k, 1M, 5M} tokens.
+
+Some budget levels exclude certain methods because they cannot scale to that length: zero-shot QA cannot be expanded at all, many-shot QA is capped at $m=256$ (limited by the number of distinct examples and context length), RAG reaches its effective limit at 128k tokens, DRAG is limited by the 1M-token context window, and only IterDRAG can reach 5M through iterative accumulation.
+
+**Normalization for scaling law plots (Section 4.3, Appendix H):**
+
+For visualization in the scaling law figures (Figures 1, 4, 11), performance metrics are normalized:
+> "we normalized the performance metrics by subtracting the mean and dividing by the standard deviation for each dataset and metric" (Appendix H)
+
+This puts all metrics on a common $z$-score scale, allowing different datasets and metrics to be plotted together and compared on the same axes. The normalization is done per-dataset and per-metric, so "0" represents the average performance across all configurations for that dataset-metric pair, and "1" represents one standard deviation above average. This is purely for visualization—the raw metrics are reported in Table 1 and used for model fitting after the inverse sigmoid transformation.
+
+**Fitting the scaling law trend lines (Section 4.3):**
+
+The dashed lines in Figures 1, 4, and 11 represent a linear fit between $\log(L_{\text{max}})$ and the normalized optimal performance $P^*$. The paper does not report the exact fitting procedure (OLS, RANSAC, or otherwise) or the $R^2$ values for these fits, but the qualitative claim is that the relationship is "nearly linear" or "almost linear." The visual evidence supports this for most datasets up to 1M tokens, with some deviation at the extremes (flat regions at very low and very high budgets) and dataset-specific sigmoidal patterns on HotpotQA and 2WikiMultiHopQA at lengths above 100k tokens (Appendix E, Figure 11).
 
 ## 4. Key Insights and Innovations
-- Inference scaling laws for RAG (Sections 4.3; Figures 1 and 4)
-  - Novelty: “Performance improves nearly linearly as you increase effective context length—if you allocate the budget well across documents, demonstrations, and iterations.”
-  - Evidence: Red dots in Figures 1 and 4 mark the best configuration found at each budget, and the dashed lines fitting those points are close to linear growth on a log-scale x-axis. Gains are strongest up to ~1M tokens and then taper (Section 4.3).
 
-- Two complementary scaling strategies
-  - `DRAG` (Section 3.2): scales well at smaller budgets (16k–32k). It adds demonstrations that show how to use retrieved evidence; simpler to run (one model call).
-  - `IterDRAG` (Section 3.3): scales better at larger budgets (≥128k) by interleaving retrieval and generation, building a reasoning chain that reduces the “compositionality gap.” Figure 2 and Table 1 highlight that `IterDRAG` overtakes `DRAG` beyond 128k tokens.
+### Innovation 1: Inference Scaling Laws for RAG as a Discovery, Not a Design
 
-- A compute allocation model that predicts optimal settings (Section 5; Figures 6 and 12; Tables 2–4)
-  - Significance: instead of brute force search every time, you can estimate how many documents, shots, and iterations to use given a budget and a new domain.
-  - Results:
-    - Fit quality for DRAG: R² = 0.903, MSE = 0.085 (Table 2, “Sigmoidal σ” column).
-    - Domain generalization at 1M tokens achieves 96.6% of the oracle performance on average (Table 3).
-    - Length extrapolation is accurate up to 1M tokens and degrades modestly at 5M (Table 4).
+The paper's most fundamental contribution is not a new method but an **empirical finding**: when test-time compute is optimally allocated across multiple dimensions, RAG performance scales nearly linearly with the logarithm of effective context length. This is the "inference scaling laws for RAG" — a direct conceptual parallel to pretraining scaling laws (Hoffmann et al., 2022) but operating in a fundamentally different regime (inference-time resource allocation rather than training-time model scaling).
 
-- A clearer picture of retrieval limits and the benefit of iterativity (Appendix A)
-  - Finding: Recall steadily improves with more documents, but ranking quality (NDCG, MRR) plateaus near 100 documents (Figure 7). 
-  - Iterative retrieval with sub-queries boosts Recall, NDCG, and MRR substantially; for 2WikiMultiHopQA, Recall rises from 0.722 to 0.935 and MRR from 0.336 to 0.528 (Table 5).
+What makes this a genuine discovery rather than an obvious observation is that it contradicts the **dominant narrative in prior RAG work**. The field had accumulated substantial evidence that scaling retrieval quantity alone produces diminishing returns: retrieving more than ~10–20 documents typically plateaus or even degrades performance due to distraction from irrelevant context (Kuratov et al., 2024; Ram et al., 2023; Yoran et al., 2024). The natural conclusion — and one that many practitioners had implicitly accepted — was that RAG performance had a soft ceiling that couldn't be broken by throwing more compute at the problem.
+
+This paper demonstrates that this ceiling is an artifact of **single-dimensional scaling**. When inference compute is allocated across documents AND demonstrations (DRAG) or documents AND demonstrations AND iterative generation steps (IterDRAG), the plateau disappears and performance continues to improve. Figure 1 is the paper's centerpiece argument: standard RAG flatlines around 10^4 effective context length on MuSiQue, while DRAG and IterDRAG achieve near-linear improvement through 10^6 tokens under optimal configuration. The normalized performance vs. log-effective-context-length plots in Figure 4 and Appendix E show this pattern across all four benchmark datasets, though with varying degrees of linearity (Bamboogle and MuSiQue are nearly perfectly linear; HotpotQA and 2WikiMultiHopQA show more sigmoidal patterns above 100k tokens).
+
+The significance of this finding extends beyond RAG. It establishes that **inference compute can substitute for architectural improvements or larger models** in a principled, predictable way. This is analogous to what Snell et al. (2024) showed for math reasoning — that test-time compute scaling can outperform model scaling under certain conditions — but applied to the retrieval setting where the compute is spent on information acquisition and synthesis rather than on verifying candidate solutions. The finding that the scaling is log-linear (performance ∝ log(compute)) rather than logarithmic or power-law also has practical implications: it means the returns to additional compute are diminishing but **persistent**, not exhausted. Every additional order of magnitude of context length buys a roughly constant increment in performance, at least up to the 1M-token regime.
+
+A subtle but important aspect of this finding is that it is **conditional on optimal allocation**. The paper does not claim that any arbitrary way of spending more compute yields linear gains. The discovery is specifically about the *envelope* — the best achievable performance at each budget level. This makes the scaling laws a property of the **joint optimization over strategy and parameters**, not a property of any single method. The near-linearity emerges only when you're willing to switch strategies across budget levels (DRAG dominates at shorter budgets, IterDRAG at longer ones) and tune parameters per-task. This is methodologically important because it means the scaling behavior is an emergent property of the allocation framework, not something you'd observe by naïvely cranking up document count on a fixed configuration.
+
+---
+
+### Innovation 2: Multi-Dimensional Inference Compute as a Conceptual Reframing of RAG
+
+Prior to this work, the RAG literature treated inference compute as essentially one-dimensional: you retrieved $k$ documents, stuffed them in the prompt, and generated an answer. Scaling meant increasing $k$. The paper fundamentally reframes this by introducing **multiple orthogonal scaling axes** — documents ($k$), demonstrations ($m$), and generation iterations ($n$) — that can be traded off against each other within a fixed compute budget.
+
+This reframing is significant not because the individual axes are novel (in-context learning and iterative retrieval both existed), but because the paper demonstrates that **these axes are not independently optimal**. The key empirical finding is that the optimal allocation depends on the total budget, the task, and the method. For example, Figure 5a shows that for DRAG at moderate budgets, the performance heatmap over ($k$, $m$) has a diagonal structure: you can achieve similar performance with (many documents, few shots) or (few documents, many shots), but the optimal balance shifts as the budget grows. Figure 8 shows that IterDRAG's optimal $m$ is higher than DRAG's (32 shots vs. fewer), because demonstrations are more valuable when they teach decomposition patterns. Table 1 shows that DRAG is optimal at 16k–32k tokens while IterDRAG dominates at 128k+ tokens — a transition in optimal strategy class, not just parameter tuning.
+
+The conceptual contribution here is that **inference compute in RAG should be thought of as a portfolio allocation problem**, not a single-knob optimization. This is analogous to how the pretraining scaling laws literature (Hoffmann et al., 2022) reframed model scaling from "make models bigger" to "allocate a fixed FLOPs budget between model size and data quantity." This paper brings the same portfolio-thinking to inference time, but with a richer set of assets to allocate.
+
+What makes this more than a taxonomic observation is the demonstration that **the axes have different scaling properties and difficulty-dependent returns**. Section 4.4 documents that documents and shots are "not equally helpful" — increasing documents generally yields larger improvements per log-unit than increasing shots (the slopes differ in Figure 5b and 5c). Iterations are particularly valuable for complex multi-hop queries where the compositionality gap is large (Table 1 shows IterDRAG dramatically outperforming DRAG on 2WikiMultiHopQA at 128k tokens: 62.3 EM vs. 47.5 EM). This non-uniformity means that simply adding more of everything proportionally is suboptimal — you need to allocate more budget to the axes that provide higher marginal returns for your specific task and total budget.
+
+This reframing also provides a unifying explanation for why prior work found conflicting results about RAG scaling. Studies that only varied document count (and found plateaus) were implicitly exploring only one slice through a multi-dimensional space. The plateau they observed was real — but specific to that slice. By adding demonstrations (DRAG) or iterations (IterDRAG), the paper shows you can "break through" the plateau and access higher-performance regions of the configuration space that were unreachable by scaling documents alone.
+
+---
+
+### Innovation 3: The Computation Allocation Model as a Predictive Framework That Separates Model-Specific and Task-Specific Effects
+
+The paper's third contribution is the computation allocation model (Equation 2), which is **not just a curve-fitting exercise but a structured decomposition** that separates scaling behavior into model-intrinsic components (how this specific LLM benefits from documents, shots, and iterations in general) and task-specific components (how informative documents and demonstrations are for this particular dataset). This decomposition is what enables the model to generalize: the model-intrinsic parameters ($a$, $b$, $c$) are estimated once per LLM and then reused across tasks, with only two cheap evaluations needed per new task (to measure $i_{\text{doc}}$ and $i_{\text{shot}}$).
+
+This is significant because it addresses a practical bottleneck. Exhaustively grid-searching over ($k$, $m$, $n$) for every new dataset, metric, and budget level is computationally prohibitive — the paper's own grid search over 110+ configurations per dataset per method was feasible only because of dataset subsampling (1.2k examples) and a compact model (Gemini 1.5 Flash). The allocation model reduces the adaptation cost to: run zero-shot once, run one-document once, run one-shot once, then predict the optimal configuration for any budget analytically. Table 3 demonstrates that this approach achieves 96.6% of the oracle's optimal performance on held-out datasets — a strong generalization result that suggests the decomposition captures real structure rather than overfitting noise.
+
+What distinguishes this model from generic regression is the **log-linear-inverse-sigmoid form** and the specific choice of what goes where. The log-linear form ($\log(\theta)$) encodes the empirical finding that performance scales with the order of magnitude of resources, not their raw count — doubling documents from 1 to 2 helps far more than doubling from 500 to 1000. The inverse sigmoid transformation ($\sigma^{-1}$) handles the S-shaped saturation that naturally occurs when performance is bounded between baseline (zero-shot) and ceiling (perfect accuracy). The additive interaction $(a + b \odot i)$ encodes the assumption that task informativeness modulates the slope of scaling but not its fundamental shape. Each of these choices is empirically motivated and tested via ablation (Table 2), with the full model achieving $R^2 = 0.903$ vs. 0.866 for the variant without task-specific modulation and 0.876 for the linear variant without the sigmoid transformation.
+
+The model also makes a **non-obvious prediction that is empirically validated**: documents and shots are *substitutable* within certain regimes. Because the model is additive in log-space, it predicts that you can trade off documents for shots and achieve similar performance, as long as the weighted sum $(a + b \odot i)^T \log(\theta)$ remains constant. The heatmap structure in Figure 5a — with performance contours running diagonally — provides visual confirmation of this predicted substitutability. This has practical implications: if your retriever is expensive or low-quality for a given task (low $i_{\text{doc}}$), you can compensate by using more demonstrations (if $i_{\text{shot}}$ is high), and vice versa. The model quantifies the exchange rate precisely.
+
+The length extrapolation results (Table 4) reveal both the power and the limits of this approach. The model extrapolates well when the optimal strategy class remains consistent (e.g., DRAG at 128k to DRAG at 1M: 2.8% average gap from oracle). It struggles when the optimal strategy class changes (32k to 128k, where DRAG is optimal at the lower budget but IterDRAG dominates at the higher one) because the model is fitted separately to each strategy and has no mechanism for predicting strategy transitions. This is a fundamental limitation — the allocation model predicts performance within a strategy class but cannot tell you which strategy class to use — and a direction the paper implicitly identifies for future work (a unified model covering DRAG and IterDRAG jointly).
+
+---
+
+### Innovation 4: Retrieval Noise as a Resource to Be Managed Through Strategy, Not Eliminated Through Filtering
+
+An implicit but important conceptual shift in this paper is its treatment of retrieval noise. Prior RAG robustness work (Yoran et al., 2024; Zhang et al., 2024; Yu et al., 2023) focused on **reducing or filtering out irrelevant documents** — training models to ignore distractors, using re-rankers to push irrelevant documents down, or applying corrective retrieval mechanisms. The underlying assumption was that irrelevant documents are harmful and should be minimized.
+
+This paper takes a different stance: **irrelevant documents are an unavoidable byproduct of high-recall retrieval, and the right response is to teach the model to cope with them rather than to eliminate them**. The DRAG strategy is built on this premise: each in-context demonstration includes a full set of retrieved documents that "may or may not be relevant," and the prompt explicitly tells the model this. The demonstrations teach the model, through in-context learning, how to selectively attend to relevant passages while ignoring noise — a skill that generalizes to the test instance where the document set is also noisy.
+
+This is significant because it reframes the retrieval challenge. If you accept that some noise is inevitable (Figure 7 in Appendix A shows that NDCG and MRR plateau around 100 documents while recall continues to improve up to 1000+), then the optimization problem shifts from "get the most relevant documents" to "get enough relevant documents that the model can find them, plus teach the model to ignore the rest." This is a **capacity-building approach** to robustness (make the model better at handling noise) rather than a **noise-elimination approach** (clean up the input before the model sees it).
+
+The evidence for this shift is in the scaling behavior itself. If irrelevant documents were purely harmful, performance would eventually degrade as document count increases — and indeed, this is what standard RAG shows (the plateau and occasional decline in Figure 1 for the baseline RAG curve). But DRAG and IterDRAG **do not show this degradation** — their optimal-performance curves are monotonically increasing (or at worst flat) even as document counts reach 500–1000. The in-context demonstrations have effectively immunized the model against the distraction effect that plagues standard RAG.
+
+IterDRAG takes this logic further by using iterative retrieval to **strategically add relevant documents** rather than filtering irrelevant ones. The retrieval quality analysis (Table 5) shows that IterDRAG improves all retrieval metrics (recall +21.7%, NDCG +30.7%, MRR +39.9% over DRAG at $k=50, m=2$) by generating simpler sub-queries that are individually easier for the retriever to satisfy. The model doesn't need to find a single document that answers a complex multi-hop question — it needs to find documents that answer each simple sub-question, which is a much better match to how embedding-based retrieval works. This is a **decomposition approach to retrieval quality**: make the retrieval problem easier, not by building a better retriever, but by asking easier questions.
+
+---
+
+### Innovation 5: Demonstration-Based RAG as a Form of In-Context Retrieval Skill Learning
+
+The paper's DRAG strategy introduces a subtle but important capability that standard RAG and prior in-context RAG approaches lack: the model learns **not just what the answer looks like, but how to extract answers from a document-heavy context**. This is a meaningful distinction from both many-shot QA (which teaches input-output mappings without showing the supporting evidence) and standard RAG (which provides documents but no demonstrations of how to use them).
+
+The paper is explicit about this distinction in Section 3.2:
+
+> "Unlike previous works (Press et al., 2023; Trivedi et al., 2023), DRAG incorporates extensive retrieved documents within the demonstrations, enabling long-context LLMs to learn to extract relevant information and answer questions using a rich input context."
+
+What makes this an innovation rather than a trivial combination of existing ideas is the **completeness of the demonstration unit**. Each example in DRAG is a self-contained lesson: here are the (noisy, partially relevant) documents, here is the question, and here is the answer that was extracted from those documents. The model sees the full mapping from input to output, including the intermediate "reading" step that is implicit in the generation. This is analogous to showing a student not just the answer key, but the full process of reading the source material and arriving at the answer.
+
+The value of this is demonstrated by the **scalability of DRAG**. Standard RAG plateaus because adding more documents increases the noise-to-signal ratio and the model lacks the skill to filter effectively. Many-shot QA without documents plateaus because the model can only learn from the specific question-answer pairs it has seen, not from the general skill of extracting answers from text. DRAG combines both — it scales to large document sets because the demonstrations teach the extraction skill, and it scales to many demonstrations because each one reinforces the skill with different documents and different answer patterns.
+
+The comparison to chain-of-thought (CoT) in Appendix B (Table 6) is instructive here. CoT provides reasoning demonstrations but does not include the supporting documents and does not perform interleaved retrieval. IterDRAG outperforms CoT substantially (e.g., 57.5 vs. 33.0 EM on 2WikiMultiHopQA at $k=5$, $m=4$) because CoT teaches reasoning patterns without grounding them in actual retrieval — the model learns *how to reason* but not *how to find the facts to reason about*. IterDRAG's demonstrations include both the decomposition logic AND the retrieval that supplies the evidence for each step, teaching a more complete skill.
+
+This insight — that in-context learning can teach meta-skills like "how to read documents" rather than just input-output mappings — connects to broader questions about what in-context learning actually learns. The paper provides empirical evidence that this meta-skill is transferable: DRAG's strong performance on held-out datasets (Table 3) and across different retrieval quality levels suggests the model is learning a general strategy for selective attention, not just memorizing the specific documents in its demonstrations. This has implications beyond RAG: if in-context learning can teach extraction and filtering skills, similar approaches might work for other information-processing tasks where the challenge is not generating the answer but locating and synthesizing the relevant inputs.
 
 ## 5. Experimental Analysis
-- Setup (Section 4.1; Appendix H)
-  - Tasks: multi-hop QA—Bamboogle, HotpotQA, MuSiQue, 2WikiMultiHopQA. Extra analyses include TriviaQA, Natural Questions, and StrategyQA (Appendix C).
-  - Metrics: Exact Match (EM), token-level F1, and an “accuracy” that checks whether the ground-truth answer string appears in the prediction (Section 4.1).
-  - Baselines: 
-    - Zero-shot QA (no retrieval, no shots).
-    - Many-shot QA (shots only).
-    - Standard RAG (documents only).
-  - Budget grid: `L_max` in {16k, 32k, 128k, 1M, 5M}, with broad sweeps over `k`, `m`, `n` (Section 4.1).
-  - Model: Gemini 1.5 Flash with up to 1M-token window; iterative calls extend effective length beyond the window.
 
-- Main quantitative results
-  - DRAG and IterDRAG scale while baselines plateau (Table 1; Figures 1–2, 4).
-    - At 128k tokens, `IterDRAG` clearly outperforms standard RAG on multi-hop tasks:
-      > Table 1 (128k): On 2WikiMultiHopQA, `IterDRAG` reaches Acc 74.6 vs RAG 48.4 (+26.2 absolute).  
-      > On Bamboogle, `IterDRAG` Acc 68.8 vs RAG 52.8 (+16.0).  
-      > On MuSiQue, `IterDRAG` Acc 24.5 vs RAG 16.8 (+7.7).
-    - At 1M tokens, DRAG is at its window limit while `IterDRAG` continues to scale by iterating:
-      > Table 1 (1M): On 2WikiMultiHopQA, `IterDRAG` Acc 76.4; DRAG 53.3.  
-      > On MuSiQue, `IterDRAG` Acc 30.5; DRAG 18.2.
-    - At 5M effective tokens (achieved via iteration), `IterDRAG` still improves slightly:
-      > Table 1 (5M): On HotpotQA, `IterDRAG` EM 51.7 (up from 48.7 at 1M); Acc 56.4.
+### Evaluation Methodology
 
-  - Average accuracy comparison across methods (Figure 2):
-    > DRAG and especially `IterDRAG` dominate zero-shot, many-shot, and standard RAG once the budget is allowed to scale (up to 5M effective tokens).
+- **Dataset.** The paper evaluates on four multi-hop question answering datasets: Bamboogle (Press et al., 2023), HotpotQA (Yang et al., 2018), MuSiQue (Trivedi et al., 2022), and 2WikiMultiHopQA (Ho et al., 2020). To manage computational costs of the extensive grid search, 1.2k examples are sampled from each dataset following Gutiérrez et al. (2024) and Wu et al. (2024). Wikipedia passages from the KILT benchmark (Petroni et al., 2020) serve as the external document corpus for retrieval.
 
-  - Linear-ish optimal scaling (Figures 1 and 4):
-    > The red “optimal config” points aligned by dashed fits grow almost linearly with log effective length up to ~1M, then gains slow.
+- **Base model(s).** All experiments use Gemini 1.5 Flash, a compact instruction-tuned LLM with a 1M-token context window. The paper argues this model is representative of current long-context LLM capabilities while being efficient enough to enable the large-scale grid search required for studying inference scaling. A separate LLM (unspecified, but presumably Gemini 1.5 Flash or similar) is used to generate the demonstration data for IterDRAG by producing decomposition chains in the Self-Ask format.
 
-  - Parameter-specific scaling behavior (Section 4.4; Figure 5; Appendix C Figure 8)
-    - Increasing `k` (documents) usually gives larger marginal gains than increasing `m` (shots) in DRAG (Figure 5b vs 5c).
-    - In IterDRAG, adding even one shot helps more visibly by teaching decomposition (Section 4.4).
-    - Both have soft thresholds: beyond ~100–500 documents, marginal gains fade or reverse due to noise (Figure 5b and retrieval analysis in Appendix A).
+- **Metrics.** Three metrics are reported: (1) Exact Match (EM), where the predicted answer string must exactly match the ground truth after normalization; (2) F1 score, computed as token-level overlap between prediction and ground truth; and (3) Accuracy (Acc), which "assesses whether the ground truth is located within the prediction" — a lenient metric treating the prediction as correct if it contains the answer anywhere, even if extra text is present. All three are reported because they capture different aspects of answer quality, with EM being the strictest.
 
-  - Retrieval quality and the case for iterativity (Appendix A)
-    > Table 5: IterDRAG improves Recall by 21.7% on average and improves NDCG and MRR by ~30–40% over DRAG at k=50, m=2.
+- **Baselines.** Four baselines are compared: (1) **Zero-shot QA (ZS QA)**: the model receives only the question with no retrieved documents and no demonstrations; (2) **Many-shot QA (MS QA)**: the model receives $m$ question-answer demonstrations (without any retrieved documents), varying $m$ from 0 to $2^8$, following Agarwal et al.; (3) **Retrieval Augmented Generation (RAG)**: the model receives $k$ retrieved documents prepended to the query, with no demonstrations, representing the standard RAG paradigm; (4) **Chain-of-thought (CoT)** prompting (Appendix B): the model receives reasoning chain demonstrations with a fixed retrieval, evaluated as a comparison point for IterDRAG. The CoT examples are generated following Trivedi et al. (2023).
 
-  - Chain-of-thought vs IterDRAG (Appendix B, Table 6)
-    > IterDRAG substantially outperforms a CoT baseline: e.g., on 2WikiMultiHopQA, Acc 72.3 vs 36.7.
+- **Generation budget / compute accounting.** The universal unit of inference computation is **effective context length**, defined as the total number of input tokens across all LLM calls before producing the final answer (Section 3.1). For single-call methods (DRAG, RAG, QA baselines), this is simply the token count of the input prompt. For IterDRAG, it is the sum of input tokens across all iterative calls. Output tokens are excluded (answers are typically fewer than 10 tokens in these tasks), and retrieval costs are treated as negligible relative to LLM inference (citing Sun et al., 2024). Budget levels are fixed at $L_{\text{max}} \in \{16\text{k}, 32\text{k}, 128\text{k}, 1\text{M}, 5\text{M}\}$ tokens.
 
-  - One-hop datasets and StrategyQA (Appendix C)
-    > TriviaQA best Acc 69.0 at ~50 documents; Natural Questions peaks at ~20 documents (Figure 9).  
-    > StrategyQA accuracy rises from 61.1 (zero-shot) to 79.0 (DRAG) and 83.4 (IterDRAG) (Table 7).
+- **Cross-validation / statistical protocol.** No cross-validation is used. The compute-optimal performance $P^*(L_{\text{max}})$ is identified via exhaustive grid search over all configurations $\theta$ that satisfy the per-query budget constraint $\forall i, l(x_i; \theta) \leq L_{\text{max}}$. The optimal configuration is the one maximizing average metric across all test queries. For the computation allocation model validation, domain generalization is tested by training the model on three datasets and predicting on the held-out fourth; length extrapolation is tested by training on configurations at one $L_{\text{max}}$ and predicting optimal configurations at a larger $L_{\text{max}}$. The paper excludes "peak and valley outliers" when computing $R^2$ and MSE for model fit but includes all data for generalization experiments (Appendix H).
 
-  - Predictive model validation (Section 5.2)
-    - Good fit and ablations:
-      > Table 2: Full model (“Sigmoidal σ”) achieves R² 0.903, MSE 0.085; removing the task-adaptive term `b ⊙ i` hurts fit.
-    - Domain generalization:
-      > Table 3: Predicted configurations at 1M tokens achieve near-oracle results across four datasets (e.g., Bamboogle Acc 68.0 predicted vs 68.8 oracle).
-    - Length extrapolation:
-      > Table 4: From 128k→1M, predictions differ from oracle by only ~2.8% on average; predicting to 5M is harder (avg gap ~5.6%).
+---
 
-- Do the experiments support the claims?
-  - Yes, across four multi-hop datasets and multiple budgets, the “near-linear optimal scaling” pattern repeats (Figures 1 and 4; Figure 11 per-dataset). The predictive model is validated with out-of-domain and out-of-length tests (Tables 3–4). Retrieval analyses explain why naively adding documents plateaus and why interleaving retrieval helps (Appendix A).
-  - Failure analyses (Appendix G; Figure 14) are candid about residual errors—retrieval misses, flawed reasoning, hallucinations, and evaluation artifacts—clarifying where gains stop.
+### Main Quantitative Results
+
+#### Overall Performance Scaling Across Budgets (Table 1)
+
+The central empirical result is Table 1, which reports the optimal performance $P^*(L_{\text{max}})$ achievable by each method at each budget level, with the best results per $L_{\text{max}}$ marked in bold. The key finding is that **DRAG and IterDRAG continue to improve as the budget grows, while all baselines plateau**:
+
+- At $L_{\text{max}} = 16\text{k}$: DRAG achieves the best results on three of four datasets. On MuSiQue, DRAG achieves 14.5 EM / 24.6 F1 / 16.9 Acc compared to RAG's 12.3 / 21.5 / 15.3 and many-shot QA's 7.4 / 16.4 / 8.5. On 2WikiMultiHopQA, DRAG reaches 45.2 EM / 53.5 F1 / 50.5 Acc vs. RAG's 42.3 / 49.3 / 46.5. Bamboogle is the exception where IterDRAG slightly edges DRAG at 46.4 EM vs. 44.0.
+- At $L_{\text{max}} = 32\text{k}$: RAG and DRAG remain close, with DRAG maintaining a small but consistent advantage. On HotpotQA, DRAG achieves 46.9 EM / 60.3 F1 / 52.0 Acc vs. RAG's 44.2 / 58.2 / 49.3. IterDRAG performs comparably to DRAG on Bamboogle but lags on HotpotQA (38.3 EM vs. 46.9) and 2WikiMultiHopQA (44.3 EM vs. 45.9).
+- At $L_{\text{max}} = 128\text{k}$: The strategy transition becomes visible. IterDRAG now dominates on three of four datasets: Bamboogle (63.2 EM, a large jump from DRAG's 52.8 and RAG's 51.2), MuSiQue (17.3 EM vs. DRAG's 15.4), and 2WikiMultiHopQA (62.3 EM vs. DRAG's 47.5 — a 14.8 percentage point gap). HotpotQA is the exception where DRAG retains a slight edge (47.4 EM vs. IterDRAG's 44.8). Standard RAG peaks here and does not improve further.
+- At $L_{\text{max}} = 1\text{M}$: DRAG reaches its ceiling (limited by the 1M-token context window) while IterDRAG continues to improve. On MuSiQue, IterDRAG achieves 22.2 EM / 34.3 F1 / 30.5 Acc vs. DRAG's 15.9 / 26.0 / 18.2. On 2WikiMultiHopQA, IterDRAG reaches 65.7 EM vs. DRAG's 48.2. On HotpotQA, IterDRAG now surpasses DRAG (48.7 EM vs. 47.4).
+- At $L_{\text{max}} = 5\text{M}$: Only IterDRAG can scale to this budget (through iterative accumulation, since no single call exceeds the 1M context window). Gains are marginal beyond 1M: MuSiQue improves from 22.2 to 22.5 EM, HotpotQA from 48.7 to 51.7 EM, 2WikiMultiHopQA from 65.7 to 67.0 EM. Bamboogle is flat at 65.6 EM. The paper explicitly notes this sub-linearity at extreme lengths (Section 4.3, Section 6).
+
+The 58.9% gain figure cited in the abstract and introduction comes from comparing IterDRAG at 5M tokens to the strongest baseline at 16k tokens on specific dataset-metric pairs (e.g., 2WikiMultiHopQA Acc: 76.9 at 5M IterDRAG vs. 30.7 at 16k ZS QA — a 150% relative improvement, but the 58.9% is likely an average across datasets and metrics under specific conditions; the exact derivation is not spelled out in a single sentence).
+
+#### Inference Scaling Laws: Near-Linear Performance vs. Log-Compute (Figures 4 and 11)
+
+Figures 4 and 11 plot normalized performance against effective context length on a log scale for all evaluated configurations, with the optimal envelope $P^*(L_{\text{max}})$ highlighted in red and a fitted dashed line. The key visual finding is that **the optimal performance scales nearly linearly with $\log(L_{\text{max}})$**, especially for DRAG and IterDRAG combined:
+
+- On Bamboogle (Figure 11a): The optimal envelope is strikingly linear across the full range from ~10^4 to ~10^6 tokens, with DRAG configurations populating the left-to-middle range and IterDRAG configurations extending the right side.
+- On MuSiQue (Figure 1): Standard RAG plateaus around 10^4 tokens, while DRAG and IterDRAG together trace a near-linear improvement through 10^6 tokens, followed by flattening from 10^6 to 5×10^6.
+- On HotpotQA and 2WikiMultiHopQA (Figures 11b and 11c): The scaling is more sigmoidal at lengths above 100k tokens, with the optimal envelope showing diminishing returns. The paper attributes this to "the difficulty of the datasets and the quality of the retrieved documents" (Appendix E).
+
+The paper does not report $R^2$ values for these trend-line fits, making the "near-linear" claim qualitative rather than quantitative. The visual evidence supports linearity on Bamboogle and MuSiQue but is more ambiguous on HotpotQA and 2WikiMultiHopQA.
+
+#### Parameter-Specific Scaling: How Documents, Shots, and Iterations Differ in Impact (Figures 5, 8)
+
+The heatmaps in Figures 5a (DRAG) and 8 (IterDRAG) visualize performance as a function of $k$ and $m$, averaged across datasets. The key observations from Section 4.4 are:
+
+**Documents vs. shots are not equally valuable (Figure 5b vs. 5c):** For a fixed configuration, scaling documents generally yields steeper improvements than scaling shots. For example, in Figure 5b (performance vs. $k$ at fixed $m$), the curves rise more quickly than in Figure 5c (performance vs. $m$ at fixed $k$), especially at low-to-moderate budgets. This is quantified in the allocation model: $a_1 = 0.325$ (coefficient for $\log(k)$) vs. $a_2 = 0.101$ (coefficient for $\log(m)$), a 3.2× difference in per-log-unit improvement.
+
+**Shots matter more for IterDRAG than for DRAG (Figure 8 vs. Figure 5a):** The optimal $m$ for IterDRAG is higher (32 shots in Figure 8) compared to DRAG, where the benefits of adding shots diminish more quickly. The paper explains: "Increasing shots $m$ is more helpful for IterDRAG... possibly due to demonstrations that leads to improved in-context query decomposition and knowledge extraction" (Section 4.4). The qualitative difference is that DRAG demonstrations teach extraction from documents, while IterDRAG demonstrations additionally teach the decomposition strategy, which benefits from more varied examples.
+
+**Saturation thresholds exist but depend on configuration:** "Beyond the soft thresholds, further increases in $k$ or $m$ yield marginal gains or even results in performance declines" (Section 4.4). The optimal $k$ in DRAG heatmaps (Figure 5a) tends to be between 100 and 500 documents, while the optimal $m$ varies by metric and dataset. For IterDRAG (Figure 8), the best combinations are "located toward the bottom right of each heatmap, which corresponds to longer context lengths," meaning high $k$ and high $m$ are both valuable when combined with iterative generation.
+
+**Optimal configuration depends on dataset, method, and metric (Section 4.4, point 4):** "The optimal combinations are sensitive to the metrics and located differently, posing challenges for performance modeling w.r.t. $\theta$." This heterogeneity is the motivation for the computation allocation model — a simple rule like "use top-100 documents and 8 shots" would be suboptimal for many dataset-metric pairs.
+
+#### DRAG Performance Heatmap and Configuration Trade-offs (Figure 5a)
+
+Figure 5a provides the averaged DRAG performance across datasets as a function of $k$ (x-axis, log scale from 0 to 1000) and $m$ (y-axis, 0 to 256). The heatmap reveals:
+
+- Performance is generally low in the bottom-left corner (few documents, few shots) and highest in the top-right (many documents, many shots).
+- However, the gradient is not uniform: there is a diagonal band of similar performance, suggesting that documents and shots are partially substitutable. For instance, a configuration with $(k=200, m=4)$ might achieve similar performance to $(k=50, m=32)$, trading documents for shots.
+- At the extremes, particularly at very high $m$ and moderate $k$, performance begins to decline (visible as a cooling of the heatmap at the top-right corner for some metrics), indicating that too many demonstrations with too few supporting documents can be counterproductive.
+
+#### IterDRAG Performance Heatmap (Figure 8)
+
+Figure 8 shows the averaged IterDRAG performance. Compared to DRAG:
+
+- The optimal $m$ is shifted upward: performance continues improving with more shots beyond the point where DRAG saturates.
+- The optimal $k$ is similarly high (100–1000 documents range), but the performance surface appears more uniformly high across the upper-right quadrant, suggesting IterDRAG is more robust to the specific $(k, m)$ combination than DRAG — as long as both resources are abundant, the iterative generation mechanism compensates for suboptimal allocation.
+- The paper notes: "In comparison to DRAG, the optimal number of in-context examples is higher at 32, which highlights the importance of in-context demonstrations in enabling better query decomposition and interleaved retrieval" (Appendix C).
+
+#### Computation Allocation Model Fit and Validation (Section 5.2, Tables 2–4, Figures 6 and 12)
+
+The allocation model's predictive accuracy is evaluated through three experiments:
+
+**In-distribution fit (Figures 6 and 12):** Figure 6 plots predicted vs. actual normalized performance for DRAG, with each subplot showing a dataset and each line representing a fixed $k$ with varying $m$. The predictions closely track the actual values across all four datasets, though with some variation. Figure 12 shows the analogous plots for IterDRAG, where the fit is slightly less tight ("IterDRAG shows larger variations compared to DRAG") but still captures the overall trends, particularly on HotpotQA and 2WikiMultiHopQA which show "more consistent trends with the predictions, likely due to the predominance of multi-hop queries."
+
+The overall fit statistics (Table 2, "Sigmoidal $\sigma$" row): $R^2 = 0.903$, $\text{MSE} = 0.085$, indicating the full model explains 90.3% of variance in the normalized inverse-sigmoid performance values across all evaluated configurations.
+
+**Ablation study (Table 2):** Four variants are tested:
+- Excluding $b$ and $i$ (no task-specific modulation): $R^2 = 0.866$, $\text{MSE} = 0.116$ — a meaningful drop, confirming that task informativeness matters.
+- Quadratic form in $\log(\theta)$: $R^2 = 0.867$, $\text{MSE} = 0.117$ — essentially identical to the simpler linear form, suggesting the added parameters don't improve fit.
+- Linear $\sigma$ (no inverse sigmoid transformation): $R^2 = 0.876$, $\text{MSE} = 0.109$ — worse than the sigmoidal variant, confirming that the S-shaped saturation at extremes benefits from the non-linear transformation.
+- Full model (Sigmoidal $\sigma$): $R^2 = 0.903$, $\text{MSE} = 0.085$ — the best configuration.
+
+**Domain generalization (Table 3):** The model is trained on three datasets and predicts optimal configurations for the held-out fourth at $L_{\text{max}} = 1\text{M}$. Results are compared against an 8-shot baseline and the oracle (best configuration found through exhaustive grid search). Key findings:
+- The predicted configurations consistently and substantially outperform the 8-shot baseline. For example, on 2WikiMultiHopQA, predicted achieves 60.8 EM vs. baseline 46.5 EM; on Bamboogle, predicted achieves 64.0 EM vs. baseline 49.6 EM.
+- The predicted configurations achieve, on average, 96.6% of the oracle's performance. On Bamboogle, predicted (64.0 EM) nearly matches oracle (65.6 EM) — a 1.6 percentage point gap. On HotpotQA, the gap is 0.9 percentage points (47.8 predicted vs. 48.7 oracle). Larger gaps appear on MuSiQue (19.3 vs. 22.2 EM, 2.9 point gap) and 2WikiMultiHopQA (60.8 vs. 65.7 EM, 4.9 point gap), suggesting the model is less precise for these harder datasets.
+
+**Length extrapolation (Table 4):** The model is trained on configurations at a source $L_{\text{max}}$ and used to predict optimal configurations at a larger target $L_{\text{max}}$. Four extrapolation scenarios are tested, with results compared to an 8-shot baseline and oracle:
+- Extrapolating 16k → 32k: Predicted performance nearly matches oracle (e.g., 37.4 EM predicted vs. 39.2 EM oracle), improving over baseline (37.4 EM).
+- Extrapolating 32k → 128k: "Extrapolating from 32k to 128k is challenging. This is because DRAG performs best around 32k, while IterDRAG typically excels at a long context of 128k" (Section 5.2). The model, trained on DRAG configurations at 32k, cannot predict IterDRAG's performance at 128k, causing a larger gap from oracle (41.2 EM predicted vs. 46.9 EM oracle). This is identified as a fundamental limitation: the model predicts within a strategy class but not across strategy transitions.
+- Extrapolating 128k → 1M: Strong performance, with predicted 48.0 EM vs. oracle 50.5 EM (2.5 percentage point gap), averaging 2.8% difference across metrics. The strategy class is consistent (both DRAG and IterDRAG are active in this range), so the model extrapolates well.
+- Extrapolating 1M → 5M: "5M context length is less predictable, with the average performance difference between predicted and oracle metrics observed at a substantial 5.6%" (Section 5.2). The sub-linearity at extreme lengths is not fully captured by the fitted sigmoid, and the model tends to over-predict improvements.
+
+#### Comparison of DRAG and IterDRAG to CoT (Appendix B, Table 6)
+
+At $k=5, m=4$, IterDRAG substantially outperforms chain-of-thought prompting:
+- HotpotQA: IterDRAG 44.8 EM / 59.4 F1 / 52.8 Acc vs. CoT 40.2 / 51.3 / 45.6
+- MuSiQue: IterDRAG 17.9 EM / 30.1 F1 / 25.9 Acc vs. CoT 8.9 / 16.1 / 10.8
+- 2WikiMultiHopQA: IterDRAG 57.5 EM / 69.9 F1 / 72.3 Acc vs. CoT 33.0 / 37.9 / 36.7
+
+The paper attributes this to three factors: (1) CoT relies on the initial retrieval only, while IterDRAG performs interleaved retrieval for each sub-query, improving recall; (2) Gemini 1.5 Flash may perform better with constrained Self-Ask decoding than free-form CoT reasoning; and (3) the generated CoT examples may be less informative than the handcrafted or quality-filtered Self-Ask demonstrations. This comparison, however, uses a fixed $(k=5, m=4)$ rather than the optimal configuration for CoT, which somewhat weakens it — a fairer comparison would have given CoT its own optimal $(k, m)$.
+
+#### One-Hop QA Results (Appendix C, Figure 9)
+
+On one-hop datasets (TriviaQA and Natural Questions), DRAG performance shows the same pattern as multi-hop datasets but with earlier saturation:
+- TriviaQA: Accuracy peaks at 69.0% with 50 documents, with higher document counts showing diminishing returns. The optimal number of shots is 1–4.
+- Natural Questions: Accuracy peaks at 54.6% with 20 documents and 1 shot. Beyond 20 documents, "performance drops slightly when more documents are included."
+- The paper notes this is in contrast to multi-hop datasets where larger $k$ and $m$ continue to help: "This trend, in contrast to multi-hop datasets, may be partially attributed to the nature of the one-hop questions and retrieval relevance" (Appendix C). Since one-hop questions require finding a single fact rather than synthesizing across documents, the marginal value of additional documents is lower, and noise becomes a bigger factor relative to signal.
+
+#### StrategyQA Results (Appendix C, Table 7)
+
+On the binary multi-hop dataset StrategyQA, the hierarchy of methods is consistent with the main results: Zero-shot QA achieves 61.1 Acc, Many-shot QA and RAG both reach 74.7, DRAG improves to 79.0, and IterDRAG achieves the highest at 83.4. The 29.3% relative improvement from DRAG over ZS QA (79.0/61.1 ≈ 1.29) and the further boost from iterative decomposition confirm that the strategies transfer to binary classification tasks as well.
+
+#### Retrieval Quality Analysis (Appendix A, Figures 7, Table 5)
+
+Figure 7 shows retrieval quality (Recall, NDCG, MRR) as a function of number of retrieved documents using the Gecko-1B retriever. The key finding is a **divergence between recall and ranking quality**:
+- Recall consistently improves with more documents, approaching near-perfect scores at ~1k documents across all datasets.
+- NDCG and MRR plateau much earlier, around 100 documents, with "diminishing gains as the document count further rises."
+- This divergence explains why standard RAG plateaus: while the correct answer is present in the document set at high $k$ (high recall), the ranking quality degrades (low NDCG/MRR), meaning the most relevant documents are buried among irrelevant ones, making it harder for the model to locate and use them.
+
+Table 5 compares one-step DRAG retrieval vs. iterative IterDRAG retrieval at $k=50, m=2$. IterDRAG improves all metrics, with the largest gains on the hardest dataset (2WikiMultiHopQA): Recall 0.722 → 0.935 (+29.5%), NDCG 0.421 → 0.605 (+43.7%), MRR 0.336 → 0.528 (+57.1%). Averaged across datasets, IterDRAG improves Recall by 21.7%, NDCG by 30.7%, and MRR by 39.9%. The paper notes that ranking-discounted metrics improve more than recall, suggesting IterDRAG's decomposition "yields simpler sub-queries, facilitating more effective retrieval."
+
+#### Results with GTR Retriever (Appendix D, Figure 10)
+
+To test generalizability across retrievers, experiments are repeated on MuSiQue using the GTR XXL retriever (Ni et al., 2021) with 100 sampled examples. The patterns replicate: standard RAG plateaus, DRAG achieves consistent gains with increasing context length, and IterDRAG extends performance further at longer context lengths. The paper concludes this demonstrates "consistent patterns in inference scaling even with a different retriever model."
+
+---
+
+### Ablation Studies and Robustness Checks
+
+**Computation allocation model variants (Table 2):** Removing the task-specific modulation term $b$ (the "Exclude $b$" variant) reduces $R^2$ from 0.903 to 0.866 and increases MSE from 0.085 to 0.116, confirming that task informativeness matters for accurate prediction. Using a quadratic form in $\log(\theta)$ instead of linear produces near-identical fit ($R^2 = 0.867$, MSE = 0.117), suggesting the added complexity is not warranted — the log-linear relationship is sufficient to capture the scaling behavior. Using a linear transformation instead of the inverse sigmoid for the performance values (the "Linear $\sigma$" variant) degrades fit to $R^2 = 0.876$, MSE = 0.109, confirming that the S-shaped saturation at low and high budgets benefits from the non-linear compression.
+
+**Domain generalization of the allocation model (Table 3):** The model's parameters, when estimated from three datasets and applied to predict optimal configurations for a held-out fourth, achieve 96.6% of oracle performance on average. The generalization is stronger for some datasets (Bamboogle: 64.0 predicted vs. 65.6 oracle EM; HotpotQA: 47.8 vs. 48.7) than others (MuSiQue: 19.3 vs. 22.2; 2WikiMultiHopQA: 60.8 vs. 65.7), suggesting that the model is less accurate when the held-out dataset differs substantially in retrieval characteristics or difficulty from the training datasets.
+
+**Length extrapolation of the allocation model (Table 4):** The model extrapolates well when the strategy class is consistent across budget levels (128k → 1M: 2.8% average gap from oracle) but poorly when the optimal strategy class changes (32k → 128k: the model trained only on DRAG cannot predict IterDRAG's superiority) or at extreme budgets (1M → 5M: 5.6% gap). This reveals a structural limitation: the allocation model is fitted separately to each method (DRAG or IterDRAG) and has no mechanism for predicting which method class should be used at a given budget.
+
+**Inverse sigmoid transformation (Table 2, Appendix F):** The fitted sigmoid $\sigma(x) = \frac{3.30}{1 + e^{-1.81(x + 0.46)}} - 2.18$ improves fit over the linear variant (MSE 0.085 vs. 0.109). The specific parameterization captures the empirical pattern: performance scales near-linearly with log-compute in the mid-range but saturates at both low budgets (floor at zero-shot performance) and very high budgets (ceiling effects, particularly above 1M tokens).
+
+**Retrieval quality: DRAG vs. IterDRAG (Table 5):** IterDRAG's iterative retrieval consistently outperforms DRAG's one-shot retrieval across all metrics and datasets, with the largest improvements on 2WikiMultiHopQA. The ranking-discounted metrics (NDCG +30.7%, MRR +39.9%) improve more than recall (+21.7%), suggesting that query decomposition not only finds more relevant documents but also improves their ranking quality within the retrieved set.
+
+**Chain-of-thought vs. IterDRAG (Table 6):** IterDRAG substantially outperforms CoT prompting (e.g., 57.5 vs. 33.0 EM on 2WikiMultiHopQA), but this is evaluated at a fixed $(k=5, m=4)$ rather than the optimal configuration for each method. The paper identifies three factors: retrieval quality (interleaved retrieval vs. single retrieval), model scale (Gemini 1.5 Flash is "relatively small" for free-form reasoning), and demonstration quality (generated CoT examples are "less informative than handcrafted ones").
+
+**GTR vs. Gecko retriever (Appendix D, Figure 10):** The inference scaling patterns replicate with GTR XXL, showing that the observed scaling laws are not specific to the Gecko-1B retriever. However, this validation is on a reduced sample (100 examples from MuSiQue only), which limits the strength of this robustness claim.
+
+**One-hop vs. multi-hop datasets (Appendix C, Figure 9):** DRAG on one-hop datasets (TriviaQA, Natural Questions) exhibits earlier saturation than on multi-hop datasets, with optimal performance achieved at 20–50 documents rather than 100–500. This suggests that the scaling benefits are partially task-dependent: multi-hop questions, which require synthesizing information across documents, benefit more from large document sets and many demonstrations than single-hop questions where one relevant document often suffices.
+
+**StrategyQA binary classification (Appendix C, Table 7):** The performance hierarchy (ZS QA < MS QA ≈ RAG < DRAG < IterDRAG) replicates on binary multi-hop questions, extending the findings beyond span-extraction QA to classification tasks. However, this is a single dataset with a single configuration, not a systematic sweep.
+
+---
+
+### Critical Assessment
+
+#### Claim 1: "RAG performance scales nearly linearly with the increasing order of magnitude of the computation budget under optimal configurations"
+
+This claim is the paper's centerpiece finding, and the evidence for it is strong but with important qualifications that the paper itself acknowledges.
+
+**What the experiments demonstrate:** Figures 4 and 11 show that the optimal performance envelope $P^*(L_{\text{max}})$ for the combined DRAG + IterDRAG strategies rises monotonically with $\log(L_{\text{max}})$, with a visual appearance of linearity on Bamboogle and MuSiQue. Table 1 confirms that at each successively larger budget level, the best achievable performance increases — from 16k to 1M tokens, DRAG + IterDRAG EM improves from 46.4 to 65.6 on Bamboogle, from 16.9 to 30.5 Acc on MuSiQue, and from 50.5 to 76.9 Acc on 2WikiMultiHopQA.
+
+**What is not demonstrated:** The paper does not provide quantitative evidence that the relationship is *linear* — no $R^2$ values are reported for the scaling law fits, no statistical tests compare linear vs. logarithmic vs. power-law models, and the visual evidence on HotpotQA and 2WikiMultiHopQA (Figure 11) shows sigmoidal rather than linear patterns above 100k tokens. The paper itself hedges: "exhibit more sigmoidal patterns, likely due to the difficulty of the datasets and the quality of the retrieved documents" (Appendix E). The "inference scaling laws for RAG" are therefore better described as a qualitative empirical regularity (monotonic improvement with log-compute) rather than a quantitatively validated law.
+
+**The budget range is limited:** The scaling is demonstrated over roughly two orders of magnitude of effective context length (~10^4 to ~10^6 tokens). Gains from 1M to 5M tokens are marginal (e.g., 2WikiMultiHopQA Acc: 76.4 → 76.9). This means the "near-linear" regime may be bounded, and the paper's own data suggests that returns diminish significantly beyond 1M tokens. A growth curve that is linear from 16k to 1M but flat from 1M to 5M is arguably sigmoidal overall, not linear.
+
+**Optimality is defined and measured within a limited configuration space:** The "optimal" performance $P^*(L_{\text{max}})$ is the best among the grid-searched configurations, not a true global optimum. The grid is coarsely sampled: $k$ is swept over 11 values (with large gaps, e.g., from 200 to 500 to 1000), and $m$ is swept over powers of 2. A configuration with $k=300, m=12$ might outperform all grid points but is never tested. The true $P^*$ could be higher than reported, and the scaling curve could be steeper or differently shaped.
+
+#### Claim 2: "The computation allocation model predicts optimal inference parameters and generalizes across domains and budget levels"
+
+**Domain generalization (Table 3) is the strongest evidence for this claim.** The model achieves 96.6% of oracle performance when trained on three datasets and tested on the fourth. However, several qualifications apply:
+
+- The generalization is tested on datasets from the same distribution (all multi-hop QA from Wikipedia). There is no test on a genuinely different domain (e.g., biomedical QA, legal QA, code generation) where retrieval characteristics might differ substantially.
+- The model still requires two cheap evaluations per target task ($i_{\text{doc}}$ and $i_{\text{shot}}$), so it is not zero-shot in the strict sense. The claim that the model "can be estimated once and applied to various downstream tasks without requiring additional calibration" (Section 5.1) is slightly overstated — you still need to measure $i$, even if cheaply.
+- The largest gaps from oracle occur on the hardest datasets (MuSiQue: 19.3 vs. 22.2 EM; 2WikiMultiHopQA: 60.8 vs. 65.7 EM), which are precisely the datasets where optimization matters most. The model is less reliable exactly where you'd most want it.
+
+**Length extrapolation (Table 4) shows clear limitations.** The model fails to extrapolate across strategy class transitions (32k → 128k) and degrades at extreme budgets (1M → 5M: 5.6% gap). Since the practical value of an allocation model is to predict at budgets you haven't exhaustively searched, the inability to handle budget ranges where the optimal strategy changes is a significant limitation. The paper acknowledges this but does not propose a solution.
+
+**The model is fitted and evaluated on the same model (Gemini 1.5 Flash).** There is no evidence that the estimated parameters $(a, b, c)$ transfer to other LLMs. A different LLM with different in-context learning capabilities or different long-context behavior would almost certainly have different scaling coefficients. The claim that the model captures "model-specific scaling behavior" (Section 5.1) is true by construction, but the practical implication — that you can calibrate once per model — is only demonstrated for a single model.
+
+**The $R^2$ of 0.903 is on data with outliers removed:** "To manage noisy data," the paper excludes "peak and valley outliers in our experiments" when computing $R^2$ and MSE (Appendix H). Including these outliers would reduce the reported fit. For domain generalization and length extrapolation, however, "all data points are included in the evaluation," which is the right choice for honest assessment but means the 96.6% figure is based on a harder test than the 0.903 $R^2$ would suggest.
+
+#### Claim 3: "DRAG and IterDRAG achieve up to 58.9% gains on benchmark datasets compared to standard RAG"
+
+**This claim requires careful interpretation of what "gains" means.** The 58.9% figure (from Section 1) is the maximum improvement across dataset-metric-budget combinations, not an average. It presumably comes from a specific comparison (likely IterDRAG at 5M vs. RAG at some baseline budget on 2WikiMultiHopQA Acc, where the improvement is from ~48.4% to ~76.9% — roughly a 58.9% relative gain). The exact derivation is not provided in a single sentence, which makes the claim somewhat opaque.
+
+**The comparison is against standard RAG at its best budget, not at a matched budget.** Table 1 shows RAG's optimal performance peaks at 128k tokens on most datasets. Comparing IterDRAG at 5M tokens to RAG at 128k tokens is not a fair compute-matched comparison — it compares a method using 40× more compute to a baseline. The claim would be more meaningful if stated as "IterDRAG with 5M tokens of effective context length outperforms RAG at its optimal budget by X%." The paper's central thesis is that *scaling compute* yields gains, so comparing at different compute levels is valid — but the "58.9% gains" should not be interpreted as "58.9% better at the same cost."
+
+#### Claim 4: "Increasing inference computation leads to nearly linear gains in RAG performance when optimally allocated"
+
+**This is supported for the optimal envelope but not for arbitrary configurations.** The paper is clear about this distinction (Section 4.3: "The optimal performance exhibits consistent gains as the effective context length expands"), but the strong claim about "nearly linear" scaling appears in the abstract and introduction without always qualifying that it refers to the *optimal* allocation. Naïve scaling of documents alone (standard RAG) plateaus, as Figure 1 demonstrates — the linearity is an emergent property of *multi-dimensional* scaling, not a property of RAG per se.
+
+#### Missing Experiments and Weaknesses
+
+The paper would be strengthened by several experiments and analyses that are absent:
+
+- **No confidence intervals or error bars on any result.** With 1.2k sampled examples per dataset, there is non-trivial sampling variance. The differences between, say, DRAG at 46.9 EM and IterDRAG at 44.8 EM on HotpotQA at 128k (Table 1) could be within sampling noise. Without confidence intervals, the reader cannot assess which comparisons are statistically reliable. This is a significant omission for a paper making quantitative scaling claims.
+
+- **No comparison to re-ranking or filtering baselines.** The paper shows that DRAG and IterDRAG improve over standard RAG by teaching the model to handle noisy document sets. But a simpler alternative — use a re-ranker to select the top-10 most relevant documents from the top-100 retrieved — is not evaluated. This baseline would test whether the benefit of DRAG comes from better document utilization or simply from having more documents (and the demonstrations teach the model to do implicitly what a re-ranker does explicitly).
+
+- **No latency or throughput measurements.** The paper defines effective context length as the budget metric but acknowledges that iterative methods have serial dependencies that wall-clock time would penalize. Without any latency data, a practitioner cannot assess whether IterDRAG's 5M-token configuration (which may require 5+ sequential LLM calls plus retrieval) is practical for real-time applications, even if it achieves higher accuracy.
+
+- **Limited exploration of the iteration budget.** IterDRAG is capped at 5 iterations, and the paper does not ablate this number. Would 10 iterations help? Does performance plateau at 3 iterations for some datasets? The iteration dimension is the least explored of the three scaling axes.
+
+- **No test of whether the allocation model transfers to other model families.** All results use Gemini 1.5 Flash. Demonstrating that the same parametric form works for GPT-4, Claude, or Llama would substantially strengthen the claim that the model captures general inference scaling behavior.
+
+- **The difficulty estimation parallel is unexplored.** Unlike the Snell et al. (2024) paper on math reasoning test-time compute, which conditions strategies on predicted question difficulty, this paper does not attempt to predict which queries will benefit most from DRAG vs. IterDRAG or which $(k, m, n)$ configuration is query-specific. The allocation model predicts *average* performance across the dataset, not per-query optimal allocation. Adaptively routing easy queries to cheap configurations and hard queries to expensive ones could further improve efficiency, but this is not explored.
+
+- **No experiment on the optimal budget split between DRAG and IterDRAG within a single task.** The paper shows that DRAG dominates at shorter budgets and IterDRAG at longer budgets, but the optimal performance envelope is constructed by picking the best method at each budget. In practice, for a given budget, you might want to split the budget — run some queries with DRAG and some with IterDRAG based on predicted difficulty. The paper does not explore this within-budget strategy mixing.
+
+#### Summary Assessment
+
+The experimental evidence strongly supports the paper's qualitative thesis: **multi-dimensional inference compute scaling (documents + demonstrations + iterations) enables sustained RAG performance improvements where single-dimensional scaling (documents alone) plateaus.** Table 1, Figures 4, and 11 provide clear, consistent evidence for this across four datasets, three metrics, and five budget levels.
+
+The claim of **near-linear scaling with log-compute** is supported visually but lacks quantitative rigor — no fit statistics are reported for the scaling laws themselves, and the evidence for linearity is dataset-dependent (strong on Bamboogle and MuSiQue, weaker on HotpotQA and 2WikiMultiHopQA). The claim would be stronger with explicit model comparison (linear vs. logarithmic vs. power-law fits to $P^*(L_{\text{max}})$).
+
+The **computation allocation model** is a useful practical tool with demonstrated generalization ability (96.6% of oracle) and clear limitations (strategy transitions, extreme budgets). The model's value lies in reducing the cost of configuration search for new tasks, and the generalization experiments provide credible evidence for this. However, the model is validated on a narrow distribution of tasks (Wikipedia-based multi-hop QA) and a single model family, so its broader applicability remains unknown.
+
+The **58.9% gain figure** is a headline result that, while technically supported by the data at some operating point, overstates the typical improvement — it represents the maximum gain at the maximum budget, not the expected gain at reasonable operating points. The more meaningful practical finding is that DRAG improves over standard RAG by ~2–5 percentage points at matched budgets (Table 1, 16k–128k), and IterDRAG adds another ~5–15 percentage points at higher budgets (128k–1M).
 
 ## 6. Limitations and Trade-offs
-- Assumptions and scope
-  - The compute budget is defined solely as input tokens; output tokens and retrieval cost are ignored (Section 3.1). This is reasonable for short answers and cheap ANN retrieval but may not hold for long-form generation or complex retrieval stacks.
-  - The approach is evaluated with one long-context model (Gemini 1.5 Flash). Scaling behavior could vary with other LLMs or architectures.
 
-- Where it may not work as well
-  - Ultra-long single-pass contexts: DRAG shows diminishing returns beyond ~10⁵ tokens per call (Figures 1 and 11); the model may not reliably extract the right evidence from extremely long inputs.
-  - Very noisy corpora or stale knowledge: retrieval errors remain a leading failure source; when correct evidence is absent or ranked poorly, iterative reasoning still fails (Appendix G).
-  - Extremely large budgets: beyond ~1M effective tokens, gains diminish (Section 4.3).
+### The Difficulty Estimation Cost Is Equal to or Greater Than the Inference Budget Being Studied
 
-- Computational trade-offs
-  - IterDRAG trades extra latency (multiple LLM calls) for better evidence quality and reasoning. While effective context length can grow to millions of tokens via iteration, each step adds overhead, which may affect real-time applications.
-  - Finding optimal configurations by grid search can be expensive; the allocation model mitigates this but requires some initial runs for fitting (Section 5.1).
+The paper's most practically consequential limitation concerns how the compute-optimal configuration is identified. Section 4.1 formalizes $P^*(L_{\text{max}})$ as the maximum performance achievable within a budget $L_{\text{max}}$ via grid search over all configurations $\theta$ that satisfy the per-query constraint $l(x_i; \theta) \leq L_{\text{max}}$. This grid search enumerates 110+ configurations for DRAG alone (11 values of $k$ times 10 values of $m$) and more for IterDRAG, evaluating each on the full test set. The paper acknowledges this cost implicitly through its design choices — sampling 1.2k examples per dataset "to manage the computational costs of extensive experiments" (Section 4.1) and using Gemini 1.5 Flash for "more efficient experiments" (Appendix H) — but never quantifies it or accounts for it in any efficiency calculation.
 
-- Modeling simplifications
-  - The informativeness vector sets the iteration component to zero (`i_iter = 0`) because adding it did not help in experiments (Section 5.1). This may limit expressiveness in settings where the number of iterations is especially impactful.
-  - The inverse-sigmoid linearization is empirical; although it fits well (Table 2), it is not derived from first principles and mildly underperforms at the longest budgets (Table 4, last column).
+**The consequence** is that the headline scaling results and the 4× or larger efficiency claims (such as "IterDRAG at 128k outperforms RAG at 512k") omit the dominant cost in a deployment scenario. To find the optimal configuration for a new task, you would need to either (a) perform an exhaustive grid search at a cost far exceeding the inference budget you are optimizing, or (b) trust the computation allocation model's generalization, which the paper shows achieves 96.6% of oracle performance on held-out datasets (Table 3) — an upper bound that leaves a 3.4% accuracy gap versus optimal on average, and larger gaps on harder datasets (MuSiQue: 19.3 vs. 22.2 EM, a 13% relative gap). The 96.6% figure also applies only to budget levels where the strategy class is consistent; when the optimal strategy transitions from DRAG to IterDRAG (32k to 128k), "extrapolating from 32k to 128k is challenging" (Section 5.2, Table 4), meaning the allocation model provides no reliable guidance at the most critical decision point — when to switch from one-shot to iterative methods.
+
+This is a more severe problem than it appears because, unlike the math reasoning inference scaling work by Snell et al. (2024) where a lightweight classifier can estimate question difficulty from the prompt text alone, this paper's allocation model requires computing $i_{\text{doc}}$ and $i_{\text{shot}}$ for each new task. These values are defined as the performance gains from adding one document and one shot relative to zero-shot (Section 5.1), which require three full evaluations on the task. While cheaper than a full grid search, this is still a non-trivial cost — especially for IterDRAG, where "evaluating $i_{\text{doc}}$ and $i_{\text{shot}}$" presumably means running IterDRAG with those configurations, each of which involves up to 5 iterative LLM calls with interleaved retrieval. The paper reports no budgets for these calibration evaluations, meaning the true total cost of deploying the compute-optimal framework is unknown.
+
+**Mitigation status:** The computation allocation model is the paper's proposed solution to this problem, and the domain generalization results in Table 3 provide evidence that it works within the studied task distribution. However, the model does not eliminate the calibration cost (it reduces it from an exhaustive grid search to three evaluations), and it provides no mechanism for selecting the optimal strategy class (DRAG vs. IterDRAG) at a given budget — this selection remains an empirical question requiring additional grid search. The paper does not propose a difficulty estimation model that predicts optimal configurations from the query text alone, which is the approach that would make the framework genuinely deployment-ready. This is a major avenue for future work that the paper does not explicitly flag but which is a direct prerequisite for practical application.
+
+---
+
+### Hard Problems Show Diminishing and Eventually Zero Returns from Additional Inference Compute
+
+A central finding of the paper is that inference scaling amplifies existing capabilities rather than creating new ones — a pattern that is visible across all datasets but most starkly on MuSiQue. Table 1 shows that MuSiQue accuracy for IterDRAG improves from 12.2% (at 16k tokens, $L_{\text{max}}$) to 22.2% EM (at 1M tokens), and then essentially flatlines to 22.5% EM at 5M tokens. This means that even with 5M effective context tokens — over 400× the budget of the 16k configuration — the model achieves only 22.5% exact match accuracy on MuSiQue. The remaining 77.5% of questions are fundamentally unsolvable by this approach regardless of compute budget.
+
+**The consequence** is a hard capability ceiling that no amount of optimization can breach. Section 6 identifies four persistent error categories — inaccurate or outdated retrieval, incorrect or lack of reasoning, hallucination or unfaithful reasoning, and evaluation issues or refusal to answer (Appendix G, Figure 14) — and acknowledges that while IterDRAG "substantially improved" retrieval and reasoning errors, hallucination and evaluation issues persist. More importantly, some MuSiQue questions simply require knowledge or reasoning capabilities that Gemini 1.5 Flash does not possess. The retrieval quality analysis (Appendix A, Figure 7) shows that even with 1,000 documents, recall does not reach 1.0 on any dataset, and NDCG plateaus around 100 documents at moderate values — there are questions where the correct answer is not in the retrieved set at all, so no amount of document processing or iterative decomposition can help. For these hardest questions, the optimal strategy is to recognize the model's incapability and either escalate to a larger model or a human, but the paper's framework provides no mechanism for making this routing decision.
+
+This limitation is partially acknowledged in the paper's broader narrative about scaling — Section 4.3 notes that "gains on optimal performance gradually diminish beyond an effective context length of 1M" and that the plateau "may be due to limitations in long-context modeling." Section 6 elaborates: "the model's ability to identify relevant information from extensive context remains to be improved, especially when presented with large quantity of 'similar' documents." However, the paper does not quantify what fraction of questions fall into this "unsolvable at any budget" category or characterize them systematically. This is important because the 58.9% gain figure (Section 1) and the "nearly linear" scaling claim (Section 4.3) paint an optimistic picture that can obscure the fact that for the hardest task studied (MuSiQue, which is also arguably the most realistic test of multi-hop reasoning), the absolute performance ceiling is low and the marginal return per unit of additional compute above 1M tokens is near zero.
+
+**What evidence exists in the paper:** Figures 1 and 11 show the flattening of optimal performance curves on all four datasets above ~10^6 effective context length. Table 1 quantifies the plateau: IterDRAG EM on MuSiQue improves 0.3 percentage points (22.2 to 22.5) from 1M to 5M tokens. Figure 4 shows that the optimal envelope begins to bend at the high end. The error analysis in Appendix G is qualitative but illustrates specific failure modes that persist despite scaling.
+
+**Mitigation status:** The paper acknowledges the plateau but does not attempt to characterize which questions are fundamentally unsolvable or to develop a method for identifying them at inference time. The computation allocation model's inverse sigmoid transformation (Appendix F) is designed to capture saturation at high budgets — the fitted sigmoid $\sigma(x) = \frac{3.30}{1 + e^{-1.81(x + 0.46)}} - 2.18$ compresses improvements at the high end — but this is a descriptive correction, not a solution. The fundamental limitation remains: inference compute amplifies a model's existing capabilities but cannot create new ones, and the paper provides no framework for determining when additional compute has reached the point of zero marginal return for a given query or task.
+
+---
+
+### Single Model Family, Single Task Domain, No Evidence of Cross-Model or Cross-Domain Transfer
+
+All experiments in the paper use exactly one model — Gemini 1.5 Flash — on exactly one task family — multi-hop question answering over Wikipedia passages. Section 4 states that Gemini 1.5 Flash is used "for more efficient experiments," and Appendix H explains that it was chosen because it is "representative of current long-context LLM capabilities." However, no experiments validate this representativeness claim. The paper does not test whether the observed scaling laws, the optimal configurations, or the fitted computation allocation model parameters transfer to other long-context LLMs (GPT-4-Turbo, Claude 3, Gemini 1.5 Pro, Llama 3, or even Gemini 1.5 Flash with different instruction tuning) or to other task types (code generation with retrieval, legal document analysis, biomedical QA with domain-specific corpora).
+
+**The consequence** is that a practitioner reading this paper has no evidence-base for deciding whether the findings apply to their setting. Several aspects of the results could be model-specific:
+
+- **The relative benefit of demonstrations vs. documents ($a_1 = 0.325$ vs. $a_2 = 0.101$ in the allocation model, Appendix F, Table 8)** depends on Gemini 1.5 Flash's in-context learning capability, which varies substantially across model families. A model with stronger in-context learning (like GPT-4 or larger Gemini variants) might benefit more from demonstrations relative to documents, shifting the optimal $(k, m)$ tradeoff toward higher $m$. A model with weaker in-context learning might show much smaller benefits from DRAG overall.
+
+- **IterDRAG's effectiveness depends on the model's ability to perform constrained decoding in the Self-Ask format** (Section 3.3). Gemini 1.5 Flash's compliance with this format may not generalize — the paper itself notes that "Gemini 1.5 Flash is relatively small and may not perform well in free-form reasoning in comparison to larger LLMs" (Appendix B), which cuts both ways: a larger model might not need constrained decoding to benefit from iterative decomposition, or it might refuse to follow the Self-Ask format reliably.
+
+- **The diminishing returns at ~1M tokens are a property of Gemini 1.5 Flash's context window and attention mechanism.** A model with a larger effective context window (like Gemini 1.5 Pro's 2M-token window) or with specialized long-context architecture (e.g., Mamba or RWKV models, mentioned in Section 2.1) might show different saturation behavior. The paper's finding that "long-context modeling should be further refined to enhance in-context learning capabilities" (Section 6) could be model-specific rather than a general property of long-context RAG.
+
+**The task-domain limitation is equally severe.** The paper evaluates on four multi-hop QA datasets (Bamboogle, HotpotQA, MuSiQue, 2WikiMultiHopQA), all sourced from Wikipedia (via the KILT benchmark, Appendix H) and all in English. The one-hop datasets (TriviaQA and Natural Questions, Appendix C, Figure 9) show different scaling behavior — saturation occurs earlier (20–50 documents vs. 100–500 for multi-hop). StrategyQA (Appendix C, Table 7) is binary classification, not span extraction. None of these extend beyond the narrow distribution of "factoid QA over an encyclopedia." The paper does not test on:
+
+- Domain-specific retrieval (biomedical literature, legal documents, code repositories) where retrieval quality, document length, and relevance patterns differ substantially.
+- Tasks requiring synthesis, summarization, or argumentation rather than fact extraction — where the final answer might be paragraphs long (challenging the paper's assumption that "LLMs typically generate significantly fewer tokens," Section 3.1).
+- Non-English or multilingual settings.
+
+**What evidence exists in the paper:** (Appendix D) replicates the MuSiQue scaling pattern with the GTR XXL retriever instead of Gecko-1B, showing that the qualitative pattern (RAG plateaus, DRAG improves, IterDRAG extends further) is not specific to one retriever. This is the only cross-component validation. There is no cross-model validation whatsoever, and no cross-domain validation beyond the distinction between one-hop and multi-hop QA within the Wikipedia domain.
+
+**Mitigation status:** The paper does not claim generalizability beyond its experimental setting — it reports results on "benchmark QA datasets" and does not assert that the findings transfer to other models or domains. However, the computation allocation model is presented as a general framework ("the computation allocation model can be estimated once and applied to various downstream tasks without requiring additional calibration," Section 5.1), and this claim is not supported for models other than Gemini 1.5 Flash. A practitioner who wants to apply this framework to, say, GPT-4 on biomedical QA would need to re-estimate all model parameters and validate the parametric form from scratch — the paper provides no evidence that the same functional form ($\sigma^{-1}(P(\theta)) \approx (a + b \odot i)^T \log(\theta) + c$) would hold.
+
+---
+
+### IterDRAG's Demonstration Generation Introduces Selection Bias Whose Effect Is Unquantified
+
+IterDRAG's in-context demonstrations are not human-written or drawn from a curated dataset. They are generated by prompting an LLM to decompose training queries into sub-queries following the Self-Ask format, with interleaved retrieval, and then **"retaining examples with intermediate steps and correct final answers"** (Section 3.3). This filtering step — keeping only demonstrations where the decomposition produced the correct final answer — introduces a systematic selection bias: the model sees only successful decompositions during training, never failed ones.
+
+**The consequence** is that the model learns decomposition patterns that are guaranteed to be correct for their respective queries, which creates a mismatch at test time. When faced with a query where retrieval is noisy or the decomposition strategy is genuinely uncertain (should the query be broken into 2 sub-queries or 3? what sub-queries are appropriate?), the model has seen no examples of what a failed decomposition looks like or how to recover from one. This may contribute to the error categories observed in Appendix G: "incorrect or lack of reasoning" and "hallucination or unfaithful reasoning" could stem partly from the model confidently applying decomposition patterns learned from successful-only demonstrations to queries where those patterns are inappropriate, without the calibration that would come from seeing negative examples.
+
+This is particularly concerning for complex multi-hop queries on MuSiQue and 2WikiMultiHopQA, where the decomposition itself is non-trivial and errors in the decomposition strategy can propagate to incorrect answers even when all individual retrieval steps are successful. The paper provides no analysis of *how often IterDRAG's decomposition strategy is correct conditional on the final answer being wrong* — are the errors primarily from bad decompositions, bad retrieval given a good decomposition, or good retrieval and decomposition but flawed reasoning? Without this breakdown, it is impossible to assess how much the selection bias in training data contributes to the observed failure modes.
+
+The paper also does not report what fraction of generated demonstrations were rejected during the filtering step. If, say, 80% of generated decompositions produced incorrect answers and were discarded, the retained 20% represent a highly selected subset of "easy" queries where decomposition is straightforward. The model is then tested on the full distribution (including queries where decomposition is hard), but trained only on examples of queries where decomposition worked. This is a classic train-test mismatch that could cause systematic overconfidence or inappropriate decomposition strategies on harder test queries.
+
+**What evidence exists in the paper:** The contrast between IterDRAG's performance gains on different datasets is suggestive. IterDRAG dramatically outperforms DRAG on 2WikiMultiHopQA (62.3 vs. 47.5 EM at 128k, Table 1) but shows smaller or no gains on HotpotQA (44.8 vs. 47.4 EM at 128k) and actually underperforms DRAG at 16k and 32k on several datasets (e.g., HotpotQA: 36.0 vs. 45.5 EM at 16k; 2WikiMultiHopQA: 33.2 vs. 45.2 EM at 16k). This pattern is consistent with a method that works well when decomposition is a good fit for the query type (2WikiMultiHopQA has structured two-hop questions) but underperforms when many queries do not benefit from decomposition or when the demonstrations do not cover the necessary decomposition patterns. However, the paper does not analyze this dataset-dependent variance through the lens of demonstration quality or selection bias.
+
+**Mitigation status:** The paper does not acknowledge this selection bias as a limitation. The only discussion of demonstration quality appears in Appendix B, where the paper notes that "the generated CoT examples are less informative than handcrafted ones" — but this refers to CoT demonstrations, not IterDRAG's Self-Ask demonstrations. The IterDRAG demonstrations are implicitly assumed to be high-quality because they are filtered for correctness, but the filtering itself is the source of bias. Future work could address this by including negative examples (demonstrations that show incorrect decompositions and their corrections) or by using on-policy decomposition generation where the model learns from its own decomposition attempts, including failures, rather than from a pre-filtered set of successes.
+
+---
+
+### The Computation Allocation Model Ignores Cross-Axis Interactions and Cannot Predict Strategy Transitions
+
+The computation allocation model (Equation 2, Section 5.1) assumes that the effects of documents, shots, and iterations on performance are **additive in log-space**: $(a + b \odot i)^T \log(\theta)$ means that the benefit of increasing documents does not depend on how many shots you have, and vice versa. This is an approximation that is empirically tested but structurally limited. The performance heatmaps (Figures 5a and 8) show evidence of interactions: the optimal $m$ depends on $k$ (the diagonal structure in the heatmap), and the optimal strategy class transitions from DRAG to IterDRAG as the budget grows (Table 1, Figure 4).
+
+**The consequence** is that the model makes systematically biased predictions in regimes where interactions matter most. The paper explicitly acknowledges one manifestation of this: "extrapolating from 32k to 128k is challenging. This is because DRAG performs best around 32k, while IterDRAG typically excels at a long context of 128k" (Section 5.2, Table 4). Since the allocation model is fitted separately to DRAG and IterDRAG — they have different $\theta$ spaces and different scaling behaviors — it cannot predict which strategy class to use. At a budget where both strategies are viable, the model provides two separate predictions (one from the DRAG-fitted parameters, one from the IterDRAG-fitted parameters) with no principled way to choose between them.
+
+This limitation is fundamental, not incidental, because the paper's central thesis is that **multi-strategy allocation** is what enables sustained scaling. The computation allocation model captures within-strategy allocation (how to split the budget between $k$, $m$, and $n$ within DRAG or IterDRAG) but not across-strategy allocation (whether to use DRAG or IterDRAG for a given budget and task). This means the model's practical utility is limited to scenarios where the user has already decided which strategy to use — which is precisely the decision that requires the most compute to make empirically (since it involves evaluating two separate grid searches).
+
+A secondary interaction that the model ignores is the interdependence between documents and shots within a strategy. The heatmap in Figure 5a shows that performance contours are not straight lines in log-space — they curve, indicating that the marginal benefit of adding documents depends on how many shots are present (and vice versa). The additive model $(a_1 + b_1 i_{\text{doc}})\log(k) + (a_2 + b_2 i_{\text{shot}})\log(m)$ forces these effects to be independent. The paper's ablation (Table 2) shows that adding quadratic terms in $\log(\theta)$ does not improve fit ($R^2 = 0.867$ vs. 0.866 without task-specific modulation), but the quadratic terms test for curvature within individual axes (e.g., $\log(k)^2$), not for interaction terms (e.g., $\log(k) \cdot \log(m)$). The latter is never tested.
+
+**What evidence exists in the paper:** The performance heatmaps (Figures 5a and 8) provide visual evidence of interactions — the optimal region is not aligned with either axis, and the shape changes between DRAG and IterDRAG. Table 4 demonstrates the strategy-transition problem quantitatively: predicted 32k → 128k extrapolation yields 41.2 EM vs. oracle 46.9 EM, a 5.7 percentage point gap, compared to 2.8% average gap for 128k → 1M where the strategy class is consistent. The paper also notes that the allocation model parameters are fitted "for DRAG and IterDRAG separately" (Appendix H), which is an implicit acknowledgment that a unified model does not exist.
+
+**Mitigation status:** The paper acknowledges the strategy-transition problem in the length extrapolation discussion (Section 5.2) but does not propose a solution. The most natural extension — a unified allocation model that includes a strategy indicator variable or that models the transition as a function of budget — is not explored. This is a significant gap because it means the paper's two main contributions (the empirical demonstration of multi-strategy scaling and the predictive allocation model) are not fully integrated: the allocation model cannot reproduce the scaling behavior that the empirical results demonstrate.
+
+This also limits the applicability of the domain generalization results (Table 3). The 96.6% of oracle performance is computed using the correct strategy class for the target budget (IterDRAG at 1M). In a true zero-shot setting where both the budget and the optimal strategy class are unknown, performance would be lower because the user would need to guess which strategy to deploy or run both.
+
+---
+
+### Latency and Serial Dependency Costs Are Completely Unaddressed Despite IterDRAG's Inherent Sequential Bottleneck
+
+The paper defines inference computation exclusively as effective context length — the total number of input tokens across all LLM calls (Section 3.1). This metric treats 1M tokens consumed in a single forward pass (DRAG) as equivalent to 1M tokens consumed across 5 sequential forward passes (IterDRAG at ~200k tokens each). In wall-clock time, these are radically different: IterDRAG's iterative retrieval-generation loop is **inherently serial** — each sub-query must be generated, its documents retrieved, and its intermediate answer produced before the next sub-query can begin. DRAG, RAG, and many-shot QA are **fully parallelizable** at the generation step — the entire prompt is assembled and processed in one forward pass.
+
+**The consequence** is that a practitioner optimizing for latency (time-to-first-token or time-to-final-answer) faces a completely different tradeoff curve than the one the paper presents. An IterDRAG configuration that "wins" on effective context length efficiency might lose badly on wall-clock time. For example, at $L_{\text{max}} = 128\text{k}$, IterDRAG achieves 62.3 EM on 2WikiMultiHopQA vs. DRAG's 47.5 EM (Table 1) — a dramatic accuracy gain. But if IterDRAG requires 5 sequential LLM calls at ~25k tokens each (plus 5 retrieval round-trips), while DRAG requires 1 call at 128k tokens, the latency ratio could be 5:1 or worse depending on request queuing, retrieval latency, and token generation speed. For a real-time application like a search engine or voice assistant, a 5× latency increase for a 14.8 percentage point accuracy gain might be unacceptable, regardless of the total token efficiency.
+
+This latency cost is also non-uniform across queries. IterDRAG's decomposition is data-dependent: some queries might generate 2 sub-queries, others 5, and some might fail to decompose at all (producing the final answer in a single step). This means latency variance across queries could be high, creating tail latency problems — the worst-case latency (5 iterations where each retrieval returns many long documents, plus long intermediate answers) could be an order of magnitude worse than the median. Production systems typically care about P99 latency, not just average throughput, and the paper provides no measurements of either.
+
+The paper's justification for ignoring output tokens — "LLMs typically generate significantly fewer tokens (fewer than 10) in knowledge-intensive tasks" (Section 3.1) — is accurate for the final answer but ignores that IterDRAG generates sub-queries and intermediate answers, which are part of the output. These intermediate outputs are consumed as input to the next iteration (they are concatenated into the prompt), so they count toward the effective context length. But they also consume generation time — the model must autoregressively produce "Follow up: [sub-query text]" and "Intermediate answer: [answer text]" tokens, which adds latency beyond what the input token count captures. For complex multi-hop queries with long intermediate answers, this generation time could be substantial.
+
+**What evidence exists in the paper:** None. The paper includes no latency measurements, no throughput measurements, and no discussion of the serial vs. parallel compute tradeoff beyond the acknowledgment in Section 3.1 that IterDRAG's effective context length "can be extended indefinitely depending on the strategy" without noting that this infinite extensibility comes at the cost of infinite latency (each additional iteration adds a full LLM forward pass + retrieval round-trip of latency). Appendix B notes that Gemini 1.5 Flash is "relatively small" and used "for more efficient experiments," which implicitly acknowledges that efficiency matters, but the efficiency discussed is only token-count efficiency, not time efficiency.
+
+The one-hop QA results (Appendix C, Figure 9) provide an indirect clue about latency tradeoffs: on one-hop datasets, DRAG with a moderate number of documents (20–50) achieves near-optimal performance, and the additional latency of IterDRAG's iterative decomposition would be wasted. But the paper does not frame this as a latency-accuracy tradeoff or suggest adaptive strategy selection based on predicted query complexity.
+
+**Mitigation status:** The paper does not address this limitation, propose latency-aware allocation strategies, or suggest how a practitioner should trade off the accuracy gains of IterDRAG against its serial latency cost. For a paper about "optimal computation allocation," the complete absence of time as a dimension of the allocation problem is a significant omission. Future work could address this by (a) measuring latency and throughput for both strategies at equivalent effective context lengths, (b) developing hybrid strategies where easy queries use DRAG and hard queries use IterDRAG based on a quick initial classification step (amortizing the IterDRAG latency cost over only the queries that benefit), or (c) exploring whether IterDRAG's sub-queries can be parallelized — for example, generating all sub-queries first (parallel generation), performing all retrievals (parallel retrieval), then generating all intermediate answers (parallel or batched). The current sequential design is not the only possible decomposition strategy, and the paper does not explore alternatives.
 
 ## 7. Implications and Future Directions
 - How this work changes the field

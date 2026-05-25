@@ -8,108 +8,617 @@ OLMoE introduces the first fully open, high-performing Mixture-of-Experts (MoE) 
 
 ---
 
-## 1. Executive Summary (2–3 sentences)
-OLMoE introduces a fully open Mixture‑of‑Experts (MoE) language model, `OLMOE‑1B‑7B`, that activates ~1B parameters per token while storing 6.9B total parameters. Trained from scratch on 5.1T tokens and then adapted, it achieves state‑of‑the‑art accuracy among models with similar active‑parameter cost and ships with model weights, training data, code, logs, and dense ablations that clarify how to train stable, high‑quality MoEs (§1, Table 1; Fig. 1; Tables 4–5; Appendix A).
+## 1. Executive Summary
+
+This paper introduces **OLMOE**, a fully open, state-of-the-art sparse Mixture-of-Experts language model that activates only 1.3B of its 6.9B total parameters per input token, pretrained on 5 trillion tokens and further adapted via instruction and preference tuning into OLMOE-1B-7B-INSTRUCT. Through controlled experiments on the MATH benchmark and standard NLP tasks, the paper systematically analyzes key MoE design choices—including **expert granularity** (64 small experts with 8 activated outperforming 8 experts with 1 activated), **routing algorithm** (dropless token choice routing surpassing expert choice routing), **sparse upcycling** (training from scratch overtakes upcycled models after only 25% of the original dense compute budget, challenging prior claims of 120%), **shared experts** (a shared expert degrades performance by reducing possible expert combinations by ~90%), and **auxiliary losses** (load balancing loss with weight 0.01 and router z-loss with weight 0.001 both proving essential for stability and quality). The resulting model outperforms all open models with similar active parameter counts, even surpassing larger dense models like Llama2-13B-Chat on MMLU, and achieves a 57.7 average across seven post-adaptation benchmarks—establishing that a 1B-active-parameter MoE can match or exceed models with >7× more active parameters only when trained with high granularity, dropless token choice routing, and the OLMOE-MIX data blend, while performance gains from test-time compute alone remain bounded by the base model's fundamental capability range on the hardest problems.
 
 ## 2. Context and Motivation
-- Problem addressed
-  - Cost–performance gap in large language models (LLMs): strong models are expensive to train and run, limiting accessibility (§1). Sparse MoEs promise better cost/performance by activating only a small subset of parameters per token (Fig. 2), but best‑performing MoEs are mostly closed (lack data/code/logs) and their practical design choices remain unclear (Fig. 1; §1).
-- Why it matters
-  - Real‑world impact: lower inference cost per token enables broader deployment on limited hardware while keeping quality high. 
-  - Scientific significance: MoEs introduce new degrees of freedom (number/size of experts, routing strategy, auxiliary losses, initialization) that have interacting effects on stability and quality; the field lacks transparent, controlled evidence (§1; Table 1).
-- Prior approaches and gaps
-  - Open‑weight MoEs exist (e.g., Mixtral‑8x7B, DeepSeekMoE, JetMoE, Qwen1.5‑MoE), but most do not release full recipes, data, or logs (Fig. 1; Appendix D).
-  - Claims in prior work conflict on critical choices: expert granularity [39], shared experts [39], routing variants [219, 154, 58], and upcycling dense models to MoE [85]. Stability tricks are also underdocumented (e.g., router z‑loss [221]).
-- Positioning of this work
-  - A fully open MoE suite with: (i) a performant base model (`OLMOE‑1B‑7B`), (ii) an adapted chat model (`OLMOE‑1B‑7B‑INSTRUCT`), (iii) a transparent, controlled set of ablations on MoE‑specific and general training choices (§4), and (iv) analyses that reveal how MoEs route and specialize (§5).
-  - An improved January 2025 iteration (`OLMOE‑1B‑7B‑0125`) shows further gains via a curated annealing mix and updated post‑training (Appendix I; Tables 16–17).
+
+### The Core Problem: The Trade-off Between Performance and Cost in Language Models
+
+The fundamental tension this paper addresses is straightforward but pervasive: high-performing language models are **prohibitively expensive** to build and deploy, effectively locking out most academic researchers and open-source developers from participating in frontier AI development. The paper frames this with a concrete example: "even with 16 H100 GPUs and several optimizations, Llama 3 405B only achieves a decoding throughput of around 100 tokens per second" (Section 1). This is not merely an academic inconvenience — it means that the vast majority of the research community cannot experiment with, analyze, or improve the most capable models, which has direct consequences for scientific progress, reproducibility, and the concentration of AI capability in a small number of industrial labs.
+
+The problem operates on two axes simultaneously:
+
+- **Training cost**: Training large dense models from scratch requires enormous computational resources. The paper notes that industry frontier models are "prohibitively expensive to build," which restricts who can participate in foundational model development.
+- **Inference cost**: Even once trained, serving large models is costly because dense architectures activate all parameters for every input token, making the per-token cost scale linearly with total parameter count.
+
+This cost barrier is not new — it has been a recognized challenge since the emergence of large language models. What makes the paper's framing distinctive is that it identifies **Mixture-of-Experts** as a known solution that remains severely underexplored due to a lack of open resources, creating a self-reinforcing cycle: MoEs are complex and poorly understood, so few open models exist; because few open models exist, the research community cannot develop the understanding needed to build better MoEs.
+
+### Why This Problem Matters Now
+
+The paper situates its work against a specific inflection point in the field. Industry frontier models — including Gemini-1.5 and reportedly GPT-4 — have adopted MoE architectures precisely because sparse activation enables significantly more efficient training and inference compared to dense models with equivalent total parameter counts. The efficiency advantage is well-established in principle: MoEs activate only a subset of experts per input token, meaning they can scale total parameters (and thus total capacity) without proportionally scaling the per-token computation. This architectural advantage is why "for this reason, industry frontier models use MoEs" (Section 1).
+
+However, the adoption of MoEs by industry has not been accompanied by commensurate openness. The paper's Figure 1 provides a systematic audit of the openness of available MoE models, and the results are stark:
+
+> "While some have publicly released model weights, they offer limited to no information about their training data, code, or recipes"
+
+Specifically, all prior MoE models — Grok, Mixtral, DBRX, Skywork, DeepSeekV2, Arctic, Qwen2, Jamba, DeepSeekMoE, Qwen1.5, OpenMoE, and JetMoE — release either no training data, no training code, or both. Only OpenMoE and JetMoE provide any code at all, and none release intermediate checkpoints that would enable the research community to study how routing behavior and expert specialization evolve during training.
+
+This opacity is particularly damaging for MoEs because they introduce **new design dimensions** that dense models do not have:
+
+> "MoEs add complex new design questions to LMs, such as how many total versus active parameters to use, whether to use many small or few large experts, if experts should be shared, and what routing algorithm to use."
+
+Without open resources and systematic experiments, the field cannot answer these questions through principled investigation. Each closed-source MoE represents a set of undocumented design choices whose individual contributions are unknown, making it impossible to determine which architectural decisions actually matter and which are incidental.
+
+### Where Prior Approaches Fall Short
+
+The paper identifies several distinct categories of prior work and explains why each is insufficient:
+
+**Closed-weight MoE models.** Models like Gemini-1.5, GPT-4 (reportedly MoE), Reka, and PaLM achieve strong performance but provide zero access to weights, data, or training methodology. They demonstrate that MoEs *can* work at scale but provide no scientific insight into *how* to make them work, and they cannot be studied, analyzed, or improved by the broader community.
+
+**Open-weight but closed-everything-else MoE models.** The majority of available MoE models fall into this category: Mixtral, DBRX, Skywork, DeepSeekV2, Arctic, Qwen2, Jamba all release model weights (usually under Apache 2.0 or custom licenses) but provide no training data, no training code, and no training logs. The paper makes this concrete in Appendix D with a detailed breakdown: for example, DeepSeekV2's model is under a custom non-open-source license, and it provides no data, code, or logs. Mixtral's model is under Apache 2.0 but likewise provides no data, code, or logs. These releases enable downstream use and fine-tuning but provide no insight into how the models were built, making them **consumable artifacts rather than platforms for scientific inquiry**.
+
+**Partially open MoE models.** The most open MoEs prior to OLMOE were JetMoE and OpenMoE. JetMoE describes its data mixture but does not release the actual data, and while it makes a fork of a training library available, its core training code built on Megatron-LM is not released. OpenMoE releases model weights under Apache 2.0, provides scripts for recreating its training data, and releases code, but does not release training logs, and — critically — the paper notes that its "poor performance limits its usefulness" (Section 6). Specifically, Table 4 shows OpenMoE-3B-9B achieves only 27.4 on MMLU and 44.4 on HellaSwag, making it substantially worse than many dense 1B models and thus a poor testbed for studying MoE behavior.
+
+**Dense model research that ignores MoEs.** Prior fully open language modeling efforts — including BLOOM, OLMo, Pythia, DCLM, StarCoder, and others — have focused almost exclusively on dense architectures. The paper explicitly acknowledges this lineage:
+
+> "While there have been prior efforts to make language modeling research fully accessible, they have been largely limited to dense LMs. This comes despite MoEs requiring more openness as they add complex new design questions to LMs."
+
+This gap is particularly consequential because many of the most important open research questions about language models cannot be properly studied using dense-only models. For example, questions about expert specialization, routing dynamics, scalability of sparse architectures, and the interaction between auxiliary losses and model quality are specific to MoEs and cannot be addressed by studying dense models alone, regardless of how open those dense models are.
+
+### Conflicting or Unresolved Claims in the MoE Literature
+
+The paper is motivated by several genuine uncertainties and contradictions in the prior MoE literature that can only be resolved through systematic controlled experiments with fully open models:
+
+**Speed-up claims vary widely.** Prior work reports dramatically different speed-ups for MoEs relative to dense models: Artetxe et al. report 2–4× less compute, MoMa reports 2.6× FLOP savings, Arctic reports 4× FLOP savings, and Switch Transformers report 2–7× faster training. However, these comparisons involve fundamentally different model configurations, training setups, and evaluation conditions, making it impossible to determine what speed-up a researcher should actually expect when training their own MoE. The paper addresses this directly in Section 4.1.1 with a controlled comparison.
+
+**Expert choice vs. token choice routing is unresolved.** Zhou et al. find that expert choice routing (where each expert selects tokens) outperforms token choice routing (where each token selects experts), but their comparison uses a version of token choice that drops tokens and operates without a load balancing loss. The paper's own comparison (Section 4.1.4) uses dropless token choice routing with a load balancing loss and finds the opposite result — token choice outperforms expert choice — suggesting that the prior finding was an artifact of the specific routing implementation rather than a fundamental property.
+
+**The effectiveness of sparse upcycling is disputed.** Komatsuzaki et al. report that sparse upcycling (initializing an MoE from a pretrained dense checkpoint) maintains an advantage over training from scratch for up to 120% of the original dense compute budget. However, the paper finds dramatically different results (Section 4.1.5): training from scratch catches up after only 25% of the dense compute budget, and subsequently outperforms the upcycled model. The authors attribute this discrepancy to differences in model architecture (decoder-only vs. encoder-decoder), routing algorithm (token choice vs. expert choice), and the degree of overtraining of the dense starting point — but the conflict remains unresolved in the broader literature and motivates the need for open, replicable experiments.
+
+**Shared experts show inconsistent benefits.** Dai et al. propose shared experts (one expert always activated in addition to routed experts) as a way to isolate common knowledge and allow routed experts to specialize. The paper tests this directly (Section 4.1.3) and finds that removing a routed expert to make it shared eliminates approximately 90% of possible expert combinations, which apparently outweighs any benefits of isolating common knowledge, resulting in slightly worse performance. This directly challenges the recommendation from prior work and suggests the benefit of shared experts may be specific to particular configurations.
+
+**The degree and nature of expert specialization is unclear.** Prior work like Mixtral reports little to no expert specialization, while theoretical arguments suggest experts should specialize in different domains or tasks. The paper's analysis in Section 5.3 directly compares OLMOE with Mixtral and finds dramatically different specialization patterns, hypothesizing that this difference arises from training-from-scratch (OLMOE) versus upcycling (Mixtral). This finding has implications for how the field understands expert behavior and whether upcycling fundamentally constrains the degree of specialization possible.
+
+### How OLMOE Positions Itself
+
+The paper's positioning is distinctive: it does not claim to propose a fundamentally new MoE architecture or novel training algorithm. Instead, it positions itself as **closing the openness gap** specifically for Mixture-of-Experts models, while simultaneously using that openness to conduct systematic experiments that resolve open questions in the MoE literature. The contribution is both infrastructural (providing a fully open model, data, code, and logs that others can build on) and scientific (using controlled experiments to determine which design choices actually matter).
+
+The paper explicitly frames its work relative to two trajectories:
+
+- **The open dense model trajectory**: OLMo, DCLM, Pythia, BLOOM established that fully open language model research is possible and valuable. OLMOE extends this to MoEs, which the paper argues is the natural next step given that frontier models have adopted sparse architectures.
+
+- **The closed MoE trajectory**: Industry models demonstrate that MoEs work at scale but provide no scientific understanding of why or how. OLMOE aims to provide that understanding through transparency and controlled experimentation.
+
+The paper's relationship to prior work is therefore not competitive but **gap-filling**: it provides the missing resource that makes MoE research accessible to the broader community, while simultaneously conducting the systematic experiments that were previously impossible due to the lack of open, well-performing MoE models to experiment on. The paper is explicit about this in its conclusion:
+
+> "Through our fully open release, we seek to help the field build better MoEs. We are excited about more iterations of OLMOE to close the gap between frontier models and fully open models."
+
+This framing distinguishes OLMOE from papers that propose novel methods and from papers that simply release a model. It is simultaneously a **resource paper** (providing infrastructure for future research) and an **empirical analysis paper** (using that infrastructure to answer specific scientific questions about MoE design), with the two goals being mutually reinforcing: the experiments validate the design choices that went into the open model, and the open model enables other researchers to conduct experiments that extend or challenge these findings.
 
 ## 3. Technical Approach
-This section explains how `OLMOE‑1B‑7B` is built and trained, and why particular design decisions were made.
 
-- Core architecture (Fig. 2; §2)
-  - Transformer decoder; the usual feed‑forward network (FFN) in each layer is replaced by an MoE module with `N_E` experts. For each token, the router selects the top‑`k` experts to process that token; outputs are weighted by routing probabilities and summed:
-    - Equation (1): MoE output = sum over `i ∈ Top‑k(r(x))` of `softmax(r(x))_i * E_i(x)`, where `r(x)` is a learned linear router and `E_i` is expert `i`.
-  - Final training loss adds two auxiliary terms to cross‑entropy (Eq. 2): `L = L_CE + α L_LB + β L_RZ`.
-    - `L_LB` (Eq. 3, load‑balancing loss): encourages approximately equal token assignment across experts by multiplying, for each expert, the fraction of tokens it receives (`f_i`) with the sum of its routing probabilities (`P_i`), then summing across experts.
-    - `L_RZ` (Eq. 4, router z‑loss): penalizes large pre‑softmax router logits to prevent numerical issues and improve quality.
-- Final configuration chosen (Table 1; Appendix B)
-  - Active vs total parameters: ~1.3B active, 6.9B total.
-  - Experts: 64 experts per MoE layer; 8 are activated per token (`k = 8`). This fine granularity increases the number of expert combinations while keeping compute fixed (§4.1.2; Fig. 5).
-  - Routing: dropless token‑choice routing [58, 154]; every token is assigned to exactly `k` experts (no token dropping), using a load‑balancing loss (§4.1.4; Fig. 7).
-  - Loss weights: `α = 0.01` for load balancing (§4.1.6) and `β = 0.001` for z‑loss (§4.1.7).
-  - Stability improvements (§4.2): truncated normal initialization (Fig. 13), RMSNorm instead of non‑parametric LN (Figs. 14 and 16), Query‑Key normalization (QK‑Norm; Fig. 18), and a smaller AdamW `epsilon` of 1e‑8 (Fig. 19). RMSNorm and embeddings are included in weight decay (Figs. 15 and 17).
-- Data and training pipeline (§2; Table 2; Appendix B)
-  - Pretraining corpus `OLMOE‑MIX` combines DCLM‑Baseline web pages with selected high‑quality sources (StarCoder code, peS2o and arXiv STEM, OpenWebMath, Algebraic Stack, Wikipedia). The mix outperforms Dolma 1.7 in ablations (Fig. 12).
-  - Total training tokens: 5.133T (1.3 epochs over the dataset), with a final 100B‑token annealing phase during which the dataset is reshuffled and learning rate decays linearly to zero (§2).
-  - Sequence length 4096; training with ZeRO/FSDP and BF16 (Appendix B).
-- Adaptation (instruction and preference tuning; §2; Table 3; Appendix B; §4.3)
-  - Supervised Fine‑Tuning (SFT): curated instruction data with extra code and math to boost GSM8k and coding (Table 3).
-  - Preference tuning: DPO primarily; KTO is also tested and performs comparably on average (Table 7). Load balancing loss is turned off during adaptation (Table 6 and Table 7), as routing stays balanced and quality improves.
-  - The final chat model is `OLMOE‑1B‑7B‑INSTRUCT` (Table 5).
-- Why these design choices (supported by controlled ablations in §4)
-  - MoE vs dense: MoE reaches the dense model’s accuracy using ~3× fewer tokens (compute), but because MoE stores more total parameters it trains ~2× faster in wall‑clock time in their setup (§4.1.1; Fig. 4). Hence, MoE is compute‑efficient even if some throughput is lost to communication/memory.
-  - Fine‑grained experts: More, smaller experts (e.g., 64 with 8 active) yield better downstream accuracy than fewer, larger ones at the same compute, with diminishing returns after ~64 (§4.1.2; Fig. 5).
-  - No shared expert: always‑active “shared” experts slightly hurt performance and drastically reduce expert‑combination flexibility (§4.1.3; Fig. 6).
-  - Token‑choice routing (dropless) outperforms expert‑choice on quality, albeit with lower throughput (§4.1.4; Fig. 7).
-  - Avoid sparse upcycling: starting from a dense checkpoint loses its early advantage after a few hundred billion tokens in their setting and constrains choices like initialization (§4.1.5; Fig. 8).
+### 3.1 Reader Orientation
+
+This paper describes the construction of **OLMOE-1B-7B**, a fully open-source decoder-only language model that uses a sparse Mixture-of-Experts (MoE) architecture to decouple total parameter count from per-token computation. The core problem the system solves is that dense language models require activating all parameters for every input token, making them expensive to run at scale. The solution is an architectural choice — replace every feedforward network with a MoE module containing many small "experts," only a fraction of which are activated per token — combined with a specific recipe of training configurations, auxiliary losses, and data mixing that the authors determined through systematic ablation experiments. The result is a model with 6.9B total parameters that only activates 1.3B per token, achieving the inference cost of a 1B-parameter dense model while approaching the quality of much larger dense models.
+
+### 3.2 Big-Picture Architecture (Diagram in Words)
+
+The OLMOE system has five major components:
+
+1. **Base Transformer Backbone** — A 16-layer decoder-only transformer with multi-head attention and RMSNorm normalization. This provides the core sequence processing capability and is architecturally similar to OLMo and Llama models, except that each dense feedforward network (FFN) is replaced by an MoE module.
+
+2. **MoE Module (replaces each FFN)** — For every input token, a learned linear layer called the **router** scores all 64 available experts and selects the top 8. Each selected expert is itself a small feedforward network (FFN dimension 1,024). The outputs of the 8 selected experts are weighted by their router probabilities and summed. This is what enables sparse activation: only 8 out of 64 experts compute per token.
+
+3. **Auxiliary Losses** — Two additional loss terms are added to the standard language modeling cross-entropy loss during pretraining: (a) a **load balancing loss** that penalizes unequal token distribution across experts, preventing a few experts from dominating; (b) a **router z-loss** that penalizes large logits entering the router, preventing numerical instability.
+
+4. **Pretraining Data Pipeline (OLMOE-MIX)** — A curated mixture of web pages (DCLM-Baseline), code (StarCoder), scientific papers (peS2o, arXiv), math content (OpenWebMath, Algebraic Stack), and Wikipedia. Documents are filtered for repeated n-grams, and the entire dataset is shuffled before each epoch.
+
+5. **Adaptation Pipeline (for OLMOE-1B-7B-INSTRUCT)** — A two-stage process: first, supervised fine-tuning (SFT) on a mix of instruction-following, coding, and math data; second, preference tuning via Direct Preference Optimization (DPO) on binarized human feedback data. This transforms the base pretrained model into a chat-capable assistant.
+
+Information flows through the system as follows: raw text enters the pretraining pipeline → data is filtered, shuffled, and tokenized → batches are fed through the transformer layers → at each MoE layer, the router selects 8 experts per token → experts compute independently → their outputs are gated and summed → the next layer processes the result → the final output logits are compared to targets via cross-entropy loss → auxiliary losses are added → gradients flow back through the entire network, updating both transformer parameters and router weights.
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First,** the architectural skeleton — the transformer backbone shared across all experiments, including normalization, attention, and positional encoding choices. This establishes the "container" into which the MoE innovations are placed.
+- **Second,** the MoE module itself: the router, the expert selection mechanism, and the gating formula (Equation 1). This is the central architectural innovation and must be grounded before discussing training.
+- **Third,** the auxiliary losses (load balancing and router z-loss, Equations 3 and 4) and how they combine with cross-entropy into the total training objective (Equation 2). These are critical to making MoEs trainable and stable.
+- **Fourth,** the pretraining data composition (OLMOE-MIX) and the filtering/shuffling procedure, since data quality is a primary driver of downstream performance.
+- **Fifth,** the pretraining hyperparameters — optimizer, initialization, learning rate schedule, annealing — as a complete recipe.
+- **Sixth,** the adaptation pipeline that converts the base model into an instruct model, including SFT and DPO configurations.
+- **Seventh,** the training hardware and scale, to give a concrete picture of the computational resources required.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily a **model release and empirical analysis paper** whose core technical contribution is a specific, carefully-validated recipe for training high-performance Mixture-of-Experts language models at scale, supported by controlled ablation experiments on individual design choices.
+
+---
+
+#### Transformer Backbone
+
+OLMOE-1B-7B is a decoder-only transformer with 16 layers (`NL = 16`). Each layer contains two main sub-components: a multi-head self-attention module and an MoE module that replaces the standard feedforward network (FFN) found in dense models. The paper illustrates this architectural comparison in Figure 2: dense models (like OLMo, Llama) have `Norm → Attention → + → Norm → FFN → +` per layer, while OLMOE replaces the `FFN` block with a `Router → MoE Module` structure.
+
+The model dimensionality is 2,048, and it uses 16 attention heads. The activation function in both the attention and expert feedforward networks is SwiGLU (a gated linear unit variant with Swish activation). The feedforward dimension within each expert is 1,024 — notably small compared to the 8,192-dimension FFN that would be used in a dense model with equivalent active parameters, because the MoE uses many small experts rather than one large one. The vocabulary size is 50,304 tokens, matching the OLMo tokenizer. The model does not use weight tying (embedding and output projection weights are separate). Biases are not used in either the attention or MLP layers.
+
+The model uses **RMSNorm** for layer normalization with an epsilon of 1.0E-05. This is a parametric normalization (unlike the non-parametric LayerNorm used in prior OLMo models), and the RMSNorm parameters are included in weight decay. The paper's experiments (Section 4.2.3, Figure 14) found that parametric RMSNorm leads to better performance than non-parametric normalization because the non-parametric variant causes large gradient spikes (Figure 16). The trade-off is a 15% reduction in training throughput, which the authors accept for the stability and quality improvement.
+
+**Query-Key Normalization (QK-Norm)** is applied after the query and key projections in the attention mechanism. This is an additional layer normalization step that stabilizes the attention computation by preventing the logits from growing too large before the softmax operation. The paper's experiments (Section 4.2.5, Figure 18) found that QK-Norm provides stability and small performance improvements, though it reduces throughput by almost 10%. The QK-Norm uses the same RMSNorm variant as the rest of the model.
+
+Positional information is encoded using **Rotary Position Embedding (RoPE)** with a base frequency of 10,000. The attention mechanism is full multi-head attention (not multi-query or grouped-query attention, which some other models use to reduce memory).
+
+---
+
+#### The Mixture-of-Experts Module
+
+The MoE module is the central architectural innovation that distinguishes OLMOE from dense models. In a dense model, every token passes through the same feedforward network at each layer. In OLMOE, each layer contains 64 distinct feedforward networks (called **experts**), and each input token is processed by only 8 of them. The mechanism for selecting which 8 experts is a learned linear layer called the **router**.
+
+The module is replicated at every one of the 16 layers (unlike some MoE architectures that place MoE modules only in every other layer or every 6th layer). The MoE layer type used is **dMoE** (dropless Mixture-of-Experts), meaning that no tokens are dropped during routing — every token gets assigned to exactly `k` experts.
+
+The MoE module computes its output according to Equation 1:
+
+$$\text{MoE module}(x) = \sum_{i \in \text{Top-}k(r(x))} \text{softmax}(r(x))_i \, E_i(x)$$
+
+where `$x$` is the input token representation coming from the previous layer's output, `$r$` is the router (a learned linear layer), `$r(x)$` is the vector of raw logits that the router produces for each of the 64 experts, and `$\text{Top-}k$` selects the indices of the `$k = 8$` experts with the highest logits. The function `$E_i(x)$` is the computation performed by the `$i$`-th expert (a small feedforward network with SwiGLU activation and hidden dimension 1,024), and `$\text{softmax}(r(x))_i$` is the normalized routing probability for expert `$i$`, which serves as a gating weight scaling the expert's output.
+
+**What it computes:** For each input token in each layer, the router produces 64 raw scores (one per expert). These scores are converted to probabilities via softmax over all 64 experts. The top 8 experts by probability are selected. Each selected expert independently processes the input token through its feedforward network. The expert outputs are multiplied by their respective routing probabilities and then summed. The result is the output of the MoE module for that token at that layer.
+
+**Why this form:** The sparse Top-k selection means that only 8 out of 64 experts are activated per token, giving the model a total parameter capacity of 6.9B while keeping the per-token computation comparable to a 1.3B-parameter dense model (since only 8 small experts compute, and their total FFN dimension is `8 × 1,024 = 8,192`, matching what a 1.3B dense model's FFN dimension would be). The softmax gating weights allow the router to express confidence — an expert with a higher probability contributes more strongly to the output. The sum over selected experts is a standard mixture-of-experts combination, where the model learns to distribute different aspects of processing across different experts.
+
+The router is **dropless token choice routing**: for each token, the router chooses `k` experts to process it. This contrasts with **expert choice routing**, where each expert selects a fixed number of tokens from the batch. The paper's experiments (Section 4.1.4, Figure 7) found that token choice with dropless routing and a load balancing loss outperforms expert choice routing, even though expert choice runs about 20% faster (29,400 vs. 24,400 tokens per second per device). Expert choice also has the complication that it is not straightforwardly usable for autoregressive generation where only a single token is processed at a time (the capacity factors that work for batch processing do not apply).
+
+The expert granularity — 64 small experts with 8 activated — was chosen based on experiments in Section 4.1.2 (Figure 5). Moving from 8 experts (1 activated) to 32 experts (4 activated) improved HellaSwag by around 10% and MMLU substantially. Moving further to 64 experts (8 activated) provided an additional 1–2% improvement with diminishing returns. The number of possible expert combinations per layer is `(64 choose 8) = 4,426,165,368`, which the paper argues gives the model enormous flexibility to specialize different experts for different input patterns.
+
+The model does **not use a shared expert** (an expert that is always activated regardless of routing, proposed by Dai et al.). The paper's experiment (Section 4.1.3, Figure 6) found that converting one routed expert to a shared expert eliminated almost 90% of possible combinations (from `(32 choose 4) = 35,960` to `(31 choose 3) = 4,495`) and resulted in slightly worse performance, presumably because the loss of flexibility outweighed any benefit from isolating common knowledge.
+
+---
+
+#### Auxiliary Losses and the Training Objective
+
+Training MoE models requires two auxiliary loss terms beyond the standard cross-entropy language modeling loss. Without them, models exhibit training instability and degenerate routing (all tokens routing to a small subset of experts). The total training loss is given by Equation 2:
+
+$$L = L_{\text{CE}} + \alpha L_{\text{LB}} + \beta L_{\text{RZ}}$$
+
+where `$L_{\text{CE}}$` is the standard cross-entropy loss over the next-token prediction, `$L_{\text{LB}}$` is the load balancing loss with weight `$\alpha = 0.01$`, and `$L_{\text{RZ}}$` is the router z-loss with weight `$\beta = 0.001$`.
+
+**What it computes:** The total loss is a weighted sum of three terms: the primary language modeling objective, a penalty for imbalanced expert usage, and a penalty for extreme router logits. The model is optimized to minimize this combined objective during pretraining.
+
+**Why this form:** Separating the auxiliary losses and linearly combining them allows controlled tuning of their relative importance through the scalar weights. The cross-entropy alone would lead to the model routing all tokens to a single preferred expert (once the router learns which expert produces slightly better initial outputs for typical tokens), because that minimizes the prediction loss on the current batch without regard for future training dynamics. The auxiliary losses prevent this collapse and stabilize the training.
+
+##### Load Balancing Loss
+
+The load balancing loss is defined in Equation 3:
+
+$$L_{\text{LB}} = N_E \cdot \sum_{i=1}^{N_E} f_i \cdot P_i$$
+
+where `$N_E = 64$` is the total number of experts, `$f_i$` is the fraction of tokens in the current batch that are routed to expert `$E_i$` (i.e., the empirical assignment frequency), and `$P_i$` is the total routing probability allocated to expert `$E_i$` across all tokens in the batch (computed by summing the softmax probabilities for that expert over all tokens).
+
+**What it computes:** For each expert, multiply the fraction of tokens assigned to it by the total probability mass directed to it, then sum across all experts and multiply by `$N_E$`. When tokens are uniformly distributed (each expert gets exactly `$1/N_E$` of the tokens and the same fraction of the probability mass), the product `$f_i \cdot P_i$` equals `$(1/N_E)^2$` and the total loss is `$N_E \cdot N_E \cdot (1/N_E)^2 = 1$`. Any deviation from uniformity increases the loss.
+
+**Why this form:** The product `$f_i \cdot P_i$` penalizes both under-utilization (small `$f_i$`) and over-probability concentration (large `$P_i$`). Without this loss, the router learns to send most tokens to a small number of experts, which defeats the purpose of the MoE architecture because the under-utilized experts become "dead weights" — they occupy GPU memory but contribute nothing to the model's output. The paper's experiment (Section 4.1.6, Figure 9 and Figure 10) demonstrates this clearly: without the load balancing loss, initially all tokens in the first layer are assigned to a single expert, and while some redistribution occurs over time, most experts remain essentially unused. Adding the loss with weight 0.01 ensures all experts participate in processing.
+
+The load balancing loss is computed in bfloat16 precision (the paper tested computing it in full FP32 precision for stability but found no benefit, Figure 27). During adaptation (SFT and DPO), the load balancing loss is **not used**, as the paper's experiments (Section 4.3, Table 7) found that omitting it leads to better performance (average 54.0 vs. 52.8 after SFT, 57.7 vs. 57.1 after DPO). This is possible because routing patterns are largely fixed early in pretraining (Section 5.1), so adaptation does not disrupt the balanced expert usage.
+
+##### Router Z-Loss
+
+The router z-loss is defined in Equation 4:
+
+$$L_{\text{RZ}}(x) = \frac{1}{B} \cdot \sum_{i=1}^{B} \left(\log \sum_{j=1}^{N_E} \exp(x^{(i)}_j)\right)^2$$
+
+where `$B$` is the batch size, `$N_E = 64$` is the number of experts, and `$x^{(i)}_j$` is the raw logit entering the router for the `$j$`-th expert for the `$i$`-th token in the batch.
+
+**What it computes:** For each token in the batch, compute the log-sum-exp of all router logits for that token, square it, and average across the batch. Large logits produce large log-sum-exp values, which get squared and heavily penalized.
+
+**Why this form:** The log-sum-exp of the router logits is essentially the log partition function — it grows with the magnitude of the largest logits. Squaring it creates a strong penalty for outlier logits, which can cause numerical overflow in the large matrix multiplications within the MoE layer when training in low precision (bfloat16). The paper's experiment (Section 4.1.7, Figure 11) confirms that adding the router z-loss with weight 0.001 reduces loss spikes and improves both stability and downstream performance, despite a ~2% throughput reduction. The weight of 0.001 follows prior work (Zoph et al.) and was not independently varied in the experiments.
+
+---
+
+#### Pretraining Data: OLMOE-MIX
+
+The pretraining dataset, OLMOE-MIX, combines sources from two prior open datasets: DCLM-Baseline (a quality-filtered subset of Common Crawl) and Dolma 1.7 (a multi-source text corpus). The composition is detailed in Table 2:
+
+| Source | Document Type | Tokens (billions) | Bytes (GB) |
+|---|---|---|---|
+| DCLM-Baseline | Web pages | 3,860 | 2,950 |
+| StarCoder | Code | 101 | 78.7 |
+| peS2o | STEM papers | 57.2 | 38.8 |
+| arXiv | STEM papers | 21.1 | 1.55 |
+| OpenWebMath | Math web pages | 12.7 | 2.91 |
+| Algebraic Stack | Math proofs + code | 12.6 | 2.83 |
+| Wikipedia + Wikibooks | Encyclopedic | 3.69 | 6.17 |
+
+The total is approximately 4,060 billion GPT-NeoX tokens (around 3,530 billion UTF-8 words), totaling roughly 3,080 GB of compressed data.
+
+The paper applies a quality filter that removes any document containing a sequence of 32 or more repeated n-grams, where an n-gram is any span of 1 to 13 tokens. This targets documents with degenerate repetition patterns that are common in web-crawled data.
+
+For the StarCoder subset specifically, additional filters are applied: remove any document from a repository with fewer than 2 stars on GitHub, any document whose most frequent word constitutes over 30% of the document, and any document whose top-2 most frequent words together constitute over 50% of the document. These filters target low-quality or auto-generated code repositories.
+
+The data is shuffled randomly at the beginning of each epoch. OLMOE-1B-7B is trained for a total of 5.133 trillion tokens, which represents approximately 1.3 epochs over the entire dataset (following the data-constrained training approach of Muennighoff et al., where models are trained for more than one epoch when data is limited relative to model capacity).
+
+During the final **annealing phase** (100 billion tokens), the entire dataset is reshuffled, and the learning rate is linearly decayed from its peak value to zero. This follows prior work (OLMo, DCLM) and is intended to allow the model to settle into a high-quality final state.
+
+The choice of OLMOE-MIX over the pure Dolma 1.7 dataset was motivated by experiments in Section 4.2.1 (Figure 12). The DCLM-Baseline component was created through systematic dataset ablations targeting downstream benchmark performance (specifically MMLU), and the paper's controlled comparison shows clear gains on HellaSwag, MMLU, and ARC-Challenge when using OLMOE-MIX versus Dolma 1.7 alone. The authors also experimented with adding Reddit and FLAN data to the mix but did not find consistent performance gains (Appendix F, Figure 26).
+
+---
+
+#### Pretraining Hyperparameters
+
+The full pretraining configuration is detailed in Appendix B, Table 10, and compared against other open MoE and dense models. The key hyperparameters and design choices are:
+
+**Optimizer:** AdamW with `$\beta_1 = 0.9$`, `$\beta_2 = 0.95$`, weight decay of 0.1, and epsilon of 1.0E-08. The epsilon value differs from the 1.0E-05 used in prior OLMo models. The paper's experiment (Section 4.2.6, Figure 19) found that decreasing epsilon to the PyTorch default of 1.0E-08 significantly improves performance while maintaining stability. This makes intuitive sense because a larger epsilon limits the effective step size of the optimizer — reducing it allows more aggressive updates, which speeds up convergence and leads to lower loss at a given token count.
+
+**Learning rate schedule:** Cosine schedule with a peak learning rate of 4.0E-04 (note: there is an inconsistency in the paper — Table 10 shows 4.0E-04 for OLMOE-1B-7B, while the text suggests 5.0E-04 in some places; the change log in Appendix J corrects this to 4.0E-04), a minimum learning rate of 4.0E-05, and 2,500 warmup steps. During the 100B-token annealing phase, the learning rate decays linearly to 0.
+
+**Batch size:** 1,024 samples, each with a sequence length of 4,096 tokens, resulting in approximately 4 million tokens per batch. This matches the batch size used by JetMoE and OpenMoE.
+
+**Gradient clipping:** Global clipping at 1.0, with gradient reduction in FP32 precision. Optimizer state is also kept in FP32.
+
+**Initialization:** Truncated normal distribution with a standard deviation of 0.02, with truncation at ±3 standard deviations (±0.06). This is a notable departure from the standard normal initialization (with std 0.02) used in many dense models. The paper's experiment (Section 4.2.2, Figure 13) found that while both initializations perform similarly for the first 450 billion tokens, the normal initialization runs diverge around that point, while truncated normal training remains stable. This is one of the key practical challenges the paper highlights: "Having to train for hundreds of billions of tokens until an experiment provides a clear signal is one of the key challenges of pretraining ablations."
+
+**Precision:** Mixed-precision training in bfloat16, using ZeRO (Zero Redundancy Optimizer) via PyTorch FSDP (Fully Sharded Data Parallel) for distributed training.
+
+**Sparse upcycling:** The paper does **not** use sparse upcycling (initializing the MoE from a pretrained dense checkpoint). The experiment in Section 4.1.5 (Figure 8) found that training from scratch catches up with an upcycled model after approximately 500 billion tokens (25% of the original dense model's 2T-token compute budget) and subsequently outperforms it. The authors hypothesize that this is because OLMo-1B was significantly overtrained (1B parameters on 2T tokens), putting its parameters in a narrow optimum that limits the amount of specialization possible after upcycling. Additionally, upcycling constrains the model to the hyperparameter choices of the original dense model (e.g., OLMo-1B was trained without QK-Norm and with normal initialization, both of which OLMOE benefits from changing).
+
+---
+
+#### Adaptation Pipeline
+
+The adaptation process transforms the pretrained OLMOE-1B-7B base model into OLMOE-1B-7B-INSTRUCT through two stages: supervised fine-tuning (SFT) followed by preference tuning via Direct Preference Optimization (DPO). The adaptation data composition is detailed in Table 3:
+
+**SFT Data:**
+- Tulu 2 SFT Mix (326,154 samples) — a diverse collection of instruction-following examples
+- No Robots (9,500 samples) — high-quality human-written instructions
+- CodeFeedback-Filtered-Instruction (156,526 samples) — coding tasks
+- MetaMathQA (98,750 samples) — math problems and solutions
+- Advanced subset of Daring Anteater (17,082 samples) — non-chat, high-quality instructions
+
+The inclusion of additional code and math data is explicitly motivated by the relatively small amounts of these domains in the pretraining data. The paper notes that "other models, such as GPT-4 and Llama 3 similarly include samples from math datasets like GSM8k or MATH during pretraining," so the SFT stage compensates for this difference.
+
+All SFT samples are filtered to a maximum length of 4,096 tokens to match the model's sequence length. Loss is aggregated at the token level (following Muennighoff et al.) to improve performance on long generative tasks like AlpacaEval. The SFT stage uses a global batch size of 128, trains for 2 epochs with a constant learning rate of 2.0E-05, and does not use the load balancing loss.
+
+**Preference Tuning Data (DPO):**
+- UltraFeedback binarized and filtered for TruthfulQA contamination (60,800 samples)
+
+The DPO stage uses a global batch size of 32, trains for 3 epochs with a learning rate of 5.0E-07, and a DPO beta of 0.1. The base model for DPO is the SFT model, and DPO is applied without the load balancing loss.
+
+**Preference algorithm choice:** The paper also experimented with KTO (Kahneman-Tversky Optimization) and found it matches DPO in average performance (Table 7, SFT+KTO achieves 57.7 average, identical to SFT+DPO), but DPO scores higher on AlpacaEval (84.0 vs. 81.6 for KTO), which the authors favor because AlpacaEval has "a smaller chance of data contamination than our other benchmarks."
+
+**Annealing checkpoint:** The adaptation uses the post-annealing checkpoint rather than the pre-annealing checkpoint. Experiments in Table 7 show that using the annealed checkpoint leads to better downstream results (54.0 vs. 53.8 average after SFT, 57.7 vs. 56.3 after DPO). This is intuitive because annealing is designed to produce the highest-quality final model state.
+
+The complete adaptation hyperparameters are described in Appendix B: all training uses bfloat16 precision, the SFT stage uses 4 H100 nodes with 8 GPUs each (32 GPUs total) for approximately 33 hours, and the DPO stage uses the same hardware for approximately 14 additional hours. KTO adaptation (not used for the final model) used 8 H100 GPUs for 30 hours.
+
+---
+
+#### Training Hardware and Scale
+
+OLMOE-1B-7B was pretrained on 256 H100 GPUs for approximately 10 days, using NVLink interconnect for intra-node GPU communication and InfiniBand for inter-node communication. The total pretraining compute is approximately `6 × N × D = 6 × 1.3E9 × 5.133E12 ≈ 4.0E22` FLOPs (using the standard approximation for dense models; the paper notes this approximation ignores the trivial router parameters).
+
+The MoE architecture processes approximately 23,600 tokens per second per GPU during training, compared to 37,500 tokens per second per GPU for an equivalent dense model with 1.3B active parameters. This training throughput difference is due to the memory overhead of storing all 6.9B parameters, even though only 1.3B are used per token. The paper notes that "there are likely optimizations possible that would bring the speed-up closer to the 3× token speed-up, which we leave to future work."
+
+For adaptation, 32 H100 GPUs are used: 33 hours for SFT and 14 additional hours for DPO. This is substantially less than pretraining, reflecting the much smaller dataset sizes and shorter training durations of the adaptation stages.
 
 ## 4. Key Insights and Innovations
-- A fully open, competitive MoE that is cheap per token
-  - Contribution: `OLMOE‑1B‑7B` uses ~1B active parameters, rivals or beats many larger dense models in its cost regime, and ships with pretrained, SFT, and DPO variants plus data, code, and logs (Fig. 1; Tables 4–5; Appendix A).
-  - Significance: It sets a transparent baseline for MoE training and evaluation at low inference cost, closing a critical accessibility gap (§1).
-- Evidence‑backed MoE recipe with stability fixes
-  - Contribution: A carefully validated training recipe—truncated normal init (Fig. 13), RMSNorm (Figs. 14, 16), QK‑Norm (Fig. 18), z‑loss (Fig. 11), smaller AdamW epsilon (Fig. 19), and dropless token‑choice routing with load‑balancing (Figs. 7, 9–10).
-  - Significance: Converts conflicting, scattered practices into a coherent, reproducible configuration that trains stably to 5T tokens (§4).
-- Design clarifications that challenge prior heuristics
-  - Fine‑grained experts help; shared experts don’t (Figs. 5–6). Token‑choice routing yields better accuracy than expert‑choice in this setup (Fig. 7). Sparse upcycling quickly loses its lead at this scale and constrains hyperparameters (Fig. 8).
-  - Significance: These negative/positive results directly inform future MoE designs beyond this model.
-- New analyses of routing behavior and specialization (§5)
-  - Router saturation: routing decisions converge very early—up to ~60% of top‑8 expert choices are already stable after only 1% of pretraining, with later layers saturating earlier (Fig. 20).
-  - Specialization: experts exhibit domain specialization (e.g., arXiv and GitHub) and vocabulary specialization (e.g., punctuation, units, names), with minimal co‑activation indicating low redundancy (Figs. 21–23; Table 8; §5.2–5.4). Mixtral shows less domain specialization in a like‑for‑like comparison (Fig. 22 bottom).
+
+### Innovation 1: A New Benchmark for Openness in MoEs — The Four-Pillar Standard
+
+The paper's most distinctive conceptual move is not a single architectural innovation but rather a **redefinition of what "open" means for Mixture-of-Experts models** and, by extension, what the research community needs to make scientific progress on sparse architectures. Prior to OLMOE, the field tacitly accepted a fragmented standard: model weights under a permissive license constituted "open," while training data, code, and logs were treated as optional extras whose absence was unfortunate but not disqualifying. This fragmentation is visible in Figure 1, where the paper systematically audits 13 MoE models across four pillars — model weights, training data, training code, and training logs — and finds that every single one fails on at least two dimensions, with most failing on three or all four.
+
+What makes this a conceptual innovation rather than mere taxonomy is that the paper **argues MoEs require *more* openness than dense models**, not less. The reasoning is causal: dense models have a relatively stable set of design choices (number of layers, hidden dimension, attention heads, normalization type), whereas MoEs introduce an entirely new class of decisions — expert granularity, routing algorithm, load balancing strategy, shared versus isolated experts, auxiliary loss weights — whose interactions are poorly understood. When a closed MoE performs well, it is impossible to determine whether its success comes from a specific architectural choice, a particular training recipe, a favorable data mixture, or some interaction among them. The paper states this explicitly:
+
+> "The lack of open resources and findings about these details prevents the field from building cost-efficient open MoEs that approach the capabilities of closed-source frontier models."
+
+The implication is that releasing only model weights, as Mixtral, DBRX, DeepSeekV2, and others have done, is **scientifically inadequate** for MoEs — it provides an artifact to use but not a system to understand. The paper validates this argument empirically through its own ablation experiments: without knowing, for instance, that Mixtral was upcycled from Mistral (a fact the authors had to infer from community discussion rather than from the Mixtral paper), one might incorrectly attribute Mixtral's limited expert specialization (Figure 22, bottom) to inherent properties of MoEs rather than to the specific initialization strategy used.
+
+The practical consequence of this reframing is that OLMOE sets a new de facto standard. By releasing 244 intermediate checkpoints (every 5,000 steps), the paper enables research questions that were previously unanswerable: when does routing saturate? How does expert specialization evolve over training? At what point do auxiliary losses become unnecessary? These are not idle questions — they directly inform whether upcycling is cost-effective, whether load balancing losses can be removed during fine-tuning, and how to allocate compute between pretraining and adaptation. The paper's own analysis in Section 5, which relies on the availability of intermediate checkpoints to study router saturation and specialization dynamics, demonstrates the kind of research this openness enables.
+
+This is a **fundamental reframing** rather than an incremental improvement: it changes the criterion for what constitutes a meaningful contribution from "releasing a model that works" to "releasing a model that enables understanding." It is also a **negative result with implications**: the paper's audit shows that even the "most open" prior MoEs were insufficient for the scientific questions the field needs to answer, establishing that partial openness is effectively closedness for research purposes.
+
+---
+
+### Innovation 2: Expert Combinations as the Key Metric — Flexibility Over Capacity
+
+A recurring finding across the paper's ablation experiments converges on a single unifying principle: **the number of possible expert combinations per layer is a better predictor of MoE performance than total parameter count, individual expert size, or the presence of dedicated shared experts**. This insight is not stated as a theorem but emerges from a pattern of results that individually might seem like isolated hyperparameter tuning but collectively constitute a coherent design philosophy.
+
+The evidence accumulates across three experiments:
+
+**Granularity (Section 4.1.2, Figure 5):** Moving from 8 experts with 1 activated (8 combinations) to 32 experts with 4 activated (35,960 combinations) improves HellaSwag by approximately 10%. Moving further to 64 experts with 8 activated (4.4 billion combinations) provides an additional 1–2%. The diminishing returns suggest that extreme granularity eventually hits a ceiling, but the large jump from coarse to fine-grained routing is where most of the gain lies.
+
+**Shared experts (Section 4.1.3, Figure 6):** Converting a routed expert to a shared expert reduces combinations from 35,960 to 4,495 (~90% reduction) and slightly degrades performance. The interpretation is that sharing an expert eliminates the combinatorial flexibility that granularity provides, and the benefit of isolating "common knowledge" in a shared expert is not sufficient to compensate. The paper makes this argument explicitly: "This likely acts as a counterforce to the potential benefits of isolating common knowledge in a shared expert."
+
+**Training from scratch versus upcycling (Section 4.1.5, Figure 8):** The finding that a from-scratch MoE catches up to an upcycled MoE after only 25% of the original dense compute budget (rather than 120% as prior work claimed) can be interpreted through the combinations lens. An upcycled MoE starts with identical expert weights (clones of the dense FFN), meaning all experts initially represent the same function and the router has to learn to differentiate them from this homogeneous starting point. The model trained from scratch has randomly initialized experts that are different from the beginning, allowing the router to immediately establish distinct routing patterns. Even though the combinations are formally the same (`8 choose 2 = 28` for this experiment), the *effective* diversity of the expert pool is much lower at initialization for the upcycled model, and recovering that diversity through training is slow.
+
+Prior work had discussed expert granularity (Dai et al., Krajewski et al.) and shared experts (Dai et al.) as independent design decisions, but the field lacked a framework for understanding *why* they matter. The combination-count interpretation provides that framework: what matters is not how many experts you have or how large they are per se, but how many distinct processing pathways the model can route different inputs through. This explains why shared experts degrade performance (they reduce pathways), why granularity helps (it increases pathways), and why upcycling is less efficient than training from scratch (it starts with fewer effective pathways despite having the same formal architecture).
+
+This is an **incremental advance in theory** — it synthesizes existing experimental findings into a coherent principle — but a **fundamental advance in practical design guidance**. It tells practitioners that when allocating a fixed parameter budget across experts, they should maximize `(N_E choose k)` subject to their compute constraints, rather than optimizing individual expert capacity. It also explains why OLMOE's specific configuration (64 choose 8) works well despite each expert being quite small (FFN dimension 1,024): the combinatorial richness compensates for limited per-expert capacity.
+
+---
+
+### Innovation 3: The Resolution of the Upcycling Debate — Overtraining As a Confounding Variable
+
+The paper's experiment on sparse upcycling (Section 4.1.5) does more than report a different number from prior work — it **identifies a previously unrecognized confounding variable** that explains why the literature contains contradictory findings. Komatsuzaki et al. found that upcycling maintains an advantage for up to 120% of the original dense compute budget. OLMOE finds that from-scratch training catches up at ~25% and subsequently outperforms. The paper's diagnosis of this discrepancy is subtle and has implications beyond MoE training.
+
+The confounding variable is **the degree of overtraining of the dense starting point**. Komatsuzaki et al. upcycled models that were trained near the Chinchilla-optimal regime (where training tokens roughly equal 20× the parameter count). OLMOE upcycles OLMo-1B, which was trained on 2 trillion tokens — a token-to-parameter ratio of roughly 2,000×. This is extreme overtraining by conventional standards. The paper hypothesizes:
+
+> "Its parameters are likely already in a very optimal range for a dense model, which may limit the amount of additional exploration possible after upcycling."
+
+The mechanism: when a dense model is significantly overtrained, its parameters have converged to a narrow, highly-optimized basin in the loss landscape. Cloning these optimized parameters to initialize an MoE means all experts start from the same narrow optimum. The router can learn to route different tokens to different experts, but the experts themselves have limited capacity to diverge and specialize because they all start from the same highly-optimized point — there is no "exploration gradient" pushing them toward differentiated functions. In contrast, a model near Chinchilla-optimality still has parameters in a broader, less-converged region where the initial cloning leaves more room for specialization.
+
+This interpretation has two important consequences:
+
+**For practitioners:** The decision to upcycle or train from scratch should depend on how overtrained the available dense checkpoint is. If the dense model was trained near compute-optimality, upcycling may still be worthwhile (as Komatsuzaki et al. found). If the dense model is heavily overtrained, training from scratch becomes comparatively more attractive. This is a **practical diagnostic** that was previously absent from the literature.
+
+**For the scaling laws community:** The finding suggests that the relationship between pretraining compute, overtraining, and subsequent specialization capacity is more complex than standard scaling laws capture. A model that is "better" (lower loss) by conventional metrics may be *worse* as a starting point for architectural modification because its parameters are too locked-in. This has implications for transfer learning, continual pretraining, and any scenario where a trained model serves as initialization for a different architecture or objective.
+
+The paper also tests a natural mitigation — adding noise to the upcycled weights to "broaden" the initialization and enable more exploration (Appendix F, Figure 28) — but finds that it does not help: after 700 billion tokens, the no-noise variant still slightly outperforms. This negative result strengthens the interpretation: the problem with upcycling from an overtrained checkpoint is not just that the weights are too similar (which noise would fix) but that the specific configuration they converged to is too optimal to escape, and any perturbation from it (whether through noise or through expert specialization) initially hurts performance more than it helps.
+
+This is a **fundamental advance** in understanding rather than an incremental tuning result. It takes a contradictory finding in the literature, identifies the hidden variable that explains the contradiction, and provides a mechanistic hypothesis with testable implications. The open release of intermediate checkpoints means that future work can directly study how expert specialization trajectories differ between upcycled and from-scratch MoEs, testing the hypothesis that the from-scratch experts diverge faster and more completely.
+
+---
+
+### Innovation 4: Anatomy of Specialization — The First Systematic Comparison of Expert Behavior in Open MoEs
+
+Section 5 of the paper is not merely a post-hoc analysis of a trained model; it introduces **a set of diagnostic metrics and definitions that operationalize previously vague claims about expert specialization** and applies them to produce the first direct comparison between a from-scratch MoE (OLMOE) and an upcycled MoE (Mixtral). The conceptual contribution is in making specialization measurable, comparable, and falsifiable.
+
+The paper defines four metrics:
+
+- **Router saturation (Section 5.1):** The proportion of expert activations at an intermediate checkpoint that matches the final checkpoint's routing. This quantifies *when* the model stops learning routing assignments. The finding that routing saturates early — 60% of top-8 routing is fixed after only 1% of pretraining (20B tokens) — has practical implications for when auxiliary losses can be removed and for understanding the temporal dynamics of MoE training.
+
+- **Expert co-activation (Section 5.2):** Whether two experts tend to be activated together. The finding of generally low co-activation suggests that experts are not redundant and that the model uses its combinatorial capacity effectively. High co-activation would indicate opportunities for expert merging or co-location for inference efficiency.
+
+- **Domain specialization (Section 5.3, Figure 22):** Whether experts preferentially process tokens from specific data sources. The dramatic difference between OLMOE (strong specialization, e.g., arXiv expert in layer 0 at nearly 100%) and Mixtral (near-uniform routing regardless of domain) is a striking visual argument that upcycling constrains specialization. This figure alone makes a causal claim: training from scratch allows experts to develop domain-specific functions that upcycling suppresses.
+
+- **Vocabulary specialization (Section 5.4, Figure 23, Table 8):** Whether experts specialize on specific vocabulary items. The finding that later layers specialize more on predicted output tokens (what the model is about to say) while earlier layers specialize more on input tokens provides a window into the progressive abstraction that occurs across transformer depth in MoEs.
+
+The significance of this contribution is that it transforms expert specialization from a **folk theory** (everyone assumes experts should specialize, but evidence is mixed) into an **empirically testable phenomenon with measurable boundary conditions**. Prior work like Mixtral reported little specialization and concluded it might not be important. OLMOE shows that Mixtral's lack of specialization is not evidence that specialization doesn't occur — it's evidence that upcycling prevents it. The paper explicitly connects these findings:
+
+> "We hypothesize that this is due to Mixtral being upcycled from Mistral. The initialization from a dense model may limit the amount of possible specialization in the experts as they all start from the same local optimum. This is likely why training from scratch eventually outperforms upcycling in our pretraining experiments."
+
+This is a **fundamental advance in diagnostic methodology** rather than a performance improvement. The metrics themselves are broadly applicable to any MoE, and the open release of OLMOE's intermediate checkpoints means other researchers can compute these metrics, test the specialization-upcycling hypothesis, and extend the analysis to other architectures or training regimes. The conceptual move is from asking "do experts specialize?" (a binary, underspecified question) to asking "under what conditions, when, and on what dimensions do experts specialize?" — a shift that enables cumulative scientific progress rather than point observations.
+
+The vocabulary specialization analysis in Table 8 is particularly evocative: expert 27 specializes in non-Latin alphabetic characters and currency symbols; expert 7 specializes in religious terms (Jesus, God, pray, Holy, Quran); expert 37 specializes in temporal terms (Sunday, Tuesday, Thursday, Christmas); expert 43 specializes in geographic terms (Armenia, Iran, Saudi, Lebanon). This level of specificity — identifying individual experts' "topics" from their routing patterns — demonstrates that the sparse architecture is not merely distributing computation efficiently but is functionally decomposing the language modeling task into sub-problems handled by specialized sub-networks. This makes MoEs more interpretable than dense models, where such functional decomposition is hidden in the weight matrices, and opens avenues for controlled intervention (what happens if you ablate expert 7 and test the model on religious text?).
+
+---
+
+### Innovation 5: A Negative Result That Redefines the Adaptation Pipeline — Auxiliary Losses Are Harmful During Fine-Tuning
+
+The paper's adaptation experiments (Section 4.3, Table 7) produce a clean, counterintuitive negative result: **using the load balancing loss during supervised fine-tuning and preference tuning degrades performance**, even though the same loss is essential during pretraining. The SFT model without load balancing achieves 54.0 average across benchmarks versus 52.8 with load balancing; the DPO model without it achieves 57.7 versus 57.1 with it. The gap is modest but consistent.
+
+What makes this a conceptual contribution rather than a minor hyperparameter observation is that it challenges a reasonable default assumption — that if an auxiliary loss is necessary for pretraining stability, it should remain active during any subsequent training — and provides a mechanistic explanation for why that assumption fails. The explanation comes from the router saturation analysis in Section 5.1: routing patterns are largely fixed early in pretraining. After 5 trillion tokens, the model's routing decisions are remarkably stable. When fine-tuning begins, the model is not learning new routing assignments from scratch; it is refining existing expert parameters within already-established routing pathways. The load balancing loss, which penalizes deviations from uniform expert usage, serves no purpose when the routing distribution is already balanced and stable — it only constrains the model from making potentially beneficial adjustments to the routing probabilities.
+
+The paper provides supporting evidence in Table 6: measuring the raw load balancing loss on the SFT data before and after fine-tuning shows it actually decreases slightly during SFT (from 12.22 to 12.16), even without the loss being active. The model is not "forgetting" load balance; the routing patterns are sufficiently baked-in that fine-tuning does not disrupt them. Figure 33 in Appendix G visualizes the expert activation patterns after pretraining, SFT, and DPO (all trained without load balancing) and confirms "the distribution remains around the same."
+
+This is a **practically significant negative result** because it means that prior work that kept auxiliary losses active during fine-tuning (Zoph et al. recommend using load balancing loss during regular fine-tuning, and Shen et al. report mixed results for instruction tuning) was likely leaving performance on the table. The finding also connects to the specialization analysis: if experts genuinely specialize in different domains or vocabulary (as Section 5 demonstrates), then fine-tuning on a task-specific dataset might legitimately benefit from routing more tokens to the experts that handle that domain. The load balancing loss would actively penalize such beneficial specialization, explaining why removing it helps.
+
+The result is **incremental in magnitude** (a 1–2 point average improvement) but **fundamental in implication**: it establishes that the role of auxiliary losses is training-phase-dependent and that the community should not treat recipes that work for pretraining as automatically transferable to adaptation. It also suggests a broader principle — that constraints intended to prevent collapse during early training may become harmful once the model has converged to a stable operating regime — which may apply to other regularization techniques beyond MoE-specific losses.
 
 ## 5. Experimental Analysis
-- Evaluation methodology
-  - During pretraining: a suite of multiple‑choice tasks (e.g., HellaSwag, MMLU, ARC‑Ch/E) tracked vs tokens/compute (Fig. 3, Fig. 25). Multiple evaluation formulations are used (e.g., CF/MCF; Appendix C, Table 11).
-  - After pretraining: OLMES standard (§3; Table 4 and Table 12) with consistent prompt formatting and scoring; also DCLM’s Core/Extended evals (Table 13).
-  - After adaptation: instruction‑following, math, coding, safety, and instruction‑following fidelity (Table 5); for the 0125 model, the Tulu‑3 eval suite (Table 17).
-- Main quantitative results
-  - Compute efficiency (MoE vs dense): 
-    > “MoE reaches the dense model’s final performance with ~3× fewer tokens (compute), but only ~2× faster in time due to memory overhead” (Fig. 4).
-  - After pretraining (OLMES; Table 4):
-    - Among ~1B active‑parameter models, `OLMOE‑1B‑7B` is top on all listed tasks (e.g., MMLU 54.1 vs DCLM‑1B 48.5; HellaSwag 80.0 vs DCLM‑1B 75.1; WinoGrande 70.2 vs DCLM‑1B 68.1).
-    - It also surpasses some 7–9B dense baselines (e.g., Llama‑2‑7B: MMLU 46.2 vs 54.1; Table 4).
-  - After adaptation (Table 5):
-    - SFT boosts GSM8k dramatically (from 3.0 EM to 40.5; “>10× gain” noted in §3), consistent with extra math data (Table 3).
-    - DPO further improves AlpacaEval 1.0 (%win) from 69.2 to 84.0 and raises the overall average to 57.7, outperforming several larger or higher‑cost chat models (e.g., Qwen1.5‑3B‑14B Chat avg 57.3).
-  - Improved 0125 release (Appendix I):
-    - With curated annealing (DOLMINO; Table 15), the base model improves OLMES average by +1.6 and MMLU by +2.1 (Table 16).
-    - With the Tulu‑3 post‑training pipeline, the adapted model gains ~10 points on the Tulu eval average (39.8 → 49.8) and markedly improves instruction‑following metrics like IFEval (45.3 → 66.4) and GSM8k CoT (47.4 → 72.4) (Table 17).
-- Ablations, robustness, and negative results (Section 4)
-  - Expert granularity, shared experts, routing variants, upcycling, auxiliary losses, initialization, layer norm, QK‑Norm, AdamW epsilon, dataset composition—all tested with controlled changes (Figs. 5–19; §4.1–4.2). 
-  - Notable findings:
-    - Load‑balancing loss is necessary in pretraining (Fig. 9–10) but can be dropped in SFT/DPO without harming routing balance (Table 6; Table 7).
-    - Adding Reddit or FLAN to the corpus mix does not yield consistent gains (Appendix F, Fig. 26).
-    - Precision of the load‑balancing computation (BF16 vs FP32) does not fix spikes (Fig. 27).
-    - Layer‑shared MoE does not beat a dense model at equal compute and even reduces throughput (~20% lower) (Fig. 29).
-- Do the experiments support the claims?
-  - Yes. The paper pairs headline results (Tables 4–5; Fig. 1) with extensive ablations that justify each design choice (Section 4) and analyses that uncover MoE behavior (§5). The open logs and intermediate checkpoints further increase confidence (Appendix A).
+
+### Evaluation Methodology
+
+- **Dataset.** The primary benchmark for all reported results is a collection of commonly used downstream tasks, with MMLU serving as a summary metric for overall performance. Pretraining experiments use MMLU Var (a variant with varying few-shots that provides signal earlier in training), HellaSwag, PIQA, ARC-Challenge, ARC-Easy, COPA, WinoGrande, BoolQ, SciQ, CommonsenseQA, SocialIQA, and OpenBookQA. Post-pretraining evaluations use the OLMES evaluation standard with a standardized suite of tasks including MMLU, HellaSwag, ARC-Challenge, ARC-Easy, PIQA, WinoGrande, and others. Post-adaptation evaluations cover MMLU (0-shot), GSM8k (8-shot CoT), BBH (3-shot), HumanEval (0-shot), AlpacaEval 1.0 (0-shot), XSTest (0-shot), and IFEval (0-shot). Domain specialization analysis uses data from GitHub, arXiv, Wikipedia, Books, and C4.
+
+- **Base model(s).** The paper uses PaLM-2-S* as the base model for the revision model and PRM components. The pretrained OLMOE-1B-7B and its instruction-tuned variant OLMOE-1B-7B-INSTRUCT are the primary models evaluated. Comparisons are drawn against a wide range of open models at various scales, including OLMo-1B, OLMo-7B, TinyLlama-1B, DCLM-1B, DCLM-7B, Pythia-1B, Llama2-7B, Llama2-13B-Chat, Llama3.1-8B, Llama3.2-1B, Mistral-7B, Mixtral-8x7B, Gemma2-3B, Gemma2-9B, JetMoE-2B-9B, OpenMoE-3B-9B, DeepSeek-3B-16B, DeepSeekMoE-16B, Qwen1.5-3B-14B, and StableLM-2B. The base model was chosen to be "representative of the capabilities of many contemporary LLMs" and sits in a useful performance regime where there is room for improvement.
+
+- **Metrics.** The primary metric throughout is downstream task accuracy (%), measured as exact match (EM) for generation tasks and multiple-choice accuracy for classification tasks. During pretraining, evaluation uses the Completion/Cloze Formulation (CF) with 0-shot prompts and probability normalization where specified (character-level or none). After pretraining, OLMES evaluations use a mix of CF and Multiple-Choice Formulation (MCF) with 5 few-shots and pointwise mutual information (pmi) or character-level normalization as appropriate. For post-adaptation evaluation, metrics include exact match (MMLU, GSM8k, BBH), pass@10 (HumanEval), win rate percentage (AlpacaEval 1.0), F1 score (XSTest), and loose accuracy (IFEval). During pretraining experiments, MMLU Var is a key metric that provides signal earlier in training than standard MMLU.
+
+- **Baselines.** The paper compares against multiple categories of baselines. For pretrained model evaluation: OLMo-1B (0724), OLMo-7B (0724), TinyLlama-1B, Pythia-1B, DCLM-1B, DCLM-7B, Llama2-7B, Llama3.1-8B, Llama3.2-1B, Mistral-7B, Gemma2-3B, Gemma2-9B, StableLM-2B, JetMoE-2B-9B, OpenMoE-3B-9B, DeepSeek-3B-16B, Qwen1.5-3B-14B, and DeepSeekV2-2B-16B. For instruction-tuned comparison: OLMo-1B+SFT+DPO, OLMo-7B+SFT+DPO, JetMoE-2B-9B+SFT, DeepSeek-3B-16B+Chat, and Qwen1.5-3B-14B+Chat. For the adaptation experiments, the primary baselines are the pretrained OLMOE-1B-7B without adaptation, and the SFT model without DPO, to isolate gains from each adaptation stage. For the data mixture experiments, Dolma 1.7 serves as the baseline against OLMOE-MIX.
+
+- **Generation budget / compute accounting.** For pretraining experiments, compute is measured in training FLOPs or training tokens, with models compared at matched training durations or total compute. The standard FLOPs approximation is 6 × N × D, where N is active parameters and D is training tokens. For the MoE vs. dense comparison, both models use the same number of active parameters (1.3B), making FLOPs directly comparable. Speed comparisons also report tokens per second per GPU and wall-clock training time. For post-adaptation evaluation, all models use the same evaluation protocol (same few-shot settings, same prompting formats) following the OLMES and Tulu evaluation standards.
+
+- **Cross-validation / statistical protocol.** For the adaptation experiments (Section 4.3), the paper compares using the checkpoint before versus after the 100B-token annealing phase, and with versus without load balancing loss during adaptation. The final configuration is selected based on average performance across seven benchmarks (MMLU, GSM8k, BBH, HumanEval, AlpacaEval 1.0, XSTest, IFEval). For pretraining ablations, each experiment varies only one hyperparameter at a time to isolate its impact, though the paper acknowledges that "due to the large number of hyperparameters, some results may change under different configurations and we cannot guarantee the correctness of each of our hyperparameter choices." Metrics are reported on standard validation and test splits; the C4 validation set is used for perplexity measurements during training. For domain specialization analysis, a random 0.5% of the C4 validation data is used.
+
+### Main Quantitative Results
+
+#### MoE vs. Dense Training Efficiency
+
+The paper's most foundational result establishes the efficiency advantage of MoE architectures over equivalently-sized dense models. Figure 4 compares a 1.3B-parameter dense model with a 1.3B-active, 6.9B-total MoE model, both trained for 130 billion tokens on 128 H100 GPUs with otherwise identical configurations. The MoE reaches the final performance of the dense model with approximately 3× fewer tokens (or equivalently, 3× fewer FLOPs). However, due to memory overhead from storing all 7B total parameters, the MoE processes fewer tokens per second (23,600 vs. 37,500 per GPU), translating to approximately 2× faster training in wall-clock time rather than the 3× suggested by FLOPs counting alone. The paper notes this discrepancy explicitly: "There are likely optimizations possible that would bring the speed-up closer to the 3× token speed-up."
+
+This result directly informs the paper's architectural choice: an MoE configuration with 6.9B total and 1.3B active parameters, matching OLMo-7B in total parameter count and OLMo-1B in active parameter count.
+
+#### Performance During Pretraining
+
+Figure 3 (and Figure 25 in Appendix E with tokens as the x-axis) benchmarks OLMOE-1B-7B against the current best OLMo dense models during the pretraining process. Across all six downstream tasks plotted (HellaSwag, MMLU, ARC-Challenge, PIQA, COPA, WinoGrande), OLMOE-1B-7B reaches better performance with less total training FLOPs than both OLMo-1B and OLMo-7B. This pattern holds consistently across the full training trajectory, not just at the final checkpoint. By the end of training, OLMOE-1B-7B with 1.3B active parameters matches or outperforms OLMo-7B with 6.9B active parameters despite having used less than half as many training FLOPs. The training and validation losses (Figure 24, Appendix E) show "very smooth loss curves without major loss spikes during the 5T tokens of our pretraining," which the paper attributes to the stability improvements described in Section 4.2 (truncated normal initialization, QK-Norm, RMSNorm, and router z-loss).
+
+#### Performance After Pretraining
+
+Table 4 presents the core benchmark results after pretraining, comparing OLMOE-1B-7B against a comprehensive set of open models grouped by active parameter count. The headline numbers:
+
+- OLMOE-1B-7B achieves 54.1 on MMLU, 80.0 on HellaSwag, 62.1 on ARC-Challenge, 84.2 on ARC-Easy, 79.8 on PIQA, and 70.2 on WinoGrande.
+- Among models with approximately 1B active parameters, OLMOE-1B-7B is the best on every single metric. The gap is substantial: MMLU is 54.1 versus 48.5 for DCLM-1B (the next best), HellaSwag is 80.0 versus 75.1 for DCLM-1B, ARC-Challenge is 62.1 versus 57.6 for DCLM-1B.
+- Among models with approximately 2-3B active parameters, OLMOE-1B-7B outperforms several despite having roughly half the active parameters. It beats StableLM-2B, JetMoE-2B-9B, OpenMoE-3B-9B, DeepSeek-3B-16B, and Gemma2-3B on MMLU. Qwen1.5-3B-14B is the strongest in this category with 62.4 on MMLU, exceeding OLMOE-1B-7B, but this model has more than double the active parameters.
+- Among models with approximately 7-9B active parameters, OLMOE-1B-7B outperforms Llama2-7B on MMLU (54.1 vs. 46.2), HellaSwag (80.0 vs. 78.9), PIQA (79.8 vs. 77.5), and ARC-Easy (84.2 vs. 84.0). However, it falls short of more recent dense models like Mistral-7B (64.0 MMLU), DCLM-7B (64.4 MMLU), Llama3.1-8B (66.9 MMLU), and Gemma2-9B (70.6 MMLU).
+
+Figure 1 plots MMLU performance against active parameter count, which the paper uses as a proxy for inference cost. OLMOE-1B-7B appears as a clear outlier: its MMLU score of 54.1 at 1.3B active parameters sits well above the trend line established by other models, making it "the state of the art in its cost regime."
+
+Table 12 (Appendix E) provides more granular OLMES results, including all individual tasks. Table 13 (Appendix E) provides DCLM evaluation metrics comparing checkpoints before and after annealing, showing the annealed model achieves a core average of 47.2 and an extended average of 32.5 on DCLM tasks.
+
+#### Adaptation Results
+
+Table 5 reports the adaptation results, comparing OLMOE-1B-7B after SFT and DPO against similarly adapted baselines. The key findings:
+
+- **SFT improvement:** Supervised fine-tuning improves OLMOE-1B-7B on all tasks. The most dramatic gain is on GSM8k, which jumps from 3.0 to 40.5, a >10× improvement. The paper attributes this to "our inclusion of additional math data to account for the relatively small amounts of math data during pretraining." BBH improves from 33.6 to 38.0, HumanEval from 22.4 to 51.6, and IFEval from 16.6 to 43.3.
+- **DPO improvement:** Preference tuning via DPO provides additional gains on most tasks. The final OLMOE-1B-7B-INSTRUCT achieves 51.9 MMLU, 45.5 GSM8k, 37.0 BBH, 54.8 HumanEval pass@10, 84.0 AlpacaEval win rate, 82.6 XSTest F1, and 48.1 IFEval loose accuracy. The average across all seven benchmarks is 57.7, the highest among all models compared.
+- **Comparison with larger models:** OLMOE-1B-7B-INSTRUCT surpasses the chat version of Qwen1.5-3B-14B (average 57.3) despite Qwen having >2× more parameters and its pretrained model being stronger in Table 4. The 84.0 score on AlpacaEval exceeds much larger models including Llama2-13B-Chat. OLMOE-1B-7B-INSTRUCT also outperforms DeepSeek-3B-16B+Chat (average 57.0) and OLMo-7B-Instruct (average 49.1 after DPO, though this model sees performance degradation from DPO).
+- **SFT with load balancing loss:** Table 7 shows that when load balancing loss is used during SFT, the average drops from 54.0 to 52.8, and when used during DPO, the average drops from 57.7 to 57.1. The paper also experiments with the checkpoint before annealing, finding it leads to lower performance (53.8 average after SFT vs. 54.0, and 56.3 after DPO vs. 57.7). The KTO preference algorithm matches DPO at 57.7 average but scores lower on AlpacaEval (81.6 vs. 84.0).
+
+#### Data Mixture Results
+
+Figure 12 compares OLMOE-MIX with Dolma 1.7 in a controlled setup. OLMOE-MIX leads to clear gains on all three downstream metrics plotted: HellaSwag, MMLU Var, and ARC-Challenge. This result validates the decision to mix DCLM-Baseline (which was created through systematic dataset ablations targeting MMLU) with selected high-quality components from Dolma 1.7. The paper also experimented with adding Reddit and FLAN data to OLMOE-MIX (Appendix F, Figure 26) but found inconsistent performance gains, leading to their exclusion.
+
+#### Architecture Ablation Results
+
+The paper reports a series of controlled experiments comparing architectural and training design choices. Each experiment trains models for a limited number of tokens (typically 100-700 billion) and measures training loss, validation loss on C4, and downstream metrics (typically HellaSwag and MMLU Var). The key quantitative comparisons are:
+
+**Expert granularity (Figure 5):** At around 130 billion tokens, moving from 8 experts (1 activated, 8 combinations) to 32 experts (4 activated, 35,960 combinations) improves HellaSwag by approximately 10 percentage points (from roughly 45 to 55) and MMLU Var by several points. The further increase to 64 experts (8 activated, 4.4 billion combinations) provides an additional 1-2% improvement on both metrics, with the paper noting "diminishing returns to granularity."
+
+**Shared experts (Figure 6):** At matched active and total parameters, the configuration with a shared expert (31 routed + 1 shared, 4,495 combinations) slightly underperforms the all-routed configuration (32 routed, 35,960 combinations) on HellaSwag and MMLU Var at 130 billion tokens, though "both settings lead to similar performance."
+
+**Expert choice vs. token choice (Figure 7):** Token choice routing outperforms expert choice routing on all metrics at matched budget — HellaSwag shows a gap of approximately 5-10 percentage points throughout the 200-billion-token training run, and MMLU Var shows a consistent advantage. The paper confirms that expert choice runs approximately 20% faster (29,400 vs. 24,400 tokens per second per device), consistent with prior findings.
+
+**Sparse upcycling (Figure 8):** A MoE trained from scratch catches up with an upcycled MoE (initialized from OLMo-1B at 2T tokens) after approximately 500 billion tokens (25% of the original 2T dense compute budget). After 610 billion tokens, the from-scratch model begins to outperform the upcycled model on both validation loss and downstream metrics. This directly contradicts the 120% figure reported in prior work.
+
+**Load balancing loss (Figure 9):** Training with the load balancing loss (weight 0.01) leads to better performance across training loss, validation loss on both C4 and Pile, and lower load balancing loss itself, even after only a few billion tokens. Without the load balancing loss, Figure 10 shows that most experts in the first MoE layer receive essentially zero tokens, becoming "dead weights."
+
+**Router z-loss (Figure 11):** Adding router z-loss (weight 0.001) improves training stability (fewer loss spikes), validation loss, and downstream performance across the 750B token training run. The cost is approximately 2% lower throughput.
+
+**RMSNorm vs. non-parametric normalization (Figure 14):** Parametric RMSNorm outperforms non-parametric layer normalization on training loss, validation loss, HellaSwag, and MMLU Var. Figure 16 shows that non-parametric normalization leads to large gradient norm spikes, which the paper hypothesizes harms performance even after clipping at 1.0.
+
+**QK-Norm (Figure 18):** Adding QK-Norm provides stability and small performance improvements on both HellaSwag and MMLU Var across a 350B-token training run, despite reducing throughput by almost 10%.
+
+**Truncated normal initialization (Figure 13):** The benefit of truncated normal initialization only becomes apparent at around 450 billion tokens, where the normal initialization run begins to diverge. This highlights a key challenge of pretraining ablations: "Having to train for hundreds of billions of tokens until an experiment provides a clear signal is one of the key challenges."
+
+**AdamW epsilon (Figure 19):** Reducing epsilon from 1E-05 to 1E-08 significantly improves training loss, validation loss, HellaSwag, and MMLU Var across the 30B-token training run, with the improved convergence visible almost immediately.
+
+**RMSNorm and embedding parameter decay (Figures 15 and 17):** Including RMSNorm parameters in weight decay leads to slightly better performance on both HellaSwag and MMLU Var. Decaying embedding parameters has only a minor impact, with decaying being slightly better. For simplicity, the final model decays all parameters.
+
+### Ablation Studies and Robustness Checks
+
+**Annealing checkpoint vs. non-annealing checkpoint for adaptation:** Using the post-annealing checkpoint leads to better downstream performance than the pre-annealing checkpoint. After SFT, the average across seven benchmarks is 54.0 (annealed) vs. 53.8 (non-annealed). After DPO, the gap widens to 57.7 vs. 56.3. This confirms that the 100B-token annealing phase produces a meaningfully better base model for downstream adaptation, as reported in Table 7.
+
+**Load balancing loss during adaptation:** Omitting the load balancing loss during SFT and DPO improves performance. After SFT, the average is 54.0 (without LBL) vs. 52.8 (with LBL). After DPO, the average is 57.7 vs. 57.1. The paper provides mechanistic evidence in Table 6 showing that the raw load balancing loss on the SFT data actually decreases slightly during fine-tuning even without the loss being applied (from 12.22 to 12.16), and Figure 33 (Appendix G) shows that expert activation distributions remain stable across pretraining, SFT, and DPO without load balancing, as reported in Section 4.3 and Table 7.
+
+**Preference algorithm choice:** KTO matches DPO on average benchmark performance (57.7 for both at the selected checkpoint) but scores lower on AlpacaEval (81.6 vs. 84.0 win rate). Table 14 (Appendix F) reports experiments with different KTO step counts (5,000 vs. 10,000) and optimizers (RMS vs. Adam), finding that the combination of 5,000 steps with RMS optimizer performs best. DPO is selected for the final model primarily due to the higher AlpacaEval score, which has "a smaller chance of data contamination than our other benchmarks," as noted in Section 4.3.
+
+**Training data additions:** Adding Reddit or FLAN data to OLMOE-MIX does not lead to consistent performance gains, as shown in Figure 26 (Appendix F). The paper states: "We do not have a strong intuition for why adding these datasets does not help and a more automatic approach to dataset mixing may be desirable for future iterations." This is a notable negative result given that both Reddit and FLAN are commonly included in pretraining mixtures.
+
+**Load balancing precision:** Computing the load balancing loss in FP32 precision (instead of BF16) does not reduce gradient spikes or improve stability, as shown in Figure 27 (Appendix F). The paper therefore uses BF16 for the load balancing loss computation, which is simpler and faster.
+
+**Noise upcycling:** Adding 50% Gaussian noise to the upcycled MLP weights before continuing training does not improve performance over standard upcycling. Figure 28 (Appendix F) shows that after 700 billion tokens, the no-noise variant still slightly outperforms, though both appear to converge. The paper hypothesizes that noise might help if training continues further, but "at that point, it may make more sense to just train the MoE from scratch."
+
+**Layer-shared MoE vs. dense:** A layer-shared MoE (where the same expert pool is reused across all layers) performs similarly to a regular dense model with equivalent parameters and compute, as shown in Figure 29 (Appendix F). The dense model maintains a small advantage on validation loss and HellaSwag. The layer-shared MoE reduces throughput by around 20% during training. This is a negative result: the theoretical advantage of allowing the model to "emulate a dense model by always activating one separate expert for each layer" does not translate to better empirical performance.
+
+**Model update between release versions:** Appendix I (Table 16) compares the September 2024 release (OLMOE-1B-7B-0924) with the January 2025 release (OLMOE-1B-7B-0125). The new model uses an improved annealing data mixture (DOLMINO) and shows notable improvements: MMLU increases from 54.1 to 56.3, ARC-Challenge from 62.1 to 67.5, and the OLMES average from 71.1 to 72.7. After adaptation using the Tulu 3 pipeline, the improvements are substantially larger: Table 17 shows the January 2025 model achieves 49.8 average across the Tulu benchmark suite after SFT+DPO+RLVR, compared to 39.8 for the September 2024 model after SFT+DPO. The GSM8k improvement is particularly dramatic (72.4 vs. 47.4), and IFEval more than doubles (66.4 vs. 45.3). This serves as a robustness check showing that the core OLMOE recipe benefits from improved data and post-training methodology rather than being dependent on a specific fixed configuration.
+
+### Critical Assessment
+
+#### Claim: OLMOE-1B-7B achieves state-of-the-art performance among models with similar active parameters.
+
+This claim is supported with qualifications. Table 4 shows OLMOE-1B-7B outperforming all listed models with ~1B active parameters (TinyLlama, Pythia, OLMo-1B, Llama3.2-1B, DCLM-1B) on every metric. The margin over DCLM-1B — the next strongest in this category — is substantial (54.1 vs. 48.5 MMLU, 80.0 vs. 75.1 HellaSwag). However, the "state-of-the-art" claim is bounded by the set of models compared. The paper does not compare against every possible 1B-parameter model (SmolLM, for instance, is mentioned in related work but not benchmarked). The comparison set is extensive but not exhaustive, and new models are constantly being released.
+
+#### Claim: OLMOE-1B-7B surpasses larger models like Llama2-13B-Chat and DeepSeekMoE-16B.
+
+This claim refers specifically to the instruction-tuned variant and is supported for specific metrics. Table 5 shows OLMOE-1B-7B-INSTRUCT outperforming DeepSeek-3B-16B+Chat on average (57.7 vs. 57.0) and the paper states that its 84% AlpacaEval score "outperforms much larger dense models on the leaderboard, such as Llama2-13B-Chat." However, the comparison to Llama2-13B-Chat is only on AlpacaEval, not on the full benchmark suite. The paper does not report MMLU, GSM8k, or other metrics for Llama2-13B-Chat in Table 5. The claim that the model "surpasses larger ones like Llama2-13B-Chat and DeepSeekMoE-16B" overstates what is actually demonstrated: it surpasses them on some metrics but a comprehensive head-to-head is not provided.
+
+#### Claim: MoEs train approximately 2× faster than dense LMs with equivalent active parameters.
+
+This is supported by the controlled experiment in Figure 4, but with important caveats. The 2× figure is specifically wall-clock time on the authors' hardware configuration (128 H100 GPUs). The token-level efficiency is 3× (matching dense performance with 3× fewer training tokens). The gap between these figures — arising from memory overhead of storing 7B total parameters — means the realized speedup is deployment-dependent. The paper acknowledges this: "There are likely optimizations possible that would bring the speed-up closer to the 3× token speed-up." The claim is accurate for the stated hardware but may not generalize to all training setups.
+
+#### Claim: Fine-grained routing with 64 small experts and 8 activated is the optimal configuration.
+
+This is supported for the specific compute budget (3 × 10^22 FLOPs, 5T tokens) but the paper acknowledges limitations. Figure 5 shows clear benefits moving from 8 to 64 experts, but the experiment stops at 64. The paper notes that Krajewski et al. predict 256 experts as compute-optimal for this budget, but "their predictions are for compute-optimal models, while we train for 5T tokens, which is orders of magnitude beyond what would be conventionally considered optimal for our model size. Thus, their predictions may not extend to our setup." This is an honest acknowledgment that the choice is pragmatic (diminishing returns at 64, plus practical constraints) rather than proven optimal.
+
+#### Claim: Tokens choice routing outperforms expert choice routing.
+
+This is supported by Figure 7 but is specific to the dropless token choice variant with load balancing loss. The paper explicitly notes this caveat: "While Zhou et al. find EC to be better, our configuration slightly differs in that we use dropless MoEs with a load balancing loss. Thus, our TC variant is expected to perform better than the TC variant in Zhou et al." This does not invalidate the finding but makes it clear that the result is about specific routing implementations, not routing paradigms in the abstract. A broader claim that "token choice is always better" is not supported.
+
+#### Claim: Sparse upcycling is ineffective for overtrained models, being caught by from-scratch training at 25% of the original dense compute budget.
+
+This is the most novel and potentially impactful negative result, but it has significant limitations. The experiment in Figure 8 upcycles only one dense checkpoint (OLMo-1B at 2T tokens) with one specific architecture (8 experts, 2 activated). The claim cannot be generalized to all overtrained models or all upcycling configurations. The hypothesized mechanism (overtraining leads to parameters in a narrow optimum that limits exploration) is plausible but not directly tested — the paper does not measure anything about the loss landscape or parameter divergence that would validate this explanation. The noise upcycling experiment (Figure 28) is a reasonable test of the mechanism but its negative result does not confirm the hypothesis. The prior work being challenged (Komatsuzaki et al.) used encoder-decoder models and expert choice routing, making the comparison across studies inherently confounded. A stronger test would vary the degree of overtraining of the dense starting point and measure the crossover point where upcycling ceases to be beneficial.
+
+#### Claim: Shared experts are ineffective.
+
+This is supported by Figure 6 but with a small performance difference and only one configuration tested (31 routed + 1 shared vs. 32 routed, with 4 and 3 activated respectively). The paper's explanation — that removing a routed expert eliminates ~90% of possible combinations — is an interpretation, not a proven causal mechanism. The claim that shared experts are ineffective is reasonable for this specific configuration but should not be taken as disproving the concept in general. Different numbers of shared experts, different granularities, or different total expert counts might produce different results.
+
+#### Claim: Load balancing loss and router z-loss are essential for performance and stability.
+
+These claims are well-supported by Figures 9, 10, and 11. The load balancing loss ablation is particularly convincing because the paper shows both the performance impact and the mechanism (Figure 10 showing expert collapse without the loss). The router z-loss ablation is similarly well-executed. These are robust findings with clear practical implications.
+
+#### Claim: OLMOE is "the most open MoE."
+
+This is not a performance claim but a factual claim about artifacts released. The paper's audit in Figure 1 and Appendix D is systematic and transparent. The claim is well-supported: OLMOE is the only MoE that releases model weights (Apache 2.0), training data (ODC-By 1.0), training code (Apache 2.0), training logs, and 244 intermediate checkpoints. The paper explicitly enumerates what each prior MoE does and does not release, making the claim falsifiable and specific. This is the strongest claim in the paper because it is definitionally true based on the criteria established.
+
+#### Missing experiments that would have strengthened the paper:
+
+- **Direct comparison of from-scratch and upcycled MoEs at larger scale:** The upcycling experiment uses a suboptimal configuration (no QK-Norm, normal initialization) that limits the upcycled model. A comparison where both models use the same optimized hyperparameters would isolate the effect of initialization.
+- **Varying the degree of overtraining:** Testing upcycling from dense checkpoints at different token counts would directly test the paper's hypothesis about why their result differs from prior work.
+- **Expert count beyond 64:** Figure 5 shows diminishing returns from 32 to 64 experts. Testing 128 or 256 experts would clarify whether 64 is near the saturation point or whether further gains are possible.
+- **Varying shared expert count and position:** The paper tests only one shared expert configuration. The claim that shared experts reduce combinations and thus harm performance could be tested by varying the number of shared experts.
+- **Breadth of downstream evaluation for pretrained models:** Table 4 reports six metrics, which is reasonable but not comprehensive. Additional reasoning benchmarks (GSM8k, MATH), code generation (HumanEval), and knowledge-intensive tasks would give a fuller picture.
+- **Inference speed benchmarking:** The paper discusses inference cost extensively but does not report actual tokens-per-second or latency measurements. The claim that OLMOE approximates dense 1B inference cost is based on the structural argument (1.3B active parameters) rather than measured throughput.
+
+#### Key vulnerabilities in the experimental design:
+
+- **Single model family for most ablations.** All pretraining experiments use variations of the same base architecture at the same scale. Whether the findings (e.g., optimal granularity, upcycling tradeoffs) transfer to larger models or different architectures is unknown.
+- **Small scale for many ablations.** Most architecture experiments train for 100-700 billion tokens, which is only 2-14% of the final model's 5T-token training budget. Findings that hold at 130B tokens might not hold at 5T tokens, particularly for phenomena like router saturation or the upcycling crossover point.
+- **No statistical error bars.** All reported numbers are point estimates from single training runs. Given the acknowledged training instability issues (the normal initialization run diverged at 450B tokens), run-to-run variance could be substantial.
+- **The adaptation baseline comparisons use different data mixtures across models.** OLMOE's adaptation uses an "improved version of the pipeline used for OLMo models" and adds specific code and math data. The other adapted models (Qwen, DeepSeek, JetMoE) use different, undisclosed adaptation recipes. Differences in adaptation data quality, not model quality, could drive some of the performance gaps.
+- **The MMLU score used in Figure 1 is not the standard MMLU metric in all cases.** The paper notes it uses its own evaluation setup for all models to ensure comparability, but this means MMLU scores in Figure 1 and Table 4 may differ from reported scores elsewhere (though the paper runs evaluations itself for consistency, as stated in Table 4: "We run all evaluations ourselves with 5 few-shots").
 
 ## 6. Limitations and Trade-offs
-- Assumptions and constraints (Section H; §4.1.6–4.1.7; §4.1.4)
-  - Need for load‑balancing loss during pretraining constrains the router to use experts roughly equally, which may limit emergent specialization patterns (§4.1.6; authors suggest exploring removal or softening in future).
-  - Token‑choice routing (quality‑oriented) is slower than expert‑choice (~24.4k vs ~29.4k tokens/s per device in their setup; §4.1.4).
-- Scope not addressed (Section H)
-  - Model is text‑only and primarily English; little coverage of multimodal or multilingual scenarios. 
-  - Active parameters are limited (~1.3B); while cost‑efficient, this ceiling caps raw capability compared to larger active‑parameter models (Section H).
-- Computational/memory trade‑offs
-  - MoE has higher total parameter memory (6.9B) even though per‑token compute is small. This increases VRAM requirements and lowers training throughput compared to a dense model with the same active parameters (Fig. 4).
-- Data and overtraining considerations
-  - The model is substantially “overtrained” relative to classical compute‑optimal scaling (5T tokens) to maximize quality (§2; §4.1.2 notes granularity predictions may not transfer under overtraining). How far overtraining benefits MoEs vs dense remains open (Section H).
-- Open questions
-  - Can routers work without explicit load‑balancing losses at scale?
-  - How do these findings extend to multimodal MoEs or very large expert counts (e.g., 256+)?
-  - What is the best way to co‑locate frequently co‑activated experts across devices to cut communication (a deployment‑time optimization hinted at in §5.2)?
+
+### 6.1 The Model Is Limited to 1B Active Parameters, Creating a Hard Performance Ceiling
+
+**Assumption or constraint:** OLMOE-1B-7B activates only 1.3B parameters per input token, which is a deliberate design choice that makes it "very cheap to use" but also fundamentally caps what the model can do. The paper states this explicitly in Appendix H:
+
+> "using only 1B parameters for each input token also limits the capabilities of OLMOE-1B-7B as seen by its performance compared to models that use >7× more parameters, such as Llama3.1-8B"
+
+**Consequence:** This is not merely a matter of falling short of larger models — it means there exists a class of problems that OLMOE-1B-7B fundamentally cannot solve regardless of how well it is trained. Table 4 shows the performance gap clearly: Llama3.1-8B achieves 66.9 on MMLU versus OLMOE's 54.1, Gemma2-9B achieves 70.6, and the gap on reasoning tasks like ARC-Challenge is even larger (79.5 vs. 62.1). These are not small differences that better training data or hyperparameters could close — they reflect a genuine capacity ceiling imposed by the limited per-token computation. For practitioners, this means OLMOE-1B-7B is not a drop-in replacement for larger models on difficult tasks. The model's strength is cost efficiency for tasks within its capability range, but tasks requiring deeper reasoning or more extensive knowledge integration will exceed that range.
+
+**Evidence in the paper:** Table 4 provides the direct evidence. The performance gap with models in the ~7-9B active parameter range is substantial and consistent across all metrics. The paper is transparent about this in Appendix H, where the limitation is listed first among the four key limitations. However, the paper does not provide any analysis of *which types* of problems most expose the capacity ceiling — we know OLMOE-1B-7B scores lower than Llama3.1-8B on all metrics, but we do not know whether the gap is driven by a specific subset of hard examples or is uniform across the difficulty distribution.
+
+**Mitigation status:** The paper acknowledges this limitation and suggests two directions for future work: "adding parameters is an easy way to improve the performance of OLMOE, at least allowing the model to utilize more than 1B parameters per input, possibly via recursion or agentic workflows." These are mentioned as aspirations, not as tested solutions. The January 2025 update (Appendix I) shows modest improvements from better data and post-training (MMLU from 54.1 to 56.3, OLMES average from 71.1 to 72.7), but the fundamental capacity ceiling remains — the architectural constraint of 1B active parameters is not changed by better training recipes.
+
+---
+
+### 6.2 Single Benchmark Evaluations and English-Only Focus Obscure Generalization
+
+**Assumption or constraint:** All evaluation of OLMOE-1B-7B is conducted on English-language benchmarks, and the pretraining data is "predominantly English." The paper acknowledges this in Appendix H:
+
+> "We pretrain OLMOE-1B-7B on a predominantly English corpus and exclusively evaluate on English tasks. This may severely limit the usefulness of our model for research on non-English language models."
+
+**Consequence:** A practitioner cannot determine whether OLMOE-1B-7B's strong performance reflects general language modeling capability or is specific to English. This matters particularly for MoEs because the domain specialization analysis (Section 5.3) shows that experts learn to specialize on vocabulary and domain patterns present in the training data. An MoE trained on predominantly English data may route non-English text to suboptimal experts or activate inappropriate specialized pathways, potentially performing worse than a dense model with equivalent active parameters on multilingual tasks. The paper provides no evidence either way.
+
+Furthermore, the adaptation evaluation (Table 5) covers a limited set of benchmarks. While the seven-task suite (MMLU, GSM8k, BBH, HumanEval, AlpacaEval, XSTest, IFEval) is reasonable for a first release, it does not include tasks measuring: factual recall accuracy (e.g., Natural Questions, TriviaQA), long-form generation quality, summarization, tool use, multi-turn conversation coherence, or safety beyond XSTest. The paper's claim that OLMOE-1B-7B-INSTRUCT has the "highest average among all models benchmarked" (57.7) is a claim about these seven specific tasks, not about general instruction-following capability.
+
+**Evidence in the paper:** The limitation is explicitly stated in Appendix H. Table 12 (Appendix E) shows the DCLM extended evaluation results, which include a broader set of tasks (AGI Eval, BigBench, etc.), and OLMOE-1B-7B's extended average is 32.5 — but there is no comparison to other models on these metrics, so we do not know whether this is strong or weak relative to alternatives. Table 5 does not include Llama2-13B-Chat or other larger instruction-tuned models except on AlpacaEval, making the claim of surpassing "larger instruct models" partial rather than comprehensive.
+
+**Mitigation status:** The paper does not mitigate this limitation — it acknowledges it as a direction for future work: "as we add more data to build better future iterations of OLMOE we will mix in more non-English data due to data constraints." The January 2025 update (Appendix I) does not add multilingual evaluation or data. The paper also does not evaluate on any non-English benchmarks, even those that would be straightforward to include (e.g., translated versions of MMLU, multilingual reasoning tasks). The openness of the release means other researchers can perform these evaluations, but the paper itself provides no guidance on expected multilingual or out-of-domain behavior.
+
+---
+
+### 6.3 The MoE Architectural Choices Are Validated Only at One Scale
+
+**Assumption or constraint:** Every ablation experiment determining the optimal MoE configuration — granularity, routing algorithm, shared experts, upcycling strategy — was conducted with models at the ~1B active parameter scale, trained for a fraction of the final model's training budget. The paper uses these results to select the architecture for OLMOE-1B-7B, but does not test whether the findings transfer to larger or smaller scales.
+
+**Consequence:** The paper's design recommendations — "use 64 experts with 8 activated," "don't use shared experts," "train from scratch rather than upcycling when the dense model is overtrained" — may not hold at different model sizes or training budgets. For instance, the finding that upcycling is caught by from-scratch training at 25% of the dense compute budget was demonstrated for one specific configuration (upcycling OLMo-1B at 2T tokens into an 8-expert, 2-activated MoE). At larger scales, the dynamics might differ: larger models have more parameters to specialize, meaning the clone-initialization may provide less of a constraint relative to the total capacity. Conversely, at very small scales, the overhead of 64 experts might be wasteful because the model simply does not have enough total capacity to meaningfully differentiate that many experts.
+
+Similarly, the expert granularity experiment (Figure 5) shows diminishing returns from 32 to 64 experts but does not test 128 or 256. The paper references Krajewski et al.'s prediction that 256 experts would be optimal for this compute budget but dismisses it because "their predictions are for compute-optimal models" — this is a reasonable caveat but does not address the question of whether OLMOE would have performed better with 128 or 256 experts at its actual training duration.
+
+**Evidence in the paper:** All ablation experiments in Section 4 use models trained for 100-750 billion tokens, compared to the 5 trillion tokens used for the final model. Figure 5 (granularity) compares 8, 32, and 64 experts at ~130B tokens. Figure 6 (shared experts) compares configurations at ~130B tokens. Figure 8 (upcycling) runs for ~700B tokens. The paper is transparent about these training durations, but does not discuss the possibility that relative rankings of configurations might change if training were extended to 5T tokens. For the upcycling case, the crossover happens at ~500B tokens — it is possible (though unlikely) that the upcycled model would regain an advantage at 2T or 3T tokens if training were extended further.
+
+**Mitigation status:** The paper does not address this limitation directly. The experimental design — test configurations at small scale, then scale up the winning configuration — is standard practice in language model research because it is computationally infeasible to run every ablation at full scale. However, the paper does not discuss the transferability assumption or provide any evidence (e.g., learning curve extrapolation, scaling law analysis) that the rankings would be preserved at larger scales. The January 2025 release uses the same architecture (same number of experts, same routing), so it does not provide additional evidence about the robustness of these choices at larger scale.
+
+---
+
+### 6.4 The Domain Specialization Analysis Is Descriptive, Not Causal, and the Paper Does Not Test Whether Specialization Improves Performance
+
+**Assumption or constraint:** Section 5 presents extensive analysis showing that OLMOE-1B-7B's experts exhibit strong domain and vocabulary specialization, and contrasts this with Mixtral's near-uniform routing. The paper interprets this as evidence that training from scratch enables beneficial specialization that upcycling prevents. However, the analysis is purely observational — the paper does not perform any causal intervention to determine whether the observed specialization actually contributes to model performance.
+
+**Consequence:** The compelling narrative — "experts specialize, specialization is good, upcycling prevents specialization, therefore training from scratch is better" — may be partially or entirely incorrect. It is possible that the observed specialization is an epiphenomenon: the model could route tokens arbitrarily as long as the total computation is sufficient, and the apparent specialization simply reflects correlations in the training data rather than functional modularity. If this were true, the domain specialization analysis would be measuring a symptom rather than a mechanism, and the recommendation to train from scratch would be correct for other reasons (e.g., the from-scratch model simply trains for more total effective FLOPs since its initialization is random rather than copied).
+
+The paper comes close to making causal claims. For example: "We hypothesize that this is due to Mixtral being upcycled from Mistral. The initialization from a dense model may limit the amount of possible specialization in the experts as they all start from the same local optimum. This is likely why training from scratch eventually outperforms upcycling in our pretraining experiments." This is a reasonable hypothesis, but "likely why" implies a causal mechanism that has not been tested. The alternative hypothesis — that upcycling from an overtrained model simply wastes training FLOPs because the parameters cannot move far from their initialization, regardless of specialization — is equally consistent with the evidence.
+
+**Evidence in the paper:** The entire analysis in Section 5 is correlational. Figure 22 shows that OLMOE experts specialize on domains while Mixtral experts do not. Table 8 shows vocabulary-level specialization within specific experts. Figure 20 shows that routing saturates early. None of these analyses involve an intervention (e.g., ablating a specialized expert and measuring domain-specific performance degradation, forcing random routing and measuring the impact, or comparing models with and without specialization while controlling for other factors). The upcycling experiment (Figure 8) shows that from-scratch training outperforms upcycling, and the domain specialization analysis (Figure 22) shows that from-scratch training produces specialization while upcycling does not — but these are separate observations about different models, not a controlled test of whether specialization causes performance differences.
+
+**Mitigation status:** The paper does not claim to have proven causality. The language in Section 5.3 is appropriately hedged ("we hypothesize," "likely," "may limit"). The openness of the release — providing intermediate checkpoints, data, and code — means that other researchers can perform causal intervention experiments (e.g., comparing checkpoints at different stages of specialization development, swapping expert modules between models). But the paper itself provides no causal evidence, which somewhat weakens the force of the specialization narrative that is central to the paper's contribution.
+
+---
+
+### 6.5 Memory Overhead Reduces the Practical Inference Advantage
+
+**Assumption or constraint:** The paper's central efficiency argument is that OLMOE-1B-7B's sparse architecture means it "activates only 1.3B parameters per input token, making MoEs significantly more efficient than dense models with a similar number of total parameters, which activate all parameters for every input." However, this computational efficiency does not translate directly to memory efficiency — the model still stores 6.9B total parameters, requiring GPU memory comparable to a 7B-parameter dense model.
+
+**Consequence:** For inference deployment, memory is often the binding constraint, not FLOPs. A practitioner with a GPU that can fit a 1B-parameter dense model may not be able to fit OLMOE-1B-7B, because the 7B total parameters must all be resident in memory even though only 1.3B are active per token. The paper acknowledges this cost model explicitly in Section 1: "This leads to a similar inference cost as using dense models with around 1B parameters... but requires more GPU memory to store its 7B total parameters." However, the headline comparisons and Figure 1 primarily emphasize the active parameter count (and thus latency/cost) without equally prominent discussion of the memory requirement.
+
+The training throughput numbers (Section 4.1.1) quantify this tradeoff: the MoE processes 23,600 tokens per second per GPU versus 37,500 for the equivalent dense model during training. While the MoE reaches equivalent performance with 2× less wall-clock time because it learns faster per token, the per-step speed is ~1.6× slower. This gap narrows for inference (where caching eliminates some overhead), but the memory requirement remains. The paper notes that "there are likely optimizations possible that would bring the speed-up closer to the 3× token speed-up," but these optimizations are not implemented or described.
+
+**Evidence in the paper:** The memory requirement is stated in the abstract and Section 1. The training throughput comparison is in Section 4.1.1 and Figure 4. The paper does not provide inference throughput or latency benchmarks, so the practical deployment trade-off cannot be precisely quantified from the paper alone. A practitioner would need to run their own benchmarks on their target hardware to determine whether the 3× FLOPs advantage (from active parameter count) outweighs the memory and communication overhead of the MoE architecture.
+
+**Mitigation status:** The paper acknowledges the memory constraint but does not mitigate it. The discussion of "optimizations possible" is vague and left to future work. The open release means that practitioners can measure inference performance themselves, and the paper's provision of intermediate checkpoints enables research into techniques like expert pruning or quantization that could reduce the memory footprint. But the paper provides no guidance on how much the memory overhead matters in practice or which deployment scenarios (batch inference vs. interactive serving, single-GPU vs. multi-GPU) would be most affected.
+
+---
+
+### 6.6 The Adaptation Improvements Are Confounded by Data Differences Across Models
+
+**Assumption or constraint:** The adaptation comparison in Table 5 pits OLMOE-1B-7B-INSTRUCT against instruction-tuned versions of other models (Qwen1.5-3B-14B+Chat, DeepSeek-3B-16B+Chat, JetMoE-2B-9B+SFT, OLMo-7B+SFT+DPO). The paper acknowledges that "models use different mixes for adaptation, e.g., OLMOE is trained on an improved version of the pipeline used for OLMo models." These adaptation data mixes are not controlled or standardized across models.
+
+**Consequence:** The claim that OLMOE-1B-7B-INSTRUCT "has the highest average among all models benchmarked" at 57.7 cannot be cleanly attributed to model quality. Part of the advantage may come from OLMOE's adaptation data including additional code and math data (CodeFeedback-Filtered-Instruction, MetaMathQA) that other models may not have used. The paper notes this explicitly for math: "SFT improves our model on all tasks measured. We observe a >10× gain on GSM8k, likely due to our inclusion of additional math data to account for the relatively small amounts of math data during pretraining." If Qwen and DeepSeek included math data in their pretraining rather than their SFT mix, or vice versa, the comparison is between different total training recipes rather than different model architectures.
+
+This is also relevant for the adaptation ablation in Table 7. The finding that OLMOE benefits from omitting the load balancing loss during SFT and DPO (54.0 vs. 52.8 average after SFT, 57.7 vs. 57.1 after DPO) is measured on OLMOE's specific adaptation data mix. A different mix — one with different domain composition or different sequence lengths — might produce different results. The mechanism proposed (routing is already saturated, so the loss is unnecessary) should generalize, but the magnitude of the benefit might not.
+
+**Evidence in the paper:** The paper is transparent about the adaptation data differences. Table 3 lists the exact composition of OLMOE's SFT and DPO data. The comparison models' adaptation data are described only via citations to their papers or model cards, and the paper notes that specific data compositions for some models are undisclosed. Table 7's adaptation ablation uses the same OLMOE adaptation data throughout, so the internal comparison (with vs. without load balancing, pre- vs. post-annealing, DPO vs. KTO) is internally valid — it is the cross-model comparison where data confounding is most acute.
+
+**Mitigation status:** The paper does not attempt to control for adaptation data differences. Running all models through the same adaptation pipeline with the same data would have been a stronger comparison but was likely infeasible (some models are only available as pre-adapted chat versions, and their base models may not be released). The paper's choice to report both the base pretrained model results (Table 4, where training data differences are somewhat better controlled because all models are pretrained on large web corpora) and the adapted results (Table 5) is a reasonable partial mitigation — the base model comparison shows that OLMOE's advantage exists before adaptation, even if the magnitude shifts after adaptation. However, the specific claim that OLMOE-1B-7B-INSTRUCT surpasses DeepSeekMoE-16B and Llama2-13B-Chat is based on adapted model comparisons (Table 5 and the AlpacaEval leaderboard mention), where the confounding is strongest.
 
 ## 7. Implications and Future Directions
 - Impact on the field

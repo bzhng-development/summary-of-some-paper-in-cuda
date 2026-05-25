@@ -9,164 +9,676 @@ This paper introduces SLA (Sparse–Linear Attention), a novel, trainable attent
 ---
 
 ## 1. Executive Summary
-SLA (Sparse–Linear Attention) is a trainable attention mechanism for Diffusion Transformers (`DiT`) that fuses sparse attention with linear attention inside a single GPU kernel. It solves the bottleneck of quadratic-cost attention for long video sequences by computing exact attention only where it matters and low-rank, linearized attention elsewhere, yielding large speedups without degrading generation quality.
 
-The key significance is empirical and systems-level: SLA cuts attention computation by about 95% and achieves a 13.7× kernel speedup and 2.2× end-to-end speedup on the Wan2.1-1.3B video model, while preserving video quality relative to full attention (Table 1, Figure 6).
+This paper proposes **SLA (Sparse-Linear Attention)**, a trainable hybrid attention mechanism that accelerates Diffusion Transformer (DiT) models by decomposing attention weights into three categories — critical, marginal, and negligible — and applying O(N²) FlashAttention to critical weights, O(N) linear attention to marginal weights, and skipping negligible ones entirely. Evaluated on the Wan2.1-1.3B video generation model, SLA reduces attention computation by 95% (a 20× reduction in FLOPs) without degrading generation quality, achieving a 13.7× speedup in the attention kernel and a 2.2× end-to-end speedup, establishing that sparsity beyond 90% is attainable without quality loss only when the low-rank residual attention weights are compensated through learnable linear attention rather than simply discarded.
 
 ## 2. Context and Motivation
-- Problem addressed
-  - Attention in Transformers has quadratic cost in sequence length. For video `DiT` models, sequence lengths are 10K–100K tokens, so attention latency dominates runtime (Section 1).
-- Why it matters
-  - Video diffusion models must process many frames at high resolution; practical deployment hinges on attention efficiency. Reducing attention cost unlocks shorter latencies and larger/longer-context models.
-- Limits of prior approaches
-  - Linear attention (Section 2.2) reduces complexity to linear in sequence length, but in diffusion—especially video—it substantially degrades quality. The paper reports “linear attention severely degrades video quality” in their tests, and existing diffusion work with linear attention is largely limited to images (Limitation L1, Section 1; also ablations in Table 2 “Linear Only”).
-  - Sparse attention (Section 2.1) typically reaches only 40–60% sparsity below 50K sequence length; even recent 80–85% sparsity results depend on much longer sequences (Limitation L2, Section 1). Figure 1 (right) explains why: removing too many entries causes large errors.
-- Positioning
-  - The paper’s central observation is that full attention weights can be split into:
-    - a small fraction of large weights with high rank, and
-    - the vast remainder with extremely low rank (Section 3.2; Figure 3).
-  - This explains why sparse-only (targets the few large weights) and linear-only (assumes global low rank) each fail in isolation, and motivates a hybrid that combines them (Section 3.2, Eq. (1)).
+
+### The Core Problem: Attention Is Expensive and Sparse Attention Isn't Sparse Enough
+
+The fundamental problem this paper addresses is deceptively simple: **attention in Diffusion Transformers (DiTs) for video generation is the computational bottleneck, and existing methods to accelerate it either destroy quality or don't accelerate enough.** This matters because DiT-based video generation models (like Wan, Sora, and their variants) operate on sequences of 10,000 to 100,000 tokens, where the quadratic $O(N^2 d)$ cost of self-attention dominates all other operations in the model. In the Wan2.1-1.3B model used in this paper's experiments, attention accounts for a disproportionate share of total compute — as demonstrated by the end-to-end latency breakdown where attention takes 97 seconds out of 159 seconds total (Figure 6b), or roughly 60% of generation time, despite representing only one of many operations in the transformer architecture.
+
+The practical significance is immediate: **video generation with DiTs is currently too slow for interactive or consumer-facing deployment.** A 2.2× end-to-end speedup — which this paper achieves — transforms a 159-second generation time into roughly 72 seconds, moving from "go make coffee" territory to "wait patiently" territory. More aggressive acceleration could enable real-time or near-real-time applications. Furthermore, since DiTs are scaling to longer sequences (higher resolution, longer videos), the quadratic attention bottleneck becomes proportionally more severe — $O(N^2)$ means doubling sequence length quadruples attention cost — making efficiency improvements increasingly urgent as models advance.
+
+### The Landscape of Existing Efficient Attention
+
+Prior work on accelerating attention for diffusion models falls into two main categories, each with a specific and well-documented failure mode that the paper identifies:
+
+**Category 1: Sparse Attention Methods.** These methods compute only a subset of the $N \times N$ attention score matrix, setting the rest to zero. The idea is that most attention weights are near zero (due to the exponential in softmax) and can be safely skipped. Representative methods studied include VSA (Zhang et al., 2025c), VMoBa (Wu et al., 2025), SparseAttn (Zhang et al., 2025a), and Radial Attention (Li et al., 2025). These can be training-free (applied at inference time by analyzing the attention pattern) or training-aware (where the model is trained or fine-tuned with sparsity).
+
+**Where sparse attention falls short (Limitation L2 in the paper).** The critical limitation, which the paper measures quantitatively in Figure 1 (right), is: *sparse attention rarely reaches very high sparsity without sharp quality degradation.* In practice, at moderate sequence lengths (10K–50K, typical for current video models), existing sparse attention methods achieve 40–60% sparsity while maintaining quality. More recent work pushes this to 80–85% but only on very long sequences (100K–300K) where high sparsity is easier because even the important weights are more diffused. The paper's experiment in Figure 1 (right) demonstrates why: skipping the smallest 45% of attention weights introduces a relative L1 error of less than 3% compared to full attention — this is safe to discard. But pushing sparsity to 92% (keeping only the top 8%) causes the error to jump to roughly 33%, which is unacceptable. There exists a substantial fraction of attention weights — the "marginal" ones between the obviously-important and obviously-negligible — that *are numerically significant enough to cause error if dropped, but not important enough to justify the full $O(N^2)$ cost*. Existing sparse attention methods have no mechanism to handle these: they either pay the full $O(N^2)$ cost to compute them (limiting sparsity) or drop them entirely (hurting quality).
+
+**Category 2: Linear Attention Methods.** These methods reformulate the attention operation to achieve $O(Nd^2)$ complexity by kernelizing the softmax: instead of computing $\text{Softmax}(QK^\top/\sqrt{d})V$ explicitly, they apply a feature map $\phi(\cdot)$ to $Q$ and $K$, reorder the matrix multiplications as $\phi(Q)(\phi(K)^\top V)$, and thereby avoid ever constructing the $N \times N$ attention matrix. The theoretical speedup is enormous — linear attention with sparsity 100% costs roughly 0.5% of full attention in the Wan2.1 model. Representative methods include Performers (Choromanski et al., 2020), Lightning Attention (Qin et al., 2024), and domain-specific adaptations like SANA (Xie et al., 2024) and Dig (Zhu et al., 2025) for image DiTs.
+
+**Where linear attention falls short (Limitation L1 in the paper).** The paper states bluntly: *"Linear attention methods often fail in practice, especially on video diffusion models."* This claim is backed by the experiments in Table 2 and Figure 2: when Wan2.1 is fine-tuned with "Linear Only" (replacing all attention with linear attention at 100% sparsity), the quality metrics collapse — Vision Reward (VR) drops from +0.059 (Full Attention) to −0.213, Aesthetic Quality (AQ) falls from 56.1 to 28.8, and Overall Consistency (OC) drops from 23.3 to 3.6. The visual results in Figure 2 and Figure 5 confirm this quantitatively-impaired quality. The paper's diagnosis (Section 3.2, Figure 3) is that the full attention weight matrix is **high-rank** — with a stable rank of approximately 6226 — while linear attention is fundamentally restricted to a rank at most $d$ (the head dimension, which is far smaller). Linear attention simply lacks the representational capacity to capture the attention patterns that matter for video generation. Prior work on linear attention in DiTs has been successful only for image generation (Xie et al., 2024; Zhu et al., 2025), where sequence lengths are shorter and attention patterns may be lower-rank. Video generation, with its complex spatial-temporal dependencies across much longer sequences, needs the expressive power that linear attention alone cannot provide.
+
+### The Key Observation That Unifies and Transcends Both Approaches
+
+The paper's diagnostic contribution — and the intellectual foundation for SLA — is the empirical decomposition shown in Figure 3. When attention weights are separated into two matrices based on magnitude — the top 8% (critical weights) and the bottom 92% (remaining weights) — their spectral properties diverge dramatically:
+
+- The **top 8%** of weights (by value) has a stable rank of approximately 6230, which is essentially the same as the full attention matrix's rank of 6226. These few weights carry almost all the *expressive structure* of the attention operation. They require the full representational capacity of softmax attention — sparse acceleration is the right tool for this component.
+
+- The **bottom 92%** of weights, once the top values are removed, has a stable rank of only 9. This is a striking finding: the vast majority of attention weights collectively form an extremely low-rank matrix. This is *exactly* the regime where linear attention (bounded to rank ≤ $d$) can serve as an effective approximation. The previous failure of linear attention was not because low-rank approximation is inherently wrong for attention, but because it was being asked to approximate the *full* matrix, which includes the high-rank critical weights that linear attention cannot capture.
+
+This decomposition provides a principled answer to the question: "Why can't we just use sparse attention or linear attention alone?" Because the attention weight matrix is *structurally heterogeneous* in a way that neither method alone can handle:
+
+- Sparse attention can handle the critical weights (high rank, small fraction) by computing them exactly, but it cannot handle the marginal weights (small magnitude, collectively significant) without either paying $O(N^2)$ cost or suffering quality loss.
+
+- Linear attention can handle the low-rank bulk of the matrix (marginal weights) efficiently at $O(N)$, but it cannot handle the critical high-rank component without suffering the catastrophic quality degradation documented in Table 2 and prior work.
+
+The natural synthesis — which this paper executes — is to **partition the computation by importance**: apply sparse FlashAttention to the critical (high-rank) weights, apply linear attention to the marginal (low-rank) weights, and skip the negligible ones entirely.
+
+### Why Fine-Tuning Matters: Linear Attention as Learnable Compensation, Not Approximation
+
+A subtle but crucial aspect of the paper's approach is that it does *not* claim linear attention can directly approximate the output of softmax attention on the marginal weights. Section 4.2 states this explicitly:
+
+> "Linear attention in SLA does not approximate the output corresponding to marginal attention weights, but serves as a learnable compensation that enhances the effectiveness of sparse attention. This is because linear attention alone struggles to approximate the output of full attention."
+
+This distinction separates SLA from a naive "L+S" hybrid (which the paper tests as an ablation in Table 2). A naive hybrid would compute sparse attention for critical weights and linear attention for marginal weights using the *pretrained model's frozen parameters*, and sum the results. But this L+S baseline performs poorly (Vision Reward −0.105, Aesthetic Quality 45.3 in Table 2) because the linear attention component, operating with the pretrained weights, produces outputs that are misaligned with what the sparse attention component expects. The fused output is degraded, not enhanced.
+
+SLA instead **fine-tunes the model** to *learn* to use the linear attention pathway effectively. The learnable projection $\text{Proj}(\mathbf{O}^l)$ in Equation 6 gives the model a way to adapt the linear attention output before adding it to the sparse attention output. Through fine-tuning, the model learns to have the sparse pathway handle the precise structural information while the linear pathway provides a learnable compensatory signal that restores what was lost by discarding the marginal weights. It is the combination of structural decomposition + learnable adaptation that enables 95% sparsity without quality loss. Sparge-T, a trainable sparse attention baseline, only reaches 84% sparsity with worse quality (Table 1), demonstrating that making sparse attention trainable is not enough — you need the linear compensation pathway.
+
+### Positioning Relative to Prior Work
+
+The paper positions SLA at the intersection of — and as a synthesis beyond — two largely separate research traditions:
+
+**Relative to sparse attention methods (VSA, VMoBa, SparseAttn, Radial Attention):** SLA achieves dramatically higher sparsity (95% vs. 84–89% in Table 1) while producing *better* video quality across nearly all metrics (VA, VT, IQ, OC, AQ, SC, VR). This is possible because SLA does not face the "drop vs. compute" dilemma for the marginal 10–40% of attention weights — it can handle them at low cost via linear attention rather than either paying $O(N^2)$ or suffering error. The paper notes (Section 6.3) that VSA at 89% sparsity and VMoBa at 85% sparsity already have worse generation quality than SLA at 95%, meaning SLA's advantage is not just theoretical efficiency at matched quality but *actual quality advantage at higher sparsity*.
+
+**Relative to linear attention methods (SANA, Dig, Lightning Attention):** SLA does not claim that linear attention works as a drop-in replacement for softmax attention. Instead, it identifies *where* linear attention can be useful — as a low-cost compensation for low-rank residual weights — and provides the fine-tuning framework to make that usage effective. This explains why prior linear attention methods failed on video (Limitation L1): they attempted to replace the *entire* attention operation, including the high-rank critical component, which linear attention cannot approximate.
+
+**Relative to naive hybrids (ablation "L+S"):** The paper demonstrates that simply summing sparse and linear attention outputs from a pretrained model is insufficient. The fine-tuning step, coupled with the learnable projection, is essential — and remarkably cheap, requiring only 2,000 steps with batch size 64, which the paper estimates at under 0.1% of pretraining cost.
+
+**Conceptual relationship to low-rank + sparse matrix decompositions:** While the paper does not frame it this way, SLA can be understood as implementing a learned, amortized version of "robust PCA" or "sparse + low-rank decomposition" — where the sparse component captures the high-magnitude, high-rank structure and the low-rank (linear) component captures the diffuse, low-magnitude residual. The innovation is making this decomposition *trainable within the attention forward/backward pass* and *adaptive to the input* through the learned mask prediction mechanism, rather than applying a fixed mathematical decomposition.
+
+### The Practical Stakes
+
+This paper is motivated by an industry-relevant bottleneck: video generation with DiTs is at the edge of deployability, and the attention mechanism is the primary constraint. A 13.7× speedup in the attention kernel (Figure 6a) and a 2.2× end-to-end speedup (Figure 6b) represent a qualitative change in user experience. Moreover, the approach is implemented as a fused GPU kernel supporting both forward and backward passes, making it drop-in compatible with existing DiT training and inference pipelines. The fine-tuning cost (under 0.1% of pretraining) is low enough to be practical for model developers who have already invested in pretraining, positioning SLA as an economical post-training optimization rather than a method that requires rethinking the model architecture from scratch.
 
 ## 3. Technical Approach
-SLA partitions attention computation into three tiers—critical, marginal, negligible—using a learned, block-level predictor, and executes each tier with the most appropriate mechanism, all inside one fused GPU kernel (Section 4; Figure 4; Algorithms 1–2).
 
-Key components and steps:
-1) Predict where attention matters at block level
-- Block partitioning: Queries, keys, and values are divided into blocks of size `bq × d` and `bkv × d` for efficiency on GPUs (Section 2.1). In experiments, `bq = bkv = 64` (Section 6.1).
-- Compressed attention predictor `Pc` (Eq. (2)):
-  - Compute mean-pooled queries and keys, then a compressed softmax attention:
-    - `Pc = Softmax(pool(Q) pool(K)^T / sqrt(d))`, where `Pc ∈ R^(N/bq × N/bkv)`.
-  - Define a compressed mask `Mc` (Eq. (3)) per block:
-    - Top `kh%` per row: critical blocks (`Mc = 1`).
-    - Bottom `kl%` per row: negligible blocks (`Mc = -1`).
-    - Others: marginal (`Mc = 0`).
-  - Default hyperparameters for video: `kh = 5%`, `kl = 10%` (Section 6.1; ablation in Table 2).
+### 3.1 Reader Orientation
 
-2) Compute critical blocks with exact attention (sparse FlashAttention path)
-- For each query block `Qi`, visit only key/value blocks `Kj, Vj` with `Mc[i,j] = 1`.
-- Perform blockwise attention with online softmax (Eq. (4); Algorithm 1 lines 9–11):
-  - `Sij = Qi Kj^T / sqrt(d)`,
-  - `Pij = OnlineSoftmax(Sij)`,
-  - Accumulate sparse output `Os_i += Pij Vj`.
-- Online softmax computes stable softmax statistics across blocks to avoid materializing the full `N×N` scores (Algorithm 1, lines 10–11; Section 4.1).
+SLA is a **trainable attention mechanism** that replaces standard self-attention in Diffusion Transformers with a hybrid computation: it classifies every attention weight as either critical, marginal, or negligible, then computes critical weights with full $O(N^2)$ FlashAttention, marginal weights with $O(N)$ linear attention, and skips negligible weights entirely. This solves the core problem that neither sparse attention (which must either pay full cost or drop medium-importance weights) nor linear attention (which lacks the representational rank to capture important attention patterns) can individually achieve both high computational savings and preserved generation quality — SLA's hybrid decomposition with fine-tuning enables 95% sparsity without quality loss.
 
-3) Compute marginal blocks with linear attention (low-rank path)
-- Rationale: the many small weights are low-rank (Section 3.2, Figure 3); linear attention computes a low-rank approximation in O(N d^2) time (Section 2.2).
-- Precompute per key/value block once (Algorithm 1 line 4):
-  - `hj = φ(Kj)^T Vj` and `zj = rowsum(φ(Kj)^T)`.
-- For each query block `Qi`, aggregate only over marginal blocks (`Mc[i,j] = 0`) (Eq. (5)):
-  - `Hi = Σ hj`, `Zi = Σ zj`, then
-  - `Ol_i = φ(Qi) Hi / (φ(Qi) Zi)`.
-- This turns many per-block multiplications into a handful of additions (Algorithm 1 line 13; Section 4.2).
-- Choice of feature map `φ(·)`: ablation favors `softmax` over `elu+1` and `hedgehog` (Table 2).
+### 3.2 Big-Picture Architecture (Diagram in Words)
 
-4) Skip negligible blocks
-- For `Mc = -1`, no computation is performed.
+The system has five major components connected in a pipeline during each attention operation:
 
-5) Fuse results and learn a small projection
-- Final output is the sum of sparse output and a learned projection of the linear output (Eq. (6)):
-  - `O = Os + Proj(Ol)`.
-- `Proj: R^d → R^d` is learned to mitigate distribution mismatch between softmax attention and linear attention outputs (Section 4.2 “Insight”).
+1. **Compressed Attention Predictor** — downsamples Q and K via pooling, computes a coarse attention matrix `Pc` in compressed space, and uses it to classify every query-key block pair as critical, marginal, or negligible. This produces the mask `Mc` that governs all subsequent computation.
 
-6) Backward pass and kernel fusion
-- Gradients for the sparse path follow FlashAttention’s derivation (Eq. (7)); for the linear path, they follow Eq. (8).
-- Both paths’ forward and backward computations are fused into a single kernel (Section 4; Algorithms 1–2), minimizing memory traffic and launch overhead.
+2. **Sparse Attention Engine** — for blocks where `Mc[i,j] = 1` (critical), executes standard FlashAttention: computes `S = QK^T/√d`, applies online softmax, and accumulates `P × V`. This handles the high-rank, high-magnitude weights that dominate the attention output.
 
-7) Additional efficiency optimizations (Appendix A.3)
-- Lookup tables for very sparse masks to avoid scanning zeros.
-- Pre-aggregation for the linear path: compute global sums and subtract contributions for `Mc ≠ 0`.
-- Method of Four Russians to accelerate partial subset sums when marginal density is moderate.
+3. **Linear Attention Engine** — for blocks where `Mc[i,j] = 0` (marginal), applies kernelized linear attention: precomputes `hj = φ(Kj)^T Vj` and `zj = rowsum(φ(Kj)^T)` per key block, then computes `Ol_i = φ(Qi)Hi / (φ(Qi)Zi)` where `Hi` and `Zi` are accumulated sums over marginal blocks. This handles the low-rank residual at $O(N)$ cost.
 
-Why these design choices?
-- Block-level masking matches GPU efficiency patterns and FlashAttention’s IO-aware tiling (Section 2.1, 4.1).
-- A coarse `Pc` predictor is cheap (pooled Q/K) and good enough to classify blocks by importance, especially after a short fine-tuning phase (Section 5).
-- Treating marginal mass with linear attention leverages the observed low-rank structure of small weights (Section 3.2, Figure 3), unlocking very high overall sparsity without quality loss (Figure 2; Table 1).
+4. **Learnable Projection** — applies a learned linear transformation `Proj: R^d → R^d` to the linear attention output `Ol` before combining with the sparse output. This adapts the linear component to be a useful compensation signal rather than a naive approximation.
 
-Mathematical idea in plain words
-- Split the attention weights `P` into two parts using a binary sparse mask `M`: the few big entries and the many small ones:
-  - `P = (P ⊙ M) + (P ⊙ (1 − M))` (Eq. (1)).
-- Compute the big ones exactly (sparse FlashAttention).
-- Replace the small, low-rank remainder with linear attention (a low-rank construction), and then learn a small projection to align distributions (Sections 3.2 and 4.2).
+5. **Fused GPU Kernel** — integrates the sparse engine, linear engine, and their backward passes into a single CUDA kernel, avoiding the overhead of separate kernel launches and intermediate memory transfers. Includes lookup tables and pre-aggregation optimizations for high-sparsity regimes.
+
+Information flows as follows: Q, K, V enter → pooling produces compressed Q, K → compressed softmax produces `Pc` → thresholding on `Pc` produces mask `Mc` → for each query block i, iterate over all key blocks j: if `Mc[i,j]=1`, run sparse FlashAttention step; if `Mc[i,j]=0`, accumulate linear attention statistics → finalize sparse output with online softmax normalization → finalize linear output with division by rowsum → apply learnable projection to linear output → sum sparse and projected-linear outputs to produce O.
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First, the compressed attention prediction and mask generation** (Equations 2–3): how SLA decides which weights are critical, marginal, and negligible, and why this classification happens in compressed space rather than at full resolution.
+- **Second, the sparse attention component** (Equation 4, Algorithm 1 lines 9–11): how critical weights are processed using online softmax and block-sparse FlashAttention, including the accumulation mechanics.
+- **Third, the linear attention component** (Equation 5, Algorithm 1 lines 12–13): how marginal weights are handled via kernelized attention, the role of the feature map φ, the precomputation strategy, and why the accumulation pattern differs from standard linear attention.
+- **Fourth, the combination and learnable projection** (Equation 6): how sparse and linear outputs are fused, why a learned projection is necessary, and what the ablation "L+S" (naive summation without fine-tuning) reveals about this choice.
+- **Fifth, the full forward pass algorithm** (Algorithm 1): a walk-through of the complete computation and the efficiency optimizations embedded in the design.
+- **Sixth, the backward pass** (Equations 7–8, Algorithm 2): how gradients flow through both the sparse and linear pathways, and how the backward kernel fuses both computations.
+- **Seventh, the fine-tuning procedure**: what data, optimizer settings, and hyperparameters are used; why fine-tuning is essential (not optional); and how the 2,000-step cost compares to pretraining.
+- **Eighth, the efficiency optimizations** (Appendix A.3): lookup tables, pre-aggregation, and the Method of Four Russians — the engineering techniques that make the theoretical savings realizable on GPU hardware.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily a **systems paper with an empirical discovery at its core**: the attention weight matrix in diffusion transformers decomposes naturally into a high-rank sparse component (large weights) and a low-rank dense component (remaining weights), and this structural property can be exploited by a trainable hybrid attention mechanism that applies different computational strategies to each component. The paper's technical contribution is the SLA mechanism itself — the mask prediction, the fused sparse-linear kernel, the learnable projection, and the fine-tuning recipe that together realize the decomposition's promise.
+
+---
+
+#### Compressed Attention Prediction and Mask Generation
+
+The first stage of SLA determines, for every pair of query and key blocks, which computational pathway to use. This must be done *before* the expensive attention computation, so a lightweight predictor is needed.
+
+The predictor operates in **compressed space** to keep its cost negligible. Rather than computing the full `N × N` attention matrix at resolution `d`, SLA downsamples Q and K via mean pooling:
+
+$$P_c = \text{Softmax}\left(\text{pool}(Q) \text{pool}(K)^\top / \sqrt{d}\right)$$
+
+where `pool(·)` is a mean pooling operator applied along the token dimension, reducing the sequence length from `N` to `N/b_q` for queries and `N/b_kv` for keys, where `b_q` and `b_kv` are the block sizes used in the sparse FlashAttention (both set to 64 in experiments). `P_c ∈ R^{N/b_q × N/b_kv}` is the compressed attention weight matrix — one scalar per block, not per token.
+
+**What it computes:** a coarse-grained attention matrix where each entry `P_c[i,j]` represents the approximate attention score between query block `i` and key block `j`, obtained by first averaging the token embeddings within each block (via pooling) and then computing the scaled dot-product softmax on these compressed representations.
+
+**Why this form:** computing the full `N × N` attention matrix at full resolution would defeat the purpose — it costs exactly what we're trying to avoid. Pooling reduces the dimensionality from `(N × d) × (d × N)` to `(N/b_q × d) × (d × N/b_kv)`, making the cost `O(N² d / (b_q b_kv))` rather than `O(N² d)`. With `b_q = b_kv = 64`, this is a ~4096× reduction in the cost of the prediction step. Mean pooling is chosen because it's computationally trivial (a simple average over the token dimension) and preserves the first-order statistics of the block — the average query vector in block `i` should have high dot product with the average key vector in block `j` if the tokens in those blocks generally attend to each other. Alternatives like max pooling or learned projections would add cost without guaranteed benefit.
+
+**Mask generation.** Once `P_c` is computed, each block-pair is classified into one of three categories by comparing its compressed attention score to thresholds:
+
+$$M_c[i, j] = \begin{cases} 1 & \text{(top } k_h\% \text{ of row } i) \\ -1 & \text{(bottom } k_l\% \text{ of row } i) \\ 0 & \text{(otherwise)} \end{cases}$$
+
+where `M_c ∈ R^{N/b_q × N/b_kv}` is the compressed mask, `k_h = 5%` is the critical threshold (top 5% of scores per query row), and `k_l = 10%` is the negligible threshold (bottom 10% of scores per query row). A value of 1 means "critical — use sparse FlashAttention," 0 means "marginal — use linear attention," and −1 means "negligible — skip entirely."
+
+**What it computes:** for each query block row `i` of `P_c`, sort the values, mark the top `k_h` percent as critical (1), the bottom `k_l` percent as negligible (−1), and everything in between as marginal (0). The thresholds are applied **per-row** rather than globally, which is critical: different query positions attend to different numbers of key positions. Some query tokens may have highly concentrated attention (few large weights, many near-zero), while others may have diffuse attention (many medium weights). Per-row thresholding ensures that each query block gets its own importance classification rather than being subject to a global cutoff that might misclassify an entire query's attention pattern.
+
+**Why this form — three categories rather than two:** the paper's key observation (Figure 1, Figure 3) shows that the bottom ~45% of weights contribute less than 3% error when dropped (negligible), the top ~8% carry almost all the structural information (critical), and the middle ~47% are individually small but collectively significant — dropping them introduces 30%+ error, yet computing them with full attention limits sparsity to ~50%. By introducing the "marginal" category, SLA avoids the binary tradeoff that constrained prior work. Instead of paying `O(N²)` for marginal weights or losing them entirely, SLA pays `O(N)` via linear attention. The specific thresholds `k_h = 5%` and `k_l = 10%` mean that approximately 5% of block-pairs get full attention, 85% get linear attention, and 10% are skipped (yielding approximately 95% effective sparsity, since linear attention cost is negligible). The ablation in Table 2 validates this choice: `k_h = 5%` achieves quality comparable to full attention, while `k_h = 10%` and `k_h = 20%` cost more compute without quality improvements.
+
+**Design choice — prediction at block granularity:** the mask `M_c` operates at the block level, not the token level. Each block `M_c[i,j]` corresponds to a `b_q × b_kv` submatrix of the full attention mask. The entire submatrix is either computed (critical), processed with linear attention (marginal), or skipped (negligible). This is a practical concession to GPU efficiency: element-wise sparsity (where individual token pairs are classified independently) would require scatter/gather operations and irregular memory access patterns that destroy the memory coalescing that makes FlashAttention fast. Block-level sparsity enables the use of efficient matrix-matrix multiplications (GEMMs) within each computed block. The block size of 64 is a standard choice that balances granularity (smaller blocks = finer classification) against GPU efficiency (larger blocks = better tensor core utilization).
+
+---
+
+#### Sparse Attention Component
+
+For block-pairs classified as critical (`M_c[i,j] = 1`), SLA computes standard softmax attention using a block-sparse variant of FlashAttention. The computation proceeds block-by-block, iterating over key-value block pairs for each query block:
+
+$$S_{ij} = \frac{Q_i K_j^\top}{\sqrt{d}}$$
+
+$$P_{ij} = \text{OnlineSoftmax}(S_{ij})$$
+
+$$O_i^s = O_i^s + P_{ij} V_j$$
+
+where `Q_i ∈ R^{b_q × d}` is the i-th query block, `K_j, V_j ∈ R^{b_kv × d}` are the j-th key and value blocks, `S_{ij} ∈ R^{b_q × b_kv}` is the pre-softmax score matrix for this block pair, `P_{ij} ∈ R^{b_q × b_kv}` is the post-softmax attention weight matrix, and `O_i^s ∈ R^{b_q × d}` is the accumulating sparse attention output for query block i.
+
+**What it computes:** for each critical block-pair, the standard scaled dot-product attention — multiply `Q_i` by `K_j^T`, divide by `√d` to prevent dot products from growing with dimensionality, apply softmax to obtain normalized weights, then use those weights to compute a weighted sum of `V_j`. The result is accumulated into `O_i^s`, which aggregates contributions from all critical key blocks for query block i.
+
+**Why this form — online softmax:** the `OnlineSoftmax` operator (Milakov & Gimelshein, 2018) is a numerically stable way to compute softmax in a block-wise streaming fashion without materializing the entire `N × N` attention matrix. Standard softmax requires two passes: one to compute the maximum value (for numerical stability) and the row sum (for normalization), then a second to compute the exponentiated-and-normalized values. Online softmax fuses these into a single streaming pass by maintaining running statistics — the current maximum `m_ij` and the running sum `l_ij` — and updating them incrementally as each block is processed (Algorithm 1, lines 10-11). Specifically:
+
+$$m_{ij} = \max(m_{i,j-1}, \text{rowmax}(S_{ij}))$$
+
+$$l_{ij} = e^{m_{i,j-1} - m_{ij}} l_{i,j-1} + \text{rowsum}(\exp(S_{ij} - m_{ij}))$$
+
+$$O_{ij}^s = \text{diag}(e^{m_{i,j-1} - m_{ij}}) O_{i,j-1}^s + \exp(S_{ij} - m_{ij}) V_j$$
+
+The running maximum `m_ij` tracks the largest score seen so far, `l_ij` tracks the cumulative normalization sum (adjusted whenever a new maximum is found), and `O^s_ij` accumulates the value sum with appropriate rescaling to maintain correctness under the evolving maximum. At the end of the row (after all key blocks are processed), the output is normalized:
+
+$$O_i^s = \text{diag}(l_{i,T_n})^{-1} O_{i,T_n}^s$$
+
+This approach means SLA inherits the memory-efficiency of FlashAttention for the critical blocks — no `N × N` intermediate matrix is ever materialized in HBM, and computation is performed in SRAM with tiled loads.
+
+**Why this form — block-sparse FlashAttention:** the standard FlashAttention algorithm iterates over ALL key-value blocks. SLA modifies this loop: it only enters the computation when `M_c[i,j] = 1`. The `OnlineSoftmax` state (max, sum, output accumulator) is maintained across all blocks, but only critical blocks contribute to the update. This is correct because non-critical blocks are either handled by the linear attention component (marginal) or skipped (negligible) — they do not contribute to the sparse output at all. The softmax normalization at the end divides only by the sum of weights from critical blocks, not the full row sum. This means the sparse output `O_i^s` does NOT sum to the same total as full attention output would — the missing mass from marginal and negligible weights is compensated by the linear attention component in the fusion step (Equation 6).
+
+**Design choice — why not use separate softmax for sparse and linear components:** a natural alternative would be to renormalize the sparse attention weights to sum to 1 within the critical blocks (i.e., compute softmax only over critical blocks, ignoring marginal/negligible). SLA does NOT do this — the online softmax in Algorithm 1 maintains the original scale relative to the full attention distribution (the running max `m_ij` and sum `l_ij` reflect the actual attention scores, not renormalized ones). This is deliberate: the relative magnitudes of critical vs. marginal weights matter for how the sparse and linear outputs combine. The linear attention component in Equation 5 is also not renormalized — it processes marginal blocks with the feature map `φ(K_j)` but does not enforce that the combined weights sum to 1. Instead, the model learns through fine-tuning how to properly weight the two components, with the learnable projection `Proj` acting as an adaptive scale and transform on the linear output.
+
+---
+
+#### Linear Attention Component
+
+For block-pairs classified as marginal (`M_c[i,j] = 0`), SLA applies kernelized linear attention. The key idea is to avoid constructing the `N × N` attention matrix by reordering the computation:
+
+$$H_i = \sum_{j: M_c[i,j] = 0} \phi(K_j)^\top V_j$$
+
+$$Z_i = \sum_{j: M_c[i,j] = 0} \text{rowsum}(\phi(K_j)^\top)$$
+
+$$O_i^l = \frac{\phi(Q_i) H_i}{\phi(Q_i) Z_i}$$
+
+where `φ(·)` is a feature map applied element-wise to transform queries and keys into a space where the dot product approximates the softmax attention weight, `H_i ∈ R^{d × d}` accumulates the weighted value sum across all marginal key blocks, `Z_i ∈ R^{d × 1}` accumulates the normalization factors, and `O_i^l ∈ R^{b_q × d}` is the linear attention output for query block i.
+
+**What it computes — step by step:** 
+
+1. **Feature map application:** each query and key token vector is transformed through `φ` (e.g., softmax, ELU+1, or hedgehog — an element-wise nonlinearity). This maps the `d`-dimensional vectors into a space where `φ(q)·φ(k)` approximates the attention weight `exp(q·k/√d)` that would result from softmax.
+
+2. **Precomputation per key block (Algorithm 1, line 4):** for every key block `j`, compute `h_j = φ(K_j)^T V_j ∈ R^{d×d}` and `z_j = rowsum(φ(K_j)^T) ∈ R^{d×1}`. This is done once before the query loop — it's the critical reordering that makes linear attention `O(N)` instead of `O(N²)`, because these per-block statistics can be accumulated without pairwise query-key interactions.
+
+3. **Accumulation per query block (Algorithm 1, line 13):** for each query block `i`, iterate over all key blocks `j`. If `M_c[i,j] = 0`, add `h_j` to running accumulator `H_i` and `z_j` to running accumulator `Z_i`. This is a simple matrix addition, not a matrix multiplication.
+
+4. **Final computation (Algorithm 1, line 16):** compute `O_i^l = φ(Q_i) H_i / (φ(Q_i) Z_i)`. The numerator `φ(Q_i) H_i` computes, for each query token in block i, a weighted combination of all marginal value tokens — but the weighting is done implicitly through the accumulated `H_i` rather than through explicit `N × N` attention weights. The denominator `φ(Q_i) Z_i` normalizes each query token's output by the sum of its implied attention weights over all marginal keys.
+
+**What it computes — operational interpretation:** linear attention approximates the contribution of all marginal key-value pairs to each query by compressing the key-value information into a fixed-size `d × d` matrix `H_i` (and a `d × 1` normalization vector `Z_i`). The cost is `O(N d²)` rather than `O(N² d)` because the per-query-block operation is a `d × d` matrix-vector product (`φ(Q_i) H_i`), not a `N × d` matrix-matrix product (`Q_i K^T`). Since `d` (the head dimension, typically 64–128) is much smaller than `N` (sequence length, 10K–100K in video DiTs), this is a massive computational savings — the paper reports that linear attention costs less than 0.5% of full attention in the Wan2.1 model.
+
+**Why this form — difference from standard linear attention:** standard linear attention (Section 2.2) computes `H` and `Z` over ALL key blocks, producing a single global compression of the entire key-value sequence. SLA's linear attention computes `H_i` and `Z_i` **per query block** and only over the **marginal** key blocks for that query block. This is necessary because different query blocks have different marginal key blocks — the mask `M_c` is query-dependent. However, it would be expensive to recompute `H_i` from scratch for each query block if many key blocks are marginal (e.g., 85%). The paper's efficiency optimizations (Appendix A.3, discussed below) address this by precomputing global sums and subtracting the non-marginal contributions, converting `O(#marginal)` additions per query block into `O(#critical + #negligible)` subtractions.
+
+**Choice of feature map `φ`:** The paper ablates three feature maps (Table 2): softmax, ELU+1, and hedgehog. Softmax performs best overall (VA 76.96, VR 0.048), which the authors attribute to its closer approximation of the true attention distribution. The feature map choice matters because the linear attention output will be combined with the sparse attention output — the closer the linear attention's implicit weighting matches what softmax attention would have produced for the marginal weights, the easier it is for the model to learn a useful fusion during fine-tuning.
+
+**Why linear attention can work here when it fails globally (Limitation L1):** the paper's diagnostic in Figure 3 provides the answer. Full attention weights have high stable rank (~6226), and linear attention is fundamentally limited to rank at most `d` (typically 128). When applied to the full matrix, linear attention cannot capture the high-rank structure and quality collapses. But SLA's linear attention only processes the marginal weights — which, after removing the critical (top 8%) weights, have a stable rank of only 9 (Figure 3, right). A rank-9 matrix is well within the capacity of linear attention with `d = 128`. The decomposition into sparse + low-rank components is what makes linear attention viable: it's asked to approximate only the low-rank residual, not the full high-rank matrix.
+
+---
+
+#### Fusion and Learnable Projection
+
+The sparse and linear attention outputs are combined through a learnable linear projection followed by summation:
+
+$$O = O^s + \text{Proj}(O^l)$$
+
+where `Proj: R^d → R^d` is a learned linear transformation (a `d × d` weight matrix, no bias mentioned), `O^s ∈ R^{N × d}` is the sparse attention output (from critical blocks), `O^l ∈ R^{N × d}` is the linear attention output (from marginal blocks), and `O ∈ R^{N × d}` is the final attention output that feeds into the subsequent transformer layers.
+
+**What it computes:** for each token, take its sparse attention output vector (computed from critical key-value pairs via exact softmax attention), take its linear attention output vector (computed from marginal key-value pairs via kernelized attention), apply a learned linear transformation to the linear output, and add the two vectors element-wise.
+
+**Why this form — why a learned projection and not just summation:** the paper's ablation in Table 2 includes an "L+S" baseline, which directly sums the sparse and linear attention outputs without the learned projection and without fine-tuning. L+S achieves substantially worse quality (VR -0.105 vs. SLA's +0.048, AQ 45.3 vs. 55.9) despite using similar computational patterns. The diagnosis (Section 4.2) is that linear attention does not directly approximate the output of softmax attention on marginal weights — it produces outputs in a different numerical range with different statistical properties. Without the learned projection, the linear output may add noise or systematic bias when summed with the sparse output. The projection `Proj` gives the model the capacity to learn an appropriate transformation: it can scale, rotate, or suppress dimensions of the linear output so that it serves as useful compensation rather than harmful interference.
+
+The cost of this projection is `O(N d²)`, which is the same asymptotic complexity as computing `O^l` itself — and negligible compared to the `O(N² d)` cost of full attention. The projection is part of the trainable parameters and is learned during the fine-tuning phase.
+
+**Why this form — why addition and not concatenation or gating:** addition is the simplest fusion mechanism and preserves the dimensionality of the attention output (`d`), which is necessary because the subsequent transformer layer expects input of dimension `d`. Concatenation would double the dimensionality, requiring a down-projection that costs more parameters and compute. Gating mechanisms (learned scalar weights on each component) would add parameters but the paper found addition with the learned projection sufficient for quality parity with full attention at 95% sparsity.
+
+**Why fine-tuning is essential:** the L+S ablation also demonstrates that the pretrained model's parameters are not adapted to having part of the attention replaced by linear attention. During fine-tuning, the model learns to:
+- Adjust the query and key projections so that the compressed attention predictor `P_c` produces masks that effectively separate critical from marginal weights.
+- Adapt the value projections and subsequent FFN layers to work with the combined sparse+linear attention output, which has slightly different statistics than full attention.
+- Train the `Proj` matrix to optimally transform the linear output for each attention head.
+- Potentially learn to route different types of information through the sparse vs. linear pathways — the sparse pathway handles precise, high-magnitude attention patterns while the linear pathway provides a diffuse, averaged context signal.
+
+---
+
+#### Full Forward Pass Algorithm
+
+Algorithm 1 in the paper presents the complete forward pass, which integrates the compressed prediction, sparse attention, and linear attention into a single procedure. Here is a walkthrough of the computation:
+
+**Step 1: Precomputation (lines 4–6).**
+- Divide Q and K into blocks of size `b_q = b_kv = 64` tokens, yielding `T_m = N/64` query blocks and `T_n = N/64` key blocks.
+- Precompute `h_j = φ(K_j)^T V_j` and `z_j = rowsum(φ(K_j)^T)` for every key block j. These are the compressed key-value representations needed for linear attention. This is done once at the start — a cost of `O(N d²)`.
+- Compute the compressed attention matrix `P_c = Softmax(pool(Q) pool(K)^T / √d)` and generate the mask `M_c` by applying per-row top-k and bottom-k thresholds. The pooling reduces the sequence dimension by a factor of 64 before the matrix multiply, making this step cheap.
+- Initialize output accumulators `O_i^s = 0`, `H_i = 0`, `Z_i = 0` for each query block.
+
+**Step 2: Main loop over query blocks (lines 7–17).** For each query block `i`:
+- Loop over all key blocks `j` (lines 8–15).
+- If `M_c[i,j] = 1` (critical): compute the sparse attention contribution (lines 10–11). This involves computing `S_ij = Q_i K_j^T / √d`, updating the online softmax state (`m_ij`, `l_ij`, `O_ij^s`), and accumulating the value-weighted sum. This is a standard FlashAttention inner loop restricted to critical blocks.
+- If `M_c[i,j] = 0` (marginal): accumulate linear attention statistics (line 13). Simply `H_i += h_j` and `Z_i += z_j`. This is a matrix addition of cost `O(d²)`, far cheaper than the `O(b_q b_kv d)` sparse attention computation.
+- If `M_c[i,j] = -1` (negligible): do nothing — skip this block entirely.
+- After all key blocks: finalize (line 16). Normalize the sparse output: `O_i^s = diag(l_i)^(-1) O_i^s`. Compute the linear output: `O_i^l = φ(Q_i) H_i / (φ(Q_i) Z_i)`. Store the log-sum-exp `L_i = m_i + log(l_i)` for the backward pass.
+
+**Step 3: Output combination (not in Algorithm 1 but described in Equation 6).** After the loop, apply the learned projection to all `O_i^l` and sum with `O_i^s`: `O = O^s + Proj(O^l)`.
+
+**Why this algorithm structure — why not separate kernels:** the fused design avoids the overhead of launching separate GPU kernels for sparse attention and linear attention, and avoids materializing intermediate results in global memory. The `h_j` and `z_j` precomputations are done once and reused across all query blocks. The online softmax state and the linear attention accumulators `H_i` and `Z_i` co-evolve as the key block loop progresses, enabling a single pass over the key-value blocks per query block. This fusion is what makes the theoretical FLOP reduction translate to actual wall-clock speedup — without it, the overhead of kernel launches and memory traffic between separate sparse and linear kernels could consume much of the savings.
+
+---
+
+#### Backward Pass
+
+The backward pass (Algorithm 2) computes gradients of the loss with respect to `Q, K, V, Q_φ, K_φ`, enabling end-to-end training. It is also implemented as a single fused GPU kernel. The backward computation mirrors the forward structure, with gradients flowing through both the sparse and linear pathways.
+
+**Sparse attention gradients (Equation 7):** the gradient computation for the sparse component follows FlashAttention's backward derivation. Given the gradient of the loss with respect to the sparse output `dO^s` (where the prefix `d` denotes a gradient, e.g., `dO^s = ∂ℓ/∂O^s`):
+
+$$dP_{ij} = dO^s_{ij} V_j^\top$$
+
+$$D_i^s = \text{rowsum}(dO_i^s \odot O_i^s)$$
+
+$$dS_{ij} = P_{ij} \odot (dP_{ij} - D_i^s)$$
+
+$$dQ_i \leftarrow dQ_i + dS_{ij} K_j$$
+
+$$dK_j \leftarrow dK_j + dS_{ij}^\top Q_i$$
+
+$$dV_j \leftarrow dV_j + P_{ij}^\top dO^s_i$$
+
+where `dP_ij ∈ R^{b_q × b_kv}` is the gradient with respect to the post-softmax attention weights, `D_i^s ∈ R^{b_q × 1}` is a per-query scaling factor derived from the gradient-output dot product (a consequence of the softmax Jacobian), `dS_ij ∈ R^{b_q × b_kv}` is the gradient with respect to the pre-softmax scores, and `dQ_i, dK_j, dV_j` are the accumulated parameter gradients.
+
+**What it computes — in words:** first, the gradient of the loss with respect to the attention weights `P_ij` is computed by multiplying the output gradient `dO^s_ij` by the transposed value block `V_j^T` — this traces how changes in attention weights would affect the output. Second, the softmax Jacobian is applied: the raw score gradient `dS_ij` is computed as `P_ij ⊙ (dP_ij - D_i^s)`, which accounts for the fact that softmax couples all attention weights in a row (increasing one weight decreases others due to normalization). The term `D_i^s` captures this coupling. Third, the score gradient is backpropagated to `Q_i` and `K_j` through the dot-product operation: `dS_ij` times `K_j` gives how `Q_i` must change, and `dS_ij^T` times `Q_i` gives how `K_j` must change. Finally, `dV_j` is computed from `dO^s_i` through the value weighting. These gradients are accumulated across blocks — a query block `Q_i` may receive contributions from multiple key blocks where `M_c[i,j] = 1`.
+
+**Linear attention gradients (Equation 8):** the gradient computation for the linear component backpropagates through `O^l` to `Q_φ, K_φ, V`:
+
+$$dH_i = \left(\frac{Q_i^\phi}{Q_i^\phi Z_i}\right)^\top dO_i^l$$
+
+$$D_i^l = \text{rowsum}(dO_i^l \odot O_i^l)$$
+
+$$dZ_i = -\left(\frac{Q_i^\phi}{Q_i^\phi Z_i}\right)^\top D_i^l$$
+
+$$dQ_i^\phi = (dO_i^l H_i^\top - D_i^l Z_i^\top) / (Q_i^\phi Z_i)$$
+
+$$dK_j^\phi = V_j (dH_i)^\top + (dZ_i)^\top$$
+
+$$dV_j = K_j^\phi dH_i$$
+
+where `dH_i ∈ R^{d×d}` is the per-query-block gradient of the accumulated value statistic, `D_i^l ∈ R^{b_q × 1}` is analogous to `D_i^s` for the linear attention normalization, `dZ_i ∈ R^{d×1}` is the gradient of the per-query-block normalization accumulator, and `dQ_i^φ, dK_j^φ, dV_j` are the accumulated gradients with respect to the feature-mapped queries, feature-mapped keys, and values respectively.
+
+**What it computes — in words:** the chain rule is applied backward through the linear attention computation. First, the gradient flows to `H_i` (the accumulated value statistic) and `Z_i` (the normalization accumulator) via `dO_i^l`. The structure mirrors the forward pass: `H_i` was used as `φ(Q_i) H_i` in the numerator, so its gradient involves `φ(Q_i)`. `Z_i` was used as `φ(Q_i) Z_i` in the denominator, so its gradient involves the quotient rule (hence the negative sign and the `D_i^l` term, which emerges from the derivative of division). Second, gradients flow to `φ(Q_i)` through both the numerator and denominator paths. Third, gradients flow to `K_j^φ` and `V_j` through the per-block contributions to `H_i` and `Z_i` — note that `dK_j^φ` and `dV_j` aggregate `dH_i` and `dZ_i` across query blocks (Algorithm 2, lines 13–14 and 17–18), which is the dual of the forward pass where `h_j` and `z_j` were accumulated into per-query-block `H_i` and `Z_i`.
+
+**Backward algorithm structure (Algorithm 2):** The backward pass is organized into two nested loops — first over query blocks (lines 3–6) to precompute `dH_i` and `dZ_i`, then over key blocks (lines 7–18) to propagate these to `K_j^φ` and `V_j` while also computing sparse attention gradients. The structure mirrors the forward pass but in reverse: forward processes query blocks in the outer loop, backward processes them first for linear precomputation and then in the inner loop for both sparse and linear gradient accumulation.
+
+**Why this form — fused backward kernel:** like the forward pass, the backward is fused into a single kernel. The alternative — separate sparse and linear backward kernels — would require storing and reloading intermediate values (`O^s, O^l, H_i, Z_i, L_i`) from global memory, adding latency. The fused kernel keeps these in registers or shared memory and applies both gradient computations in a single pass over the key blocks.
+
+---
+
+#### Fine-Tuning Procedure
+
+Applying SLA to a pretrained DiT model requires replacing the standard attention operations with SLA and fine-tuning the model. The paper emphasizes that this fine-tuning is **essential** — the model must adapt to having only ~5% of attention weights computed exactly, with the remainder either approximated via linear attention or skipped.
+
+**Training data and setup:** for video generation experiments, the authors use a private dataset of 20,000 5-second videos at 480p resolution. The model is Wan2.1-1.3B (Wan et al., 2025), a 1.3 billion parameter DiT for text-to-video generation. The standard attention in all transformer layers is replaced with SLA. Fine-tuning runs for **2,000 steps** with a **batch size of 64**, which the paper estimates at "less than 0.1% of the cost of pretraining" — pretraining typically involves 10^5–10^6 steps with batch sizes of 10^3–10^4.
+
+**Hyperparameters:** the paper does not specify the optimizer, learning rate, or learning rate schedule used for fine-tuning, only the number of steps and batch size. The SLA-specific hyperparameters are as stated: block size `b_q = b_kv = 64`, critical threshold `k_h = 5%`, negligible threshold `k_l = 10%`, and feature map `φ = softmax` (based on the ablation in Table 2 showing softmax outperforms ELU+1 and hedgehog).
+
+**What is being fine-tuned:** all model parameters are updated during fine-tuning, not just the SLA-specific additions (the `Proj` matrix and potentially the feature map parameters). This allows the model to adapt its query/key/value projections, feed-forward networks, and layer normalization parameters to the new attention distribution. The paper's implicit argument, supported by the ablation L+S vs. SLA in Table 2, is that the learnable components alone (Proj) are insufficient without also adapting the base model parameters.
+
+**Why fine-tuning works with so few steps:** the pretrained model already knows how to generate videos; SLA is not changing the task or the architecture, only the *implementation* of attention. The fine-tuning objective is to make the model's behavior under SLA match its behavior under full attention as closely as possible. Since SLA preserves the critical attention weights exactly (via sparse FlashAttention) and only approximates the marginal ones, the signal from the pretrained model is largely preserved — the fine-tuning primarily needs to teach the model to compensate for the missing marginal attention signal using the linear attention pathway. The paper's results show that 2,000 steps suffice for this adaptation to achieve quality parity with full attention.
+
+**Contrast with trainable sparse baselines:** Sparge-T (trainable sparse attention without linear compensation) is also fine-tuned but only reaches 84% sparsity with worse quality than SLA at 95% (Table 1). This demonstrates that fine-tuning a sparse attention method helps (Sparge-T outperforms Sparge-F, the training-free version, in quality) but cannot overcome the fundamental limitation that dropped marginal weights cause information loss that no amount of parameter adaptation can fully recover. SLA's linear attention pathway provides a mechanism to *recover* some of that lost information, which is why it can push sparsity to 95% without quality loss.
+
+---
+
+#### Efficiency Optimizations in the GPU Kernel
+
+The paper describes three complementary optimizations (Appendix A.3) that address specific efficiency bottlenecks at different sparsity regimes. These are engineering contributions that make the theoretical FLOP savings realizable as wall-clock speedup.
+
+**Lookup table for high sparsity:** when `M_c` is highly sparse (sparsity > 90%, which is SLA's operating regime), iterating over all `T_n` key blocks to check `M_c[i,j]` values causes significant memory overhead — the mask itself must be read from memory, and most entries will trigger the "do nothing" or "cheap addition" paths, wasting bandwidth. The optimization preprocesses the nonzero positions (both critical and marginal) of each row and column into a lookup table. During computation, the inner loop iterates only over the entries in the lookup table rather than all `T_n` positions. This transforms the computation from `O(T_n)` per query block (with mostly wasted iterations) to `O(#critical + #marginal)` per query block.
+
+**Pre-aggregation for linear attention:** the linear attention forward pass (Algorithm 1, line 13) requires summing `h_j` and `z_j` over all marginal key blocks. When marginal blocks constitute ~85% of all blocks, this means 85% of the inner loop iterations perform a matrix addition. In the backward pass (Algorithm 2, line 13–14), the same issue arises when aggregating `dH_i` and `dZ_i` across query blocks. The optimization precomputes the global sums `H_global = Σ_j h_j` and `Z_global = Σ_j z_j` over ALL key blocks (not just marginal), and then subtracts the contributions from critical and negligible blocks:
+
+$$H_i = H_{\text{global}} - \sum_{j: M_c[i,j] \neq 0} h_j$$
+
+$$Z_i = Z_{\text{global}} - \sum_{j: M_c[i,j] \neq 0} z_j$$
+
+Since critical + negligible blocks constitute only ~15% of all blocks (5% critical + 10% negligible), this replaces ~85% additions with ~15% subtractions — a significant reduction in the number of operations, especially in the backward pass where these accumulations happen for every query block.
+
+**Method of Four Russians for intermediate regimes:** when the number of marginal blocks is neither very small nor very large (e.g., around 50%), neither the lookup table nor the subtraction approach provides optimal efficiency. The Method of Four Russians (Arlazarov et al., 1970) is a combinatorial precomputation technique: group the `h_j` and `z_j` for `g` consecutive key blocks, precompute all `2^g` possible subset sums within each group, and store them in a lookup table. During the forward pass, any subset of the `g` blocks can be obtained by a single table lookup (with the bitmask of which blocks are marginal serving as the lookup key), reducing the computation by a factor of `1/g`. The paper mentions this technique but does not specify the value of `g` used or whether it was necessary for their reported speedups (since SLA operates at >90% sparsity, the pre-aggregation approach presumably dominates).
+
+**Impact on kernel performance:** these optimizations contribute to the measured 13.7× speedup in the attention kernel (Figure 6a). The theoretical FLOP reduction is 20× (95% sparsity), but without these memory-access optimizations, the achieved speedup would be lower due to the overhead of mask scanning and redundant linear attention accumulations. The paper does not provide an ablation isolating the contribution of each optimization to the overall speedup.
 
 ## 4. Key Insights and Innovations
-- Sparse-few, low-rank-many structure of attention in diffusion transformers
-  - Observation: Less than 10% of attention weights are large and have high rank; the remaining >90% form a matrix of extremely low rank (Section 3.2; Figure 3).
-  - Evidence: In one sample, full/stable ranks are “Rank = 6226” for full, “Top-8%, Rank = 6230,” but “Bottom-92%, Rank = 9” (Figure 3).
-  - Significance: Explains why linear attention alone fails (full attention is high rank) and why sparse-only struggles beyond ~90% sparsity (the “middle” mass still matters; Figure 1 right).
-- Three-way classification of blocks with a compressed attention predictor
-  - Novel classification of attention blocks into critical, marginal, negligible using `Pc` (Eqs. (2)–(3)). This is neither hand-crafted nor full-resolution—coarse but trainable.
-  - Significance: Enables 95% block sparsity at moderate sequence length (~30K tokens) while preserving quality (Table 1; Section 6.2).
-- Learnable compensation rather than strict approximation for the marginal mass
-  - The linear component is not asked to exactly reproduce masked-out weights; it learns to compensate for their aggregate influence (Section 4.2 “Insight”).
-  - Significance: Overcomes known failures of linear attention in diffusion (Limitation L1; Table 2 “Linear Only” fails) by combining it with sparse exact computation and a small projection.
-- End-to-end fused kernel and practical training recipe
-  - SLA provides fused forward/backward kernels (Algorithms 1–2) and system-level tricks (Appendix A.3) that translate theoretical savings into wall-clock speedups:
-    - “13.7× speedup in the attention kernel” and “2.2× end-to-end speedup” (Figure 6).
-  - Fine-tuning cost is small: “2,000 steps with batch size 64,” <0.1% of typical pretraining cost (Section 6.3).
 
-These are fundamental innovations (a new structural decomposition and hybrid mechanism) backed by engineering contributions (kernel fusion and optimizations) rather than incremental tweaks to a single attention variant.
+### Innovation 1: The Attention Matrix Is Structurally Heterogeneous — High-Rank Critical Weights, Low-Rank Marginal Weights
+
+The paper's foundational intellectual contribution is not a method but a **diagnostic discovery**: the attention weight matrix in Diffusion Transformers decomposes naturally into two components with fundamentally different spectral properties, and this heterogeneity explains the failure modes of existing acceleration techniques while pointing directly to a solution.
+
+Prior to this work, the field treated the attention matrix monolithically. Sparse attention methods assumed all weights could be thresholded uniformly — below a certain magnitude, weights are "unimportant" and can be dropped; above it, they must be computed exactly (Li et al., 2025; Zhang et al., 2025a;c; Wu et al., 2025). Linear attention methods assumed the entire attention operation could be approximated by a low-rank kernelization (Choromanski et al., 2020; Katharopoulos et al., 2020; Qin et al., 2024). Both views were partially correct and partially wrong, but the field lacked the diagnostic framework to understand *why* and *where* each approach fails.
+
+SLA's key observation (Figure 3) resolves this: when the attention weights `P` are partitioned by magnitude into the top ~8% and bottom ~92%, the top fraction retains essentially the full stable rank of the matrix (~6230 vs. ~6226 for full attention), while the bottom fraction collapses to a stable rank of only 9. This is a **structural phase transition**, not a gradual decay — there is a qualitative difference between the critical weights (high-magnitude, high-rank, carrying the expressive structure of attention) and the marginal weights (low-magnitude, low-rank, collectively significant but individually diffuse).
+
+What makes this observation transformative rather than incremental:
+
+1. **It explains contradictory results in the literature.** Why does linear attention work for image DiTs (Xie et al., 2024; Zhu et al., 2025) but catastrophically fail for video DiTs (Table 2: VR drops from +0.059 to −0.213)? Because the full attention matrix, including the high-rank critical component, has far higher rank than `d` in video models — rank ~6226 vs. head dimension ~128. Linear attention simply cannot represent this structure. Why do sparse attention methods plateau at 40–60% sparsity (Limitation L2)? Because the marginal ~40% of weights, while individually small, collectively form a matrix with non-negligible norm — dropping them introduces ~33% relative error (Figure 1, right). Prior work attributed these failures to implementation details or domain mismatch; this paper identifies the underlying structural cause.
+
+2. **It reframes the problem from "which method is best" to "how do we decompose the matrix."** Before SLA, the efficient attention literature was a competition between methods — sparse vs. linear, training-free vs. training-aware. The decomposition in Figure 3 shows this is a false choice: the matrix *itself* demands different computational strategies for different components. The right question is not "should we use sparse or linear attention?" but "how do we identify the high-rank and low-rank components and apply the appropriate acceleration to each?"
+
+3. **It provides a principled answer to "how much sparsity is possible?"** The stable rank of the bottom 92% (only 9) indicates that linear attention — bounded to rank at most `d` (far larger than 9) — has ample capacity to approximate this component. The sparsity ceiling is therefore determined not by when the dropped weights become "too large" (the sparse attention view) but by when the residual matrix becomes "too high-rank for linear attention to capture." This is a more precise and predictive criterion, and it suggests that the 95% sparsity achieved in this paper may not be the fundamental limit — if the rank of the residual remains low at even higher sparsity (e.g., keeping only the top 2–3% of weights), even greater savings might be possible.
+
+4. **It is supported by a quantitative ablation, not just visual inspection.** Figure 3 reports specific stable rank values (6226, 6230, 9), making the decomposition falsifiable and measurable. The L+S ablation in Table 2 (sparse + linear without fine-tuning, achieving VR −0.105) demonstrates that merely knowing about the decomposition is insufficient — the model must adapt to it — but the decomposition itself is the necessary first step that prior work missed.
+
+This insight is **fundamental rather than incremental**: it changes the conceptual model of what the attention matrix "is" from a uniform entity to a heterogeneous structure, and it provides a diagnostic tool (SVD on magnitude-partitioned weights) that can guide future work on efficient attention beyond the specific SLA implementation.
+
+---
+
+### Innovation 2: Linear Attention as Learned Compensation, Not a Drop-In Approximation
+
+The second intellectual move that distinguishes SLA from prior work is its **reconceptualization of what linear attention is doing** in a hybrid system. The paper explicitly rejects the naive view that linear attention approximates the output of softmax attention on the marginal weights, and instead frames it as a **learnable compensatory signal** that the model adapts to use during fine-tuning.
+
+This distinction is stated directly in Section 4.2:
+
+> "Linear attention in SLA does not approximate the output corresponding to marginal attention weights, but serves as a learnable compensation that enhances the effectiveness of sparse attention."
+
+This is not a minor implementation detail — it fundamentally changes the research question. The standard approach in the efficient attention literature has been to ask: "Can we design a cheaper function that approximates the output of full attention with bounded error?" Both sparse attention (which answers "yes, by dropping near-zero weights") and linear attention (which answers "yes, by kernelizing softmax") operate within this approximation paradigm. The evaluation criterion is fidelity to the original attention output — how close is the approximation, measured by some metric like L1 error or perplexity?
+
+SLA's approach is qualitatively different. It asks: "Can we provide the model with an alternative computational pathway that, after fine-tuning, enables it to achieve the same downstream task performance as full attention?" The linear attention component does not need to match the numerical output of softmax attention on marginal weights — it needs to provide a signal that, when transformed by `Proj` and combined with the sparse output, allows the model to generate videos of equal quality. The learned projection `Proj` is not a refinement of the approximation; it is a mechanism for the model to **learn how to use** the linear signal.
+
+Why this is significant beyond the immediate performance gain:
+
+1. **It explains why L+S (naive summation) fails while SLA succeeds.** Table 2 shows L+S achieves Vision Reward −0.105 vs. SLA's +0.048, despite identical computational patterns. The difference is not in the approximation quality of the linear component — it's in whether the model has been trained to understand and compensate for the fact that part of its attention is now operating through a fundamentally different mechanism. The failure of L+S demonstrates that fidelity of approximation (matching the numerical output of full attention) is the *wrong objective* — what matters is whether the downstream layers can learn to process the combined sparse+linear signal effectively.
+
+2. **It reframes fine-tuning from "recovery" to "adaptation."** A natural interpretation of fine-tuning SLA would be: the linear attention introduces approximation error, and fine-tuning corrects for this error so the model's behavior matches full attention. But this view is inconsistent with the evidence: if fine-tuning merely corrected for approximation error, we would expect the linear attention to be designed to minimize that error initially (e.g., by choosing the feature map `φ` to best approximate softmax weights). Instead, the paper's ablation of feature maps (Table 2: softmax, ELU+1, hedgehog) shows that the choice matters for final quality, suggesting that different feature maps provide different *types* of compensatory signals, not just different approximation accuracies. The model learns to exploit whatever signal the linear pathway provides, not to correct for its deviation from full attention.
+
+3. **It opens the door to deliberately "wrong" approximations that are more useful.** If the linear attention component is compensation rather than approximation, then future work need not constrain itself to feature maps that closely mimic softmax. A deliberately non-softmax feature map might provide a signal that is *more useful* for compensation — for example, one that emphasizes global context or suppresses high-frequency noise — even if it is a worse approximation of the original attention weights. The paper does not explore this direction, but the conceptual framing enables it.
+
+4. **It parallels developments in other areas of deep learning.** The distinction between "approximating a function" and "providing a learnable alternative pathway" echoes the evolution of network pruning (from approximating the dense network's outputs to training sparse subnetworks from scratch), quantization (from minimizing quantization error to quantization-aware training where the model adapts to discrete weights), and knowledge distillation (from matching teacher logits to using the teacher as a learnable training signal). In each case, the field's initial approach was to minimize fidelity loss, but the ultimate gains came from letting the model adapt to the modified computation. SLA applies this lesson to efficient attention.
+
+This insight is **incremental in mechanism but fundamental in framing**. The specific techniques — linear attention with a learned projection, fine-tuning — are straightforward. But the *rationale* for why they work, and what that implies about how to design hybrid attention systems, changes how future researchers should approach the problem: not "how can I replace full attention with a cheaper approximation?" but "how can I provide the model with a cheaper computational substrate that it can learn to use effectively?"
+
+---
+
+### Innovation 3: A Unified Computational Model That Escapes the Sparse-Linear Tradeoff Through Three-Way Classification
+
+The third conceptual contribution is SLA's **three-way classification of attention weights into critical, marginal, and negligible**, which creates a computational spectrum rather than the binary choice (compute vs. skip) that constrained prior sparse attention methods. This is not merely "adding a third category" — it is a recognition that the cost-importance landscape of attention weights has three distinct regimes that demand different computational strategies.
+
+Prior sparse attention methods (VSA, VMoBa, SparseAttn, Radial Attention) operate on a binary mask: either a weight block is computed (at full `O(N²)` cost) or it is skipped (zero cost). This creates an unavoidable tension: lowering the threshold to include more weights improves quality but reduces sparsity; raising the threshold increases sparsity but degrades quality. The paper's Figure 1 (right) quantifies this directly: at 45% sparsity (keeping 55% of weights), error is <3% — acceptable. At 92% sparsity (keeping 8%), error jumps to ~33% — unacceptable. The intermediate weights (the yellow column in Figure 1, representing values between `1/(100N)` and `1/N`) are in a dead zone: individually small enough that computing them all costs too much, collectively large enough that dropping them all loses too much.
+
+SLA's innovation is to recognize that this dead zone has a property that breaks the tradeoff: the marginal weights are **low-rank**. Linear attention, which costs `O(N)` per block-pair (essentially a matrix addition) rather than `O(N²)`, provides a computational strategy that is far cheaper than full attention but far more informative than skipping. By introducing the marginal category and mapping it to linear attention, SLA decouples the quality-sparsity tradeoff into two separate decisions:
+
+- **Critical threshold `k_h`**: determines how many weights get full attention. This is chosen to capture the high-magnitude, high-rank component (5% in experiments). Increasing this improves quality (by computing more weights exactly) but increases cost — a standard accuracy-efficiency tradeoff, but starting from a much lower baseline (5% vs. 50%+ in prior work).
+
+- **Negligible threshold `k_l`**: determines how many weights are skipped entirely. This is chosen to discard only weights that contribute negligibly (<3% error at 45% sparsity). Increasing this improves efficiency but eventually discards weights whose absence cannot be compensated — another tradeoff, but less severe because linear attention captures the middle ground.
+
+The marginal region absorbs the tension: weights that would previously have forced a choice between quality loss (if skipped) and efficiency loss (if computed) are now handled at low cost. The result is that SLA achieves 95% effective sparsity (since linear attention costs ~0.5% of full attention) while preserving quality, whereas prior methods maxed out at 85–89% sparsity with *worse* quality (Table 1).
+
+Why this is a conceptual advance rather than just an engineering trick:
+
+1. **It identifies a new dimension in the design space for efficient attention.** Prior work explored "how to choose which weights to compute" (sparsity patterns: block-sparse, stride-sparse, locality-based, threshold-based) and "how to compute weights more cheaply" (linear attention, locality-sensitive hashing, clustering). SLA introduces a third axis: "how to categorize weights into computational strategies based on their structural properties." This is a meta-design dimension — it's not about improving sparse attention or linear attention individually, but about composing them via a classification mechanism.
+
+2. **It provides a framework for understanding why prior methods plateaued.** The binary compute/skip choice of sparse attention implicitly assumes that all non-skipped weights are equally important and require the same computational treatment. SLA's analysis shows this assumption is false: within the non-skipped weights, there is a high-rank subset that genuinely requires full attention and a low-rank subset that can be handled more cheaply. Prior methods plateaued because they paid full cost for the low-rank subset, limiting achievable sparsity to the fraction of weights they could afford to skip (40–60% in practice). SLA pays linear cost for that subset, enabling sparsity to jump to 95%.
+
+3. **It is validated by the threshold ablation (Table 2).** Increasing `k_h` from 5% to 10% to 20% roughly doubles attention FLOPs at each step (from 2.73T to 5.38T to 10.65T) but produces negligible quality improvement (VR: 0.048, 0.057, 0.059). This confirms that the critical component is genuinely small — the model extracts almost all the benefit of exact attention from the top 5% of weights. The remaining 15–95% of weights (when `k_h=5%`) are well-served by linear attention. This finding is specific to the decomposition, not an assumption: it could have turned out that 20% of weights were critical, in which case the advantage over sparse attention would be smaller. The empirical result that 5% suffices is what makes SLA's approach so effective.
+
+This innovation is **fundamental in its redefinition of the efficient attention design space**, though the specific implementation (three categories, threshold-based classification) could be refined — for example, through learned classification rather than magnitude-based thresholds, or through more than three categories with a continuum of computational strategies. The core idea — that attention weights should be categorized by structural properties and mapped to computational strategies of appropriate cost — is likely to persist beyond the specific SLA instantiation.
+
+---
+
+### Innovation 4: Empirical Proof That 95% Sparsity Is Achievable Without Quality Loss — With Clear Boundary Conditions
+
+The paper's fourth contribution is the **empirical demonstration** that sparsity beyond 90% is attainable in video DiTs without generation quality degradation, accompanied by a clear characterization of the conditions under which this holds. This is not a method contribution but an existence proof that changes what the field believes is possible.
+
+Prior to SLA, the state-of-the-art for trainable sparse attention in DiTs was VSA at 89% sparsity (Zhang et al., 2025c) and VMoBa at 85% sparsity (Wu et al., 2025). Both showed visible quality degradation below full attention — Table 1 shows VSA achieves Vision Reward −0.069 and Aesthetic Quality 51.9 vs. Full Attention's +0.059 and 56.1. The implicit assumption in the field was that quality must degrade as sparsity increases, and the practical question was how to minimize this degradation at a given sparsity budget. SLA's results — 95% sparsity with Vision Reward +0.048 and Aesthetic Quality 55.9, statistically indistinguishable from Full Attention — break through this assumed quality-sparsity curve.
+
+What makes this finding significant beyond the specific numbers:
+
+1. **It establishes a new Pareto frontier for efficient DiT attention.** Table 1 shows SLA simultaneously achieves the highest sparsity (95%) AND the highest quality (Vision Reward 0.048, better than all baselines including those at lower sparsity). This is not a tradeoff improvement (more sparsity for less quality) but a Pareto improvement (more sparsity AND more quality). The mechanism — linear compensation for marginal weights — not only enables higher sparsity but also provides a richer signal than simply keeping those weights at full cost would, because the model learns to use the linear pathway adaptively during fine-tuning.
+
+2. **It demonstrates that the quality-sparsity relationship is non-monotonic across methods.** Sparge-T at 84% sparsity achieves Vision Reward +0.014 — worse than SLA at 95%. Sparse Only at 85% achieves −0.073 — substantially worse. The "how" of achieving sparsity matters more than the sparsity percentage itself. This implies that sparsity benchmarks that report only percentage and quality, without describing the mechanism for handling non-computed weights, are insufficiently informative. Two methods at 90% sparsity could have dramatically different quality depending on whether the skipped weights are discarded or compensated.
+
+3. **It provides a counterpoint to the narrative that fine-tuning is prohibitively expensive for video DiTs.** SLA's fine-tuning uses only 2,000 steps with batch size 64, which the paper estimates at under 0.1% of pretraining cost. Prior trainable sparse attention methods for DiTs (VSA, VMoBa) also used fine-tuning, but the practical concern in the community has been that any method requiring retraining is less attractive than training-free approaches (SparseAttn, Radial Attention). SLA's results shift the calculus: if 0.1% of pretraining cost buys 95% sparsity with lossless quality — vs. training-free methods achieving only 85% sparsity with visible quality degradation (Sparge-F in Figure 5) — then fine-tuning is not just acceptable but *preferable*.
+
+4. **The boundary conditions are clearly stated and tested.** The paper does not claim universal 95% sparsity. It demonstrates the result on Wan2.1-1.3B at ~30K sequence length and on LightningDiT for image generation at 87.5% sparsity (Table 3, where SLA achieves FID 31.49 vs. Full Attention 31.87 — slightly better despite ~7.5× less attention compute). The ablation of `k_h` (Table 2) shows that pushing the critical fraction below 5% is not explored, and the paper does not claim 95% is the limit. The rank analysis (Figure 3) provides a diagnostic for predicting when the approach should work: if removing the top-k% of weights produces a residual with stable rank ≪ `d`, linear attention should be effective. This gives future work a tool for assessing transferability to other models and sequence lengths.
+
+This contribution is **empirically fundamental** — it provides a data point that redefines the ceiling of what's possible — though its generality to other DiT architectures, sequence lengths, and generation tasks remains to be established. The paper's image generation result (Table 3) is a promising step toward generality, but the video result on a single model is the primary evidence.
 
 ## 5. Experimental Analysis
-Evaluation setup
-- Models and data
-  - Video: Wan2.1-1.3B diffusion transformer; fine-tuned on 20,000 five-second videos at 480p (Section 6.1). Typical sequence length is 30K tokens (Section 1).
-  - Image: LightningDiT-1.0B on ImageNet 512×512 (Appendix A.2).
-- Metrics (Section 6.1)
-  - Video quality: VBench dimensions—Imaging Quality (`IQ`), Overall Consistency (`OC`), Aesthetic Quality (`AQ`), Subject Consistency (`SC`)—plus VisionReward (`VR`), Aesthetic Video (`VA`), and Technical Video (`VT`).
-  - Efficiency: attention FLOPs; attention kernel FLOPS; end-to-end latency (Figure 6).
-  - Image quality: FID.
-- Baselines
-  - Trainable sparse methods: `VSA`, `VMoBa`.
-  - Training-free sparse (`Sparge-F`) and trainable sparse (`Sparge-T`) variants.
-  - Ablations: `Linear Only`, `Sparse Only`, and naïve sum `L+S` (Section 6.1).
-- SLA hyperparameters
-  - `kh = 5%`, `kl = 10%`; `bq = bkv = 64`; activation `φ = softmax` (Section 6.1; Table 2 ablation).
 
-Main quantitative results
-- Quality vs. complexity (Table 1)
-  - Full attention: `VA 76.78`, `VT 82.88`, `IQ 62.5`, `OC 23.3`, `AQ 56.1`, `SC 93.0`, `VR 0.059`, `FLOPs 52.75T`, `Sparsity 0%`.
-  - SLA (95% sparsity): `VA 76.96`, `VT 83.92`, `IQ 62.2`, `OC 23.6`, `AQ 55.9`, `SC 93.1`, `VR 0.048`, `FLOPs 2.74T`.
-  - Competing sparse methods at 84–89% sparsity show worse quality; e.g., `VSA (89%)` has `VR −0.069` and lower `VA/VT/IQ` (Table 1).
-- Kernel and end-to-end speed (Figure 6)
-  - Forward kernel: “13.7× speedup over FlashAttention2” at 95% sparsity.
-  - Backward kernel: “6.8× speedup over FlashAttention2.”
-  - End-to-end: attention latency drops “from 97s to 11s,” yielding a “2.2×” overall speedup.
-- Why sparse-only can’t push sparsity to 95% without hurting quality (Figure 1)
-  - Distributional facts in Wan2.1 attention (Figure 1 left):
-    - Only “~8.1% of weights are larger than 1/N.”
-    - “~45% are below 1/(100N).”
-  - Error analysis (Figure 1 right):
-    - Dropping the smallest 45% causes “<3%” relative L1 error, but keeping only the largest 8.1% leads to “>33%” error.
-- Qualitative comparisons (Figures 2, 5, 7)
-  - SLA at 95% sparsity matches the visual quality of full attention.
-  - Linear-only and sparse-only baselines degrade severely (Figure 2; Table 2 “Linear Only”).
-- Ablations (Table 2)
-  - Fusion matters: `Sparse Only (85%)` has `VA 64.00`, while SLA (95%) recovers `VA 76.96`.
-  - Activation in linear path: `softmax` best; `elu+1` and `hedgehog` slightly worse.
-  - Critical block fraction: `kh=5%` achieves near-full quality with much less compute; increasing to `kh=10%` or `20%` reduces sparsity and does not improve metrics consistently.
-- Image generation (Appendix A.2; Table 3)
-  - SLA reaches 87.5% sparsity and slightly improves `FID` over full attention (`31.49` vs. `31.87`), outperforming 2D variants of `VSA` and `VMoBa`.
+### Evaluation Methodology
 
-Strength of evidence
-- The paper evaluates both kernel-level speed and end-to-end latency, includes diverse quality metrics (VBench + VR), and provides ablations that isolate each architectural choice (Table 2).
-- The claim of “negligible” linear attention cost in video models is supported by a concrete example: “less than 0.5% of full attention” in Wan2.1 (Section 3.1, Figure 2 caption).
-- Quote the headline results:
-  > “SLA reduces attention computation by 95% without degrading end-to-end generation quality” (Abstract, Section 1).
-  > “13.7× speedup in attention computation and a 2.2× end-to-end speedup on Wan2.1-1.3B” (Abstract; Figure 6).
+- **Dataset.** For video generation, the paper uses a private dataset collected from Pexels and Common Crawl, consisting of 20,000 5-second videos at 480p resolution, used for fine-tuning (Section 6.1). For image generation (Appendix A.2), it uses ImageNet (Deng et al., 2009) at 512 × 512 resolution. Evaluation metrics for video are computed on generated outputs; the paper does not specify a held-out test split for the private video dataset, so the evaluation is on outputs from the fine-tuned model but the exact evaluation set is not detailed.
+
+- **Base model(s).** The primary base model is Wan2.1-1.3B (Wan et al., 2025), a 1.3 billion parameter Diffusion Transformer for text-to-video generation, operating at approximately 30K sequence length. For image generation experiments in Appendix A.2, the paper uses LightningDiT-1p0B/1 (Yao et al., 2025), a 1.03B parameter DiT for class-conditional image generation. Wan2.1-1.3B is chosen because it represents a state-of-the-art open video generation model where attention is the documented computational bottleneck, making it a strong testbed for attention acceleration claims.
+
+- **Metrics.** For video quality, the paper uses seven metrics (Section 6.1): (1) **Imaging Quality (IQ)**, (2) **Overall Consistency (OC)**, (3) **Aesthetic Quality (AQ)**, and (4) **Subject Consistency (SC)** from VBench (Zhang et al., 2024a); (5) **Vision Reward (VR)** from Xu et al. (2024) for human preference evaluation; (6) **Aesthetic Video Quality (VA)** and (7) **Technical Video Quality (VT)** from Liu et al. (2023). For image quality, it uses **FID** (Fréchet Inception Distance) following Yao et al. (2025). For computational efficiency, it uses **FLOPs** (floating-point operations, lower is better) for attention computation complexity and **FLOPS** (floating-point operations per second, defined as `O(full attention) / t` where `t` is attention latency) for kernel efficiency. End-to-end generation latency is measured in seconds.
+
+- **Baselines.** The paper compares against seven baselines (four external, three internal ablations). **External baselines**: (1) **VSA** (Zhang et al., 2025c) — a trainable sparse attention method for video DiTs; (2) **VMoBa** (Wu et al., 2025) — a mixture-of-block attention for video diffusion; (3) **Sparge-F** (Zhang et al., 2025a) — a training-free sparse attention method; (4) **Sparge-T** — a trainable variant of SparseAttn implemented by the authors since no official trainable implementation exists. **Internal ablation baselines**: (5) **Linear Only** — replacing all attention with linear attention at 100% sparsity; (6) **Sparse Only** — using only the sparse attention component of SLA; (7) **L+S** — directly summing the outputs of Linear Only and Sparse Only without SLA's learnable projection or fine-tuning.
+
+- **Generation budget / compute accounting.** Attention computation is measured in **FLOPs (floating-point operations)** , specifically the total FLOPs for attention across the entire model for a single generation. Full attention on Wan2.1-1.3B costs 52.75T FLOPs (Table 1). SLA at 95% sparsity reduces this to 2.73–2.74T FLOPs, a ~19.3× reduction. For kernel speed, FLOPS is computed as `O(full attention cost) / (measured latency)`, which normalizes for different computational patterns. For end-to-end latency, the breakdown in Figure 6b separates attention time from "others" (all non-attention operations), using wall-clock seconds on an RTX 5090. The sparsity percentage reported is `1 − (critical blocks / total blocks)`, but this understates effective sparsity since marginal (linear attention) blocks cost only ~0.5% of full attention blocks — SLA's 95% reported sparsity corresponds to 5% critical (full attention), 85% marginal (linear attention), and 10% negligible (skipped).
+
+- **Cross-validation / statistical protocol.** The paper does not report any cross-validation, statistical significance tests, or confidence intervals for its quality metrics. For the fine-tuning data, the 20,000 videos are described as a "private dataset" without details on train/validation splits or whether the evaluation prompts are from the training distribution. The comparison against baselines uses single fine-tuning runs — there is no mention of multiple seeds or error bars. For VBench metrics, the paper does not specify how many videos were generated per method for evaluation, which affects the reliability of the reported quality numbers given that VBench metrics typically require substantial sample sizes for stable estimates.
+
+---
+
+### Main Quantitative Results
+
+#### Video Generation Quality at 95% Sparsity
+
+The headline result comparing SLA to Full Attention and all sparse baselines appears in **Table 1**. SLA at 95% sparsity achieves quality metrics that are statistically indistinguishable from Full Attention across all seven quality dimensions, while reducing attention FLOPs from 52.75T to 2.74T (a 19.3× reduction):
+
+| Method | Sparsity | FLOPs | VA ↑ | VT ↑ | IQ ↑ | OC ↑ | AQ ↑ | SC ↑ | VR ↑ |
+|---|---|---|---|---|---|---|---|---|---|
+| Full Attention | 0% | 52.75T | 76.78 | 82.88 | 62.5 | 23.3 | 56.1 | 93.0 | 0.059 |
+| SLA | 95% | 2.74T | 76.96 | 83.92 | 62.2 | 23.6 | 55.9 | 93.1 | 0.048 |
+
+SLA achieves numerically higher VA (76.96 vs. 76.78), VT (83.92 vs. 82.88), OC (23.6 vs. 23.3), and SC (93.1 vs. 93.0), while being marginally lower on IQ (62.2 vs. 62.5), AQ (55.9 vs. 56.1), and VR (0.048 vs. 0.059). These differences are small enough that the paper treats them as quality-preserving — the visual examples in Figure 5 and Figure 7 confirm that SLA-generated videos are qualitatively comparable to full attention outputs, showing coherent motion, consistent object identity, and aesthetic framing.
+
+**Comparison against sparse baselines.** SLA substantially outperforms all sparse attention baselines despite having higher sparsity:
+
+- **VSA at 89% sparsity**: achieves VA 55.37, VT 64.61, VR −0.069 — substantially worse than SLA on every metric by wide margins (e.g., VA gap of 21.6 points, VR gap of 0.117).
+- **VMoBa at 85% sparsity**: achieves VA 32.33, VT 35.79, VR −0.175 — catastrophic quality degradation relative to both Full Attention and SLA.
+- **Sparge-T at 84% sparsity**: achieves VA 73.83, VT 77.87, VR +0.014 — the best of the sparse baselines but still notably worse than SLA (VA gap of 3.13, VR gap of 0.034) at substantially lower sparsity.
+- **Sparge-F at 85% sparsity**: achieves VR −0.216, VA 0.002, VT 0.026 — essentially failed generation, demonstrating that training-free sparsity is insufficient at these sparsity levels.
+
+The critical comparison is SLA at 95% sparsity vs. Sparge-T at 84% sparsity. SLA uses less than half the attention FLOPs (2.74T vs. 7.38T) while producing better video quality across all metrics. This directly supports the paper's central claim: the linear attention compensation pathway enables higher sparsity AND higher quality simultaneously, breaking the expected quality-sparsity tradeoff.
+
+**Linear Only baseline confirms Limitation L1.** At 100% sparsity (linear attention only), quality collapses: VA 0.042, VT 0.099, VR −0.213, AQ 28.8, OC 3.6. This is the catastrophic failure of linear attention on video DiTs that the paper identifies as a key motivation (Limitation L1). The contrast with SLA (which uses linear attention for 85% of weights but preserves quality) demonstrates that linear attention's failure is not inherent to the mechanism but to its application — it fails when asked to replace the high-rank critical weights, but succeeds when restricted to the low-rank marginal weights.
+
+**L+S baseline confirms that naive fusion fails.** The L+S ablation (sparse + linear without SLA's learnable integration) at 90% sparsity achieves VA 29.65, VT 41.15, VR −0.105 — far worse than SLA despite using similar computational patterns (5.37T FLOPs vs. SLA's 2.73T). This validates the paper's claim that fine-tuning and the learnable projection are essential: simply summing sparse and linear attention outputs from a pretrained model degrades quality rather than enhancing it.
+
+**Visual evidence (Figures 5 and 7).** The generated video examples provide qualitative confirmation. SLA's outputs at 95% sparsity are visually comparable to Full Attention — the polar bear playing guitar, the Pacific coast waves, and the bird building a nest all show coherent motion, consistent textures, and proper object structure. Sparge-T at 84% shows subtle degradations. VSA, VMoBa, Sparge-F, and Linear Only show severe artifacts — for these, only single frames are shown because "their video quality is not sufficient" to present as videos.
+
+---
+
+#### Efficiency and Speedup Results
+
+**Figure 6** presents the kernel-level and end-to-end speedup measurements on an RTX 5090.
+
+**Attention kernel speedup (Figure 6a).** In the forward pass, SLA achieves a **13.7× speedup** over FlashAttention2 (the paper states "FlashAttn refers to FlashAttn2, the fastest available version on RTX5090"). SLA is also 1.93× faster than VSA at 95% sparsity and 3.36× faster than VMoBa at 95% sparsity in the forward pass. In the backward pass, SLA achieves a **6.8× speedup** over FlashAttention2, still outperforming VSA and VMoBa. The paper notes that VSA at 89% and VMoBa at 85% — the sparsity levels at which they were evaluated for quality — have already worse generation quality than SLA, so their 95% sparsity configurations are not quality-matched comparisons; they are included here purely to benchmark computational efficiency at equal sparsity.
+
+The forward pass speedup (13.7×) is substantially higher than the backward pass speedup (6.8×). The paper does not analyze this discrepancy, but it likely reflects the additional gradient computation overhead in the backward pass — the linear attention backward requires aggregating `dH_i` and `dZ_i` across query blocks and propagating them to `K_j^φ` and `V_j`, which involves memory traffic patterns that are harder to fuse efficiently with the sparse attention backward than in the forward pass where the precomputation strategy is more cleanly separable.
+
+**End-to-end video generation latency (Figure 6b).** On the original Wan2.1-1.3B with FlashAttention2, total generation takes 159 seconds, of which attention accounts for 97 seconds (61%) and other operations for 62 seconds. SLA reduces attention time from 97s to 11s — an **8.8× reduction** in attention latency, bringing total generation to 73 seconds for a **2.2× end-to-end speedup**. After SLA, attention becomes almost negligible (11s out of 73s, or 15%), meaning the bottleneck shifts to other operations.
+
+For comparison with baselines at their quality-achievable sparsity levels (Figure 6b right side): VMoBa at 85% sparsity reduces total time to 109s (attention 47s), VSA at 89% sparsity to 88s (attention 26s), and SLA at 95% sparsity to 73s (attention 11s). SLA is faster than both while producing better quality. Even if VSA and VMoBa were pushed to 95% sparsity (shown in Figure 6a for kernel speed comparison), their quality degradation would make the speedup irrelevant — SLA is the only method that achieves both speedup and quality preservation.
+
+**Fine-tuning cost.** The paper reports that fine-tuning Wan2.1-1.3B with SLA requires 2,000 steps at batch size 64, which is "less than 0.1% of the cost of pretraining (typically 10^5–10^6 steps with a batch size of 10^3–10^4)" (Section 6.3). Assuming the standard estimate of pretraining cost cited in the Wan paper, this represents an amortization overhead that is trivial relative to the 2.2× inference speedup if the model is deployed at any meaningful scale.
+
+---
+
+#### Image Generation Results (Appendix A.2)
+
+**Table 3** extends SLA to image generation on LightningDiT-1p0B/1 trained on ImageNet 512×512:
+
+| Method | FID ↓ | FLOPs ↓ | Sparsity ↑ |
+|---|---|---|---|
+| Full Attention | 31.87 | 12.88G | 0% |
+| SLA | 31.49 | 1.73G | 87.50% |
+| VSA(2D) | 35.75 | 3.62G | 75.00% |
+| VMoBA(2D) | 39.45 | 3.22G | 75.00% |
+| SpargeAttn-F | 206.11 | 3.66G | 71.57% |
+| SpargeAttn-T | 46.05 | 3.16G | 75.45% |
+
+SLA achieves FID 31.49 — **slightly better than Full Attention's 31.87** — while reducing attention FLOPs by 7.5× (1.73G vs. 12.88G) at 87.5% sparsity. This is notable: SLA not only preserves quality but slightly *improves* it, consistent with the video results where SLA numerically exceeded Full Attention on several metrics. All sparse baselines achieve worse FID at lower sparsity: SpargeAttn-T at 75.45% sparsity reaches 46.05 FID (much worse), VSA(2D) at 75% sparsity reaches 35.75, and SpargeAttn-F collapses to 206.11.
+
+The image generation experiments use a different model (LightningDiT vs. Wan2.1), different task (class-conditional image generation vs. text-to-video), and different sparsity level (87.5% vs. 95%), yet the pattern holds: SLA substantially outperforms sparse baselines at higher sparsity. The lower sparsity on image generation (87.5% vs. 95%) likely reflects the shorter sequence length (512×512 images produce fewer tokens than 5-second 480p videos), but the paper does not report the sequence length or analyze this difference. The paper also does not report a Linear Only baseline for image generation, which would test whether the Limitation L1 (linear attention failure) also applies to image DiTs or is specific to video.
+
+---
+
+#### Scaling Behavior: How Performance Changes with the Critical Threshold
+
+**Table 2** includes an ablation varying the critical threshold `k_h` (the `Top k_h%` rows):
+
+| Configuration | k_h | FLOPs | Effective Sparsity | VA ↑ | VR ↑ |
+|---|---|---|---|---|---|
+| SLA (Top 5%) | 5% | 2.73T | 95% | 76.96 | 0.048 |
+| SLA (Top 10%) | 10% | 5.38T | 90% | 75.29 | 0.057 |
+| SLA (Top 20%) | 20% | 10.65T | 80% | 75.81 | 0.059 |
+| Full Attention | 100% | 52.75T | 0% | 76.78 | 0.059 |
+
+The key finding: **increasing the critical fraction beyond 5% does not improve quality.** VA at 5% is 76.96, at 20% is 75.81 — actually slightly lower. VR at 5% is 0.048, at 20% is 0.059, a marginal improvement that is well within the range of Full Attention (0.059). Yet the FLOPs increase dramatically: 10.65T at 20% is nearly 4× the cost of 5% (2.73T) for no meaningful quality gain. This confirms that 5% is the sweet spot — the model extracts essentially all the benefit of exact attention from the top 5% of attention weights, and the remaining weights are adequately handled by linear attention. The paper does not explore `k_h < 5%`, leaving open the question of whether even lower critical fractions (2–3%) would preserve quality at further reduced cost.
+
+---
+
+### Ablation Studies and Robustness Checks
+
+**Feature map choice in linear attention**: Three activation functions `φ` are compared in Table 2 (SLA rows with softmax, elu+1, hedgehog). Softmax achieves the best overall quality (VA 76.96, VT 83.92, VR 0.048). ELU+1 is slightly worse (VA 75.50, VR 0.034) and hedgehog is further behind (VA 74.59, VR 0.035). The efficiency also differs: softmax and ELU+1 cost ~2.74T FLOPs, while hedgehog costs 3.11T FLOPs (presumably due to more expensive element-wise computation). The paper selects softmax as the default based on this ablation, attributing its advantage to better alignment with the true attention distribution. This is an important result because it shows the choice of `φ` matters for final quality — the linear attention component is not merely providing an arbitrary compensatory signal, and the specific form of the feature map affects how useful that signal is for the fine-tuned model. The relatively small gap between softmax and ELU+1 (VA difference ~1.5) suggests the system is somewhat robust to this choice.
+
+**Fusing sparse and linear attention vs. separate components**: The comparison of SLA against Sparse Only (85% sparsity, 7.91T FLOPs, VR −0.073) and L+S (90% sparsity, 5.37T FLOPs, VR −0.105) in Table 2 demonstrates the value of the integrated fusion. Sparse Only at 85% sparsity (i.e., keeping 15% of weights, all computed with full attention) has substantially worse quality than SLA at 95% sparsity — this directly shows that simply computing more weights exactly (15% vs. 5%) is inferior to SLA's strategy of computing fewer weights exactly (5%) but compensating the remainder with linear attention. L+S at 90% sparsity — which uses the same computational pattern as SLA (sparse for some blocks, linear for others) but without the learnable projection or fine-tuning — performs worse than Sparse Only, demonstrating that naive fusion is actively harmful. Fine-tuning and the learnable projection are not optional refinements; they are required to make the sparse and linear components work together productively.
+
+**Critical threshold `k_h`**: As analyzed in the scaling behavior section above, varying `k_h` from 5% to 20% (Table 2) shows that 5% is sufficient — quality does not meaningfully improve with larger critical fractions, while FLOPs increase substantially. This finding validates the paper's claim that the attention matrix has a small high-rank critical component (~5%) and a large low-rank residual. It also provides practical guidance: there is no need to tune `k_h` carefully within this range, since 5% already saturates quality.
+
+**Sparsity patterns (lookup table and pre-aggregation)**: The efficiency optimizations in Appendix A.3 are described but not ablated. The paper does not provide measurements of kernel speed with vs. without the lookup table, pre-aggregation, or Method of Four Russians, making it impossible to assess their individual contributions to the 13.7× forward speedup. Given that these optimizations target specific sparsity regimes (lookup table for >90% sparsity, pre-aggregation for >90% marginal blocks, Method of Four Russians for ~50%), their impact is likely significant in SLA's operating regime, but the lack of ablation makes this claim unverified within the paper.
+
+**Image generation transfer**: The LightningDiT experiment (Table 3, Appendix A.2) serves as a cross-model robustness check. SLA generalizes from Wan2.1-1.3B (video, text-conditioned, 1.3B parameters, 30K sequence length) to LightningDiT-1p0B/1 (image, class-conditioned, 1.03B parameters, unknown sequence length), maintaining the pattern of outperforming sparse baselines at higher sparsity. This is a meaningful but limited generalization test — both are DiT architectures with similar scales. The paper does not test on substantially different architectures (e.g., U-Net-based diffusion models, autoregressive transformers, language models) or scales, leaving open whether the rank decomposition observation and SLA's effectiveness are specific to DiTs or more broadly applicable.
+
+**Negative result — linear attention alone**: The catastrophic failure of Linear Only (Table 2: VR −0.213, VA 0.042) is a critical negative result that the paper uses to validate Limitation L1 and motivate SLA. It demonstrates that the performance achieved by SLA is not simply because linear attention works on this model — it emphatically does not, confirming that the hybrid design is necessary.
+
+**Negative result — naive fusion**: L+S at 90% sparsity performs worse than Sparse Only at 85% sparsity (VR −0.105 vs. −0.073), showing that simply summing sparse and linear attention outputs from a pretrained model is counterproductive. This validates the paper's claim that fine-tuning is essential.
+
+**Missing ablation — `k_l` (negligible threshold)**: The paper varies the critical threshold `k_h` (Table 2) but does not ablate the negligible threshold `k_l`, which is fixed at 10%. A natural question is whether `k_l` could be increased (skipping more weights) or decreased (computing more marginal weights via linear attention rather than skipping them) to improve the quality-efficiency tradeoff. The 10% value is stated but not justified through experiments.
+
+**Missing ablation — block size**: The block size `b_q = b_kv = 64` is used throughout but not varied. Block size affects the granularity of the mask (smaller blocks = finer classification but more mask memory) and the efficiency of the GEMM operations (larger blocks = better tensor core utilization). An ablation would clarify whether the chosen value is near-optimal or if further gains are possible.
+
+**Missing ablation — fine-tuning steps**: The paper uses 2,000 fine-tuning steps but does not show quality vs. fine-tuning steps curves. It is unclear whether quality saturates earlier (e.g., 500 steps) or whether additional steps would further improve quality. The claim that fine-tuning costs <0.1% of pretraining is meaningful, but this could be even lower if convergence happens earlier.
+
+**Missing ablation — number of attention heads modified**: The paper replaces attention with SLA in all layers but does not report whether certain layers (e.g., early vs. late, spatial vs. temporal attention in the DiT) benefit more from SLA or whether applying SLA only to a subset of layers could achieve similar quality with even less fine-tuning.
+
+---
+
+### Critical Assessment
+
+**Claim 1: "SLA reduces attention computation by 95% without degrading end-to-end generation quality."** This claim is **substantially supported but with a nuance about the definition of "95%."** Table 1 shows SLA at 95% reported sparsity achieves quality metrics that are numerically very close to Full Attention across all seven dimensions — VA (76.96 vs. 76.78), VT (83.92 vs. 82.88), IQ (62.2 vs. 62.5), OC (23.6 vs. 23.3), AQ (55.9 vs. 56.1), SC (93.1 vs. 93.0), VR (0.048 vs. 0.059). No statistical tests (confidence intervals, significance) are reported, so "without degrading" should be interpreted as "differences are small and within typical variation for these metrics" — a reasonable interpretation but not statistically proven.
+
+The "95%" figure deserves scrutiny. SLA's sparsity is defined as `1 − (critical blocks / total blocks)` = `1 − 0.05` = 95%. However, the marginal blocks (85% of all blocks) are NOT skipped — they are processed with linear attention, which costs ~0.5% of full attention per block. The effective sparsity in FLOP terms is approximately `1 − (0.05 × 1.0 + 0.85 × 0.005 + 0.10 × 0)` ≈ 1 − 0.054 = 94.6%, which indeed rounds to 95%. So the claim is numerically honest — linear attention truly is negligible in cost (the paper reports 0.10T FLOPs for Linear Only vs. 52.75T for Full Attention, confirming ~0.2% per-block cost). The speedup metrics support this: 13.7× forward kernel speedup corresponds to ~93% reduction in attention time, and the 2.2× end-to-end speedup is consistent with Amdahl's law given that attention was ~60% of total time. The 20× reduction in attention FLOPs (52.75T → 2.74T) in Table 1 directly supports the claim.
+
+The primary limitation is the single evaluation dataset (private 20K videos), single model (Wan2.1-1.3B), and lack of statistical rigor. The paper does not report variance across evaluation prompts, multiple fine-tuning seeds, or confidence intervals, making it impossible to assess whether the small quality differences between SLA and Full Attention are real or noise.
+
+**Claim 2: "SLA achieves a 13.7× speedup in attention computation and a 2.2× end-to-end speedup."** This claim is **well-supported by Figure 6.** The 13.7× forward kernel speedup is measured against FlashAttention2 on an RTX 5090, and SLA outperforms VSA (1.93× faster) and VMoBa (3.36× faster) at equal sparsity in the forward pass. The backward pass speedup of 6.8× is lower but still outperforms baselines. The end-to-end latency reduction from 159s to 73s (2.2×) is directly measured.
+
+Context is important: the speedup is hardware-specific (RTX 5090, a consumer GPU). Different GPUs (datacenter H100/B200, older generations) would likely show different relative speedups depending on tensor core throughput, memory bandwidth, and the balance between compute-bound (dense attention) and memory-bound (sparse/linear attention) operations. The paper does not provide multi-GPU benchmarks. Additionally, the end-to-end speedup of 2.2× depends on the fraction of time spent in attention (61% in the original model). For models where attention is a smaller fraction (e.g., smaller sequence lengths, or models with heavier FFN layers), the end-to-end speedup would be lower even with the same kernel speedup.
+
+**Claim 3: "SLA consistently surpasses baselines in both generation quality and efficiency."** This claim is **strongly supported** by Table 1 and Table 3. SLA achieves higher sparsity (95% video, 87.5% image) AND better quality metrics than every baseline. VSA, VMoBa, Sparge-T, and Sparge-F all show lower sparsity and worse quality simultaneously. The image results in Table 3 replicate this pattern with FID. No baseline achieves quality comparable to SLA at any sparsity level, let alone higher sparsity. The visual examples in Figures 5 and 7 provide qualitative confirmation.
+
+The caveat is that two baselines — Sparge-T and L+S — are implemented by the authors rather than using official code ("we implement the method ourselves because there is no official implementation" for Sparge-T). If the authors' implementation inadvertently disadvantaged these baselines, the comparison would be less favorable to SLA. However, the gap is so large (Sparge-T: VR +0.014 vs. SLA: VR +0.048 at lower sparsity) that implementation differences are unlikely to explain it entirely. VSA and VMoBa use official implementations and show even larger quality gaps.
+
+**Genuine weaknesses in the experimental design:**
+
+1. **Private evaluation dataset.** The video fine-tuning uses a private dataset with no specification of the evaluation split. Reproducibility suffers — other researchers cannot verify the quality numbers or test SLA on the same data distribution. The VBench metrics are computed on generated outputs, but the prompts used for generation and the number of evaluation samples are not reported. This is a significant gap for a paper claiming a new state-of-the-art.
+
+2. **Single model architecture and scale.** All video experiments use Wan2.1-1.3B. The image experiment uses LightningDiT (a different architecture at similar scale). Both are DiT-based diffusion models at ~1B parameters. The paper does not demonstrate that SLA works on larger models (Wan2.1 has a 14B variant), different DiT designs (e.g., Sora-style, Stable Diffusion 3), or non-DiT architectures that also use self-attention. The rank decomposition observation in Figure 3 might be specific to Wan2.1's training recipe, attention patterns, or sequence length — without replication on other models, its generality is unproven.
+
+3. **No comparison against all relevant efficient attention methods.** The paper compares against VSA, VMoBa, and SparseAttn, but the efficient attention literature is large and includes flash-attention-based approaches (FlashAttention-3), quantization-based methods (SageAttention), hybrid sparse-dense attention (MInference, SeerAttention), and kernel-based methods beyond Performers (cosFormer, Linear Transformer variants). Some of these may not be directly applicable to DiT inference, but the paper does not discuss why these were excluded.
+
+4. **Missing the runtime of the difficulty/mask prediction step.** The compressed attention prediction `P_c` computation involves pooling Q and K and computing a coarse softmax. The paper does not report the wall-clock time or FLOPs for this step separately from the sparse and linear attention components. At high sparsity (95%), this prediction step could become non-negligible, but the 13.7× kernel speedup suggests that even with this overhead, the fused kernel is substantially faster.
+
+5. **No ablation on fine-tuning data quantity.** The paper uses 20,000 videos. It is unclear whether 5,000 or 10,000 videos would suffice, or whether data diversity matters. This affects the practical cost of adopting SLA, since collecting and preparing a fine-tuning dataset is often the most labor-intensive part of adapting a pretrained model.
+
+6. **Quality metrics have unknown correlation with human judgment.** VBench, Vision Reward, and the aesthetic/technical quality metrics are automated proxy metrics. The paper does not include a human evaluation study comparing SLA-generated videos against Full Attention videos. Given that the quality differences are small, a human preference study would strengthen the claim that quality is preserved — or might reveal subtle degradation that automated metrics miss (e.g., temporal inconsistencies, unnatural motion that metrics don't capture).
+
+**Missing experiments that would strengthen the paper:**
+
+- **Scaling to longer sequences:** The Wan2.1-1.3B operates at ~30K sequence length. Since the paper argues that attention is the bottleneck and becomes more dominant at longer sequences (Limitation L2 notes sparse attention achieves higher sparsity at 100K–300K), testing SLA at longer sequences (higher resolution or longer videos) would show whether the 95% sparsity holds or whether the critical fraction needs to increase with sequence length.
+
+- **Combined with other efficiency techniques:** SLA reduces attention cost but leaves FFN, convolution, and normalization layers untouched (62 seconds of "others" in Figure 6b). How SLA composes with FFN pruning, quantization, or distillation is unexplored — the end-to-end speedup ceiling is bounded by Amdahl's law at ~2.5× unless non-attention operations are also accelerated.
+
+- **Inference without fine-tuning (training-free SLA):** The paper emphasizes that fine-tuning is essential but does not report what happens if SLA is applied inference-only (like Sparge-F) — i.e., using the pretrained model with SLA's mask prediction and hybrid computation but no parameter updates. This would isolate the contribution of the architectural changes from the contribution of fine-tuning.
+
+- **Different `k_l` values:** The negligible threshold is fixed at 10%. A sweep of `k_l` would reveal whether more weights can be skipped without quality loss (increasing sparsity further) or whether some of the currently-skipped 10% are needed.
+
+**Conditional scope of the claims:**
+
+The paper's claims hold under the specific conditions tested: DiT-based video generation at ~1B scale, ~30K sequence length, fine-tuned with SLA for 2,000 steps on a 20K video dataset, evaluated using automated metrics on an RTX 5090. The paper does not claim generality beyond these conditions, but also does not explicitly identify them as boundary conditions. The image generation result (Table 3) provides evidence of generalization to a related task, but the limited scope means a practitioner considering SLA for a different model architecture, task, or scale should treat the 95% sparsity and 2.2× speedup as optimistic targets requiring validation.
 
 ## 6. Limitations and Trade-offs
-- Dependence on structure of diffusion attention
-  - SLA assumes the “sparse-few, low-rank-many” structure (Section 3.2; Figure 3). If a task/model violates this (e.g., more uniformly distributed attention or higher-rank tails), the marginal mass may not be well captured by linear attention.
-- Requires fine-tuning
-  - SLA is not training-free. It needs modest fine-tuning (2,000 steps) so the model adapts to the hybrid attention and the learned projection (Section 5; Table 2 shows `Linear Only` fails without this hybridization).
-- Hyperparameters and mask prediction
-  - The `Pc` predictor uses pooled Q/K and per-row TopK/BottomK thresholds (`kh`, `kl`). These introduce tunables that might need task-specific adjustment (Section 6.1; Table 2).
-- Workload balance and dimension dependence
-  - Linear path cost scales as `O(N d^2)` (Section 2.2). While “<0.5%” of full attention for Wan2.1 (Section 3.1), for models with much larger `d` this may be more material.
-- Hardware and integration scope
-  - Measured on RTX5090 with FlashAttention2 as the baseline (Figure 6). Speedups may vary with hardware, kernel libraries, and frameworks.
-- End-to-end ceiling
-  - Even with attention accelerated, end-to-end speedup is 2.2× because other parts of the diffusion model still consume time (Figure 6b). SLA does not address non-attention bottlenecks.
+
+### 6.1 Difficulty Estimation Cost Is Unaccounted for in the Headline Efficiency Numbers
+
+**The assumption or constraint.** SLA's three-way classification of attention weights into critical, marginal, and negligible depends on computing the compressed attention matrix `P_c = Softmax(pool(Q)pool(K)^⊤/√d)` and applying per-row thresholds `k_h` and `k_l` (Equations 2–3, Section 4). While the paper argues this step is cheap because it operates in compressed space (pooling reduces the sequence dimension by a factor of 64 before the matrix multiply), **the paper does not separately measure or report the wall-clock time or FLOPs cost of this mask prediction step.** All reported speedup numbers (13.7× kernel speedup, 2.2× end-to-end, Figure 6) are measured for the fused SLA kernel, which includes the mask prediction, but there is no ablation showing what fraction of the remaining attention time is spent on mask computation vs. actual sparse/linear attention.
+
+**The consequence.** At 95% sparsity with 5% critical blocks, SLA's actual sparse FlashAttention computation is extremely cheap — it processes only 5 out of every 100 query-key block pairs with full attention. The mask prediction, by contrast, computes a coarse attention matrix over all block pairs (pooled but still `O((N/b_q) × (N/b_kv))` entries), applies softmax, and performs per-row top-k/bottom-k selection. As sparsity increases (e.g., pushing toward 97–98% by reducing `k_h` below 5%), the mask prediction cost remains constant while the sparse attention cost decreases, meaning the mask prediction eventually becomes the dominant overhead. The paper does not characterize this crossover point or provide data on how the mask prediction cost scales with sequence length. For practitioners considering SLA at very high sparsity or very long sequences, the lack of this analysis makes it impossible to predict the achievable speedup without implementing and profiling.
+
+**What evidence exists in the paper.** None. The paper states that mask prediction uses pooling and compressed softmax (Section 4, Equation 2) but provides no timing breakdown. The 13.7× forward kernel speedup (Figure 6a) is aggregated over the entire fused kernel, so the mask prediction cost is amortized into the measurement — but we do not know how much of the remaining 7.3% of time (1/13.7 ≈ 7.3%) is mask overhead vs. actual attention computation. The FLOPs numbers in Table 1 (2.73T for SLA at 95%) include all operations; the pooling and compressed softmax FLOPs are not broken out.
+
+**Mitigation status.** Not addressed. The paper does not discuss the mask prediction cost, report its fraction of total attention time, or suggest optimizations for it (e.g., using strided rather than mean pooling, reducing the precision of the compressed attention computation, or caching masks across diffusion steps if attention patterns are temporally stable). This is a notable omission because the mask predictor is the only component of SLA whose cost does not decrease with sparsity — every other component (sparse attention, linear attention, skip) becomes cheaper as sparsity increases — making it the asymptotic bottleneck at very high sparsity.
+
+---
+
+### 6.2 Single Model Architecture and Scale: Generality to Larger DiTs and Non-DiT Architectures Is Unproven
+
+**The assumption or constraint.** All of SLA's claims — the 95% sparsity with lossless quality, the 13.7× kernel speedup, the 2.2× end-to-end speedup — are demonstrated on a single model: Wan2.1-1.3B for video generation (Section 6.2) and LightningDiT-1p0B/1 for image generation (Appendix A.2). Both are DiT-based diffusion models at approximately 1B parameters. The foundational observation that enables SLA — that removing the top ~8% of attention weights leaves a residual with stable rank ~9 (Figure 3) — is measured on Wan2.1-1.3B specifically. The paper does not verify whether this rank decomposition holds for (1) **larger DiT models** (e.g., Wan2.1-14B, which shares architecture but has substantially more parameters and potentially different attention patterns), (2) **different DiT architectures** (e.g., Sora-style spatial-temporal factorization, Stable Diffusion 3's dual-stream attention), (3) **non-DiT transformer models** (e.g., autoregressive video models, language models, or non-diffusion vision transformers), or (4) **substantially different sequence lengths** (the Wan2.1-1.3B operates at ~30K tokens; very long video generation at 100K+ tokens may exhibit different rank structure).
+
+**The consequence.** The rank decomposition in Figure 3 is SLA's intellectual foundation — it provides the principled reason why linear attention can work for the marginal weights (low rank) while failing globally (high rank). If this decomposition is specific to Wan2.1-1.3B's training dynamics, attention head structure, or the ~30K sequence length regime, then SLA's core insight may not transfer to other models. Specifically: (1) Larger DiTs (14B+) might learn higher-rank attention patterns that require a larger critical fraction (>5%) to capture, reducing achievable sparsity. (2) Architectures with specialized attention patterns (e.g., Factorized spatial-temporal attention, windowed attention, or cross-attention-heavy designs) might have fundamentally different rank profiles where the critical/marginal boundary is less clean. (3) Autoregressive models with causal masks may show different rank structure since the attention matrix is triangular. (4) At very long sequences (100K+), the stable rank of the residual might increase, requiring more critical blocks or degrading linear attention quality. A practitioner deploying SLA on a different model cannot assume 95% sparsity is achievable — they must replicate the rank analysis and potentially re-tune `k_h` and `k_l`.
+
+**What evidence exists in the paper.** The LightningDiT image generation experiment (Table 3) provides one cross-model data point, showing SLA achieves 87.5% sparsity with quality comparable to full attention. This is encouraging but limited: LightningDiT is still a DiT at similar scale (1.03B), operating at shorter sequence length (512×512 images vs. 480p videos), and the sparsity achieved is lower (87.5% vs. 95%). The paper does not analyze why the optimal sparsity differs or measure the rank decomposition on LightningDiT. No larger model is tested. No non-DiT architecture is tested. No ablation of sequence length is reported.
+
+**Mitigation status.** Not addressed. The paper does not discuss the scope of its findings or acknowledge the single-model limitation. The abstract and conclusion make general claims about "DiT models" and "diffusion models" without qualifying that the evidence comes from one specific architecture and scale. The image experiment is a step toward generality but is underanalyzed — the paper does not explain the 87.5% vs. 95% sparsity difference or investigate whether the rank decomposition holds there.
+
+---
+
+### 6.3 Evaluation Uses a Private Dataset with Unspecified Prompts and No Statistical Rigor
+
+**The assumption or constraint.** The video generation experiments in Section 6 use a "private dataset collected from websites such as Pexels and Common Crawl, consisting of 20,000 5-second videos at 480p resolution for fine-tuning" (Section 6.1). The paper does not specify: (1) how the evaluation prompts were selected (are they from the training distribution? out-of-distribution? how many prompts?), (2) how many videos were generated per method for computing the quality metrics, (3) whether there is a held-out validation/test split distinct from the fine-tuning data, (4) the variance of the quality metrics (no confidence intervals, standard deviations, or statistical significance tests), or (5) whether multiple fine-tuning runs with different random seeds were averaged.
+
+**The consequence.** The quality comparison in Table 1 — which is the central evidence for SLA's claim of "lossless quality at 95% sparsity" — is not independently reproducible. Other researchers cannot verify the numbers because the fine-tuning data and evaluation prompts are private. More critically, without knowing the number of evaluation samples and the variance of the metrics, we cannot assess whether the small numerical differences between SLA and Full Attention (e.g., VA 76.96 vs. 76.78, VR 0.048 vs. 0.059) are statistically meaningful or just noise from finite evaluation samples. If VBench metrics have standard deviations of ±2–3 points (typical for automated video quality metrics with small sample sizes), then SLA and Full Attention are statistically indistinguishable — which supports the paper's claim. But if the standard deviation is ±0.5 points, some differences might be significant. Without this information, the claim of "no degradation" is qualitative rather than quantitative. Furthermore, if the evaluation prompts are from the same distribution as the fine-tuning data, the results may not reflect SLA's generalization to unseen prompts — the model might overfit to the fine-tuning distribution specifically under SLA's attention pattern.
+
+**What evidence exists in the paper.** The paper reports point estimates for seven quality metrics (Table 1) without any uncertainty quantification. The vision quality metrics — VBench IQ, OC, AQ, SC, Vision Reward, VA, VT — are cited from prior work (Zhang et al., 2024a; Xu et al., 2024; Liu et al., 2023) but the paper does not report their measurement protocols (number of samples, prompt selection). For image generation (Table 3), FID is reported as a single number without variance, though FID is known to be sensitive to the number of samples used in computation.
+
+**Mitigation status.** Not addressed. The authors acknowledge the dataset is private but do not discuss the implications for reproducibility or statistical validity. This is a significant methodological weakness given that the paper's primary contribution is empirical (a new method achieving better quality-efficiency tradeoffs), and the evidence for that contribution rests entirely on these metrics. The visual examples in Figures 5 and 7 provide qualitative support but cannot substitute for rigorous quantitative evaluation.
+
+---
+
+### 6.4 Hard Problems Remain Essentially Unsolved: No Evidence for Very Long Sequences or High-Resolution Generation
+
+**The assumption or constraint.** SLA is evaluated on Wan2.1-1.3B generating 5-second 480p videos (~30K sequence length). The paper frames DiT attention as increasingly problematic at longer sequences — "the sequence length typically ranges from 10K to 100K" (Section 1) — and notes that prior sparse attention methods achieve higher sparsity on longer sequences (80–85% at 100K–300K tokens; Limitation L2, Section 1). However, SLA itself is **not tested on sequences longer than ~30K.** The paper does not evaluate whether the 95% sparsity with lossless quality holds at 50K, 100K, or 300K sequence lengths (higher resolution, longer videos, or higher frame rates). It also does not test whether the rank decomposition in Figure 3 — the foundation of SLA's design — changes with sequence length.
+
+**The consequence.** The paper's motivating argument is that attention bottlenecks worsen with sequence length (`O(N²)` scaling), and longer sequences are the most important regime for DiT efficiency. If SLA's critical fraction `k_h` must increase with sequence length (because attention becomes more diffuse and the high-rank component spreads across more tokens), then achievable sparsity at 100K might be 80–85% rather than 95% — regressing to the range that prior sparse methods already achieve. The paper would then be solving a problem (30K sequences) that is less severe than the motivating scenario (100K+ sequences). Alternatively, if the rank decomposition is robust to sequence length, SLA could achieve even higher sparsity at 100K (since the marginal/negligible fraction might grow), making the case for SLA even stronger. Either outcome is important for practitioners considering SLA for long-video generation, and the paper does not provide evidence for either.
+
+This is particularly relevant because the paper's own Limitation L2 notes that prior sparse attention methods achieve 80–85% sparsity on 100K–300K sequences but only 40–60% on shorter sequences. If this pattern holds for SLA — higher sparsity at longer sequences — then SLA's advantages over prior methods might be smaller or larger depending on the operating point. Without testing, the extrapolation is pure speculation.
+
+**What evidence exists in the paper.** None. All video experiments use Wan2.1-1.3B at its default configuration (5-second 480p videos, ~30K tokens). No sequence length ablation is reported. The image generation experiment (LightningDiT at 512×512) uses a shorter sequence than video, and achieves lower sparsity (87.5% vs. 95%), but the paper does not analyze whether this difference is due to sequence length, model architecture, or task characteristics.
+
+**Mitigation status.** Not addressed. The paper does not discuss sequence length scaling, acknowledge it as a limitation, or suggest future work on this dimension. Given that the paper's motivation emphasizes long sequences as the critical regime, this omission is significant.
+
+---
+
+### 6.5 The Linear Attention Feature Map and Learnable Projection Are Not Validated Against Alternative Low-Rank Compensation Mechanisms
+
+**The assumption or constraint.** SLA's design for handling marginal weights uses kernelized linear attention with a feature map `φ` (defaulting to softmax based on the ablation in Table 2), followed by a learned linear projection `Proj(O^l)` applied before summing with the sparse output (Equation 6). The paper frames this as "learnable compensation" rather than direct approximation (Section 4.2), and the ablation shows that this specific combination — linear attention + learnable projection + fine-tuning — works. However, the paper does **not compare against alternative mechanisms that could also provide low-rank compensation** for the marginal weights, such as:
+
+- **Low-rank matrix factorization directly on the marginal attention weights:** instead of using a feature map kernel, compute an explicit truncated SVD of the marginal attention weights and use the low-rank factors to approximate `P_marginal × V`. This would provide a more direct low-rank approximation rather than the indirect one through kernelization.
+
+- **Gated linear units or small MLPs:** replace the linear attention + projection with a small learned network (e.g., a 2-layer MLP applied to pooled K, V representations) that attempts to reconstruct the missing marginal contribution.
+
+- **Simpler additive biases:** learn a per-head bias vector added to the sparse output instead of a full linear attention pathway.
+
+- **Direct learning of the residual:** train a small network to predict `O_full − O_sparse` from intermediate representations, bypassing linear attention entirely.
+
+**The consequence.** Without comparisons against alternative compensation mechanisms, the paper demonstrates that linear attention *works* as compensation but does not demonstrate that linear attention is *necessary* or *optimal* for this role. It is possible that a simpler mechanism — such as a learned bias vector or a small MLP — could achieve similar quality with even lower computational cost than the linear attention pathway (which, while cheap at 0.5% of full attention, still requires computing `φ(K_j)^T V_j` for all key blocks and accumulating per query block). If a learned bias term could recover 90% of the benefit that linear attention provides, SLA's design could be simplified significantly, reducing kernel complexity and potentially improving speed further. The ablation "Sparse Only" in Table 2 (85% sparsity, no compensation) shows that *some* compensation is necessary, but does not constrain what form it must take.
+
+**What evidence exists in the paper.** The paper compares SLA against Sparse Only (no compensation) and L+S (naive compensation without fine-tuning), but not against alternative compensation mechanisms. The feature map ablation (softmax, ELU+1, hedgehog in Table 2) compares different kernelizations but all within the linear attention framework. The paper does not report experiments that replace the linear attention pathway with a simpler learned correction.
+
+**Mitigation status.** Not addressed. The paper does not discuss why linear attention was chosen over other low-rank compensation mechanisms or acknowledge the gap in the experimental design. The "learnable compensation" framing (Section 4.2) is articulated clearly, but the design space of possible compensation mechanisms is not explored.
+
+---
+
+### 6.6 The Backward Pass Speedup Is Substantially Lower Than the Forward Pass, Limiting Training and Fine-Tuning Benefits
+
+**The assumption or constraint.** SLA's GPU kernel achieves asymmetric speedups: 13.7× in the forward pass but only 6.8× in the backward pass (Figure 6a). The paper reports these numbers but does **not analyze the cause of the asymmetry or discuss its implications** for training and fine-tuning workflows. The 2.2× end-to-end speedup (Figure 6b) is measured for inference (forward pass only), and the fine-tuning cost is amortized as <0.1% of pretraining, but the paper does not measure the wall-clock time reduction for fine-tuning itself or for full training-from-scratch with SLA.
+
+**The consequence.** For practitioners who want to use SLA during training (not just inference), the backward pass bottleneck matters. If full training involves forward AND backward passes at every step, the effective per-step speedup is the harmonic mean of the forward and backward speedups, weighted by their relative costs. Standard transformer training spends roughly 2× more time in backward than forward (since backward computes gradients for all parameters), making the backward pass the dominant cost. SLA's 6.8× backward speedup vs. 13.7× forward speedup means the training speedup is substantially lower than the inference speedup — potentially in the range of 4–5× rather than 13.7× for the attention kernel, and correspondingly lower end-to-end training speedup. The paper's fine-tuning cost analysis (2,000 steps, <0.1% of pretraining) masks this because the absolute cost is small, but for training-from-scratch scenarios (e.g., if a team wants to build SLA into their DiT pretraining recipe), the backward pass limitation significantly reduces the total compute savings.
+
+The paper does not diagnose why the backward pass is slower. Possible causes: (1) the linear attention backward (Equation 8) requires aggregating `dH_i` and `dZ_i` across query blocks and propagating to `K_j^φ` and `V_j`, which involves reduction operations that are harder to fuse efficiently than the forward pass accumulations; (2) the sparse attention backward requires recomputing `P_ij` from stored `S_ij` and `L_i` values (Algorithm 2, line 11), adding recomputation overhead; (3) the backward pass may have less opportunity for the lookup table and pre-aggregation optimizations since the access patterns differ. Without diagnosis, it is unclear whether the asymmetry is fundamental (due to the gradient computation structure) or addressable through better kernel engineering.
+
+**What evidence exists in the paper.** Figure 6a reports the backward pass speedup (6.8×) and compares it to baselines (VSA, VMoBa). The paper does not provide a speedup breakdown by component (sparse backward vs. linear backward vs. mask gradient computation), nor does it measure end-to-end fine-tuning speedup vs. fine-tuning with full attention.
+
+**Mitigation status.** Not addressed. The paper does not discuss the backward pass asymmetry, analyze its causes, or suggest improvements. All end-to-end speedup claims and the "fine-tuning cost <0.1%" analysis use the inference (forward-only) speedup, effectively sidestepping the backward pass limitation. For the paper's primary use case (accelerating inference for deployed models), this is acceptable, but the paper should explicitly scope its speedup claims to inference and acknowledge that training-time benefits are more limited.
 
 ## 7. Implications and Future Directions
 - Broader recipe for fast attention: precision where needed, low-rank elsewhere

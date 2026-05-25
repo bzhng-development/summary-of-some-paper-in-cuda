@@ -9,166 +9,655 @@ This paper introduces Dynamic Tanh (DyT), a simple, element-wise alternative to 
 ---
 
 ## 1. Executive Summary
-This paper shows that standard normalization layers in Transformers (such as LayerNorm and RMSNorm) can be replaced by a simple element‑wise operation, Dynamic Tanh (`DyT`), with little or no loss in accuracy and often small gains. The key insight is that the input→output mappings of LayerNorm in trained Transformers look like an S‑shaped curve, which `tanh(αx)` replicates while avoiding the cost and complexity of computing per‑token statistics.
+
+This paper introduces **Dynamic Tanh (DyT)**, an element-wise operation `DyT(x) = tanh(αx)` with a learnable scalar `α`, as a drop-in replacement for normalization layers in Transformers. Motivated by the empirical observation that layer normalization (LN) in trained Transformers produces tanh-like, S-shaped input-output mappings — scaling central activations nearly linearly while squashing extreme values — DyT captures this behavior without computing activation statistics. Across diverse settings spanning vision (ViT-B/L, ConvNeXt-B/L on ImageNet-1K), language (LLaMA 7B–70B pretraining on 200B tokens), speech (wav2vec 2.0), diffusion (DiT-B/L/XL), and self-supervised learning (MAE, DINO), Transformers with DyT match or exceed the performance of their LN- or RMSNorm-based counterparts, mostly without hyperparameter tuning — for instance, LLaMA 7B through 70B achieve identical zero-shot lm-eval scores (0.513, 0.529, 0.536, 0.549) to RMSNorm baselines, and ViT-L improves from 83.1% to 83.6% top-1 accuracy. The work establishes that normalization layers are not indispensable for training modern Transformers, with the primary boundary condition that DyT does not effectively replace batch normalization in classic ConvNets like ResNet-50, where performance drops from 76.2% to 68.9%.
 
 ## 2. Context and Motivation
-- Problem addressed
-  - Modern Transformers almost always include normalization layers (LayerNorm/RMSNorm). These are widely believed to be essential for stable optimization and good generalization in deep, wide models.
-  - The paper asks: Are normalization layers actually indispensable in Transformers, or can we achieve the same effects with something simpler?
 
-- Why this matters
-  - Practical: Normalization layers compute means/variances and require reduction operations. That adds kernel complexity and can be a bottleneck on some hardware. A drop‑in, element‑wise replacement would simplify implementations and may enable new fusions and optimizations (Appendix C).
-  - Conceptual: If normalization is not strictly required, we gain a clearer understanding of what it really does in deep networks.
+### The Core Problem: Normalization Layers Are Assumed Indispensable — But Are They?
 
-- Where prior approaches fall short
-  - “No‑norm” methods existed but rely on carefully crafted initializations (Fixup, SkipInit) or weight reparameterizations/constraints (e.g., spectral reparametrization). These often need significant hyperparameter tuning and may underperform normalized baselines (Section 6.3; Table 9).
-  - Some methods remove norms only after pretraining via fine‑tuning, rather than training from scratch without norms.
+The central question this paper addresses is deceptively simple: **can modern neural networks, specifically Transformers, be trained effectively without normalization layers?** This matters because normalization layers — batch normalization (Ioffe and Szegedy, 2015), layer normalization (Ba et al., 2016), RMSNorm (Zhang and Sennrich, 2019) — have become so deeply embedded in neural network design that their presence is rarely questioned. They appear in virtually every modern architecture, from vision models to large language models, and are widely viewed as essential for stable and fast convergence. The paper challenges this assumption directly, asking whether the normalization operation itself is necessary, or whether its functional behavior — scaling activations and squashing extreme values — can be replicated by something simpler.
 
-- How this paper positions itself
-  - It proposes a tiny, drop‑in replacement called `Dynamic Tanh (DyT)` that:
-    - Does not compute statistics.
-    - Is element‑wise and therefore simple to implement and potentially easier to optimize.
-    - Empirically matches or exceeds LayerNorm/RMSNorm across diverse tasks and scales, including large language models (Sections 5 and 7.2).
+This question is not philosophical. Normalization layers incur real computational costs: they require computing statistics (mean, variance) over potentially large tensor dimensions, which involves reduction operations. In distributed training settings, these reductions can become communication bottlenecks. If a simpler element-wise operation — one that acts on each scalar independently, requiring no cross-element communication — could achieve the same effect, it would simplify both the conceptual understanding of why deep networks train well and the practical implementation of training at scale.
+
+### The Ubiquity Problem: Normalization Is Everywhere, and Nobody Questions It
+
+The paper highlights a telling pattern in architectural innovation. In recent years, researchers have proposed numerous alternatives to attention (Tolstikhin et al., 2021's MLP-Mixer; Gu and Dao, 2023's Mamba; Sun et al., 2024's TTT; Feng et al., 2024's RNN revival), alternatives to convolution, and alternatives to standard Transformer blocks. Yet, as the authors note in Section 1:
+
+> "novel architectures often seek to replace attention or convolution layers, but almost always retain the normalization layers."
+
+This observation reveals normalization layers as the one architectural component that has resisted replacement. Even architectures that radically rethink information processing — trading quadratic attention for linear alternatives, or discarding convolutions entirely — keep their normalization layers intact. This suggests that the field has implicitly accepted normalization as *the* solution to a fundamental training problem, without fully understanding what that problem is or whether alternative solutions exist.
+
+### What Prior Work Knew: Benefits Without a Complete Mechanistic Picture
+
+The paper situates itself against a rich literature studying *why* normalization helps. The known benefits are diverse and sometimes overlapping:
+
+**Optimization stability.** Batch normalization was originally motivated by reducing "internal covariate shift" (Ioffe and Szegedy, 2015), though subsequent work (Santurkar et al., 2018) showed the true benefit was smoothing the loss landscape — making gradients more Lipschitz-continuous, which enables larger learning rates and faster convergence. Independent work (Bjorck et al., 2018) demonstrated that BN moderates outlier eigenvalues in the Hessian, preventing pathological curvature that would otherwise slow optimization.
+
+**Gradient flow.** Several studies (Balduzzi et al., 2017; Daneshmand et al., 2020; Lubana et al., 2021) showed normalization helps maintain healthy gradient magnitudes throughout deep networks, preventing the "shattered gradients" problem where gradients become decorrelated and uninformative as depth increases.
+
+**Reduced initialization sensitivity.** Without normalization, deep networks are notoriously sensitive to weight initialization (Zhang et al., 2019; De and Smith, 2020; Shao et al., 2020). Normalization provides robustness, allowing the same initialization scheme to work across different depths and architectures.
+
+**Implicit learning rate adaptation.** Theoretical work (Arora et al., 2018; Tanaka and Kunin, 2021) showed that normalization effectively auto-tunes the effective learning rate per layer, adapting to the scale of activations as they evolve during training.
+
+**Sharpness reduction and generalization.** More recent work (Lyu et al., 2022; Dai et al., 2024; Mueller et al., 2024) connected normalization to the sharpness of the loss landscape's minima, arguing that normalization enables convergence to flatter minima that generalize better — a connection to the sharpness-aware minimization literature.
+
+**Non-linearity in Transformers.** Specific to Transformers, Ni et al. (2024) demonstrated that layer normalization introduces strong non-linearities that enhance a model's representational capacity — a finding closely related to this paper's own motivating observation (discussed in Section 3).
+
+### Where Prior Approaches Fall Short: The Limitations of Existing "Unnormalized" Methods
+
+The paper identifies three broad categories of prior work aimed at training networks without normalization, each with significant limitations:
+
+**1. Initialization-based methods (Fixup, SkipInit).** These approaches (Zhang et al., 2019; Huang et al., 2020; De and Smith, 2020; Bachlechner et al., 2021) carefully design parameter initialization schemes to prevent exploding or vanishing activations at the start of training. The idea is that if the network starts in a well-conditioned state, it can remain stable even without normalization's corrective effect throughout training.
+
+The problem, as the paper shows in Table 9, is that these methods **do not achieve competitive performance** on modern Transformer architectures. Fixup achieves only 77.2% on ViT-B vs. 82.3% for LN; SkipInit reaches just 74.1%. The gap widens on self-supervised tasks: MAE ViT-B reaches only 73.1–73.7% vs. 83.2% for LN. Moreover, these methods require **significantly lower learning rates** to prevent divergence, which slows training. The paper notes (Section 6.3) that it had to perform learning rate searches for these methods to achieve even the reported numbers — and the numbers are still far below the LN baseline.
+
+The fundamental limitation of initialization-only approaches is that they address the *starting* condition but not the *ongoing* dynamics. As activations drift during training — as they will in very deep or wide networks — the initial calibration is no longer relevant, and training can destabilize.
+
+**2. Weight-normalization-based methods (σReparam).** These approaches (Salimans and Kingma, 2016; Huang et al., 2017; Qiao et al., 2019; Zhai et al., 2023) impose constraints on network weights throughout training — for example, controlling the spectral norm of weight matrices — to maintain stable activation statistics without explicit normalization layers.
+
+The paper evaluates σReparam (Zhai et al., 2023) in Table 9. While it performs much better than Fixup/SkipInit — reaching 82.5% on ViT-B and 83.2% on MAE ViT-B, competitive with LN — it introduces its own complications. These methods modify the optimization dynamics throughout training by constraining weight updates, which can interact in subtle ways with optimizers, learning rate schedules, and architecture choices. They trade one form of complexity (normalization) for another (weight constraints).
+
+**3. Aggressive training strategies for unnormalized ResNets.** The pioneering work by Brock et al. (2021a,b) showed that high-performing ResNets could be trained without normalization — but this required combining multiple techniques: specialized initialization (De and Smith, 2020), weight normalization (Salimans and Kingma, 2016; Huang et al., 2017), adaptive gradient clipping (Brock et al., 2021b), extensive data augmentation (Cubuk et al., 2020), and heavy regularization (Srivastava et al., 2014; Huang et al., 2016). This "kitchen sink" approach achieved results but did not isolate what specifically was replacing normalization's functional role. It was also ConvNet-specific and has not been demonstrated on Transformers at scale.
+
+**4. Transformer-specific alternatives (He and Hofmann, 2023; Jha and Reagen, 2024; Heimersheim, 2024).** Several works target Transformers specifically. He and Hofmann (2023) modify Transformer blocks to reduce reliance on both normalization and skip connections. Jha and Reagen (2024) propose AERO, a Softmax-only LLM that removes normalization for inference efficiency. Heimersheim (2024) proposes *gradually* removing LN from pretrained networks by fine-tuning after each removal — a post-hoc method that requires starting with a trained normalized model.
+
+These approaches either require architectural modifications beyond just replacing normalization, or they address inference only, not the training dynamics that originally motivated normalization. None provide a simple, drop-in replacement that trains from scratch with the same hyperparameters.
+
+### How This Paper Positions Itself: Simplicity Through Functional Mimicry
+
+The paper's positioning is distinctive and deliberately counter to the prevailing narrative. Rather than explaining *why* normalization works through a theoretical lens, the paper takes an **empirically-driven functional mimicry approach**:
+
+**Step 1: Observe what normalization actually does.** The authors instrument trained Transformers (ViT, wav2vec 2.0, DiT) and plot the input-output relationship of individual LN layers (Figures 2 and 4). They find a striking pattern: LN layers produce S-shaped, tanh-like mappings. The central region is approximately linear (most points fall here), but extreme values — those with magnitudes far from zero — are squashed non-linearly toward the center. This is not what one would naively expect from a "normalization" operation, which sounds like it should be purely linear (subtract mean, divide by standard deviation).
+
+**Step 2: Replicate this behavior with a known function.** The tanh function naturally produces S-shaped curves: it is nearly linear near zero (tanh(x) ≈ x for small x) and saturates to ±1 for large |x|. Adding a learnable scalar α before the tanh — DyT(x) = tanh(αx) — allows the input range to be scaled to match whatever the current layer's activation distribution requires. This is the "Dynamic" in Dynamic Tanh: α learns during training to stretch or compress the input so that the tanh's linear and saturation regions align with the activation statistics.
+
+**Step 3: Show it works as a drop-in replacement.** The paper's key empirical claim is that DyT can directly replace LN or RMSNorm layers in existing Transformer architectures *without changing the training recipe*. This is what distinguishes DyT from prior methods:
+
+- **No architectural modifications needed.** The Transformer block structure is unchanged; only the normalization operation inside each block is replaced (Figure 1).
+- **No new initialization schemes.** α is initialized to a simple constant (0.5 for most tasks), and the affine parameters γ and β use the standard all-ones/zeros initialization.
+- **No hyperparameter tuning.** For non-LLM tasks, the original learning rates, schedules, and optimizer settings work directly. This is a stark contrast to Fixup/SkipInit, which required learning rate searches.
+- **Computationally simpler.** DyT is element-wise — it does not require computing mean and variance across tensor dimensions, which involve reduction operations. As shown in Appendix C (Table 14), on an uncompiled LLaMA 7B, DyT layers are ~52% faster for inference and ~42% faster for training than RMSNorm layers. (The paper is honest that after `torch.compile`, this advantage largely disappears — Table 15.)
+
+### The Theoretical Implication: Toward a Unified Understanding
+
+Beyond the practical replacement, the paper positions DyT as a lens for understanding *what normalization layers actually contribute*. The finding that a simple element-wise tanh — with no cross-element statistics, no mean subtraction, no variance normalization — can replace LN across such diverse settings suggests a reframing of normalization's role:
+
+The paper's central hypothesis (Section 3) is that the **non-linear squashing of extreme values** is normalization's essential function, not the statistical normalization per se. The mean subtraction and variance division are a *mechanism* for producing this squashing behavior, but they are not the only mechanism. DyT achieves the same S-shaped mapping through a different implementation — one that has no concept of statistics at all.
+
+This hypothesis is supported by the ablation in Table 7: replacing tanh with the identity function (no squashing) causes training to diverge, while other squashing functions (hardtanh, sigmoid) enable stable training, though tanh performs best. The squashing is essential; the specific mathematical form can vary, but tanh's smoothness and zero-centered properties make it the best choice among the candidates tested.
+
+### What Makes This Work Timely
+
+The paper arrives at a moment when the computational cost of normalization — while typically small relative to attention and feedforward layers — is being scrutinized at extreme scales. Large language models with hundreds of billions of parameters are trained on thousands of GPUs, where the reduction operations in normalization layers require synchronization across model-parallel dimensions. An element-wise alternative that eliminates these synchronizations, even if the per-operation speedup is modest after compilation, has architectural implications for distributed training. More importantly, the conceptual simplification — understanding that a trained network's normalization layers converge to something resembling a learned tanh — opens the door to principled architectural simplification. If DyT is sufficient, then the statistics computation in LN/RMSNorm is revealed as a historical artifact of how we first solved the training stability problem, not a fundamental requirement of deep network optimization.
 
 ## 3. Technical Approach
-Step-by-step overview:
 
-- What normalization layers do (background and observation)
-  - Standard formulation (Equation 1, Section 2): a normalization layer transforms input `x` by subtracting a mean `µ`, dividing by the standard deviation `σ`, then applying learnable per‑channel scale `γ` and shift `β`.
-  - Empirical observation (Section 3, Figures 2–4):
-    - When plotting the element‑wise input vs. output (before the learned affine `γ`/`β`) of LayerNorm in trained models (ViT, wav2vec 2.0, DiT), the mapping looks like an S‑curve—highly reminiscent of `tanh`.
-    - Deeper LayerNorm layers show this effect most clearly (Figure 2). Earlier layers look more linear.
-    - By coloring points by token (left panels of Figure 4), each token’s mapping is linear but with a different slope (because each token has different variance). Collectively these different lines form an S‑curve.
-    - By coloring by channel (right panels of Figure 4), a few channels exhibit extreme input ranges; these are squashed the most by normalization.
+### 3.1 Reader Orientation (Approachable Technical Breakdown)
 
-  Plain-language interpretation:
-  - LayerNorm isn’t globally linear over all elements. Across tokens with different statistics it collectively acts like a near‑linear mapping around zero, but it disproportionately squashes extreme values—just like a saturating nonlinearity.
+The "system" being built is not a complex pipeline but rather **a single architectural component — a replacement layer** — that can be substituted into any existing Transformer architecture. The problem it solves is: normalization layers (Layer Norm, RMSNorm) compute cross-element statistics (mean, variance) at every forward pass to stabilize training, but this paper hypothesizes that the *functional behavior* these layers produce — an S-shaped, tanh-like input-output mapping — is what actually matters, not the statistics computation itself. The solution is an element-wise operation, `DyT(x) = tanh(αx)`, with a single learnable scalar `α`, that directly produces this S-shaped mapping without computing any statistics across tensor elements.
 
-- The proposed replacement: Dynamic Tanh (`DyT`)
-  - Definition (Equation 2, Section 4): `DyT(x) = γ * tanh(α x) + β`
-    - `α`: a single learnable scalar that rescales inputs so that `tanh` operates in the “right” part of its S‑curve.
-    - `γ`, `β`: standard learnable per‑channel scale and shift, same shapes as in LayerNorm/RMSNorm.
-  - Implementation (Algorithm 1, Section 4): a tiny module—apply `tanh(αx)`, then affine scale/shift.
-  - Where it is used (Figure 1): replace each normalization layer in attention blocks, MLP/FFN blocks, and the final normalization.
-  - What it does mechanistically:
-    - Near zero, `tanh` is approximately linear, so most activations pass almost unchanged (Figure 3 shows different slopes via different `α`).
-    - Large-magnitude activations are squashed into a bounded range (−1 to 1), reproducing the key “extreme‑value suppression” observed in LayerNorm (Figures 2–4).
-    - The scalar `α` adapts over training and closely tracks the inverse activation scale: Section 6.2 and Figure 8 show `α` correlates with `1/std` both during and after training.
+### 3.2 Big-Picture Architecture (Diagram in Words)
 
-- Design choices and rationale
-  - Why `tanh`? Section 6.1 and Figure 7 compare `tanh`, `hardtanh`, `sigmoid`, and an identity mapping:
-    - Without squashing (identity), training diverges (Table 7).
-    - With squashing, training is stable; `tanh` performs best among the tested functions (Table 7), likely due to smoothness and being zero-centered.
-  - Why a single scalar `α` (instead of per-channel or per-token)?
-    - Simplicity and stability. Empirically, a single `α` already learns to match global scale dynamics (Figure 8). Per-channel or per-token `α` is not explored here.
+The paper's approach can be understood as having three conceptual components:
 
-- Practicalities and initialization
-  - Default initialization: `γ=1`, `β=0`, `α0=0.5` typically works without hyperparameter changes (Section 4; Section 7.1).
-  - LLM exception: training large LLaMA models benefits from tuned `α0`, with different values in attention vs. other blocks, and smaller `α0` as width increases (Section 7.2; Table 10; Figure 11; Table 11).
-  - LLM embedding scale: an extra learnable scalar right after the embedding, initialized to `√d`, is added so early activations aren’t too small (Appendix A, “Large Language Models”).
+1. **The Observation Mechanism (Section 3):** Instrument trained Transformers and record the per-element mapping from input to output of individual Layer Norm layers, revealing tanh-like S-shaped curves — linear in the center, saturating for extreme values. This is the empirical motivation, not a component of the final method.
 
-- How DyT differs from normalization in computation and behavior
-  - No reduction: DyT is element‑wise; no means/variances are computed.
-  - No per-token adaptation: LayerNorm normalizes each token separately; DyT uses a single global `α`. The nonlinearity of `tanh` supplies the extreme‑value squashing.
-  - Affine re-scaling is retained via `γ`/`β`, preserving representational flexibility.
+2. **The Dynamic Tanh (DyT) Layer (Section 4 and Algorithm 1):** The core replacement unit. For an input tensor `x` of shape `(B, T, C)` (batch, tokens, channels), DyT applies three operations in sequence:
+   - **Scale:** Multiply by a learned scalar `α` (broadcast across all elements) — `αx`. This stretches or compresses the input to match the tanh's operating range.
+   - **Squash:** Apply the hyperbolic tangent — `tanh(αx)`. This produces S-shaped behavior: near-linear for values close to zero, saturating to ±1 for extreme values.
+   - **Affine transform:** Apply per-channel learned scale `γ` and shift `β` — `γ * tanh(αx) + β`. These are identical to the affine parameters already present in LN/RMSNorm and allow the output to recover any range.
+
+   The critical design property: `α` is a single scalar (one per DyT layer), not a per-channel parameter. It learns to approximate the inverse standard deviation of the overall activation distribution, as shown experimentally in Figure 8.
+
+3. **The Replacement Protocol (Section 5):** For any existing Transformer architecture, each LN or RMSNorm layer is replaced by one DyT layer. This applies to normalization layers inside attention blocks, inside FFN blocks, and the final pre-output normalization. The affine parameters `γ` and `β` keep their original initialization (all-ones, all-zeros), and `α` is initialized to 0.5 for most tasks (with exceptions for LLMs discussed in Section 7). No architectural modifications, no new training recipes, no hyperparameter searches are required.
+
+Information flow in a DyT-equipped Transformer block is identical to the original — only the computation inside the normalization slot changes:
+```
+Input to block → [Attention or FFN] → DyT → [Residual add] → Output from block
+```
+The DyT layer receives the same tensor shape and position as the original normalization layer, and produces a tensor of identical shape. The rest of the network is oblivious to the change.
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First, the motivating observation:** How the paper discovered that LN layers produce tanh-like mappings, what specifically was instrumented, and why this was surprising. This establishes the empirical foundation that DyT is designed to replicate.
+
+- **Second, the DyT layer definition and mechanics:** The mathematical formulation, the role of each parameter (`α`, `γ`, `β`), the PyTorch implementation (Algorithm 1), and the initialization defaults. This is the core technical contribution.
+
+- **Third, how DyT relates to — and differs from — LN:** A detailed comparison of what each operation does to an input tensor, using the token-and-channel visualization from Figure 4 to explain why LN produces tanh-like curves despite being a per-token linear operation, and how DyT approximates this behavior element-wise.
+
+- **Fourth, the `α` initialization strategy:** Why 0.5 works as a default, the stability-ablation study (Figure 10) showing interactions between `α₀`, model size, and learning rate, and the special handling for LLMs (different `α₀` for attention vs. FFN blocks, Table 10).
+
+- **Fifth, design choices and their justifications:** Why a single scalar `α` rather than per-channel, why tanh rather than hardtanh or sigmoid, why not include statistics computation, and the ablation evidence supporting each choice.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily an **empirical replacement paper** whose core idea is that the tanh-like functional behavior of normalization layers can be replicated by a simple element-wise operation with a learnable scalar, without computing activation statistics, and that this replacement works across diverse Transformer architectures and training regimes with minimal or no hyperparameter adaptation.
+
+---
+
+#### The Motivating Observation: LN Layers Produce Tanh-Like Mappings
+
+The paper's technical approach begins not with a theoretical argument but with an **empirical measurement**. The authors take three trained Transformer models — ViT-B on ImageNet-1K (Dosovitskiy et al., 2020), wav2vec 2.0 Large on LibriSpeech (Baevski et al., 2020), and DiT-XL on ImageNet-1K (Peebles and Xie, 2023) — and instrument them to record, for selected LN layers, the relationship between each input scalar element and its corresponding output scalar element.
+
+**What is being measured.** For a given LN layer, the operation (before the affine transform) is:
+
+$$ \text{LN}_{\text{pre-affine}}(x_{ijk}) = \frac{x_{ijk} - \mu_{ij}}{\sqrt{\sigma_{ij}^2 + \epsilon}} $$
+ 
+where `$\mu_{ij}$` is the mean of all `$C$` channels for token `$j$` in sample `$i$`, `$\sigma_{ij}^2$` is the variance across those same `$C$` channels, and `$\epsilon$` is a small constant preventing division by zero.
+
+**What it computes:** For each token (a vector of `$C$` values), this operation subtracts the token's mean and divides by its standard deviation, producing a tensor where each token has zero mean and unit variance across its `$C$` channels. When viewed per-token, this is a linear transformation — scaling and shifting.
+
+**The surprising finding.** When the authors plot input `$x_{ijk}$` on the `$x$`-axis against output on the `$y$`-axis for all elements in a mini-batch (Figure 2), deeper LN layers produce **S-shaped curves that closely resemble a tanh function** (compare Figure 2's deeper layer panels with Figure 3's `$\tanh(\alpha x)$` plots). This is unexpected because LN is operating linearly *within* each token — all points from a single token form a straight line (Figure 4, left panels). The non-linearity emerges *across* tokens because each token has a different mean and standard deviation, and therefore each token's linear transformation has a different slope and intercept.
+
+**How this produces an S-shape (Figure 4 explanation).** Tokens with small activation ranges have small `$\sigma_{ij}$`, which means dividing by a small standard deviation produces a large slope in the linear mapping — their outputs are more spread out. Tokens with large activation ranges have large `$\sigma_{ij}$`, which means dividing by a large standard deviation produces a shallow slope — their outputs are compressed. When all tokens are plotted together, the ensemble of these different-per-slope lines forms an S-shaped envelope: the central values (shared across many tokens with moderate `$\sigma$`) form the approximately linear central region, while channels with extreme values (Figure 4, right panels, showing certain channels in red, green, and pink spanning much wider `$x$` ranges) get squashed — their large `$x$` values are brought closer to zero because they tend to occur in tokens with large `$\sigma_{ij}$`.
+
+**Quantifying the effect.** The paper notes that "Most points (∼99%) fall in this linear range" of the S-curve, meaning the LN output is mostly linear for the bulk of activations. However, "there are still many points that clearly fall out of this range, which are considered to have 'extreme' values, e.g., those with x larger than 50 or smaller than -50 in the ViT model." It is these extreme values — the ~1% of activations with large magnitudes — where LN's squashing effect is most pronounced and where a simple affine transformation would fail to approximate LN's behavior.
+
+**Where this observation occurs.** Earlier LN layers (first column of Figure 2) are "mostly linear" — the S-shape is not yet pronounced. Deeper layers show the tanh-like pattern, suggesting this non-linear behavior is something the network *develops* during training rather than being present from initialization. This is consistent with the idea that as training progresses, certain channels specialize to produce large-magnitude activations (perhaps as detectors for specific features), and LN's squashing of these extreme values becomes critical for stable information propagation through residual connections.
+
+**Connection to prior work.** The paper explicitly connects this observation to Ni et al. (2024), who "similarly highlight the strong non-linearities introduced by LN layers, demonstrating how the non-linearity enhances a model's representational capacity." The paper also draws an analogy to biological neurons: "this squashing behavior mirrors the saturation properties of biological neurons for large inputs, a phenomenon first observed about a century ago (Adrian, 1926; Adrian and Zotterman, 1926a,b)." This is not a mechanistic claim about biological plausibility but rather a conceptual parallel: both biological neurons and LN layers exhibit linear behavior for typical inputs and saturation for extreme inputs.
+
+**Why this motivates DyT.** The tanh function naturally produces exactly this behavior: `$\tanh(x) \approx x$` for `$|x| \ll 1$` (the linear central region), and `$\tanh(x) \to \pm 1$` as `$|x| \to \infty$` (saturation of extreme values). If LN's essential contribution is producing this S-shaped mapping — rather than the specific mechanism of per-token mean subtraction and variance division — then `$\tanh(\alpha x)$` with a learned `$\alpha$` might replicate LN's functional behavior without computing any statistics. The learned `$\alpha$` accounts for the observation that different layers and different models have different `$x$`-axis scales (Figure 2), each needing the tanh to be stretched or compressed to align its linear and saturation regions with the activation distribution.
+
+---
+
+#### The DyT Layer: Definition, Parameters, and Implementation
+
+**Mathematical definition.** The Dynamic Tanh layer is defined as:
+
+$$ \text{DyT}(\mathbf{x}) = \gamma \odot \tanh(\alpha \mathbf{x}) + \beta $$
+
+where `$\mathbf{x} \in \mathbb{R}^{B \times T \times C}$` is the input tensor with batch size `$B$`, token count `$T$`, and channel dimension `$C$`; `$\alpha \in \mathbb{R}$` is a **single scalar** parameter shared across all `$B \times T \times C$` elements; `$\tanh$` is the element-wise hyperbolic tangent; `$\gamma \in \mathbb{R}^{C}$` is a per-channel scale vector (initialized to all ones); `$\beta \in \mathbb{R}^{C}$` is a per-channel shift vector (initialized to all zeros); and `$\odot$` denotes broadcasting multiplication where `$\gamma$` is multiplied element-wise with each channel's corresponding slice of the `$\tanh$` output.
+
+**What it computes:** The operation proceeds in three sequential steps across every scalar element independently. Step 1: each input value `$x$` is multiplied by the learned scalar `$\alpha$`, producing a scaled value `$\alpha x$`. This stretches or compresses the input distribution so that the majority of values fall in the tanh's approximately-linear range `$\approx [-1, 1]$` while extreme values are pushed into or beyond the saturation regions `$|\alpha x| \gg 1$`. Step 2: the hyperbolic tangent is applied element-wise, mapping `$\alpha x$` to a bounded range `$[-1, 1]$`, with the central region `$|\alpha x| \ll 1$` remaining approximately linear (`$\tanh(z) \approx z - z^3/3 + ...$`) and large positive/negative values saturating to `$+1$`/`$-1$`. Step 3: the per-channel affine parameters `$\gamma$` and `$\beta$` scale and shift the bounded output to any desired range per channel, exactly as they do in LN and RMSNorm.
+
+**Why this form:** The separation of roles between parameters is deliberate. `$\alpha$` handles the **global scaling** — it adapts to the overall magnitude of the input activations, learning to position the distribution relative to tanh's non-linearity. The authors show (Section 6.2, Figure 8) that `$\alpha$` learns values that track `$1/\text{std}$` of the input activations, effectively performing a form of global normalization. The `$\gamma$` and `$\beta$` handle **per-channel rescaling** — they allow individual channels to have different output ranges, preserving the expressivity that LN's per-channel affine parameters provide. Without `$\alpha$`, the tanh would always operate on unscaled inputs, which might be too large (everything saturates) or too small (everything stays linear, no effective squashing). Without `$\gamma$` and `$\beta$`, the output would be forced into `$[-1, 1]$` per channel, which would severely restrict the network's representational capacity since subsequent layers expect inputs in specific ranges learned during training.
+
+**Why a single scalar `$\alpha$` rather than per-channel:** This is a critical design choice. LN computes a single `$\mu$` and `$\sigma$` per token, not per channel — it normalizes across channels, treating each token's statistics as the relevant normalization quantity. DyT's single scalar `$\alpha$` similarly applies a global scaling across all channels, but unlike LN it applies the *same* scaling to every token. The per-channel differences in activation magnitude are handled by the `$\gamma$` and `$\beta$` parameters, not by `$\alpha$`. A per-channel `$\alpha_c$` (one scalar per channel) would add `$C$` parameters, potentially allowing finer-grained control, but would also increase the risk of overfitting and would lose the clean conceptual interpretation of `$\alpha$` as tracking overall activation statistics. The paper's experiments (implicitly, given the strong results with a scalar `$\alpha$`) support that a single scalar is sufficient.
+
+**PyTorch implementation (Algorithm 1).** The paper provides pseudocode that is nearly production-ready:
+
+```python
+class DyT(Module):
+    def __init__(self, C, init_α):
+        super().__init__()
+        self.α = Parameter(ones(1) * init_α)
+        self.γ = Parameter(ones(C))
+        self.β = Parameter(zeros(C))
+
+    def forward(self, x):
+        x = tanh(self.alpha * x)
+        return self.γ * x + self.β
+```
+
+The implementation highlights several non-obvious details. `self.α` is initialized as a 1D tensor of shape `(1,)` filled with `init_α` — this makes it broadcast automatically over all dimensions of `x`. The multiplication `self.alpha * x` is valid due to PyTorch's broadcasting semantics: a scalar tensor multiplies all elements. The `tanh` is the standard PyTorch element-wise operation. The final line `self.γ * x + self.β` applies per-channel affine parameters, where `self.γ` of shape `(C,)` broadcasts over the `(B, T)` dimensions, multiplying the corresponding channel index in `x` which has shape `(B, T, C)`.
+
+**Integration into existing architectures (Figure 1).** The replacement is one-to-one: wherever the original architecture has an LN or RMSNorm layer, a DyT layer is inserted. The original Transformer block is:
+```
+x = x + Attention(LN(x))   # or: x = LN(x + Attention(x)) depending on pre/post-norm
+x = x + FFN(LN(x))
+```
+The DyT version is:
+```
+x = x + Attention(DyT(x))
+x = x + FFN(DyT(x))
+```
+The `γ` and `β` in DyT serve the same role as the affine parameters in LN. In the DiT experiments, where LN's affine parameters are additionally used for class conditioning (they are functions of the class embedding and timestep), the paper keeps this mechanism intact: "the LN layers' affine parameters are used for class conditioning in DiT, and we keep them that way in our DyT experiments, only replacing the normalizing transformation with the `tanh(αx)` function." This means DyT's `γ` and `β` can incorporate conditioning signals exactly as LN's affine parameters do — the replacement only affects the normalization part, not the affine part.
+
+**Initialization defaults.** For non-LLM models, `α` is initialized to `0.5`. This choice is analyzed extensively in Section 7 and Figure 9: values between 0.5 and 1.2 generally yield good results across tasks, and `0.5` provides training stability comparable to LN. The `γ` and `β` use the standard LN initialization: ones and zeros respectively. This means that at initialization, DyT computes `1.0 * tanh(0.5 * x) + 0.0 = tanh(0.5x)`, which is approximately equal to `0.5x` for small `$x$` and saturates to `$\pm 1$` for `$|x| \gtrsim 4$`.
+
+---
+
+#### How DyT Relates to — and Differs from — Layer Normalization
+
+**Operational comparison.** LN and DyT take the same input shape `$(B, T, C)$` and produce the same output shape `$(B, T, C)$`, but their internal computations differ fundamentally:
+
+| Property | Layer Normalization | Dynamic Tanh |
+|---|---|---|
+| Cross-element computation | Computes `$\mu_{ij}$` and `$\sigma_{ij}^2$` across `$C$` channels for each token `$(i,j)$` — reduction operations required | Element-wise — each output depends only on the corresponding input scalar |
+| Number of learned parameters | `$2C$` (two per-channel vectors `$\gamma$`, `$\beta$`) | `$2C + 1$` (two per-channel vectors plus one scalar `$\alpha$`) |
+| Linearity | Per-token linear (but collectively non-linear across tokens) | Globally non-linear (tanh) |
+| Gradient computation | Gradients flow through mean and variance computations, which involve sums over `$C$` elements | Gradients flow through `$\tanh$` and scalar multiplication — no reduction in gradient path |
+
+**Why DyT can approximate LN's S-shaped behavior element-wise.** This is the most conceptually subtle point in the paper. LN produces an S-shape not through an explicit non-linear function but through the interaction of per-token linear transformations with different slopes. Specifically:
+
+1. For token `$(i,j)$` with standard deviation `$\sigma_{ij}$`, LN (pre-affine) applies the linear mapping: `$x_{\text{out}} = (x_{\text{in}} - \mu_{ij}) / \sigma_{ij}$`. This is a line passing through `$(x_{\text{in}} = \mu_{ij}, x_{\text{out}} = 0)$` with slope `$1/\sigma_{ij}$`.
+
+2. Tokens with small `$\sigma_{ij}$` (tightly clustered values) produce steep slopes — their extreme values get stretched further from zero. Tokens with large `$\sigma_{ij}$` (widely spread values) produce shallow slopes — their extreme values get compressed toward zero.
+
+3. When plotted collectively across all tokens, the envelope of these different-slope lines forms the S-shaped curve: the central region (where most tokens' `$\mu_{ij}$` values cluster) sees contributions from many tokens with moderate slopes, approximating a linear relationship, while the extremes are dominated by tokens with large `$\sigma_{ij}$`, which squash those extreme values.
+
+DyT achieves this S-shaped behavior through a completely different mechanism: the `$\tanh$` function itself is S-shaped, and `$\alpha$` stretches or compresses the `$x$`-axis to control how much of the tanh's linear-vs-saturating regime is used. The key insight is that **the functional form (S-shape with linear center and squashed extremes) is what matters, not the mechanism that produces it.** LN produces it through per-token statistics; DyT produces it through an explicit non-linearity with a learned scale. Both result in the same qualitative behavior: typical activations pass through approximately linearly, while extreme activations are squashed toward the center.
+
+**What DyT loses: per-token adaptation.** LN adapts to each token individually — a token with unusually large activations gets divided by its own large `$\sigma$`, squashing *that token's* values regardless of what other tokens are doing. DyT applies the same `$\alpha$` and `$\tanh$` to all tokens equally. It cannot independently squash one token's extreme values while leaving another token's extreme values unsquashed. The empirical results suggest this per-token adaptation is not necessary for training stability or final performance in Transformers — global squashing with a learned `$\alpha$` is sufficient.
+
+**What DyT gains: element-wise independence.** Because DyT operates element-wise, it requires no reduction operations (sums over `$C$`). This has practical implications for distributed training: in tensor-parallel settings where different GPUs hold different channel slices, LN requires communication to compute `$\mu$` and `$\sigma$` across the full channel dimension, while DyT computes everything locally. The paper reports (Appendix C, Table 14) that on uncompiled LLaMA 7B, DyT layers are ~52% faster for inference and ~42% faster for training than RMSNorm layers, though after `torch.compile`, both become nearly identical (Table 15). The element-wise nature also simplifies the backward pass: `$\frac{d}{dx}\tanh(\alpha x) = \alpha(1 - \tanh^2(\alpha x))$` is a simple element-wise expression, whereas LN's gradient involves terms from the mean and variance computations.
+
+---
+
+#### The `α` Initialization Strategy
+
+**Why initialization of `α` matters.** The value of `α` determines the operating regime of the tanh at initialization. If `α` is too large, most inputs (even small ones) will saturate the tanh immediately, producing outputs of `$\pm 1$` with near-zero gradients since `$\tanh'(z) \to 0$` as `$|z| \to \infty$`. This would cause vanishing gradients and prevent training from starting. If `α` is too small, the tanh stays in its linear regime for all inputs (`$\tanh(\alpha x) \approx \alpha x$`), and DyT effectively becomes an affine transformation — no squashing, no non-linearity, and training may diverge (as shown in Table 7 where identity function leads to divergence).
+
+**Default initialization: `α₀ = 0.5`.** For all non-LLM experiments, the paper initializes `α = 0.5`. The sensitivity analysis in Figure 9 shows that performance is remarkably stable across `α₀ ∈ [0.2, 1.2]` for most tasks. The main exception is supervised ViT-L, which diverges for `α₀ > 0.6` with the default learning rate. The paper attributes this to training instability at large model sizes: "larger models are more prone to instability for both LN and DyT models" (Figure 10 caption), and notes that LN shows "similar stability to DyT with `α₀ = 0.5`."
+
+**Stability analysis (Figure 10).** The paper conducts a systematic grid search across three axes: model depth (8 to 32 layers), learning rate (0.002, 0.004, 0.008), and `α₀` (0.25, 0.5, 0.75, 1.0). The results in Figure 10 show that:
+
+- **Larger models require more conservative settings.** At depth 32 with lr=0.008, LN itself fails (red square in the "LN" column), and DyT with `α₀ = 0.5` or lower remains stable, while `α₀ = 0.75` and `1.0` fail. This establishes that the stability challenge is inherent to deep Transformer training, not specific to DyT, and that `α₀ = 0.5` matches LN's stability profile.
+
+- **Higher learning rates amplify instability.** For a given model size, increasing the learning rate expands the failure region toward lower `α₀` values. Conversely, "a higher `α₀` requires a lower learning rate to mitigate training instability."
+
+- **The failure mode is divergence after some progress**, as noted in Table 7: "training diverged after some progress, with the preceding number representing the highest accuracy reached before divergence." This suggests the instability is not an initialization problem per se (the network starts fine) but emerges during training as activations evolve.
+
+**LLM-specific initialization (Section 7.2, Tables 10–11).** Training large language models reveals two additional initialization considerations not present in vision or speech models:
+
+1. **Larger LLMs require smaller `α₀` values.** Table 10 shows the optimal `α₀` (attention/other) across LLaMA models: 7B uses 0.8/0.2, 13B uses 0.6/0.15, 34B uses 0.2/0.05, and 70B uses 0.2/0.05. The monotonic decrease with model size is systematic — "once the optimal `α₀` is determined for smaller models, the search space for larger models can be reduced accordingly."
+
+2. **Attention blocks benefit from higher `α₀` than FFN blocks.** Across all LLaMA sizes, the optimal `α₀` for DyT layers inside attention blocks is 3-4× larger than for DyT layers in FFN blocks or the final pre-output normalization. Figure 11 visualizes this as a loss heatmap for LLaMA 7B and 13B, where the lowest-loss region consistently lies at higher `α₀` for attention vs. other locations. The paper hypothesizes this is "related to their excessively large widths compared to other models," but does not provide a mechanistic explanation. Table 11 further shows that **model width, not depth, determines optimal `α₀`** — doubling the depth while keeping width fixed does not change the optimal `α₀`, but doubling the width requires smaller `α₀` values.
+
+3. **An additional learnable scalar is needed post-embedding.** The paper notes: "we introduce an additional learnable scalar parameter immediately after the embedding layer, before any Transformer blocks. We initialize it to the square root of the model embedding dimension `$\sqrt{d}$`." Without this scalar, "the magnitudes of model activations at the beginning of training are too small, and the training struggles to progress." This mirrors the original Transformer design (Vaswani et al., 2017), which used a fixed scalar of `$\sqrt{d}$` at the same position, but making it learnable allows the model to adapt the embedding scale during training.
+
+**Why LLMs need special handling.** The paper suggests that LLMs' unusually large widths (4096–8192 channels) compared to vision Transformers (typically 768–1024) may be the cause: "the wider the network, the more uneven initialization for 'attention' and 'other' is needed" (Section 7.2 analysis of Table 11). In very wide networks, different types of layers (attention, which mixes information across tokens, vs. FFN, which processes tokens independently) may develop activation distributions with systematically different scales, requiring different `α₀` to position them appropriately relative to the tanh's operating range.
+
+---
+
+#### Design Choices and Their Justifications
+
+**Choice 1: Use a squashing function (tanh) rather than identity or a purely linear operation.**
+
+*Evidence:* Table 7 compares identity (no squashing), tanh, hardtanh, and sigmoid on ViT-S and ViT-B. Identity diverges after reaching 58.5% (ViT-S) or 61.0% (ViT-B). All three squashing functions train stably, with tanh achieving the highest final accuracy (80.3% vs. 79.9% for hardtanh, 79.6% for sigmoid on ViT-S).
+
+*Why squashing is essential:* Without squashing, extreme activations can grow unboundedly through residual connections and feedforward layers. In deep residual networks, the variance of activations tends to grow with depth (Sun et al., 2025; Brock et al., 2021a), and without a mechanism to constrain this growth — either through normalization's variance division or through a saturating non-linearity — the activations eventually explode, causing gradients to explode as well. The diverging runs with identity (Table 7) confirm this: training progresses initially (reaching non-trivial accuracy) but eventually destabilizes.
+
+*Why tanh over alternatives:* The paper suggests tanh's advantage stems from being "smooth and zero-centered" (Section 6.1, Figure 7 caption). Hardtanh — which is flat outside `$[-1, 1]$` and linear within — has exactly zero gradient in its saturation regions, which can permanently "kill" any activation that enters saturation. Sigmoid — which maps to `$[0, 1]$$`— is not zero-centered; its output is always positive, which can cause systematic biases in gradient flow through subsequent layers. Tanh maps to `$[-1, 1]$`, is smooth everywhere (nonzero gradient even in saturation, though exponentially small), and produces both positive and negative outputs, maintaining a balanced gradient signal.
+
+**Choice 2: Include a learnable scalar `α` rather than using a fixed tanh.**
+
+*Evidence:* Table 8 shows that removing `α` (using `tanh(x)` directly) reduces ViT-B accuracy from 82.5% to 81.1% with tanh, from 82.2% to 80.7% with hardtanh, and from 81.6% to 80.7% with sigmoid.
+
+*Why `α` helps:* Without `α`, the tanh operates on the raw activation scale, which varies dramatically across layers (as shown in Figure 2 — different LN layers have different `$x$`-axis scales spanning orders of magnitude). A layer with large activations would fully saturate the tanh, losing all gradient information; a layer with tiny activations would stay entirely in the linear regime, providing no squashing. The learned `α` adapts to each layer's activation scale during training. Figure 8 (left) empirically demonstrates that `α` tracks `1/std` of the input activations throughout training — as the standard deviation changes (first decreasing, then increasing over epochs), `α` changes in lockstep, maintaining the activations in a suitable operating range for the tanh.
+
+*What `α` is doing mechanistically:* The paper's analysis (Section 6.2) shows that `α` functions "partially as a normalization mechanism by learning values approximating `1/std` of the input activations." If `α ≈ 1/std(x)`, then `αx` has unit standard deviation, positioning the bulk of activations in the tanh's linear regime (where `tanh(z) ≈ z` for `|z| < 1`) while allowing the tails (activations beyond ~1-2 standard deviations) to enter the saturation region. This is analogous to what LN does per-token with `x/σ`, but DyT does it globally — the same `α` applies to all tokens.
+
+*The "Dynamic" naming:* The term "Dynamic" refers to `α` being learned and adapting during training, not to any dynamic computation at inference time. Once trained, `α` is a fixed scalar per layer.
+
+**Choice 3: Retain per-channel `γ` and `β` affine parameters.**
+
+*Justification:* These parameters serve the identical role as in LN and RMSNorm — they allow the output to be rescaled and shifted per channel. Since different channels carry different semantic information (e.g., different features or different vocabulary items), they may need different output scales. Removing `γ` and `β` would force the output of every channel to be in the bounded range `$[-1, 1]$` (before downstream operations), which is overly restrictive — the network would have to compensate by having subsequent layers learn larger weights, effectively undoing the constraint. The paper explicitly models `γ` and `β` identically to LN, initializing them to ones and zeros respectively.
+
+**Choice 4: Position DyT in the same architectural locations as LN/RMSNorm — no changes to block structure.**
+
+*Justification:* This is what makes DyT a "drop-in replacement." The paper does not experiment with removing normalization from some layers but not others, or repositioning normalization layers within the Transformer block. This conservative approach — changing only the operation inside the normalization slot — isolates the effect of the replacement and ensures that any performance difference is attributable to DyT vs. LN, not to architectural changes. It also makes adoption straightforward: any existing codebase with LN layers can be adapted by replacing `LayerNorm` with `DyT` in the model definition.
+
+**Choice 5: Use a single scalar `α` per DyT layer, not per-channel and not shared across layers.**
+
+*Justification for per-layer rather than shared:* Different layers operate at different activation scales (Figure 2), so each layer needs its own `α` to position its activations correctly relative to the tanh. A single global `α` shared across all layers would force some layers into saturation and others into complete linearity.
+
+*Justification for scalar rather than per-channel:* LN computes its statistics per-token (across channels), not per-channel. The per-channel differences in activation magnitude are handled by `γ` and `β`. Adding a per-channel `α` would introduce `$C$` additional parameters per layer, which could be seen as a step back toward the complexity LN avoids. More importantly, the conceptual model is that `α` tracks a global property of the activation distribution (its overall standard deviation), and the per-channel corrections belong in the affine parameters. The empirical success with a scalar `α` validates this design.
+
+**Choice 6: No explicit mean subtraction.**
+
+*Justification:* LN subtracts the per-token mean `$\mu_{ij}$` before dividing by standard deviation. DyT does not subtract any mean — it applies `tanh(αx)` directly. This is possible because `tanh` is an odd function centered at zero (`tanh(0) = 0`), so activations naturally centered around zero will have outputs centered around zero. If the input distribution has a non-zero mean, `tanh(αx)` will be skewed — but the subsequent `γ` and `β` affine parameters can correct for this by shifting the output. The paper implicitly relies on the network learning to keep activations roughly zero-centered (which residual networks with proper initialization tend to do), making explicit mean subtraction unnecessary.
+
+**Choice 7: For LLMs, add a learnable scalar post-embedding, initialized to `√d`.**
+
+*Justification:* This scalar serves as an initial scaling factor for the embedding outputs before they enter the Transformer stack. Without it, the embedding magnitudes (which depend on the vocabulary size, embedding dimension, and initialization scheme) may be too small for the first DyT layer's `α = 0.5` to position them in a useful operating range. The value `√d` follows the original Transformer's design, where the authors note that "without this scaling, we find that the magnitudes of model activations at the beginning of training are too small, and the training struggles to progress." Making it learnable (unlike the original Transformer, which kept it fixed) allows the model to adjust the embedding scale during training if needed.
+
+---
+
+#### Training Protocol and Hyperparameter Handling
+
+**The "no tuning" philosophy.** A central claim of the paper is that DyT works "mostly without hyperparameter tuning" when replacing LN/RMSNorm. This is operationalized as: for each experiment, use the exact same training recipe (learning rate, schedule, optimizer settings, batch size, data augmentation, training duration) as the original LN-based model. The paper explicitly states: "to highlight the simplicity of adapting DyT, we use hyperparameters identical to those utilized by the normalized counterparts" (Section 5 opening).
+
+**Where tuning was done (and where it wasn't).** The paper is transparent about exceptions:
+
+- **LLM `α₀` tuning (Section 7.2):** This is the one setting where tuning provides substantial benefits, and the paper treats it as a separate analysis. The default `α₀ = 0.5` presumably still trains (the paper doesn't report the un-tuned LLM performance), but the tuned values in Table 10 achieve the reported results.
+
+- **DiT learning rate:** The paper notes (Appendix A): "We find that the default learning rate is suboptimal for the models considered in this paper. To address this, we conduct a simple learning rate search with the LN models and apply the tuned learning rates directly to the DyT models." This ensures a fair comparison — both LN and DyT use the same tuned learning rate, and the tuning was done on LN.
+
+- **DiT zero initialization removal:** "We also observe that the zero initialization negatively affects the performance of DyT models. Therefore, we retain the zero initialization for LN models but remove the zero initialization for DyT models." The "zero initialization" here refers to DiT-specific weight initialization for certain layers, not DyT's parameters.
+
+- **Table 12 (Appendix B) learning rate tuning:** When explicitly tuning learning rates for both LN and DyT, "tuning learning rates provide only modest performance improvements for DyT models, suggesting that the default hyperparameters optimized for LN models are already well-suited for DyT models."
+
+**What `α₀ = 0.5` means numerically at initialization.** With `α₀ = 0.5`, the DyT layer computes `tanh(0.5x)`. For input values `x`: if `|x| = 1`, `tanh(0.5) ≈ 0.462`, which is near the linear regime; if `|x| = 4`, `tanh(2.0) ≈ 0.964`, which is near saturation; if `|x| = 10`, `tanh(5.0) ≈ 0.9999`, which is essentially fully saturated. This means at initialization, activations with magnitude less than ~1-2 pass through approximately linearly (with a slope of ~0.5), while activations with magnitude greater than ~4-6 are strongly squashed. This provides a reasonable starting point for most Transformer layers, which tend to have activation standard deviations in the range ~1-5 after proper weight initialization.
+
+**Training stability monitoring.** The paper implicitly monitors stability through the training loss curves (Figures 5-6), which show that DyT and LN models follow nearly identical trajectories — there is no evidence of DyT causing erratic loss behavior, slower initial convergence, or late-training degradation. The convergence curves for ViT-B (Figure 5) show the loss for LN and DyT tracking each other within the width of the plotted line across all 300 epochs, and the LLaMA curves (Figure 6) are similarly aligned across 200B tokens of training.
+
+---
+
+#### Summary of the Technical Approach
+
+The paper's technical contribution rests on a three-part empirical chain: (1) observe that trained LN layers produce tanh-like S-shaped mappings (Section 3), (2) propose DyT as a simple element-wise operation that directly produces this S-shaped behavior with a learned scale parameter (Section 4), and (3) validate through extensive experiments that DyT can replace LN/RMSNorm in diverse Transformer architectures without architectural modifications and mostly without hyperparameter changes (Section 5). The key design insight is separating the *global scale learning* (`α`) from the *per-channel affine transform* (`γ`, `β`), which mirrors LN's separation of cross-element normalization (producing the S-shape) from per-channel rescaling (providing expressivity). The method is not presented as theoretically motivated but as empirically discovered — the tanh-like shape was observed, DyT was designed to replicate it, and it worked.
 
 ## 4. Key Insights and Innovations
-- Empirical reinterpretation of LayerNorm’s role (fundamental insight)
-  - Observation: LayerNorm’s aggregated input→output mapping across tokens is S‑shaped, strongly resembling `tanh` (Section 3; Figures 2–4).
-  - Significance: Recasts normalization’s global effect not as “pure normalization,” but as “near‑linear around zero + outlier squashing,” clarifying why it stabilizes training.
 
-- A minimalist, drop‑in alternative to normalization (`DyT`) (core contribution)
-  - Element‑wise `tanh(αx)` plus standard affine parameters replaces LN/RMSNorm across Transformer blocks (Section 4; Figure 1; Equation 2).
-  - No statistics, no reductions, simple kernel—yet comparable or better performance across many tasks (Section 5, Tables 1–6).
+### Innovation 1: Normalization's Essential Function Is Squashing Extreme Values, Not Computing Statistics
 
-- Understanding and leveraging `α` as a learned scale controller (explanatory insight)
-  - `α` tracks `1/std` of activations during training and correlates with it after training (Figure 8), showing that DyT learns an implicit “global normalization” scale.
-  - Removing `α` hurts performance (Table 8), confirming its necessity.
+This is the paper's most fundamental conceptual move — one that reframes what normalization layers *do* from a mechanistic description to a functional one. Since Ioffe and Szegedy (2015), the field has described normalization layers in terms of the computation they perform: subtract the mean, divide by the standard deviation. This mechanistic framing naturally leads to the assumption that the statistics computation *itself* is what matters — that knowledge of the activation distribution's first and second moments, computed per-batch or per-token, is required for stable training.
 
-- Practical training guidelines for LLMs (useful innovation)
-  - Tuned `α0` improves LLM training; larger widths need smaller `α0`; attention blocks benefit from higher `α0` than MLP/final blocks (Section 7.2; Table 10; Figure 11; Table 11).
-  - This yields stable 7B–70B LLaMA training matching RMSNorm in loss and zero‑shot accuracy (Table 4; Figure 6).
+This paper argues otherwise. The key insight, grounded in the empirical observation of Figure 2, is that trained LN layers in deep Transformers produce **tanh-like, S-shaped input-output mappings**. The central region is approximately linear (covering ~99% of activations), while extreme values — those with magnitudes far from zero — are squashed non-linearly toward the center. The statistics computation (mean subtraction, variance division) is revealed as a *particular mechanism* for producing this S-shaped functional behavior, not the only possible mechanism.
 
-- Strong comparison to other “no‑norm” methods (evidence of significance)
-  - DyT outperforms initialization‑based approaches (Fixup, SkipInit) and matches/exceeds σReparam in ViT/MAE settings (Table 9).
+**Why this reframing matters.** If normalization's benefit comes from an S-shaped squashing profile, then any operation producing a similar profile should work — regardless of whether it computes statistics, communicates across elements, or even knows what a "token" is. DyT is the existence proof: an element-wise `tanh(αx)` with a learned scalar `α`, operating on each activation independently with no cross-element reduction, matches or exceeds LN across vision, language, speech, and diffusion Transformers. The mechanistic account ("normalization helps because it controls activation statistics") would predict DyT's failure — it has no per-token adaptation, no mean subtraction, no variance normalization. The functional account ("normalization helps because it produces an S-shaped mapping") correctly predicts DyT's success.
+
+**Comparison to prior understanding.** Previous work studying normalization's mechanisms (Santurkar et al., 2018; Bjorck et al., 2018; Daneshmand et al., 2020) focused on explaining *how* the statistics computation helps — through loss landscape smoothing, eigenvalue moderation, gradient flow improvement. These are downstream consequences, not the functional primitive. The paper's reframing suggests those benefits are *effects* of the S-shaped squashing behavior, not of the statistics computation per se. You get the same benefits from a `tanh`, which has none of the reduction operations those theories analyze.
+
+This is a fundamental shift, not an incremental refinement. It changes the question from "how do we compute better statistics?" to "what functional form does the network actually need?" — opening a design space that includes any S-shaped non-linearity with a learned scale, not just those derived from activation statistics.
+
+**Evidence anchor.** Figure 2 and Figure 4 provide the raw observation; Tables 1–6 provide the existence proof that the functional mimic works across diverse settings; Table 7 provides the negative control (identity function diverges, confirming squashing is the essential ingredient).
+
+---
+
+### Innovation 2: The Diagnostic of Instrumenting Trained Networks to Reveal Learned Functions
+
+The paper's empirical strategy — instrumenting trained networks to measure input-output mappings of individual layers — is not novel in itself. What *is* distinctive is applying this diagnostic specifically to normalization layers (which the field treats as simple statistical corrections, not learned non-linearities) and *believing the result* when it shows something surprising.
+
+**The field's implicit assumption.** Normalization layers are universally viewed as "infrastructure" — they perform a fixed, mathematically specified transformation (subtract mean, divide by standard deviation) whose shape is determined by the data passing through them, not by learned parameters. The affine parameters `γ` and `β` are learned, but they apply *after* the statistics-based transformation. The statistics computation itself is not learned — it adapts to the current mini-batch or token, but the formula is fixed. This has led the field to analyze normalization through theoretical lenses (what properties does this fixed transformation confer?) rather than empirical ones (what does a trained normalization layer actually compute?).
+
+**What the paper does differently.** By plotting `x_input` vs. `x_output` for every scalar element in a mini-batch — *before* the affine transformation, isolating just the statistics-based computation — the paper reveals that trained LN layers have converged to a specific, recognizable functional shape: the tanh-like S-curve. This shape is not designed into LN; it emerges from the interaction of per-token linear transformations with different slopes, which in turn depends on the activation statistics the network has learned to produce. The network has *learned* to arrange its activation distributions so that LN produces a tanh-like squashing profile.
+
+**Why this diagnostic can generalize.** The approach — instrument a trained model, measure what a "simple" layer actually computes, and design a replacement that directly produces that computation — is a general methodology for architectural simplification. It does not require understanding *why* the learned function takes a particular shape; it only requires observing the shape and building a simpler mechanism that replicates it. This is a different style of architecture research from the prevailing approaches of (a) theoretical analysis of training dynamics or (b) trial-and-error architectural search. It is empirical, functional, and deliberately simple.
+
+**Significance beyond this paper.** This diagnostic strategy could be applied to other architectural components treated as "solved" — what do trained attention patterns actually look like? What do positional encodings converge to? The paper demonstrates that even for the most mundane layer type (normalization), instrumented measurement can reveal surprising structure that enables simplification.
+
+This is a methodological contribution (a way of thinking about architecture design) rather than a performance gain, but it enabled the paper's main result. It is incremental in technique (instrumentation is standard) but fundamental in application — applying it to what the field considered a non-learned operation and trusting the result enough to build a replacement.
+
+**Evidence anchor.** Figure 2 (the S-curves across ViT, wav2vec 2.0, DiT), Figure 4 (the per-token and per-channel decomposition explaining how the S-shape emerges), and the paper's statement that the observation "motivates us to propose Dynamic Tanh (DyT) as a replacement" (Section 3).
+
+---
+
+### Innovation 3: The Pretraining-vs-Architecture Tradeoff: LN's Benefit Is Trainable, Not Inherent
+
+A subtle but important finding emerges from the `α` initialization analysis (Section 7) and the LLM experiments (Section 5): **DyT does not simply "work out of the box" at all scales with default settings** — it requires scale-dependent tuning of `α₀`, particularly for large language models. But this tuning is still simpler than what prior normalization-free methods required (specialized initialization schemes, weight constraints, gradient clipping), and the resulting performance matches LN/RMSNorm. The insight is that the *difficulty* of training without normalization is partly an artifact of initialization, not an inherent requirement for normalization's ongoing corrective effect.
+
+**The field's assumption.** Normalization is needed *throughout training* — its benefit is continuous, correcting for activation drift at every forward pass. This is why Fixup and SkipInit (Zhang et al., 2019; De and Smith, 2020; Bachlechner et al., 2021) fail on Transformers (Table 9): they only address the starting condition, and once activations drift from their carefully initialized values, training destabilizes. The natural conclusion is that you need an ongoing mechanism, which normalization provides.
+
+**What DyT's success suggests.** DyT demonstrates that an element-wise `tanh` — with no ongoing statistics computation, no per-token adaptation — can train stably from scratch. The stability does not come from careful initialization of all network weights (DyT uses the same weight initialization as LN models); it comes from the `tanh` providing a *continuously active squashing mechanism* that bounds activations regardless of how they drift. The squashing is what matters; the statistics computation was one way to achieve it, but `tanh` is another.
+
+At the same time, the LLM `α₀` tuning requirement (Tables 10–11, Figure 11) reveals that the *positioning* of the squashing function relative to the activation distribution matters substantially at scale. This is a different kind of problem from what Fixup/SkipInit address — it is not about initial weight scales but about the *operating range* of the non-linearity — and it is solvable with a simple hyperparameter sweep over `α₀`, not a fundamental redesign of the training procedure.
+
+**Significance.** This finding partially explains why prior normalization-free methods succeeded on moderate-scale ConvNets but not on Transformers. ConvNets, with their narrower widths and different activation statistics, may simply be easier to position correctly relative to a squashing function. Transformers — especially wide LLMs — require more careful tuning of the squashing function's operating point, but once tuned, the training is stable. The difficulty is in initialization calibration, not in the absence of per-token statistics.
+
+This is an incremental contribution to the *understanding* of normalization-free training, but it is practically important: it gives future work a clear target (better `α₀` initialization schemes) rather than an open-ended problem.
+
+**Evidence anchor.** Table 10 (optimal `α₀` decreases with model size), Table 11 (width, not depth, determines `α₀`), Figure 11 (attention blocks need higher `α₀` than FFN blocks), and Figure 10 (stability grid showing DyT with `α₀ = 0.5` matches LN's stability profile at moderate scales).
+
+---
+
+### Innovation 4: A Unifying Empirical Result That Collapses Diverse Normalization Variants into One Functional Principle
+
+The paper's experimental scope — covering LN in ViT, ConvNeXt, MAE, DINO, DiT, wav2vec 2.0, HyenaDNA, Caduceus; and RMSNorm in LLaMA 7B through 70B — is unusually broad for a method paper. Rather than demonstrating DyT on one or two settings and claiming generality, the paper tests it across **supervised, self-supervised, generative, discriminative, vision, language, speech, and genomics domains**, with both LN and RMSNorm as the baseline normalization layers. In every case, DyT matches or exceeds performance (Tables 1–6).
+
+**Why this scope matters for the claim.** The paper's central thesis is not "DyT works well on ImageNet classification" but "normalization layers in Transformers can be replaced by an element-wise tanh." To support that strong claim, the evidence must span the range of settings where LN/RMSNorm is used. A method that worked only on ViT but not on LLaMA, or only on supervised but not self-supervised learning, would fail to support the general thesis — it would reveal domain-specific requirements that the S-shaped squashing hypothesis cannot explain.
+
+**The diversity is not arbitrary.** LN and RMSNorm differ: RMSNorm omits mean-centering, normalizing only by the root-mean-square. That DyT replaces both with identical architecture and near-identical initialization (`α₀` tuning aside) suggests that mean-centering is not essential to LN's function — consistent with the paper's hypothesis that the squashing of extreme values is what matters, and mean-centering is incidental to that. The MAE and DINO results are particularly telling: these self-supervised methods have very different training dynamics from supervised learning (MAE trains with 75% of input patches masked; DINO uses a joint-embedding loss with a momentum encoder), yet DyT matches LN in both, indicating the squashing behavior is robust to training objective.
+
+**The LLaMA 7B–70B result is the strongest single piece of evidence.** Matching RMSNorm's training loss and zero-shot performance at every scale from 7B to 70B parameters, on 200B tokens of pretraining, with 15 downstream tasks, is a stress test that most architectural innovations do not survive. The loss curves in Figure 6 are nearly superposed across all model sizes and throughout training — there is no divergence, no early advantage that fades, no scale-dependent degradation. This is not a method that "kind of works at small scale"; it scales cleanly to model sizes that push the limits of contemporary training infrastructure.
+
+**This is a "negative result" with positive implications.** The paper is not claiming DyT outperforms LN by a large margin (the improvements are modest: +0.5% on ViT-L, identical on LLaMA). The claim is that a much simpler operation achieves *parity*. The conceptual value lies in what this parity implies: normalization's statistics computation is not load-bearing for Transformer training. The computational value — element-wise operation with no reductions, enabling faster uncompiled execution (Table 14) — is secondary to the intellectual message.
+
+This is a fundamental result in the sense of *removing* a previously assumed requirement, not *adding* a new capability. It does for normalization layers roughly what the original Transformer paper did for recurrence: demonstrating that a component widely considered essential can be replaced by something simpler without loss.
+
+**Evidence anchor.** Tables 1–6, spanning 8 distinct training paradigms and model families; Figure 6 showing LLaMA loss curves at 7B, 13B, 34B, 70B; Table 4 showing identical zero-shot lm-eval scores for RMSNorm and DyT at all four scales.
 
 ## 5. Experimental Analysis
-- Evaluation setup (Section 5; Appendix A)
-  - “Replace all LN/RMSNorm with DyT” and keep the rest of the architecture unchanged (Figure 1).
-  - Hyperparameters: as close as possible to the original training recipes; in most vision/speech/DNA experiments no tuning is needed. For DiT, a small LR search is done on the LN baseline and reused for DyT (Appendix A). For LLMs, `α0` is tuned and an embedding scalar is added (Appendix A; Section 7.2).
 
-- Datasets, tasks, metrics
-  - Supervised Vision on ImageNet‑1K (top‑1 accuracy): ViT‑B/L and ConvNeXt‑B/L.
-  - Self‑supervised Vision: MAE and DINO pretrain on ImageNet‑1K, then fine‑tune (top‑1 accuracy).
-  - Diffusion Models (DiT) on ImageNet‑1K: Fréchet Inception Distance (FID; lower is better).
-  - Large Language Models (LLaMA 7B/13B/34B/70B): trained on The Pile to 200B tokens; report pretraining loss and average zero‑shot score across 15 lm‑eval tasks (Table 4).
-  - Speech (wav2vec 2.0 on LibriSpeech): validation loss.
-  - DNA sequence modeling (HyenaDNA, Caduceus): average accuracy across GenomicBenchmarks datasets.
+### Evaluation Methodology
 
-- Main quantitative results
-  - Supervised Vision (Table 1):
-    > ViT‑B: 82.3% (LN) → 82.5% (DyT); ViT‑L: 83.1% → 83.6%  
-    > ConvNeXt‑B: 83.7% → 83.7%; ConvNeXt‑L: 84.3% → 84.4%
-    - Training losses are nearly identical (Figure 5), suggesting similar learning dynamics.
-  - Self‑supervised Vision (Table 2):
-    > MAE ViT‑B: 83.2% → 83.2%; MAE ViT‑L: 85.5% → 85.4%  
-    > DINO ViT‑B (p16): 83.2% → 83.4%; DINO ViT‑B (p8): 84.1% → 84.5%
-  - Diffusion (Table 3):
-    > DiT‑B FID: 64.9 → 63.9 (better); DiT‑L: 45.9 → 45.7 (better); DiT‑XL: 19.9 → 20.8 (worse)
-    - Mostly comparable; one degradation at XL size.
-  - LLMs (Table 4; Figure 6):
-    > Zero‑shot average and final training loss match RMSNorm across 7B/13B/34B/70B, with at most ±0.01 difference in loss for smaller models.
-  - Speech (Table 5):
-    > Base: 1.95 → 1.95; Large: 1.92 → 1.91 (slightly better)
-  - DNA (Table 6):
-    > HyenaDNA: 85.2% → 85.2%; Caduceus: 86.9% → 86.9%
+- **Dataset.** The paper uses the **ImageNet-1K** dataset (Deng et al., 2009) for all vision experiments — supervised classification, self-supervised pretraining (MAE, DINO), and diffusion models (DiT) — consisting of ~1.28M training images and 50K validation images across 1,000 object categories. For language modeling, **The Pile** dataset (Gao et al., 2020) is used for LLaMA pretraining, an 800GB corpus of diverse text, with evaluation on 15 zero-shot commonsense reasoning tasks from **lm-eval** (Gao et al.): anli_r1, anli_r2, anli_r3, arc_challenge, arc_easy, boolq, hellaswag, openbookqa, piqa, record, rte, truthfulqa_mc1, truthfulqa_mc2, wic, and winogrande. For speech, the **LibriSpeech** dataset (Panayotov et al., 2015) is used for wav2vec 2.0 pretraining, containing 960 hours of read English speech. For DNA modeling, pretraining uses the **human reference genome** (GRCh38, 2013) with evaluation on **GenomicBenchmarks** (Grešová et al., 2023), a collection of genomic sequence classification datasets.
 
-- Ablations, diagnostics, and analysis
-  - Squashing is essential (Section 6.1; Table 7; Figure 7):
-    > Replacing `tanh` with identity leads to divergence. Squashing with `hardtanh`/`sigmoid` trains, but underperforms `tanh`.
-  - `α` is essential (Section 6.1; Table 8):
-    > Removing `α` drops ViT‑B top‑1 from 82.5% to 81.1%.
-  - `α` dynamics and interpretation (Section 6.2; Figure 8):
-    > `α` tracks `1/std` during training; final `α` correlates with `1/std` across layers, supporting the “implicit scale normalization” view.
-  - Comparison to other norm‑removal methods (Section 6.3; Table 9):
-    > ViT‑B: Fixup 77.2%, SkipInit 74.1%, σReparam 82.5%, DyT 82.8% (LN is 82.3%).  
-    > MAE ViT‑L: Fixup 74.1%, SkipInit 74.0%, σReparam 85.4%, DyT 85.8% (LN is 85.5%).
-  - Sensitivity to `α0`
-    - Non‑LLM tasks: broad plateau; α0 in [0.5, 1.2] usually works (Figure 9). Larger models or higher LRs need smaller `α0` to avoid instability; DyT with `α0=0.5` has stability similar to LN (Figure 10).
-    - LLMs: best `α0` depends strongly on model width and block type (Section 7.2):
-      > Optimal `α0` (attention / other):  
-      > 7B: 0.8 / 0.2; 13B: 0.6 / 0.15; 34B: 0.2 / 0.05; 70B: 0.2 / 0.05 (Table 10)  
-      > Width, not depth, primarily determines `α0` (Table 11).
-  - Efficiency (Appendix C; Tables 14–15):
-    > Without compilation, DyT speeds up the norm layers a lot and yields ≈8% end‑to‑end speedups on LLaMA‑7B. After `torch.compile`, DyT and RMSNorm have similar latency.
-  - Failure case in ConvNets with BatchNorm (Appendix D; Table 16):
-    > Replacing BN with DyT in ResNet‑50: 76.2% → 68.9%; VGG19: 72.7% → 71.0%. DyT is not a drop‑in replacement for BN.
+- **Base model(s).** The paper evaluates across model families spanning multiple scales. For vision: **ViT-B and ViT-L** (Dosovitskiy et al., 2020) for supervised and self-supervised learning, **ConvNeXt-B and ConvNeXt-L** (Liu et al., 2022) for supervised learning (chosen to test both attention-based and convolution-based architectures), **MAE ViT-B and ViT-L** (He et al., 2022) for masked autoencoding, **DINO ViT-B** with patch sizes 16 and 8 (Caron et al., 2021) for joint-embedding self-supervised learning, and **DiT-B, DiT-L, DiT-XL** (Peebles and Xie, 2023) for diffusion-based image generation with patch sizes of 4, 4, and 2 respectively. For language: **LLaMA 7B, 13B, 34B, and 70B** (Touvron et al., 2023a,b; Dubey et al., 2024), which by default use RMSNorm (Zhang and Sennrich, 2019) rather than LN. For speech: **wav2vec 2.0 Base and Large** (Baevski et al., 2020). For genomics: **HyenaDNA** (Nguyen et al., 2024) and **Caduceus** (Schiff et al., 2024). The breadth is deliberate: it spans recognition to generation, supervised to self-supervised, and vision to language to speech to genomics, establishing that DyT's effectiveness is not domain-specific.
 
-- Do the experiments support the claims?
-  - Breadth: The method is tested across recognition (supervised), self‑supervised, generation (diffusion), speech, DNA, and LLMs, using standard public codebases and recipes (Section 5; Appendix A).
-  - Strength: On Transformers with LN/RMSNorm, DyT consistently matches or slightly betters baselines, including at large LLM scales (Table 4).
-  - Caveats:
-    - Some adjustments exist: DiT learning rate search on the baseline and non‑zero init differences for DyT (Appendix A), and an extra embedding‑scale parameter for LLMs (Appendix A). These are documented and reasonable, but they mean “no‑tuning” has exceptions.
-    - Not universal: Fails to replace BatchNorm in classic ConvNets (Appendix D).
+- **Metrics.** Different tasks use different primary metrics appropriate to their domain. For **image classification** (ViT, ConvNeXt, MAE fine-tuning, DINO fine-tuning): **top-1 accuracy (%)** on the ImageNet-1K validation set of 50,000 images — the fraction of images where the model's highest-confidence prediction matches the ground-truth label. For **diffusion models** (DiT): **Fréchet Inception Distance (FID)**, a standard metric for image generation quality where lower is better, evaluated using the standard ImageNet "reference batch" following DiT conventions — FID measures the Wasserstein-2 distance between Inception-v3 feature distributions of generated and real images. For **language models** (LLaMA): **training loss** after 200B tokens (cross-entropy loss in nats per token) and **zero-shot performance** averaged across 15 lm-eval tasks, reported as the normalized accuracy score following OpenLLaMA (Geng and Liu, 2023) conventions — each task's metric (accuracy, F1, etc.) is aggregated into a single composite score. For **speech** (wav2vec 2.0): **validation loss** on LibriSpeech after pretraining — the contrastive predictive coding loss. For **DNA modeling** (HyenaDNA, Caduceus): **classification accuracy (%)** averaged over each dataset in GenomicBenchmarks. The paper does not report confidence intervals or standard deviations for any metric.
+
+- **Baselines.** The primary baseline in every experiment is the **original LN or RMSNorm version** of the same architecture, trained with the identical protocol and hyperparameters. For the comparison with other normalization-free methods (Table 9, Section 6.3), three additional baselines are evaluated: **Fixup** (Zhang et al., 2019; Huang et al., 2020), an initialization-based method that adjusts initial parameter values to prevent large gradients and activations at the start of training; **SkipInit** (De and Smith, 2020; Bachlechner et al., 2021), another initialization-based method that biases residual blocks toward identity at initialization; and **σReparam** (Zhai et al., 2023), a weight-normalization-based method that controls the spectral norm of weights throughout training. For the comparison in Table 9, the paper notes that both Fixup and SkipInit "require significantly lower learning rates to prevent training divergence," so a learning rate search was conducted for all methods including DyT, producing results that differ from the main experiments where no hyperparameter tuning was performed.
+
+- **Generation budget / compute accounting.** The paper does not operate in a budget-constrained comparison framework — there is no "compute budget" being allocated across methods as in the reference example analysis. Instead, the comparison is **hyperparameter-matched**: both LN/RMSNorm models and DyT models are trained with identical computational budgets (same number of epochs or tokens, same batch size, same number of GPUs) and the comparison is on final performance. For LLaMA, all models are trained on exactly 200B tokens with a batch size of 4M tokens. For vision models, training proceeds for a fixed number of epochs (300 for ViT-B/L and ConvNeXt-B/L on ImageNet-1K; varying by method for self-supervised pretraining). The paper does measure efficiency separately in Appendix C (Tables 14–15), reporting inference and training latency in seconds for 100 forward/forward-backward passes on a single sequence of 4096 tokens using an Nvidia H100 GPU with BF16 precision, both with and without `torch.compile`. These measurements compare the time spent in normalization layers vs. DyT layers and in the full model, but this latency analysis is separate from the accuracy comparisons.
+
+- **Cross-validation / statistical protocol.** The paper does not employ cross-validation or statistical significance testing. For the comparison with other normalization-free methods (Table 9), the stated protocol is: "We closely follow the original protocols outlined in their respective papers. However, we find that both initialization-based methods, Fixup and SkipInit, require significantly lower learning rates to prevent training divergence. To ensure a fair comparison, we conduct a simple learning rate search for all methods, including DyT." No details are provided about the learning rate search procedure (search space, selection criterion, whether it was done on validation data or test data). For the main experiments (Tables 1–6), no hyperparameter search or statistical protocol is reported — the paper states that "to highlight the simplicity of adapting DyT, we use hyperparameters identical to those utilized by the normalized counterparts." For LLM α₀ tuning (Section 7.2), the optimal α₀ values in Table 10 were determined by "pretraining each on 30B tokens and comparing their training losses" — a validation-based selection using a fraction of the full 200B token budget.
+
+### Main Quantitative Results
+
+#### Supervised Learning in Vision (Table 1, Figure 5)
+
+**Headline result:** DyT achieves slightly better or identical performance to LN across ViT and ConvNeXt at both Base and Large scales, with no hyperparameter changes. On ViT-L, DyT reaches 83.6% top-1 accuracy vs. 83.1% for LN (+0.5 percentage points). On ConvNeXt-B, both methods achieve 83.7%. On ViT-B, DyT reaches 82.5% vs. 82.3% for LN (+0.2%). On ConvNeXt-L, DyT reaches 84.4% vs. 84.3% (+0.1%). All improvements are within 0.5 percentage points — the claim is parity, not superiority.
+
+The loss curves in Figure 5 for ViT-B and ConvNeXt-B show that the training trajectories of LN and DyT models are near-identical throughout all 300 epochs. The curves overlay each other within the plotted line width, with no evidence of slower initial convergence, mid-training plateaus, or late-training divergence for DyT. This visual alignment is the paper's primary evidence that DyT does not alter the optimization dynamics of Transformer training — it achieves the same loss trajectory through a different mechanism.
+
+**Key context:** All experiments in Table 1 use the original learning rates optimized for LN models (4e-3 for all models). Table 12 in Appendix B shows that tuning learning rates provides only modest further improvements: ViT-B DyT improves from 82.5% to 82.8% at lr=6e-3; MAE ViT-B DyT improves from 83.2% to 83.7% at lr=3.2e-3; MAE ViT-L DyT improves from 85.4% to 85.8% at lr=3.2e-3. The fact that the original learning rates — optimized for LN — transfer directly to DyT is presented as evidence of functional similarity between the two operations.
+
+#### Self-Supervised Learning in Vision (Table 2)
+
+**Headline result:** DyT performs on par with LN across two different self-supervised learning paradigms — masked autoencoding (MAE) and joint-embedding (DINO) — and across model scales. MAE ViT-B achieves 83.2% for both LN and DyT. MAE ViT-L shows a negligible difference: 85.5% (LN) vs. 85.4% (DyT), a 0.1 percentage point drop. DINO ViT-B with patch size 16 improves from 83.2% (LN) to 83.4% (DyT), while DINO ViT-B with patch size 8 improves from 84.1% to 84.5% (+0.4 percentage points).
+
+**Why this matters for the central claim:** MAE and DINO have fundamentally different training objectives and dynamics from supervised learning. MAE masks 75% of image patches and trains the encoder to reconstruct the missing patches — the loss is a per-pixel reconstruction error, not a classification loss. DINO uses a student-teacher framework with a momentum encoder and a joint-embedding loss that encourages the student and teacher to produce similar representations for different augmentations of the same image — the loss operates in representation space, not output space. That DyT transfers without modification to both paradigms, and to both Base and Large scales, supports the claim that the S-shaped squashing behavior is what matters, independent of the training objective. The normalization layer does not need to adapt its behavior to the loss function — the `tanh`-like profile is universally useful.
+
+#### Diffusion Models (Table 3)
+
+**Headline result:** DyT achieves comparable or improved FID scores across DiT-B, DiT-L, and DiT-XL. DiT-B improves from 64.9 (LN) to 63.9 (DyT), a 1.0 FID reduction (lower is better). DiT-L shows a marginal improvement: 45.9 → 45.7 (−0.2 FID). DiT-XL slightly degrades: 19.9 → 20.8 (+0.9 FID). The DiT experiments have a specific architectural note: "the LN layers' affine parameters are used for class conditioning in DiT, and we keep them that way in our DyT experiments, only replacing the normalizing transformation with the `tanh(αx)` function." This means DyT's `γ` and `β` serve double duty as both affine parameters and conditioning injectors, exactly as in the original DiT — the replacement affects only the normalization computation, not the conditioning mechanism.
+
+**Non-obvious detail:** The paper notes in Appendix A that for DiT, "the default learning rate is suboptimal for the models considered in this paper. To address this, we conduct a simple learning rate search with the LN models and apply the tuned learning rates directly to the DyT models." Additionally, "the zero initialization negatively affects the performance of DyT models. Therefore, we retain the zero initialization for LN models but remove the zero initialization for DyT models." These adjustments mean the DiT comparison is not a pure "identical hyperparameters" test like the vision and speech experiments. The paper is transparent about this, but it weakens the "no tuning" claim slightly for generative models.
+
+#### Large Language Models (Table 4, Figure 6)
+
+**Headline result:** DyT matches RMSNorm across LLaMA models at all four sizes (7B, 13B, 34B, 70B) on both training loss and zero-shot task performance. The composite lm-eval scores are identical to three decimal places at every model size: 7B achieves 0.513 for both; 13B achieves 0.529 for both; 34B achieves 0.536 for both; 70B achieves 0.549 for both. Training loss values show tiny differences: 7B DyT is 1.60 vs. 1.59 for RMSNorm (+0.01); 13B DyT is 1.54 vs. 1.53 (+0.01); 34B and 70B are identical at 1.50 and 1.45 respectively.
+
+The loss curves in Figure 6 are the most compelling single piece of evidence in the paper. Across all four model sizes, the RMSNorm and DyT loss curves are virtually superposed from the first few billion tokens through 200B tokens of training. There is no divergence at any scale, no early advantage for RMSNorm that DyT later catches up to, no scale-specific degradation. The curves for 7B, 13B, 34B, and 70B each show the same pattern: the two lines track each other within the plotted width throughout. This is evidence that DyT's training dynamics are functionally equivalent to RMSNorm's at scale.
+
+**Important caveat on "no tuning":** The LLM experiments are the one setting where the paper explicitly tuned `α₀` (Section 7.2), using different values for attention blocks vs. FFN/final layers. The tuned values in Table 10 are: 7B uses 0.8/0.2 (attention/other); 13B uses 0.6/0.15; 34B uses 0.2/0.05; 70B uses 0.2/0.05. The paper does not report what performance would be with the default `α₀ = 0.5` across all layers. Additionally, a learnable scalar initialized to `√d` (the square root of the embedding dimension) is added after the embedding layer — a modification not needed for non-LLM models.
+
+#### Self-Supervised Learning in Speech (Table 5)
+
+**Headline result:** DyT performs comparably to LN for wav2vec 2.0 Base and Large models on LibriSpeech pretraining validation loss. Base achieves 1.95 for both LN and DyT. Large achieves 1.92 for LN vs. 1.91 for DyT, a reduction of 0.01 in validation loss. The paper notes (Appendix A) that for both wav2vec 2.0 models, "we retain the first group normalization layer from the original architecture, as it functions primarily as data normalization to handle the unnormalized input data." This means DyT replaces LN in the Transformer blocks but not the initial data-normalization layer — a practical concession rather than a pure test of the universal replacement claim.
+
+#### DNA Sequence Modeling (Table 6)
+
+**Headline result:** DyT maintains performance identical to LN for both HyenaDNA and Caduceus on GenomicBenchmarks classification: HyenaDNA achieves 85.2% for both; Caduceus achieves 86.9% for both. These are the smallest-scale experiments in the paper (the model sizes are not reported but are substantially smaller than the vision or language models). They serve primarily to demonstrate domain breadth, not to stress-test the method at scale.
+
+#### Comparison with Other Normalization-Free Methods (Table 9)
+
+**Headline result:** DyT consistently outperforms initialization-based methods (Fixup, SkipInit) and matches or exceeds the weight-normalization-based σReparam across ViT-B, ViT-L, MAE ViT-B, and MAE ViT-L. On supervised ViT-B, DyT achieves 82.8% vs. 77.2% for Fixup, 74.1% for SkipInit, and 82.5% for σReparam — DyT is the only method matching LN's 82.3%. On supervised ViT-L, the gaps are larger: DyT reaches 83.6% vs. 78.1% (Fixup), 75.6% (SkipInit), and 83.0% (σReparam), compared to 83.1% for LN. On self-supervised MAE, the gaps are dramatic: MAE ViT-B with DyT reaches 83.7% vs. 73.7% (Fixup), 73.1% (SkipInit), and 83.2% (σReparam), compared to 83.2% for LN. MAE ViT-L with DyT reaches 85.8% vs. 74.1% (Fixup), 74.0% (SkipInit), and 85.4% (σReparam), compared to 85.5% for LN.
+
+**Key methodological note:** The numbers in Table 9 differ from those in Table 1 because "we conduct a simple learning rate search for all methods, including DyT. This produces results that differ from those reported in Section 5, where no hyperparameter is tuned." This means Table 9 represents the *best achievable* performance for each method under tuned learning rates, making it a fair comparison of the methods' ceilings rather than their transferability from LN hyperparameters. Under this protocol, DyT achieves the highest performance across all four configurations, with Fixup and SkipInit showing large gaps (3–10+ percentage points below LN) and σReparam competitive but slightly behind DyT (82.5% vs. 82.8% on ViT-B; 83.0% vs. 83.6% on ViT-L; 83.2% vs. 83.7% on MAE ViT-B; 85.4% vs. 85.8% on MAE ViT-L).
+
+**Why Fixup and SkipInit perform poorly:** The paper notes that both "require significantly lower learning rates to prevent training divergence" — without the learning rate search, they would presumably diverge entirely. This is consistent with the paper's hypothesis that addressing only the initialization condition without providing ongoing squashing is insufficient for Transformers. σReparam's stronger performance (close to LN and DyT) suggests that weight constraints can partially substitute for normalization, but DyT is both simpler and slightly more effective.
+
+### Ablation Studies and Robustness Checks
+
+**Removing the squashing function (identity ablation):** Table 7 shows that replacing `tanh` with the identity function — making DyT a pure affine transformation `γ * (αx) + β` with no squashing — causes training to diverge. On ViT-S, the identity version reaches 58.5% accuracy and then fails; on ViT-B, it reaches 61.0% and then diverges. In both cases, the model makes meaningful progress before destabilizing — it is not an initialization failure but a mid-training collapse. This is the paper's primary evidence that squashing, not just learnable scaling, is the essential function that normalization layers provide.
+
+**Comparing squashing functions:** Table 7 further compares `tanh`, `hardtanh` (flat outside [−1, 1], linear within), and `sigmoid` (S-shaped but mapping to [0, 1]), all with the learnable `α` intact. On ViT-B, tanh achieves 82.5%, hardtanh 82.2%, and sigmoid 81.6% — a spread of 0.9 percentage points. The ordering (tanh > hardtanh > sigmoid) is consistent across ViT-S and ViT-B. The paper attributes tanh's advantage to "its smoothness and zero-centered properties." Hardtanh has exactly zero gradient in its saturation regions (flat at ±1), which can permanently kill gradient flow for activations that enter saturation. Sigmoid's output is always positive (asymptoting to 0 and 1 rather than −1 and 1), which can cause systematic bias in gradient flow through subsequent layers that expect zero-mean inputs. Both properties matter, but the effect sizes are modest (within 1 percentage point), suggesting the squashing function choice is not the dominant factor.
+
+**Removing the learnable scalar `α`:** Table 8 shows that removing `α` — using a fixed `tanh`, `hardtanh`, or `sigmoid` without any learned scaling — degrades performance across all three squashing functions. For `tanh`, ViT-B accuracy drops from 82.5% to 81.1% (a 1.4 percentage point reduction). For `hardtanh`, accuracy drops from 82.2% to 80.7% (1.5 points). For `sigmoid`, accuracy drops from 81.6% to 80.7% (0.9 points). The degradation confirms that a fixed tanh cannot adapt to the varying activation scales across different layers (as shown in Figure 2 — different LN layers have x-axis scales spanning orders of magnitude). Without `α`, some layers would operate entirely in the saturated regime and others entirely in the linear regime, neither of which is optimal.
+
+**The `α` initialization value (Section 7.1, Figure 9):** For non-LLM models, performance is remarkably insensitive to `α₀` across a wide range. Figure 9 shows accuracy/FID/loss as a function of `α₀ ∈ [0.0, 1.2]` for all non-LLM tasks. For most configurations (MAE ViT-B/L, DINO ViT-B/L, ConvNeXt-B/L, DiT-B/L, wav2vec 2.0 Base/Large, HyenaDNA, Caduceus), performance is essentially flat across `α₀ ∈ [0.2, 1.2]`. The only notable exception is supervised ViT-L (Figure 9, top right panel), which diverges for `α₀ > 0.6` when using the default learning rate — the plotted line terminates for those values. The paper attributes this to training instability at larger model sizes and notes that reducing the learning rate restores stability. This insensitivity is a practical strength: DyT does not require careful `α₀` tuning for most vision and speech tasks, reinforcing the "drop-in replacement" narrative.
+
+**LLM `α₀` tuning (Section 7.2, Tables 10–11, Figure 11):** For LLMs, tuning `α₀` provides substantial benefits, and two systematic patterns emerge. First, **larger models require smaller `α₀` values** (Table 10): optimal `α₀` in attention blocks decreases from 0.8 (7B) to 0.6 (13B) to 0.2 (34B) to 0.2 (70B); optimal `α₀` in other locations decreases from 0.2 (7B) to 0.15 (13B) to 0.05 (34B) to 0.05 (70B). Second, **attention blocks consistently benefit from higher `α₀` than FFN/final layers** — the ratio is approximately 4:1 across all model sizes. Figure 11 visualizes this as a loss heatmap for LLaMA 7B and 13B, where the optimal region (lowest loss) is at substantially higher attention `α₀` than "other" `α₀`. Table 11 further isolates that **model width, not depth, determines `α₀`**: holding width at, say, 4096, the optimal `α₀` is 0.8/0.2 regardless of whether depth is 8, 16, 32, or 64; but doubling width from 2048 to 4096 shifts the optimal from 1.0/0.5 to 0.8/0.2.
+
+**`α` tracks 1/std of activations during training (Section 6.2, Figure 8):** The left panel of Figure 8 tracks `α` and the inverse standard deviation of input activations for two selected DyT layers in ViT-B across all 300 training epochs. The two quantities fluctuate together: as activation standard deviation changes (first decreasing, then increasing during training), `α` changes in the same direction, maintaining a consistent relationship where `α ≈ 1/std`. The right panel plots the final trained `α` values against `1/std` of input activations for ViT-B and ConvNeXt-B, showing a strong positive correlation — layers with larger `α` have correspondingly smaller activation standard deviations. This empirical relationship confirms the paper's interpretation: `α` learns to perform a form of global normalization, scaling the input so that the bulk of activations fall in the tanh's approximately linear regime while extreme values enter saturation. The analysis also reveals that "deeper layers tend to have activations with larger standard deviations," consistent with prior findings on activation growth in deep residual networks (Brock et al., 2021a for ConvNets; Sun et al., 2025 for Transformers).
+
+**Tuning DyT's learning rate (Appendix B, Table 12):** The paper evaluates whether DyT benefits from learning rate tuning beyond the values optimized for LN. Across 16 model-task configurations, only 4 show improvements from tuning: ViT-B DyT improves from 82.5% (lr=4e-3) to 82.8% (lr=6e-3); MAE ViT-B from 83.2% to 83.7% (lr=2.4e-3 → 3.2e-3); MAE ViT-L from 85.4% to 85.8% (lr=2.4e-3 → 3.2e-3); wav2vec 2.0 Base from 1.95 to 1.94 (lr=5e-4 → 6e-4). The remaining 12 configurations show no improvement. This confirms that "the default hyperparameters optimized for LN models are already well-suited for DyT models" in the vast majority of cases.
+
+**Tuning DyT's `α₀` for non-LLM models (Appendix B, Table 13):** Similar to learning rate tuning, optimizing `α₀` from the default 0.5 yields only minor gains: ViT-B improves from 82.5% to 82.6% (α₀ = 1.0); MAE ViT-B improves from 83.2% to 83.4% (α₀ = 1.0); wav2vec 2.0 Large improves from 1.91 to 1.90 (α₀ = 1.0). All other configurations show no improvement. The paper interprets this as evidence that `α₀ = 0.5` is a near-optimal default.
+
+**Stability grid across model sizes, learning rates, and `α₀` (Figure 10):** This ablation systematically tests the training stability boundary for DyT. The grid varies model depth (8, 16, 24, 32 layers), learning rate (0.002, 0.004, 0.008), and `α₀` (0.25, 0.5, 0.75, 1.0) for supervised ViT training on ImageNet-1K. Key findings: (1) at moderate settings (depth 8–16, lr ≤ 0.004), all `α₀` values train stably; (2) at depth 32 with lr=0.008, even LN fails (red square), while DyT with `α₀ = 0.25` and `α₀ = 0.5` succeeds, and `α₀ = 0.75` and `1.0` fail — establishing that DyT with `α₀ = 0.5` has a stability profile matching LN; (3) reducing `α₀` or the learning rate expands the stable region — the two interventions are substitutable. This grid explains the ViT-L divergence in Figure 9: at the default lr=4e-3 and ViT-L's depth, `α₀ > 0.6` enters the unstable region for that model size.
+
+**Replacing Batch Normalization with DyT in ConvNets (Appendix D, Table 16):** This is the paper's primary negative result. DyT fails to effectively replace BN in ResNet-50 (76.2% → 68.9%, a 7.3 percentage point drop) and VGG19 (72.7% → 71.0%, a 1.7 point drop). Both models are trained on ImageNet-1K using torchvision recipes. The paper hypothesizes that the failure may be "related to BN layers being more frequent in these ConvNets, where they appear once with every weight layer, but LN only appears once per several weight layers in Transformers." This is a significant boundary condition: DyT works for LN/RMSNorm in Transformers but not for BN in classic ConvNets, limiting the universality of the functional mimicry claim.
+
+**Efficiency benchmarking (Appendix C, Tables 14–15):** On uncompiled LLaMA 7B with BF16 precision on an H100 GPU, DyT layers are substantially faster than RMSNorm layers: 52.4% faster for inference (1.0s vs. 2.1s for 100 forward passes) and 42.2% faster for training (4.8s vs. 8.3s for 100 forward-backward passes). At the full model level, the speedup is more modest: 7.8% faster inference (13.0s vs. 14.1s) and 8.2% faster training (39.1s vs. 42.6s). However, after `torch.compile`, the latency of DyT and RMSNorm layers becomes nearly identical (both 0.3s for inference, both 3.9s for training per layer; identical full-model times of 12.3s inference and 38.9s training). The paper is transparent about this: "DyT offers no speedup over models with normalization layers when properly compiled/optimized." The practical efficiency benefit depends on the deployment scenario — uncompiled execution or hardware where reduction is a bottleneck.
+
+### Critical Assessment
+
+The paper's central claim — "Transformers without normalization can achieve the same or better performance using a remarkably simple technique" — is the claim that the experimental results most directly address. The evidence for this claim is **strong across a broad range of settings but has specific boundary conditions and methodological limitations that constrain the claim's universality**.
+
+**What the experiments do demonstrate.** The paper shows convincingly that DyT can replace LN or RMSNorm in Transformer architectures spanning vision, language, speech, and genomics, across supervised, self-supervised, and generative paradigms, at scales from millions to 70 billion parameters, with near-identical training dynamics (loss curves) and final performance (accuracy, loss, FID) to the normalized baselines. The evidence for this is comprehensive: Tables 1–6 cover 8 distinct training paradigms across 5 domains; Figure 6 shows loss curve superposition at four LLaMA scales from 7B to 70B; the ablation in Table 7 confirms that the squashing function (not just learnable scaling) is essential; Table 9 shows DyT substantially outperforms prior normalization-free methods (Fixup, SkipInit) and slightly outperforms σReparam under learning-rate-tuned comparisons.
+
+**What the experiments do NOT demonstrate.** Several aspects of the claim remain untested or are contradicted by the evidence:
+
+1. **The "same or better performance" applies to LN/RMSNorm, not to all normalization layers.** The paper explicitly shows that DyT fails to replace batch normalization in classic ConvNets (Table 16: ResNet-50 drops from 76.2% to 68.9%; VGG19 drops from 72.7% to 71.0%). The paper's title ("Transformers without Normalization") and abstract ("a drop-in replacement for normalization layers in Transformers") correctly scope the claim, but the introduction's broader statements ("These findings challenge the conventional understanding that normalization layers are indispensable in modern neural networks") could be misread as applying to all normalization layers in all architectures. The evidence supports the narrower claim: DyT replaces LN/RMSNorm in Transformers, not BN in ConvNets.
+
+2. **The "no hyperparameter tuning" claim has caveats.** For non-LLM models, the claim holds: Tables 12–13 show that tuning learning rate or `α₀` provides only minor improvements for most configurations, and the default settings work. However, for LLMs, the paper **did** tune `α₀` (Table 10) and **did** add a learnable post-embedding scalar initialized to `√d` — modifications not needed for non-LLM architectures. The paper does not report LLM performance with the default `α₀ = 0.5` uniformly applied. A reader deploying DyT on a new LLM architecture would need to budget for an `α₀` sweep (the paper used 30B tokens to evaluate each candidate, which is itself a non-trivial compute investment). The claim is more accurately: "no tuning for non-LLM Transformers; modest tuning (α₀ per attention/FFN block) for LLMs."
+
+3. **The DiT results required two adjustments beyond hyperparameter matching.** The paper tuned the learning rate for DiT models (using LN models for the search, then applying the result to DyT) and removed zero initialization for DyT models. These are transparently reported but mean the DiT comparison is not "identical hyperparameters" in the same sense as the ViT and ConvNeXt experiments.
+
+4. **The "element-wise operation is faster" claim is hardware-dependent.** The paper's own benchmarking (Tables 14–15) shows that DyT's speed advantage over compiled normalization layers is essentially zero on an H100 GPU. The uncompiled advantage (42–52% per layer) may matter in settings where compilation is not available or where reductions are bottlenecked (e.g., certain distributed training configurations), but the paper does not explore these scenarios empirically. The efficiency claim should be understood as conditional: DyT *can* be faster (uncompiled execution), but this advantage is not guaranteed and can vanish with standard optimization tools.
+
+5. **The mechanism claim — that LN's tanh-like squashing is the essential function — is supported by correlation, not causation.** The paper observes that trained LN layers produce tanh-like curves (Figures 2, 4), proposes DyT to replicate this behavior, and shows DyT works. This is strong abductive reasoning (inference to the best explanation) but does not directly prove that the tanh-like shape *causes* LN's benefits. An alternative hypothesis: both LN and DyT produce similar training dynamics because they both bound activation magnitudes (LN through variance division, DyT through tanh saturation), and the specific shape of the bounding function matters only modestly (as Table 7 shows: tanh, hardtanh, and sigmoid all work, with only ~1 percentage point separating them). The bounding property, not the specific S-shape, might be what matters. The paper does not include an ablation that isolates bounding vs. shape — for instance, a piecewise linear function that bounds without an S-shape — that could distinguish these hypotheses.
+
+**Missing experiments that would strengthen the paper:**
+
+1. **LLaMA with default `α₀ = 0.5` uniformly.** This would quantify how much the `α₀` tuning in Table 10 actually matters. If the default achieves, say, 0.500 zero-shot score vs. 0.513 with tuning, the claim of "mostly without hyperparameter tuning" would need qualification for LLMs.
+
+2. **Post-hoc LN removal from trained models.** Heimersheim (2024) showed that GPT-2's LN layers can be removed *after training* through fine-tuning. An experiment showing that a trained LN model's normalization layers can be replaced with DyT *without retraining* — by setting `α` to approximate the LN layer's effective 1/std and the affine parameters to match — would directly test the functional equivalence hypothesis. If DyT truly captures LN's learned behavior, the replacement should be possible post-hoc, not just from scratch.
+
+3. **Larger-scale LLM experiments.** The LLaMA experiments go to 70B parameters and 200B tokens — substantial, but not at the frontier (200B+ models, trillion-token training). The α₀ scaling trend in Table 10 (decreasing with width) could be extrapolated but hasn't been tested beyond 70B. It is possible that at some larger width, DyT requires α₀ values so small that the tanh operates entirely in its linear regime, at which point training would diverge (as in the identity ablation).
+
+4. **Multi-modal or cross-attention Transformers.** All experiments use single-modality Transformers. DyT has not been tested on encoder-decoder architectures (e.g., T5), multi-modal models (e.g., CLIP, LLaVA), or architectures with cross-attention between modalities. These introduce additional complexity (different activation statistics for different modalities' streams) that might stress the global-scalar-α design.
+
+5. **Longer LLM training.** The LLaMA models are trained on 200B tokens — a single epoch on many datasets. The paper shows loss curves out to 200B (Figure 6) with no divergence, but longer training (multiple epochs, 500B–1T tokens) would test whether DyT's dynamics remain stable or whether the lack of per-token normalization causes accumulated drift that eventually destabilizes.
+
+6. **Direct measurement of activation statistics during DyT training.** Figure 8 tracks `α` and 1/std for ViT-B, showing they co-evolve. Similar measurements for LLaMA during training would reveal whether the same relationship holds at scale and whether the tuned α₀ values (Table 10) lead to a different equilibrium relationship between α and activation statistics. Without this, the reader cannot verify that the LLM DyT layers are actually learning to approximate 1/std, or whether the α tuning compensates for a breakdown of this relationship at scale.
+
+**Experimental design strengths:**
+
+- **Breadth of domains and settings.** Testing across 8 distinct training paradigms (supervised classification, MAE, DINO, DiT, LLaMA, wav2vec 2.0, HyenaDNA, Caduceus) is substantially more thorough than typical method papers. The replication of results across architectures (ViT, ConvNeXt, LLaMA) and scales (Base to Large to 70B) provides strong evidence that the finding is not model-specific or scale-specific.
+
+- **Transparent reporting of modifications.** The paper explicitly notes where it deviated from "identical hyperparameters": DiT learning rate tuning, DiT zero initialization removal, LLM α₀ tuning, wav2vec 2.0 retaining the first group normalization layer. This transparency allows readers to assess the strength of the "no tuning" claim themselves, rather than discovering caveats through reproduction attempts.
+
+- **Negative results reported prominently.** The BN failure (Table 16) is in the Limitations section (Section 9) and Appendix D, but it is highlighted clearly. The paper does not bury this boundary condition — it is acknowledged that DyT does not work for all normalization types in all architectures.
+
+- **Ablation design isolates the critical components.** The identity ablation (Table 7) establishes that squashing is necessary; the no-α ablation (Table 8) establishes that learned scaling is beneficial; the squashing function comparison (Table 7) establishes that tanh is preferable but not uniquely essential. Together, these ablations decompose DyT's contribution cleanly.
+
+**Experimental design weaknesses:**
+
+- **No confidence intervals or error bars.** No experiment reports standard deviations, confidence intervals, or results from multiple random seeds. For the supervised and self-supervised vision experiments, where differences between LN and DyT are typically 0.1–0.5 percentage points, it is unclear whether these differences are statistically meaningful or within run-to-run variance. The LLaMA zero-shot scores being identical to three decimal places (0.513, 0.529, 0.536, 0.549 for both LN and DyT at all four sizes) is striking and would be even more informative with variance estimates — identical scores could reflect genuine functional equivalence or could reflect limited precision of the evaluation metric.
+
+- **Small sample of models for the comparison with normalization-free methods.** Table 9 evaluates Fixup, SkipInit, and σReparam on only 4 model configurations (2 supervised ViT, 2 MAE ViT). While the gaps are large enough that the conclusion is unlikely to change with more configurations, testing on ConvNeXt, DiT, or LLaMA would strengthen the claim that DyT is the first method to broadly match LN's performance without normalization.
+
+- **The difficulty estimation equivalent in this paper is the α₀ tuning cost, which is under-reported.** The paper reports that LLaMA α₀ values were determined by pretraining on 30B tokens and comparing training losses. For the 7B model, Figure 11 shows a 5×4 grid of α₀ values tested — that is 20 training runs of 30B tokens each, totaling 600B tokens of tuning compute. This is not included in any cost comparison, and the paper does not discuss whether cheaper α₀ selection methods (e.g., shorter training runs, interpolation from smaller models) could recover similar values.
+
+- **No out-of-distribution or robustness evaluation.** All experiments evaluate in-distribution performance (same dataset, same distribution). The paper does not test whether DyT models exhibit different robustness to input perturbations, distribution shift, or adversarial examples compared to LN models. If the squashing function's exact shape affects robustness — as might be expected if DyT and LN squash extreme values differently — this would be a practically important difference not captured by accuracy and loss metrics.
+
+**Assessment of specific claims against evidence:**
+
+**Claim: "Transformers with DyT match or exceed the performance of their normalized counterparts."** Table 1: ViT-B +0.2, ViT-L +0.5, ConvNeXt-B 0.0, ConvNeXt-L +0.1 — all within ~0.5 percentage points. Tables 2–6 tell the same story: differences are small and bidirectional (DyT sometimes slightly better, sometimes slightly worse, never substantially different). The evidence supports the "match" portion of the claim strongly. The "exceed" portion is technically true in some configurations but the margins are small and without confidence intervals — the safer characterization is "match, with some configurations showing small improvements."
+
+**Claim: "DyT is a drop-in replacement for normalization layers in Transformers."** Supported for LN and RMSNorm in all Transformer architectures tested. The "drop-in" aspect — no architectural changes, same training recipe — holds for non-LLM models. For LLMs, the α₀ tuning and post-embedding scalar addition mean it is not a completely transparent drop-in; a practitioner would need to know about these adjustments. The paper's guidance (Section 7.2: tune α₀ on 30B tokens, use higher values in attention blocks) makes this practical but not "drop-in" in the strictest sense.
+
+**Claim: "These findings challenge the conventional understanding that normalization layers are indispensable in modern neural networks."** The evidence supports this within the scope of LN/RMSNorm in Transformers. The paper demonstrates that an element-wise tanh — with no cross-element statistics — can replace these normalization layers across a wide range of settings. This genuinely challenges the conventional understanding. The BN failure (Table 16) and the wav2vec 2.0 caveat (first group normalization layer retained) are important boundary conditions that the paper correctly acknowledges, preventing this claim from being overstated.
+
+**Claim: "DyT is inspired by the observation that layer normalization in Transformers often produces tanh-like, S-shaped input-output mappings."** Figure 2 provides clear visual evidence for this observation in three trained Transformer models. The claim is descriptive, not causal — the paper does not prove that LN's benefits *derive from* the tanh-like shape, only that LN *produces* a tanh-like shape and DyT (which is explicitly tanh-shaped) works as a replacement. This is a correlation-to-replacement argument, not a mechanistic proof.
+
+**Overall assessment:** The experimental evidence strongly supports the paper's practical claim — DyT can replace LN/RMSNorm in Transformers with minimal adaptation — across the tested settings. The evidence more weakly supports the mechanistic claim — that LN's tanh-like squashing is the essential function rather than a byproduct — since alternatives to the S-shape (hardtanh, sigmoid) also work, albeit slightly worse. The paper's transparency about boundary conditions (BN failure, LLM α₀ tuning, DiT adjustments) strengthens credibility. The main gaps are: no confidence intervals for any result, no post-hoc replacement experiment to directly test functional equivalence, and no testing beyond 70B parameters or 200B tokens for LLMs. A practitioner adopting DyT for a standard vision or speech Transformer can expect near-identical performance with no tuning; an LLM practitioner should budget for an α₀ sweep; a researcher seeking to understand *why* normalization works should view DyT as strong evidence that squashing matters, but not as a complete mechanistic explanation.
 
 ## 6. Limitations and Trade-offs
-- Scope limitation
-  - The positive results primarily cover Transformers using LayerNorm or RMSNorm. DyT is not shown to replace BatchNorm in ConvNets effectively (Appendix D).
 
-- Granularity of normalization effect
-  - DyT uses a single scalar `α` shared across channels/tokens. It cannot reproduce per‑token standardization like LN. The outlier suppression comes from the nonlinearity rather than per‑token variance control. This works well empirically but might be suboptimal in settings where token‑wise normalization is crucial.
+### DyT Does Not Replace Batch Normalization in ConvNets
 
-- Initialization sensitivity in LLMs
-  - Large, wide LLMs require careful `α0` selection, differing between attention and other blocks (Section 7.2). This adds a small but non‑negligible tuning burden compared to off‑the‑shelf RMSNorm.
+**The assumption or constraint.** The paper's title claims "Transformers without Normalization," and the abstract describes DyT as "a drop-in replacement for normalization layers." However, the paper explicitly acknowledges in Section 9:
 
-- Potential saturation
-  - Because DyT relies on `tanh`, overly large `α` or extreme activations could push many values into saturation, diminishing gradients. The paper mitigates this by learning `α` and shows empirically that `α` tracks `1/std` (Figure 8), but no theoretical guarantees are provided.
+> "Preliminary experiments (see Appendix D) indicate that DyT struggles to replace BN directly in classic networks like ResNets."
 
-- Efficiency gains are situational
-  - After compiler optimizations (`torch.compile`), DyT and RMSNorm have similar latency (Appendix C, Table 15). The hoped‑for speedup depends on hardware/kernels and is not guaranteed.
+This is not a minor caveat — it means DyT's domain of applicability is **LN and RMSNorm in Transformers**, not normalization layers in general. The paper does not offer a mechanistic explanation for why BN replacement fails, only a speculation: "this could be related to BN layers being more frequent in these ConvNets, where they appear once with every weight layer, but LN only appears once per several weight layers in Transformers."
 
-- Theoretical underpinnings
-  - The paper provides compelling empirical evidence and a mechanistic interpretation but no formal proof that `tanh(αx)` and LayerNorm are equivalent in any sense; this remains an open theoretical question.
+**The consequence.** A practitioner working with ConvNet architectures (ResNet, VGG, EfficientNet, etc.) cannot use DyT as a drop-in normalization replacement — the performance degradation is substantial. Appendix D (Table 16) shows ResNet-50 dropping from 76.2% (BN) to 68.9% (DyT), a 7.3 percentage point gap, and VGG19 dropping from 72.7% to 71.0%. These are not "minor" differences — they represent fundamental failure, not mere underperformance. The boundary between Transformers (where DyT works) and classic ConvNets (where it fails) is not clearly characterized: what property — normalization frequency, activation statistics, architecture topology, training recipe — determines whether DyT can replace BN? Without this understanding, a practitioner evaluating a hybrid architecture (e.g., a ConvNeXt with some BN-like layers, or a vision backbone that mixes attention and convolution) cannot predict whether DyT will work.
+
+**What evidence exists in the paper.** Table 16 (Appendix D) provides the ResNet-50 and VGG19 results. The paper states these are trained "using the training recipes provided by torchvision" with "the same hyperparameters as their BN counterparts." The number of BN vs. LN layers in the respective architectures is cited as a speculative explanation but is not empirically tested — for instance, the paper does not vary BN frequency in a ConvNet to test whether sparser BN placement enables DyT, or test DyT on a ConvNet that already uses LN instead of BN.
+
+**Mitigation status.** The paper does not attempt to address this limitation — it acknowledges it in Section 9 and Appendix D and leaves it as an open question. No experiments modify DyT or the training recipe to make it work for BN. The paper suggests it "remains to be studied in more depth," offering no specific hypotheses to test. While this limitation is honestly reported, it means the claim "normalization layers are not indispensable" must be scoped to LN/RMSNorm in Transformers specifically.
+
+---
+
+### The Difficulty Estimation Analogue: LLM α₀ Tuning Requires Substantial Compute
+
+**The assumption or constraint.** The paper's headline claim — that DyT works without hyperparameter tuning — is qualified for large language models. Section 7.2 states:
+
+> "we find tuning α₀ can substantially improve LLM performance."
+
+The paper determines optimal α₀ values for LLaMA models (Table 10) by pretraining each model size on 30B tokens and comparing training losses across a grid of α₀ settings. For LLaMA 7B, Figure 11 shows a 5×4 grid of (attention α₀, other α₀) combinations — that is 20 training runs of 30B tokens each, totaling **600B tokens of tuning compute** for a single model size, which exceeds the final 200B-token training budget by 3×. Even if the search is pruned heuristically (the paper suggests "once the optimal α₀ is determined for smaller models, the search space for larger models can be reduced accordingly"), the tuning cost is not amortized into the reported results and is not included in any efficiency comparison.
+
+Additionally, LLMs require an architectural modification: "we introduce an additional learnable scalar parameter immediately after the embedding layer... initialized to the square root of the model embedding dimension √d" (Appendix A). Without this scalar, "the magnitudes of model activations at the beginning of training are too small, and the training struggles to progress." This is not a DyT layer — it is an extra architectural component needed specifically when DyT replaces RMSNorm in LLaMA.
+
+**The consequence.** For LLM practitioners, adopting DyT requires a non-trivial hyperparameter search over α₀ settings, which the paper does not provide a cheap method for. The paper's guidance — tune α₀ on 30B-token runs, use higher values in attention blocks, reduce α₀ for wider models — is helpful but empirical; a new model width or architecture would require its own sweep. The cost of this sweep (hundreds of billions of tokens of total compute) could easily exceed the deployment cost savings from DyT's faster uncompiled execution (Table 14: ~8% faster training). A practitioner might reasonably conclude that DyT's "no tuning" benefit for non-LLM models does not transfer to LLM-scale training, making the practical value proposition at scale unclear.
+
+**What evidence exists in the paper.** The α₀ search protocol is described in Section 7.2: "We tune α₀ across LLaMA models by pretraining each on 30B tokens and comparing their training losses." The grid of tested values for LLaMA 7B and 13B is visualized in Figure 11, showing 20 and 15 configurations respectively. The paper does **not** report what performance LLaMA would achieve with the default α₀ = 0.5 uniformly — there is no baseline establishing how much the tuning actually improves over the default. The paper does **not** report the total compute spent on α₀ tuning across all model sizes. The paper does **not** test whether α₀ tuning cost can be reduced by using shorter training runs, interpolation from smaller models, or analytical initialization schemes.
+
+**Mitigation status.** The paper provides systematic patterns that could guide future α₀ selection (Tables 10–11): larger width requires smaller α₀, attention blocks need higher α₀ than FFN blocks, depth has negligible impact. These heuristics partially mitigate the tuning burden — a practitioner could narrow the search space — but they are derived from only four LLaMA model sizes on one architecture family and one dataset. The paper does not claim these patterns generalize to other LLM architectures (e.g., mixture-of-experts, different attention variants) and provides no evidence they would. The limitation is acknowledged implicitly by the detailed reporting of tuning protocols, but the paper does not frame it as a limitation — it presents the α₀ tuning as a finding ("Tuning α₀ enhances LLM performance") rather than a cost that undermines the "no hyperparameter tuning" narrative.
+
+---
+
+### DyT Offers No Speedup on Compiled/Optimized Models
+
+**The assumption or constraint.** The paper presents DyT as computationally simpler than normalization layers because "it is an element-wise operation and does not require a reduction operation within itself" (Section 9). This implies practical efficiency benefits. However, the paper's own benchmarking in Appendix C reveals a critical qualification:
+
+> "after torch.compile, the latency of the RMSNorm and DyT layers becomes nearly identical" (Table 15).
+
+On an H100 GPU with BF16 precision, compiled LLaMA 7B shows identical per-layer latency (0.3s inference, 3.9s training) and identical full-model latency (12.3s inference, 38.9s training) for RMSNorm and DyT. The significant speedups observed in uncompiled execution — 52.4% faster inference for DyT layers, 42.2% faster training (Table 14) — vanish entirely with standard compilation.
+
+**The consequence.** For any practitioner using modern ML compilation tools (torch.compile, TensorRT, XLA, etc.) — which is standard practice for production LLM deployments — DyT provides **zero computational benefit**. The paper's narrative emphasizes DyT's simplicity and element-wise nature, which suggests efficiency advantages, but the measured benefit is conditional on not using compilation. This is a practical trade-off: DyT is conceptually simpler and may enable future hardware-specific optimizations (the paper speculates about "fusing it with the preceding matrix multiplication layer"), but as of the paper's evaluation, it does not reduce latency in typical optimized deployments. A practitioner adopting DyT for its computational benefits would need to verify that their specific hardware-compilation combination preserves the uncompiled advantage, which the paper does not characterize — no other hardware platforms or compilation tools are tested.
+
+**What evidence exists in the paper.** Tables 14 and 15 (Appendix C) provide the direct comparison on LLaMA 7B with 4096-token sequences on an H100 GPU. The uncompiled advantage is real but modest at the full-model level (7.8% faster inference, 8.2% faster training) and concentrated in the normalization layers. The compiled results show complete elimination of this advantage. The paper measures only one hardware configuration (H100, BF16) and one compilation tool (torch.compile). It does not measure throughput in tokens/second, only latency for 100 forward/backward passes.
+
+**Mitigation status.** The paper is transparent about this limitation, noting in Section 9:
+
+> "we find that DyT offers no speedup over models with normalization layers when properly compiled/optimized. Its computational benefits across different hardware platforms or deployment environments remain uncertain."
+
+This is honest reporting, but it leaves the practical value proposition ambiguous. The paper suggests that "on hardware where reduction is a bottleneck" DyT could be faster, but provides no evidence. The mention of potential operator fusion is speculative and not evaluated. A practitioner cannot determine from the paper whether their deployment scenario (different GPU, different compilation stack, distributed training with communication bottlenecks) would benefit from DyT's element-wise nature.
+
+---
+
+### Per-Token Adaptation Is Lost, and the Consequences Are Not Characterized
+
+**The assumption or constraint.** DyT applies the same scalar α and tanh function to every token equally — it has no mechanism for per-token adaptation. In contrast, LN normalizes each token independently using that token's own mean and variance. This means DyT cannot differentially squash extreme values in one token while leaving another token's values untouched. As discussed in Section 3.4 of the technical approach, LN's per-token statistics produce the S-shaped curve through the interaction of tokens with different variances — tokens with large activation ranges get more aggressive squashing (steeper slopes in their linear transformation) than tokens with narrow ranges. DyT's global α applies the same squashing profile to all tokens regardless of their individual activation statistics.
+
+The paper does not study the consequences of this lost per-token adaptation. The hypothesis — that per-token adaptation is not necessary for Transformer training stability or final performance — is supported by the empirical results showing DyT matches LN, but only in aggregate. The paper does not measure whether specific tokens, specific sequence positions, or specific input types are differentially affected by the loss of per-token normalization.
+
+**The consequence.** There are several unexamined risks:
+- **Long-sequence degradation:** For very long sequences (beyond the 4096 tokens tested in LLaMA), activation statistics may vary substantially across token positions — early tokens might have different variance than late tokens due to positional encoding effects or attention sink phenomena. DyT's global α might be appropriate for some positions but suboptimal for others, potentially degrading performance at sequence lengths the paper did not test.
+- **Outlier token vulnerability:** LN's per-token normalization is particularly effective at suppressing individual tokens with anomalously large activations — dividing by that token's own large σ aggressively squashes all its channels. DyT's global α would squash all tokens identically, meaning an outlier token with extreme values in a specific channel would only be squashed if α is large enough globally, which might be suboptimal for typical tokens. The paper does not measure whether outlier token activations are well-controlled in DyT models.
+- **Multi-modal or heterogeneous inputs:** In architectures processing mixed input types (e.g., vision-language models, instruction-tuned models with system/user/assistant tokens), different token types may have systematically different activation statistics. LN adapts to each automatically; DyT applies the same transformation regardless.
+
+**What evidence exists in the paper.** No experiments directly address this limitation. The breadth of settings (vision, language, speech, genomics) provides indirect evidence that per-token adaptation is not critical in the tested regimes, but this is correlation, not causation. The paper does not measure per-token activation statistics in trained DyT models to compare against LN models — for instance, showing that DyT models learn to produce more uniform activation statistics across tokens to compensate for the lost per-token normalization, or conversely that they exhibit larger per-token variance that the tanh squashes acceptably. Figure 8 analyzes α vs. 1/std globally, not per-token. The wav2vec 2.0 experiment is the only one that processes variable-length sequential inputs (speech), and the paper reports only aggregate validation loss (Table 5), not any analysis of whether DyT and LN models differ in their handling of tokens at different temporal positions.
+
+**Mitigation status.** The paper does not acknowledge this as a limitation — it is presented as a feature (element-wise operation, simpler computation) rather than a potential weakness. No experiments vary sequence length or input heterogeneity to probe whether per-token adaptation becomes important in regimes beyond those tested. The compensation mechanism (if any) by which DyT models handle the absence of per-token adaptation is unexplored. Future work on very long sequences, multi-modal architectures, or heterogeneous input types would need to establish whether DyT's global squashing remains sufficient or whether per-token mechanisms must be reintroduced.
+
+---
+
+### Only One Model Family per Domain Is Tested
+
+**The assumption or constraint.** The paper tests one model family per architecture category: ViT for vision Transformers, ConvNeXt for ConvNet-style Transformers, LLaMA for language models, wav2vec 2.0 for speech, DiT for diffusion, and HyenaDNA/Caduceus for genomics. While the breadth across domains is impressive, the depth within each domain is thin — particularly for language, where **only LLaMA (RMSNorm) is tested**, not other widely-used LLM architectures such as GPT-style models with LN, T5-style encoder-decoders, mixture-of-experts models (Mixtral, DeepSeek-MoE), or models with different attention mechanisms (Mamba hybrids, linear attention variants). For vision, only ViT and ConvNeXt are tested — not Swin Transformer, DeiT, or other ViT variants with different block structures or normalization placements (e.g., pre-norm vs. post-norm). The paper states in Section 4 that the selection criterion is "popularity and distinct operations," but the distinct operations considered are only attention vs. convolution — other axes of variation (pre-norm vs. post-norm, encoder-only vs. decoder-only vs. encoder-decoder, dense vs. mixture-of-experts) are not systematically explored.
+
+**The consequence.** A practitioner using a Transformer variant not tested in the paper cannot be confident that DyT will work. Specific concerns:
+- **Pre-norm vs. post-norm:** All Transformer models tested in the paper use pre-norm (normalization before attention/FFN). Post-norm Transformers (normalization after the residual add) have different activation dynamics, and the paper provides no evidence that DyT's tanh-like squashing remains appropriate.
+- **Encoder-decoder architectures:** Models like T5, BART, or translation Transformers have separate encoder and decoder stacks, potentially with different optimal α₀ values, and cross-attention layers where the query, key, and value come from different distributions. The paper has not tested whether a single α per DyT layer across both encoder and decoder contexts is sufficient.
+- **Mixture-of-experts:** MoE models route different tokens to different experts, potentially creating more heterogeneous activation distributions across tokens within a layer. The lost per-token adaptation (Limitation 3 above) might become more consequential in this setting.
+- **Training recipes matters:** Each model family has its own training recipe (learning rate schedule, optimizer, weight decay, data augmentation, etc.). The paper demonstrates that DyT works with the original recipe for each model, but this is determined post-hoc — the paper does not test whether DyT would work under a *different* training recipe for the same architecture, limiting the generalizability of the "recipe transfer" claim.
+
+**What evidence exists in the paper.** The paper's experimental tables (Tables 1–6) list the specific model variants tested. For language, only LLaMA 7B/13B/34B/70B appears — no GPT-2/3/4, no OPT, no BLOOM, no Mistral, no Falcon. For vision, only ViT-B/L and ConvNeXt-B/L appear — no Swin, no DeiT, no PVT. The paper acknowledges (Section 4) that the choice is based on popularity and that "The Transformers we examine in this work all use LN, except that LLaMA uses RMSNorm" (Section 2), but this is presented as experimental coverage, not as a limitation. The paper does **not** state that the selection is biased toward models known or expected to work with DyT, nor does it test any architecture specifically because it might be challenging for DyT.
+
+**Mitigation status.** The paper does not address this as a limitation. The consistent success across the tested models provides suggestive evidence for broader applicability, but the selection strategy is convenience-based (popular, open-source recipes available) rather than systematic (covering architectural axes of variation). A practitioner seeking to apply DyT to an untested architecture — particularly one with substantially different normalization placement, attention mechanisms, or training dynamics from ViT/LLaMA — would need to run their own validation experiments, which for LLM-scale models could cost millions of dollars in compute. The paper provides no diagnostic (e.g., a cheap proxy experiment at small scale) to predict whether a new architecture will be compatible with DyT.
+
+---
+
+### No Direct Evidence That the Tanh-Like Shape Is Causal, Not Correlational
+
+**The assumption or constraint.** The paper's central motivating observation is that trained LN layers produce tanh-like S-shaped mappings (Section 3, Figures 2 and 4), and DyT is designed to explicitly replicate this shape. The implicit causal claim is: **LN's tanh-like squashing behavior is the reason LN helps training, and replicating this behavior is sufficient to replace LN.** This is a correlation-to-function argument — LN produces tanh-like curves, DyT produces tanh-like curves, DyT works — but the paper does not directly demonstrate that the tanh-like shape *causes* LN's benefits, as opposed to being a byproduct of some other property of LN that DyT happens to also provide (e.g., activation bounding, gradient scaling, or implicit learning rate modulation).
+
+**The consequence.** If the tanh-like shape is a byproduct rather than the mechanism, then efforts to improve upon DyT by designing better approximations to LN's observed S-curve (e.g., learning the exact shape via splines or more expressive parametric functions) might be misguided. Conversely, if the shape is causal but only one of several mechanisms by which LN helps training, DyT might fail in regimes not tested — for instance, at extreme model depths or widths where another mechanism of LN (such as per-token gradient normalization or Hessian conditioning) becomes load-bearing but is absent from DyT.
+
+The ablation in Table 7 partially addresses this by showing that squashing is necessary (identity diverges) and that tanh is better than alternatives, but it does not isolate the S-shape from other properties:
+- **Hardtanh** and **sigmoid** both produce bounded outputs with saturation, and both work (within ~1 percentage point of tanh), suggesting that the specific S-shape is not uniquely essential — any reasonable bounding function works.
+- **No ablation tests a non-saturating bounding function** (e.g., element-wise `x / (1 + |x|)` or a soft clamping function without an S-shaped central region) to test whether it is specifically the *shape* of tanh that matters or simply the property of bounding extreme values while leaving central values approximately unchanged.
+- **No ablation tests whether the linearity of the central region matters** — for instance, replacing tanh with a function that is flat in the center (no linear region) but saturates at extremes, which would bound values without the S-shaped linear center.
+
+**What evidence exists in the paper.** The paper's evidence for causality is entirely correlational:
+1. Observation: LN produces tanh-like S-curves (Figures 2, 4).
+2. Design: DyT = tanh(αx) with learned α.
+3. Result: DyT matches LN across diverse settings (Tables 1–6).
+
+The squashing function comparison (Table 7) shows that the exact shape matters only modestly — hardtanh and sigmoid both work, suggesting the squashing property (not the specific S-shape) is the essential factor. The identity ablation (Table 7) shows that squashing is necessary but does not show that the S-shape is necessary. The α-ablation (Table 8) shows that learned scaling helps but does not bear on the shape question.
+
+**Mitigation status.** The paper does not claim to have proven causality — it presents DyT as "inspired by" the tanh-like observation and uses the empirical success as validation of the design insight. This is appropriate for an empirical method paper, but it leaves the mechanistic understanding incomplete. The paper does not propose experiments that could directly test whether LN's tanh-like shape is causal (e.g., training LN with a modified objective that penalizes deviations from a linear mapping, to see if the tanh-like shape is necessary for performance; or post-hoc replacing trained LN layers with learned parametric S-curves and measuring whether the exact shape match correlates with performance preservation). The limitation is not that the paper makes an unsupported causal claim — it does not — but that the motivating insight remains a correlational observation that has not been validated as the mechanism by which LN helps. This limits the theoretical contribution: we know DyT works, but we still do not know *why* LN works, only that its functional behavior can be emulated.
 
 ## 7. Implications and Future Directions
 - How this changes the landscape

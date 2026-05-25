@@ -9,176 +9,818 @@ EXAONE 4.0 pioneers a unified large language model family that seamlessly blends
 ---
 
 ## 1. Executive Summary
-EXAONE 4.0 introduces a single family of large language models that natively supports two operating styles—`NON-REASONING` (fast, concise answers) and `REASONING` (deliberate, chain-of-thought style)—within one model, while scaling context to 128K tokens via a hybrid local–global attention design (Figure 1, §2.1, §2.3). It further proposes a new reinforcement learning algorithm (`AGAPO`) and a two-stage preference alignment scheme to boost verifiable reasoning without degrading instruction following (Figure 3, §2.4), and demonstrates strong math/coding and competitive tool-use performance for both a mid-size 32B and an on-device 1.2B model (Tables 3–6).
+
+This technical report introduces EXAONE 4.0, a unified large language model series that integrates a NON-REASONING mode and a REASONING mode within a single model, extending from the practical usability of EXAONE 3.5 and the reasoning depth of EXAONE Deep. The models—a 32B mid-size and a 1.2B on-device variant—are evaluated across six categories of benchmarks (World Knowledge, Math/Coding, Instruction Following, Long Context, Agentic Tool Use, and Multilinguality), with post-training organized around three mechanisms: large-scale supervised fine-tuning across five domains, a novel reasoning reinforcement learning algorithm called **AGAPO (Asymmetric Sampling and Global Advantage Policy Optimization)** (which removes the clipped PPO objective and uses asymmetric sampling to retain all-incorrect response groups for negative feedback), and a two-stage preference learning phase with a hybrid reward combining correctness, conciseness, language consistency, and preference scores. The 32B model outperforms the 235B Qwen 3 in both modes across all Math/Coding benchmarks—for example, achieving 85.3 on AIME 2025 in REASONING mode versus Qwen 3 235B's 72.9—and the 1.2B model surpasses all small-size baselines except EXAONE Deep 2.4B on AIME 2025 (45.2), establishing that unified mode training with reinforcement learning can push a 32B model to frontier-class reasoning performance while maintaining competitive instruction-following and agentic tool use, though the largest capability gaps favoring the EXAONE series are concentrated in Math/Coding and expert-knowledge domains (GPQA-DIAMOND: 75.4 for 32B REASONING, second only to DeepSeek R1-0528 among all compared models).
 
 ## 2. Context and Motivation
-- Problem addressed
-  - Real users want both quick, direct responses and deep, step-by-step reasoning, but most systems optimize for one style at a time. Earlier EXAONE releases split these capabilities: EXAONE 3.5 emphasized “real-world usability” (instruction following) while EXAONE Deep emphasized reasoning (§1).
-  - Long-context use (summarization, RAG, document QA) is increasingly common, but full global attention at 100K+ tokens is computationally costly (§1, §2.1). 
-  - Agentic workflows need robust tool calling over multi-step, multi-turn tasks (§1, §2.4.1).
-  - Multilingual support beyond English–Korean is desirable without hurting existing languages (§1).
 
-- Why it matters
-  - Consolidating the two response styles reduces operational complexity (one model to deploy, not two), and enables applications to dynamically choose speed vs accuracy.
-  - Efficient long-context handling directly affects enterprise and government scenarios that require processing contracts, legal filings, technical manuals, or multi-document evidence (§1, §2.3, Appendix D).
-  - Tool use underpins modern agent systems (e.g., data retrieval, code execution, transactions), so stable function calling and multi-step planning are foundational for “agentic AI” (§1, §3.1).
+### The Core Problem: Building a Single Model That Does Two Fundamentally Different Things
 
-- Shortcomings of prior approaches
-  - Long-context: models that use global attention in every layer are accurate but expensive; chunked attention can be easier to implement but may lose cross-chunk information. EXAONE 4.0 replaces “global everywhere” with a hybrid approach (3 local : 1 global) and uses sliding-window local attention to keep both stability and efficiency (§2.1; Figure 1).
-  - Reasoning RL: popular GRPO-style training relies on clipped PPO objectives, ignores all-incorrect groups, and normalizes advantages only within groups—each of which can weaken learning signals for complex reasoning (§2.4.2).
+The central challenge EXAONE 4.0 addresses is deceptively simple to state but difficult to execute: **how do you pack both rapid, instruction-following behavior AND deep, deliberative reasoning into a single language model without one capability cannibalizing the other?** This is not merely a multi-task learning problem. The two modes impose contradictory demands on the model:
 
-- Positioning
-  - EXAONE 4.0 unifies modes, scales context to 128K with hybrid attention (Figure 1), adjusts normalization to mitigate depth-related variance (Figure 2), and introduces AGAPO to strengthen verifiable reasoning signals (Eq. 1–2, §2.4.2). It also broadens multilingual coverage to Spanish while keeping the same tokenizer/vocab as earlier EXAONE models (Table 1, §1).
+- **NON-REASONING mode** requires the model to produce direct, concise responses quickly — like a standard chatbot. The user asks a question, the model answers immediately. This is what EXAONE 3.5 [31] was optimized for: comprehensive instruction-following, real-world usability, and efficient token usage.
+
+- **REASONING mode** requires the model to engage in extended chain-of-thought, exploring multiple reasoning paths, backtracking, and potentially consuming thousands of tokens before arriving at an answer. This is what EXAONE Deep [32] was separately optimized for: mathematical rigor, coding precision, and deep analytical thinking at the cost of verbosity and latency.
+
+The tension is real and well-documented. In Section 2.4.1, the authors explicitly observe that **if the token ratio of REASONING mode data is too high during combined training, "the model tends to behave as if it is in REASONING mode even when NON-REASONING mode is enabled."** This is the fundamental mode-collapse risk: a model trained predominantly on long reasoning traces may lose the ability to provide quick, concise answers — it "overthinks" everything. Conversely, a model optimized for brevity may lack the capacity for sustained analytical reasoning when needed.
+
+### Why This Problem Matters: The Agentic AI Era Is Coming
+
+The paper positions EXAONE 4.0 not as an academic exercise in multi-modal reasoning, but as infrastructure for the **upcoming agentic AI era**. Section 1 frames this explicitly:
+
+> "With the upcoming era of agentic AI in mind, EXAONE 4.0 introduces agentic tool use—a core capability for this paradigm—and further advances reasoning abilities."
+
+Agentic AI systems — autonomous agents that plan, execute multi-step tasks, use external tools, and interact with environments — require a specific combination of capabilities within a single model:
+
+1. **Fast instruction-following** for interpreting user intent, routing simple queries, and managing conversation flow.
+2. **Deep reasoning** for planning complex tool-use sequences, debugging code on the fly, or verifying mathematical derivations.
+3. **Tool-use orchestration** for calling APIs, interpreting execution feedback, and adapting plans based on environmental responses.
+4. **Long-context comprehension** for maintaining coherence across multi-turn agent sessions that may span tens of thousands of tokens.
+
+A practical agent cannot switch between two separate models mid-task — the user experience would be fragmented, and the overhead of model switching would introduce latency and deployment complexity. A single unified model that can dynamically shift between rapid-response and deep-reasoning modes based on the task context is the natural architecture for agentic systems.
+
+The importance extends beyond agentic AI to **resource-constrained deployment**. The 1.2B variant is explicitly designed for on-device applications (Section 1), where running multiple specialized models is infeasible. A single model that can handle both quick factual lookups and demanding mathematical reasoning on a phone or edge device has substantial practical value.
+
+### Prior Approaches and Their Shortcomings
+
+The EXAONE team's own prior releases illustrate the split-specialization approach and its limitations:
+
+**EXAONE 3.5 (December 2024) [31]:** Focused on real-world usability — strong instruction-following, multilingual support (English + Korean), and practical application performance. The emphasis was on being a reliable, general-purpose assistant. Its reasoning capabilities, particularly in math and coding, were competent but not frontier-class. The model was fundamentally a NON-REASONING model — it generated responses without extended deliberation.
+
+**EXAONE Deep (March 2025) [32]:** Built specifically for reasoning performance. The Deep variant excelled at mathematical and coding benchmarks through extended chain-of-thought generation, but this came at a cost: it was a purpose-built reasoning model, not a general-purpose assistant. Users who needed both quick answers and deep reasoning had to maintain and deploy two separate models — a significant infrastructure burden.
+
+This split-specialization approach has several concrete downsides that motivate the unification in EXAONE 4.0:
+
+- **Deployment complexity:** Maintaining two separate model instances doubles inference infrastructure costs, model serving complexity, and version management overhead.
+- **Context switching friction:** Applications must implement logic to route queries to the appropriate model (fast vs. deep), introducing classification errors and latency at the routing layer.
+- **Inconsistent user experience:** A conversation that starts with quick factual questions might suddenly require deep reasoning — switching models mid-conversation is awkward and may lose conversational context.
+- **Tool-use integration difficulty:** An agent that needs both rapid tool calls (NON-REASONING) and deep planning (REASONING) within a single session cannot cleanly split these across two models.
+
+**Other hybrid models in the field** — such as Qwen 3 [62], with its 32B and 235B hybrid variants — demonstrate that the industry recognizes this unified-mode problem. Qwen 3 also supports both thinking and non-thinking modes, with the thinking mode activated by specific prompting or system messages. However, the EXAONE 4.0 paper positions its contribution as not merely "also supporting two modes," but achieving **particularly strong reasoning performance despite the unified architecture**, especially against significantly larger models.
+
+### Where Existing Training Methodologies Fall Short
+
+The paper identifies specific limitations in standard post-training pipelines that make unified mode training particularly challenging:
+
+**1. Standard GRPO has blind spots for reasoning training.** The GRPO (Group Relative Policy Optimization) algorithm [49], widely adopted after DeepSeekMath's success, computes advantages within response groups and discards samples where all responses are either all-correct or all-incorrect (since the advantage is zero in both cases). This has two consequences relevant to unified training:
+
+- **All-correct groups are discarded**, meaning the model never receives positive reinforcement on problems it already solves consistently — data that could help stabilize NON-REASONING mode behavior in familiar domains.
+- **All-incorrect groups are discarded**, meaning the model gets no gradient signal on problems where it consistently fails — precisely the sample group that contains the most valuable negative feedback for guiding the model away from systematic errors. Recent work on Negative Sample Reinforcement [70] suggests these all-incorrect groups are particularly informative, but standard GRPO throws them away.
+
+**2. The clipped PPO objective may suppress crucial reasoning tokens.** The PPO clipping mechanism [48] prevents probability ratios from deviating too far from 1.0, which Ahmadian et al. [3] showed can degrade performance by preventing low-probability tokens from contributing to gradient updates. For reasoning tasks specifically, these low-probability tokens often correspond to **reflective behaviors — "wait, let me reconsider," "actually, that approach is wrong"** — that serve as critical forks in the reasoning path. Suppressing them through clipping may directly inhibit the model's ability to learn backtracking and self-correction during reasoning.
+
+**3. Preference optimization alone cannot recover reasoning capability lost during post-training.** As the paper notes in Section 2.4.3, the RL stage that specializes the model for reasoning tasks causes **"a decline in performance in other types of tasks."** Simply applying vanilla RL on reasoning data improves math/code accuracy but degrades instruction-following, world knowledge recall, and other NON-REASONING capabilities. The standard fix — preference learning (DPO, SimPER) — must be carefully orchestrated with hybrid rewards that balance correctness, conciseness, and language consistency to restore balance between modes without undoing the RL-stage reasoning gains.
+
+**4. Training data for reasoning is inherently scarce relative to its importance.** The paper notes in Section 2.4.1 that for Math, Code, and Logic domains, "the number of unique problems is relatively limited compared to their importance." This is because establishing ground truth for math and code problems requires verifiable answers (numerical solutions, passing test cases), which restricts the universe of usable problems. The paper's insight — that **generating multiple diverse responses for each unique query can be as effective as increasing query diversity** — is a practical response to this data bottleneck, but it requires careful filtering to avoid degeneration and language inconsistency in long reasoning traces.
+
+### How This Paper Positions Itself
+
+EXAONE 4.0 positions itself as a **systematic unification** rather than a continuation of the split-model approach. The key positioning claims are:
+
+**Against EXAONE 3.5 + EXAONE Deep (the company's own prior work):** EXAONE 4.0 integrates both modes into a single model, eliminating deployment duality while matching or exceeding the reasoning performance of the dedicated Deep model. This is a direct response to the fragmentation of the previous release strategy.
+
+**Against same-class open-weight models:** The paper explicitly compares against Qwen 3 32B (the most direct hybrid competitor in the same size class), Phi 4 reasoning-plus, Magistral-Small-2506, and others. The competitive positioning is that EXAONE 4.0 achieves superior Math/Coding performance while maintaining parity or near-parity in instruction-following and other domains — a claim supported by the benchmark tables (Tables 3 and 4).
+
+**Against frontier-class models:** The paper intentionally includes comparisons with models 5–20× larger (Qwen 3 235B, DeepSeek R1-0528, DeepSeek V3-0324, Llama 4 Maverick). This is not about claiming overall superiority but about establishing that **size class ceases to be the primary determinant of reasoning performance** — a 32B model with the right training recipe can compete with 235B+ models on specific high-value benchmarks like AIME 2025 and GPQA-DIAMOND.
+
+**Methodologically:** The paper introduces AGAPO as a targeted improvement over standard GRPO, explicitly designed to address the blind spots identified above (discarding all-incorrect groups, clipping low-probability reasoning tokens). The two-stage preference learning with hybrid rewards is positioned as the mechanism that **reintegrates NON-REASONING capabilities** after RL specialization, rather than treating post-training as a single monolithic phase.
+
+**Architecturally:** The hybrid attention mechanism (3:1 local-to-global ratio) and QK-Reorder-LN normalization are positioned as architectural improvements that enable the 128K context length needed for agentic tool use and long-document reasoning, drawing on recent findings from the Gemma [14, 15] and Llama [36] teams that sparse attention with strategic global-attention layers can match full-attention performance.
 
 ## 3. Technical Approach
-Step-by-step overview of the system design and training pipeline.
 
-- Model configurations (§2.1; Table 1)
-  - Two sizes: `32B` (64 layers, d_model=5120) and `1.2B` (30 layers, d_model=2048).
-  - `GQA` (Grouped Query Attention), `SwiGLU` feed-forward, `RMSNorm` throughout.
-  - Max context: 131,072 (32B) and 65,536 (1.2B); shared BBPE tokenizer, 102,400 tokens.
+### 3.1 Reader Orientation
 
-- Hybrid attention with sliding windows (Figure 1, §2.1)
-  - Local attention uses a `sliding window` over recent tokens; EXAONE sets a 4K-token window to protect short-context quality.
-  - Global attention is applied periodically (ratio `Local:Global = 3:1`) to preserve the ability to integrate information across the whole sequence while reducing compute compared to full-global.
-  - Design choices:
-    - Avoids Rotary Position Embeddings (`RoPE`) for the global attention path to reduce length bias and preserve a “global view” (§2.1).
-    - Prefers sliding-window attention (well-supported, theoretically stable) over chunked attention (§2.1).
+EXAONE 4.0 is a **unified language model** that can dynamically switch between producing quick, direct answers and engaging in extended, deliberative reasoning — all within a single set of weights, eliminating the need to deploy separate models for different modes of thinking. The paper solves the problem of **mode interference during post-training** (where training for reasoning degrades instruction-following, and vice versa) by organizing the training pipeline into three carefully sequenced stages — large-scale supervised fine-tuning, a novel reinforcement learning algorithm called AGAPO for reasoning specialization, and a two-stage preference learning phase with hybrid rewards to reintegrate general capabilities — with the key design insight being that the token ratio between NON-REASONING and REASONING data must be held at 1:1.5 to prevent the reasoning mode from dominating the model's default behavior.
 
-- Normalization change: `QK-Reorder-LN` (Figure 2, §2.1)
-  - Motivation: Pre-LN Transformers can accumulate output variance with depth, causing “dead” layers in deep stacks (§2.1).
-  - Mechanism: apply `RMSNorm` to the `Query` and `Key` inputs before attention scoring and again after the attention output—shown to improve downstream performance despite extra compute (§2.1, Figure 2).
+### 3.2 Big-Picture Architecture (Diagram in Words)
 
-- Context-length extension to 128K (§2.3)
-  - Two-stage procedure: pretrain at 4K, extend to 32K, then to 128K, validating each step with the Needle-In-A-Haystack (NIAH) test until “green light” across segments is achieved (§2.3).
-  - For the 1.2B model: extended to 64K.
+The EXAONE 4.0 system is built through a pipeline of five major components, applied sequentially to a pretrained base model:
 
-- Pretraining data scale and curation (§2.2; Table 2)
-  - `32B`: 14 trillion tokens (≈2× EXAONE 3.5’s 6.5T); `1.2B`: 12T tokens. Aim: expand world knowledge and expose reasoning-relevant “cognitive behaviors” via curated STEM and similar content.
-  - Compute: 2.69×10^24 FLOPs (32B), 8.65×10^22 FLOPs (1.2B) (Table 2).
+1. **Base Model (Pretrained Transformer)** — A decoder-only transformer pretrained on 14 trillion tokens (32B) or 12 trillion tokens (1.2B) with a hybrid attention mechanism (3:1 local-to-global attention ratio), QK-Reorder-LN normalization, and a 128K-token maximum context length. This provides the foundation of world knowledge and basic language capabilities.
 
-- Supervised fine-tuning (large-scale SFT) and unified mode training (§2.4.1; Figure 3)
-  - SFT data split into `NON-REASONING` vs `REASONING`, and across five domains: World Knowledge, Math/Code/Logic, Long Context, Agentic Tool Use, Multilinguality.
-  - Long-context SFT varies both the length and the position of key information to train retrieval over dispersed evidence (§2.4.1).
-  - Agentic tool-use data emphasizes multi-step, multi-turn interactions with environment feedback—not just single function calls (§2.4.1).
-  - Unified training mixes both modes; token ratio `REASONING:NON-REASONING = 1.5:1`. Higher reasoning ratios made the model “act reasoning” even when not requested, so this ratio balances modes (§2.4.1).
-  - After unification, a second pass reuses high-quality `REASONING` data in Code and Tool Use to correct domain imbalance (§2.4.1).
+2. **Large-Scale Supervised Fine-Tuning (SFT)** — A multi-domain dataset spanning five categories (World Knowledge, Math/Code/Logic, Agentic Tool Use, Long Context, and Multilinguality) is constructed with different data generation strategies per domain. The NON-REASONING and REASONING datasets are combined and trained together at a token ratio of 1:1.5 (REASONING:NON-REASONING), followed by a second round of Code & Tool REASONING data to address domain imbalance.
 
-- Reasoning RL with `AGAPO` (§2.4.2; Eq. 1–2; Figure 3)
-  - Task domains: math, code, science, instruction following. Filtering removes “too easy” items (all 8 SFT samples correct) to focus on informative cases (§2.4.2).
-  - Rewards:
-    - Math: rule-based verifier of final answers.
-    - Code: final code block must pass tests.
-    - Science: rule-based verifier first; if incorrect, an LLM-judge checks flexibly.
-    - Instruction-following: 1 if all constraints met, else 0 (§2.4.2).
-  - Core innovations relative to GRPO:
-    - Remove PPO-style clipping: enables low-probability, exploratory tokens (often critical in branching reasoning) to influence gradients (§2.4.2 “Remove Clipped Objective”).
-    - Asymmetric sampling: keep groups where all responses are incorrect and assign small negative rewards (“negative reinforcement”) to push away from bad reasoning paths (§2.4.2 “Asymmetric Sampling”).
-    - Group & Global advantages: compute leave-one-out (LOO) advantage per group, then normalize across the entire mini-batch to calibrate rewards for all-incorrect groups (§2.4.2 “Group&Global Advantages”).
-    - Sequence-level cumulative KL: regularize toward the SFT policy at the sequence level to preserve prior capabilities (§2.4.2).
-  - Objective (Eq. 1–2): maximize a sum of log-likelihoods weighted by global advantages minus a KL penalty to a reference policy.
+3. **Reasoning Reinforcement Learning (AGAPO)** — Online reinforcement learning using a novel algorithm that modifies GRPO to retain all-incorrect sample groups for negative feedback, removes the clipped PPO objective to avoid suppressing exploratory reasoning tokens, computes advantages in two stages (group-level leave-one-out then global batch normalization), and applies a sequence-level cumulative KL penalty to prevent catastrophic forgetting of SFT capabilities.
 
-- Two-stage preference learning with hybrid rewards (§2.4.3; Figure 3)
-  - Framework: `SimPER` (preference optimization without a fixed reference). Dataset is on-policy: generate 4–16 responses per prompt from the RL model, then score with a hybrid reward that mixes verifiable correctness, preference, language consistency, and conciseness (§2.4.3).
-  - Stage 1: promote token efficiency by preferring the shortest correct solution—chosen = shortest among correct; rejected = longer or incorrect. Keeps `REASONING` quality while curbing verbosity (§2.4.3).
-  - Stage 2: focus on human alignment—use preference and language consistency rewards; only the final answer (not the intermediate thoughts) is preference-labeled for reasoning data. Sample some Stage-1 data to stabilize training (§2.4.3).
+4. **Two-Stage Preference Learning** — The first stage optimizes for token efficiency by selecting the shortest correct response as the chosen option (combining verifiable reward with conciseness reward). The second stage uses a hybrid reward combining preference scores and language consistency scores to restore human alignment and NON-REASONING mode usability that was partially degraded during RL specialization.
 
-- Multilingual support and tokenizer reuse (§1, Table 1, §2.4.1)
-  - Adds Spanish while preserving English/Korean performance; uses the same tokenizer and vocabulary to avoid regressions (§1, Table 1; §2.4.1 Multilinguality).
+5. **Dual-Mode Inference Controller** — At inference time, the model accepts a mode selector (NON-REASONING or REASONING) that controls generation parameters: NON-REASONING uses greedy decoding for single responses; REASONING uses temperature 0.6, top-p 0.95, presence penalty 1.5 (32B only), and generates up to 64K reasoning tokens with a budget-aware early-termination mechanism that appends a transition prompt when the token budget is exhausted.
+
+Information flows as follows: pretrained model → combined SFT on all domains → RL specialization on reasoning tasks → preference learning to restore balance → deployment with mode-dependent decoding. The critical design tension managed throughout is that RL improves reasoning but degrades other capabilities, while preference learning restores general usability — the two stages are not independent optimizations but a coordinated push-pull dynamic.
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First, the model architecture** (Section 3.4, Hybrid Attention and QK-Reorder-LN), because these structural choices determine what the model can process (128K context) and how efficiently it does so — they're the hardware on which all post-training runs.
+- **Second, the pretraining and context extension** (Section 3.4, Pretraining and Context Length Extension), since the base model's knowledge and long-context capability are prerequisites for all downstream stages.
+- **Third, the large-scale SFT pipeline** (Section 3.4, Large-Scale Supervised Fine-Tuning), explaining how data was constructed for each of the five domains and why the 1.5:1 REASONING:NON-REASONING ratio matters for mode integration.
+- **Fourth, the AGAPO reinforcement learning algorithm** (Section 3.4, Reasoning Reinforcement Learning), in full technical detail including the four innovations over GRPO, the training data categories, the reward functions, and the mathematical objective.
+- **Fifth, the two-stage preference learning** (Section 3.4, Preference Learning with Hybrid Reward), covering how hybrid rewards balance correctness, conciseness, language consistency, and human preference to reintegrate capabilities after RL.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily a **systems-building and training-methodology paper** whose core idea is that a single language model can be trained to support both NON-REASONING and REASONING modes by carefully orchestrating a three-stage post-training pipeline in which reinforcement learning improves reasoning and preference learning restores general capabilities, with the key being the specific data ratio and algorithm modifications that prevent mode collapse.
+
+---
+
+#### Hybrid Attention Mechanism
+
+The EXAONE 4.0 architecture departs from EXAONE 3.5's uniform global attention by adopting a **hybrid attention mechanism** that interleaves local (sliding window) attention with global attention across layers in a 3:1 ratio. In EXAONE 3.5, every transformer layer computed attention over the entire context sequence — a design that is conceptually clean but computationally expensive for long contexts, scaling quadratically with sequence length. EXAONE 4.0 replaces this with a sparse attention pattern where, for every four consecutive layers, three layers use sliding window attention (attending only to a local neighborhood of 4K tokens) and one layer uses full global attention (attending to the entire 128K-token context).
+
+The key architectural decisions and their justifications are:
+
+**Sliding window size of 4K tokens:** The paper selects this window size "to minimize any adverse effects on short-context performance." This is important because many real-world queries are short — if the window were too small, the model would lose local coherence; if too large, the computational savings diminish. 4K tokens is a middle ground that preserves local context integrity while reducing the quadratic cost of attention by a factor of roughly `$(128K / 4K)^2 = 1024$` for the local-attention layers (in practice, the savings are less dramatic because global-attention layers still incur full cost, but the 3:1 ratio means 75% of layers benefit from the reduction).
+
+**Sliding window attention rather than chunked attention:** The paper explicitly states they "do not employ the chunked attention strategy" and instead adopt sliding window attention because it "offers strong theoretical stability" and "benefits from wide support in open-source frameworks, ensuring robust implementation and ease of integration." Chunked attention partitions the sequence into fixed blocks, which can create boundary artifacts where tokens at the edge of a block lose access to nearby tokens in adjacent blocks. Sliding window attention — where each token attends to the 4K tokens preceding it (or 2K on each side) — avoids these artificial boundaries, providing a smooth local context window that slides continuously along the sequence.
+
+**No Rotary Position Embedding for global attention layers:** The paper notes that "the model does not employ Rotary Position embedding for global attention, ensuring that the model does not develop biases towards length and can maintain a global view." This is a subtle design choice: RoPE [52, 63] encodes position information by rotating query and key vectors, which causes tokens far apart in the sequence to have lower attention scores due to rotational dissimilarity — effectively imposing a distance-based decay. For layers that need to attend across the entire 128K context, this length-based bias is harmful because it inhibits attention between distant but semantically related tokens. By removing RoPE from global-attention layers specifically, EXAONE 4.0 allows those layers to attend uniformly across the full context regardless of positional distance.
+
+**3:1 local-to-global ratio:** The choice of ratio draws from recent findings in the literature. The paper cites Gemma 2 [14], Gemma 3 [15], and the Llama 4 announcement [36] as evidence that "utilizing a larger window size... and applying global attention to only a minority of layers can still achieve excellent long-context performance." The 3:1 ratio means that for the 64-layer 32B model, 48 layers use local attention and 16 layers use global attention — enough global-attention layers distributed periodically through the network to maintain global context understanding, while the majority of layers operate efficiently on local windows.
+
+**Interaction with the 128K context extension:** The hybrid attention design is not just about inference efficiency — it also enables the **training** of long-context capabilities. The paper uses a two-stage context extension process (4K → 32K → 128K), and the reduced computational cost of local attention makes this feasible without requiring disproportionate compute. The long-context fine-tuning process is validated at each stage using the Needle In A Haystack (NIAH) test [16], continuing "until the 'green light' signal is consistently observed across all segments, signifying the successful extension of the context length to 128K tokens."
+
+For the 1.2B model, which has only 30 layers, the paper does not use hybrid attention — it uses global attention for all layers (as shown in Table 1, "Attention type: Global"). The context length is extended only to 64K tokens, which the paper notes is "approximately twice as long as the typical maximum length of 32K tokens supported by most models in the 1B-parameter range." The simpler architecture for the smaller model reflects a practical tradeoff: the 1.2B model's per-layer cost is already low, and the implementation complexity of hybrid attention may not be justified at this scale.
+
+---
+
+#### QK-Reorder-LN Normalization
+
+EXAONE 4.0 repositions layer normalization from the standard Pre-LN (pre-layer-normalization) pattern used in EXAONE 3.5 to a **QK-Reorder-LN** pattern. This change addresses a specific architectural pathology identified in recent research [53]: in deep Pre-LN transformers, the variance of hidden states grows exponentially with depth, causing deeper layers to contribute diminishingly to model predictions — effectively, the model "ignores" its own deep layers.
+
+In the Pre-LN architecture (used in EXAONE 3.5), each sub-layer (attention or FFN) is wrapped as `LayerNorm → SubLayer → Add( residual )`. While this improves training stability compared to the original Post-LN design, it has the side effect that the residual stream accumulates un-normalized variance across layers. By the 64th layer, the signal from deep layers is dominated by accumulated variance noise.
+
+The QK-Reorder-LN architecture (visualized in Figure 2) modifies the attention block as follows:
+
+1. **LayerNorm is applied after the query and key projections**, not before the attention block as a whole. Specifically, after projecting inputs to queries ($Q$) and keys ($K$) via learned weight matrices, RMSNorm is applied to both $Q$ and $K$ before computing attention scores. This normalizes the geometry of the attention computation itself, ensuring that the dot-product similarity between queries and keys remains well-scaled regardless of layer depth.
+
+2. **LayerNorm is applied after the attention output**, before it enters the residual stream. This prevents the attention output from injecting un-normalized variance into later layers.
+
+3. **The FFN block retains its own normalization**, creating a total of three normalization points per transformer layer (Q-norm, K-norm, post-attention-norm, plus the existing pre-FFN norm).
+
+The normalization type is **RMSNorm** (Root Mean Square Normalization), retained from EXAONE 3.0 onward. RMSNorm normalizes by the root mean square of activations rather than by mean and variance, removing the mean-centering step to reduce computation while empirically performing similarly to LayerNorm.
+
+The paper states that QK-Reorder-LN "yields better performance on downstream tasks despite consuming more computation." The additional normalization operations are cheap relative to attention computation itself (RMSNorm on vectors of dimension 5120 or 2048 is negligible compared to the `$O(d_{model}^2)$` cost of the Q/K/V projections), so the performance benefit justifies the minimal overhead. The method is attributed to prior work by Muennighoff et al. [42] on OLMoE and Team OLMo 2 [56].
+
+---
+
+#### Pretraining Data and Scale
+
+The pretraining stage establishes the model's foundational capabilities before any instruction tuning or reasoning specialization. EXAONE 4.0 significantly scales pretraining data compared to its predecessor:
+
+| Model | Pretraining Tokens | Computation (FLOPs) |
+|---|---|---|
+| EXAONE 3.5 32B | 6.5T | Not specified |
+| EXAONE 4.0 32B | 14T | `$2.69 \times 10^{24}$` |
+| EXAONE 4.0 1.2B | 12T | `$8.65 \times 10^{22}$` |
+
+The 32B model doubles the pretraining data from 6.5 trillion to 14 trillion tokens, and the paper states this increase "is specifically aimed at enhancing the model's world knowledge." The justification is empirical: benchmarks that measure knowledge recall, such as MMLU-Redux, show "noticeable improvements" from more extensive pretraining data. This is consistent with the broader literature showing that knowledge-intensive tasks benefit from seeing more diverse factual content during pretraining, while reasoning capabilities may benefit more from post-training interventions.
+
+A notable observation about pretraining data quality: the paper cites recent work by Gandhi et al. [12] showing that "reasoning performance was significantly influenced by the cognitive behavior acquired from documents seen during pretraining." This means that the *nature* of pretraining data matters for downstream reasoning, not just the quantity. In response, EXAONE 4.0 performs "rigorous data curation during pretraining to enhance post-training performance." The paper does not detail the specific curation criteria, but the principle is that pretraining documents exhibiting structured reasoning patterns (mathematical derivations, logical arguments, step-by-step explanations) provide a better foundation for later reasoning fine-tuning than documents that are purely declarative or narrative.
+
+---
+
+#### Context Length Extension Process
+
+The 128K maximum context length is not achieved in a single training step. The paper describes a two-stage process:
+
+**Stage 1: 4K → 32K tokens.** Starting from a model pretrained with 4K-token context length (which is the original pretraining context window), the model is fine-tuned on longer sequences to extend its effective context to 32K tokens. This is the first long-context fine-tuning stage.
+
+**Stage 2: 32K → 128K tokens.** A second round of fine-tuning further extends the context length to 128K tokens for the 32B model. For the 1.2B model, the extension stops at 64K tokens.
+
+At each stage, the process is validated using the Needle In A Haystack (NIAH) test [16], which embeds a specific fact (the "needle") at a random position within a long context (the "haystack") and tests whether the model can retrieve it. The paper describes continuing refinement "until comprehensive optimization is achieved and the 'green light' signal is consistently observed across all segments." This means that the model must demonstrate successful needle retrieval at *every* position in the context — the beginning, the middle, and the end — confirming that attention quality does not degrade with distance.
+
+The long-context fine-tuning recipes are designed to avoid a common pitfall: models fine-tuned on long contexts sometimes **degrade on short-context tasks** because they over-adapt to the statistics of long documents. The paper states that EXAONE 4.0 "employs a careful data selection methodology and a progressive training recipe, effectively balancing efficiency and performance." The data selection methodology involves "systematically varying both the context length and the location of key content" in the fine-tuning data, ensuring the model learns to attend across all positions rather than developing position-dependent biases.
+
+---
+
+#### Large-Scale Supervised Fine-Tuning
+
+The SFT stage is the first post-training step and the foundation upon which RL and preference learning build. Its design reflects a central tension: the model must learn both NON-REASONING behavior (direct, concise responses) and REASONING behavior (extended chain-of-thought) from a combined dataset, without one mode dominating.
+
+**Data composition across five domains:**
+
+The SFT dataset is divided into non-reasoning and reasoning data, further classified into five domains. Each domain has distinct data construction strategies because the nature of the task dictates what makes good training data:
+
+*World Knowledge:* This domain covers "a wide range of fields and levels of difficulty" where the goal is knowledge distillation — the model should learn to recall and synthesize facts from its pretraining knowledge. Data is collected from web sources and "filtered based on their educational value, prioritizing the use of high-quality data." Additionally, "specialized and high-difficulty data" is sampled for use specifically in REASONING mode training, suggesting that knowledge recall under reasoning conditions requires more challenging examples than standard factual QA.
+
+*Math, Code, Logic:* This domain faces a data bottleneck: "the number of unique problems is relatively limited compared to their importance" because "establishing accurate ground truth is not only essential but also difficult in these domains." The paper's key insight is that **response diversity can substitute for query diversity**: "rather than create unverifiable problems, we train on diverse responses for queries with verifiable answers, and observe that generating multiple responses per unique query is as effective as increasing the diversity or number of unique queries themselves." This means generating, say, 5 different correct solution paths for the same math problem is as valuable as finding 5 new problems. However, for REASONING mode specifically, "responses for Math and Code domains tend to be longer, which increases the risk of degeneration and language inconsistency; thus, careful filtering is applied" — long chain-of-thought traces risk generating nonsensical continuations or switching languages mid-response. For the Code domain, data collection extends "beyond problem-solving to include a software engineering dataset focused on full stack development, created from code corpora," broadening the model's understanding from algorithmic puzzles to real-world software construction.
+
+*Long Context:* Data is constructed from web corpora with tasks that "require comprehensive understanding of extended inputs." The key design principle is systematic variation: "to train models to identify and reason over dispersed information, we systematically vary both the context length and the location of key content." If all training examples placed the relevant information at the end of the context, the model would learn a recency bias. By distributing key information uniformly across all positions, the model learns true long-range attention. The dataset also includes "instruction-following queries for long-form generation, allowing models to produce coherent and well-structured long outputs." For Korean long-context data, the paper curates documents from "legal, administrative, and technical texts... restructured to accommodate a diverse range of long-context input formats, ensuring variation in structure and content scope."
+
+*Agentic Tool Use:* This domain is particularly important for the paper's agentic AI framing. Rather than simple single-turn tool calls ("what's the weather?" → call weather API → return result), the paper emphasizes "the construction of more complex, long-horizon tool-calling data." Specifically, the team develops "user-agent conversations that incorporate user interaction, execution feedback from the environment, and iterative reasoning, ultimately guiding the agent to achieve the user's desired goal." This means the training data includes multi-step trajectories where the model: (1) decides to call a tool, (2) receives the tool's output (which might be an error or an unexpected result), (3) reasons about what to do next given that feedback, and (4) potentially calls additional tools. These datasets are "organized in multi-step and multi-turn formats to better support the learning of agentic tool use."
+
+*Multilinguality:* For Korean and Spanish support, the paper constructs datasets targeting "cultural and historical knowledge specific to each language" and "fluent, natural conversations with users." Data is created through both original instruction writing in each language and "translations of selected existing samples as queries" — but only as queries, not as responses, to avoid training on translated outputs that might sound unnatural. For Korean specifically, data is curated "to address topics relevant to local education and industry experts, ensuring that the model is well-equipped to handle domain-specific queries from Korean users."
+
+**Unified mode training and the 1.5:1 ratio:**
+
+The critical design decision in the SFT stage is how to combine NON-REASONING and REASONING data. The paper reports a specific failure mode: "if the token ratio of REASONING mode is too high, we observe that the model tends to behave as if it is in REASONING mode even when NON-REASONING mode is enabled." This is a **mode collapse** problem — the model defaults to extended chain-of-thought for every query, producing verbose reasoning traces when the user wants a quick answer.
+
+Through ablation studies, the paper settles on a **token ratio of REASONING to NON-REASONING data of 1.5:1**. This ratio is measured in tokens, not examples — since reasoning responses are typically much longer than non-reasoning responses, a 1.5:1 token ratio likely means that REASONING data comprises a smaller fraction of total *examples* but a larger fraction of total *tokens*. The ratio is not symmetric (1:1) because the REASONING data is centered on Math and Code domains, which are inherently more token-expensive per example, and the model needs sufficient exposure to long reasoning traces to develop the capability.
+
+**Second-round fine-tuning for domain rebalancing:**
+
+After the combined training, the paper performs "a second round of training using high-quality REASONING data from the Code and Tool Use domains, reusing these samples to further enhance the performance." This second round addresses domain imbalance: after the initial combined training, the model may be under-trained on Code and Tool Use specifically (since these are subdomains within the larger REASONING category). By resampling and retraining on these specific domains, the model's capabilities are fine-tuned without disrupting the overall mode balance achieved in the first round.
+
+---
+
+#### Reasoning Reinforcement Learning — AGAPO Algorithm
+
+After SFT, the model undergoes online reinforcement learning to enhance reasoning capabilities. This stage uses a novel algorithm called **AGAPO (Asymmetric Sampling and Global Advantage Policy Optimization)**, which modifies the widely-used GRPO (Group Relative Policy Optimization) algorithm in four specific ways. The paper is explicit about the limitations of GRPO that AGAPO addresses.
+
+**Training data and pre-filtering:**
+
+The RL training data covers four categories: mathematics, code, science, and instruction following. Each category has a category-specific reward function (described below). Before training begins, the data is filtered using the SFT model itself: "we perform accuracy-based filtering by generating eight responses from the SFT model and excluding samples where all eight responses are correct." This removes problems that are trivially easy for the model, since RL on such problems provides no learning signal — the model already produces consistently correct answers, so there's nothing to improve. The filtering step is a pre-processing investment that makes RL training more efficient by focusing computation on problems where the model has room to improve.
+
+**Reward functions per category:**
+
+The reward function used in RL varies by category because "correctness" means different things in different domains:
+
+- **Mathematics:** A rule-based verifier, meaning the model's final answer is extracted and compared to the ground-truth answer using deterministic string matching or mathematical equivalence checking. There is no LLM-judge or learned reward model — correctness is purely programmatic.
+
+- **Code:** "A response is considered correct if its final code block passes all associated test cases." This is the standard pass@k evaluation, but computed per-response as a binary reward (1 if all tests pass, 0 otherwise).
+
+- **Science:** A two-stage verification process. First, a rule-based verifier is applied. If the response is deemed incorrect by the rule-based verifier, "an LLM-judge then performs a more flexible verification." This hybrid approach acknowledges that science questions may have multiple valid phrasings or partially correct answers that a strict rule-based check would reject, while still preferring deterministic verification when possible.
+
+- **Instruction following:** "A reward of 1 is assigned if all constraints are satisfied, and 0 otherwise." This is an all-or-nothing reward for constraint satisfaction tasks.
+
+**Innovation 1: Remove Clipped Objective**
+
+Standard PPO (Proximal Policy Optimization) [48] uses a clipped surrogate objective:
+
+$$L^{CLIP}(\theta) = \mathbb{E}_t\left[\min\left(r_t(\theta)\hat{A}_t, \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon)\hat{A}_t\right)\right]$$
+
+where `$r_t(\theta) = \pi_\theta(a_t|s_t) / \pi_{\text{old}}(a_t|s_t)$` is the probability ratio between the current and old policy, `$\hat{A}_t$` is the advantage estimate, and `$\epsilon$` (typically 0.2) clips the ratio to prevent excessively large policy updates.
+
+The paper identifies a specific failure mode of this clipping for reasoning tasks. Citing Ahmadian et al. [3] and MiniMax [40], the argument is that the clipped objective can "degrade performance by preventing crucial, low-probability tokens from contributing to gradient updates." In reasoning, these low-probability tokens are often the most important ones: they correspond to "reflective behaviors that serve as forks in the reasoning path" — phrases like "wait, I made a mistake," "let me reconsider this step," or "actually, the correct approach is..." When the model generates such a token, it is deviating from its most likely continuation (which would be to continue the current flawed reasoning path). If the probability ratio for this token exceeds `$1 + \epsilon$`, the clip prevents the token from receiving a gradient update, effectively punishing the model for exploring alternative reasoning paths.
+
+AGAPO removes the clipping entirely and "instead uses a standard policy gradient loss." The objective becomes:
+
+$$J_{\text{AGAPO}}(\theta) = \mathbb{E}_{q \sim P(Q), \{o_i\}_{i=1}^G \sim \pi_\theta(O|q)}\left[\frac{1}{G}\sum_{i=1}^G A_{\text{global},i} \log \pi_\theta(o_i | q) - \beta D_{\text{KL}}(\pi_\theta, \pi_{\text{ref}})\right]$$
+
+where the terms are explained progressively below. The key change from PPO is the absence of any clipping operator on the log-probability term — every token contributes to the gradient, regardless of how unlikely it was under the old policy.
+
+**Why this form:** The standard policy gradient `$A \cdot \log\pi$` is the REINFORCE estimator [3], which is unbiased but can have high variance. PPO added clipping to reduce variance, but at the cost of introducing bias against low-probability tokens. AGAPO accepts the higher variance in exchange for unbiased gradients on exploratory tokens, and relies on other mechanisms (the KL penalty term, asymmetric sampling) to maintain stability.
+
+**Innovation 2: Asymmetric Sampling**
+
+Standard GRPO generates a group of G responses per question and computes advantages within that group. However, both GRPO and related methods like DAPO [17, 67] "filter out samples where all responses were either correct or incorrect... because they result in a zero advantage." When all responses in a group are correct, the advantage for each is zero — there's no signal to differentiate better from worse responses within the group. Similarly, when all are incorrect, the mean reward equals the individual rewards, and advantages are zero.
+
+AGAPO departs from this in one direction: "AGAPO utilizes an asymmetric sampling method that does not discard samples where all responses are incorrect, thereby including a higher proportion of negative feedback." The all-correct groups are still discarded (they provide no useful gradient signal — every response is equally good), but all-incorrect groups are **retained**.
+
+For these all-incorrect groups, the challenge is that standard GRPO advantage calculation would still give zero advantage (since every response has the same reward). AGAPO solves this by using a two-stage advantage calculation (Innovation 3) that allows "a small negative reward" to be assigned through normalization across the entire batch, "allowing them to be used to guide the model away from erroneous reasoning paths."
+
+The justification cites recent work on Negative Sample Reinforcement [70], which showed that learning from consistently wrong outputs — teaching the model what *not* to do — is surprisingly effective for reasoning. The intuition is that seeing multiple different wrong answers to the same problem helps the model identify common failure patterns and learn to avoid them, even without a correct example in the same group.
+
+**Innovation 3: Group & Global Advantages**
+
+This is the mechanism that makes asymmetric sampling work. The paper identifies that "GRPO advantage method does not account for the distribution of the entire batch, which makes it difficult to assign appropriate negative rewards to groups of all-incorrect samples."
+
+AGAPO computes advantages in two stages:
+
+**Stage 1 — Group-level Leave-One-Out (LOO) advantage:**
+
+$$A_{\text{loo},i} = r_i - \frac{1}{G-1}\sum_{j \neq i} r_j$$
+
+where `$r_i \in [0, 1]$` is the verifiable reward for response `$i$`, `$G$` is the group size (number of responses per question), and the sum runs over all other responses `$j$` in the same group.
+
+**What it computes:** For each response in a group, the LOO advantage compares its reward to the average reward of all *other* responses in the same group. If response `$i$` has reward 1 and all other responses have reward 0, then `$A_{\text{loo},i} = 1 - 0 = 1$` — a strong positive advantage. If all responses have reward 0, then `$A_{\text{loo},i} = 0 - 0 = 0$` for all `$i$` — no advantage signal within the group. This is exactly the zero-advantage problem for all-incorrect groups.
+
+**Why this form:** Leave-one-out prevents a response from being compared to itself, avoiding a bias where the advantage is artificially inflated or deflated by including the response's own reward in the baseline. The baseline `$\frac{1}{G-1}\sum_{j\neq i} r_j$` is the empirical average reward of alternative responses, making the LOO advantage interpretable as "how much better (or worse) this response is compared to what the model typically generates."
+
+**Stage 2 — Global normalization:**
+
+$$A_{\text{global},i} = \frac{A_{\text{loo},i} - \text{mean}(\{A_{\text{loo},k}\}_k)}{\text{std}(\{A_{\text{loo},k}\}_k)}$$
+
+where the mean and standard deviation are computed over all responses in the mini-batch of size `$K = B \times G$` (batch size `$B$` times group size `$G$`).
+
+**What it computes:** Z-score normalization of the LOO advantages across the entire mini-batch. After this normalization, the advantages have mean 0 and standard deviation 1 across the batch.
+
+**Why this form — the critical insight:** For an all-incorrect group, all LOO advantages are 0. After global normalization, `$0 - \text{mean}(\text{batch})$` will be **negative** (since the mean across the whole batch will be positive if there are any correct responses in other groups), and dividing by the standard deviation scales this negative value appropriately. This gives the all-incorrect responses a **negative advantage**, meaning the policy gradient will reduce the probability of generating those responses. The model learns to avoid the reasoning paths that led to consistently wrong answers. The paper describes this as assigning "a small negative reward... through the advantage calculation," but more precisely, the negative advantage is an *emergent property* of global normalization, not an explicitly assigned reward.
+
+**Innovation 4: Sequence Level Cumulative KL**
+
+To prevent the model from drifting too far from the SFT-trained policy during RL — which would manifest as degradation in NON-REASONING capabilities — AGAPO includes a KL divergence penalty:
+
+$$D_{\text{KL}}(\pi_\theta, \pi_{\text{ref}})$$
+
+where `$\pi_\theta$` is the current policy being optimized and `$\pi_{\text{ref}}$` is the reference policy — the SFT model frozen at the start of RL training. The KL divergence between these two distributions measures how much the current policy has changed.
+
+The paper specifically adopts "the sequence-level cumulative KL, as proposed in prior research [54], to ensure the model receives an appropriate gradient during training." The sequence-level cumulative KL sums the per-token KL divergences across the entire response sequence, rather than using a per-token KL penalty. This is important because reasoning traces can be long (thousands of tokens), and a per-token KL penalty that is too aggressive would prevent the model from ever generating the long reasoning sequences needed for difficult problems. The cumulative approach allows individual tokens to deviate from the reference policy as long as the overall sequence remains within a reasonable divergence budget, controlled by the coefficient `$\beta$`.
+
+**The full AGAPO objective:**
+
+$$J_{\text{AGAPO}}(\theta) = \mathbb{E}_{q \sim P(Q), \{o_i\}_{i=1}^G \sim \pi_\theta(O|q)}\left[\frac{1}{G}\sum_{i=1}^G \left(A_{\text{global},i} \log \pi_\theta(o_i | q) - \beta D_{\text{KL}}(\pi_\theta, \pi_{\text{ref}})\right)\right]$$
+
+where `$q$` is a question sampled from the training distribution `$P(Q)$`, `$\{o_i\}_{i=1}^G$` are `$G$` responses generated by the current policy `$\pi_\theta$` for question `$q$`, `$A_{\text{global},i}$` is the two-stage normalized advantage for response `$i$`, and `$\beta$` is the KL penalty coefficient.
+
+**What it computes:** An expected sum of advantage-weighted log-probabilities minus a KL penalty, averaged over the group of `$G$` responses. The gradient of this objective with respect to `$\theta$` increases the probability of responses with positive global advantage and decreases the probability of responses with negative global advantage, while penalizing large deviations from the reference policy. The result is a policy update that improves reasoning accuracy while maintaining proximity to SFT behavior.
+
+**Why this form:** It combines four design choices: (1) no clipping, so low-probability reasoning tokens contribute to gradients, (2) asymmetric sampling, so all-incorrect groups provide negative feedback, (3) two-stage advantage normalization, so all-incorrect groups receive non-zero (negative) advantages via batch-level z-scoring, and (4) sequence-level KL penalty, so the model stays close to its SFT starting point. Each choice addresses a specific limitation of standard GRPO/PPO for reasoning training.
+
+---
+
+#### Preference Learning with Hybrid Reward
+
+The RL stage improves reasoning but causes "a decline in performance in other types of tasks" — specifically, NON-REASONING capabilities like instruction-following and conversational fluency degrade because the model has been specialized for math and code reasoning. The preference learning stage is designed to restore this balance.
+
+**Framework and data construction:**
+
+The paper uses Direct Preference Optimization (DPO) [46], specifically the SimPER variant [60] which is a reference-free preference optimization method. Unlike standard DPO, which requires a reference model for KL regularization, SimPER operates without a reference model, simplifying the training setup.
+
+The preference data is constructed **on-policy**: the model after RL generates responses for each query, and these responses are used to create chosen-rejected pairs. Specifically, "for each query, we generate 4 to 16 responses per task, and select chosen and rejected responses based on a hybrid reward combining verifiable reward, preference reward, language consistency reward, and conciseness reward, tailored per task." The on-policy nature is important: because the model has been specialized by RL, its output distribution is different from the SFT model, so preference data must be generated from the current model to provide relevant learning signals. Off-policy preference data (generated by a different model) would misalign with the current policy's behavior.
+
+**Stage 1: Token efficiency through conciseness reward**
+
+The first stage addresses a specific problem: REASONING mode responses tend to be long, and after RL, the model may produce unnecessarily verbose reasoning traces even for problems it can solve quickly. The goal of Stage 1 is "increasing token efficiency by reducing the generation length while maintaining the performance of the reasoning mode."
+
+For reasoning-related data with verifiable correctness (math and code problems), the hybrid reward combines:
+
+- **Verifiable reward:** Whether the final answer is correct (1 or 0).
+- **Conciseness reward:** A measure of response length, presumably incentivizing shorter responses.
+
+The chosen response is "the shortest response among the correct answers." The rejected response could be either an incorrect response or a correct but longer response. This creates a preference signal that says: "when multiple responses are correct, prefer the shortest one." The effect is to teach the model that concise reasoning is valued, provided accuracy is maintained.
+
+**Stage 2: Human alignment through preference and language consistency rewards**
+
+The second stage addresses broader alignment beyond reasoning accuracy and conciseness. The hybrid reward combines:
+
+- **Preference reward:** A score from a human preference model (likely a learned reward model trained on human preference judgments, though the paper does not specify the source).
+- **Language consistency reward:** A measure of whether the response maintains consistent language throughout. This is particularly important for a multilingual model: a Korean query should receive a Korean response, and the model should not switch languages mid-response. The paper notes that for REASONING mode data, "preference labeling is performed only on the final answer after the reasoning process is complete" — meaning the long chain-of-thought trace is not evaluated for human preference, only the final answer that a user would read.
+
+Additional stability measures: "to ensure stability during the second stage of training, a portion of the data from the first stage is sampled and reused." This prevents catastrophic forgetting of the conciseness behavior learned in Stage 1.
+
+**Why two stages:** The separation into two stages reflects an ordering of priorities. First, ensure reasoning remains accurate but becomes more token-efficient (Stage 1). Then, restore human alignment and language consistency without sacrificing the efficiency gains (Stage 2). If both objectives were optimized simultaneously, the model might find a degenerate solution where it satisfies human preference by being verbose (longer responses often feel more thorough to human raters), undoing the conciseness gains. The staged approach enforces a specific ordering: accuracy → conciseness → alignment.
+
+---
+
+#### Design Choices Summary
+
+Throughout the post-training pipeline, the paper makes several architectural decisions that reflect the core challenge of unified mode training:
+
+- **Combined SFT rather than sequential:** The NON-REASONING and REASONING data are trained together rather than fine-tuning on one mode first and then the other. This prevents sequential catastrophic forgetting — if REASONING were trained after NON-REASONING, the second stage could overwrite the first.
+
+- **1.5:1 token ratio:** Discovered through ablation rather than theory. The asymmetry (REASONING data outweighing NON-REASONING data in tokens) reflects the fact that REASONING responses are inherently longer, so a higher token ratio is needed to give them sufficient representation.
+
+- **No PPO clipping:** A deliberate tradeoff — accepting higher variance in policy gradients in exchange for not suppressing exploratory reasoning tokens. The stability is recovered through KL regularization and the two-stage advantage normalization.
+
+- **Asymmetric retention of all-incorrect groups:** Only the all-incorrect groups are kept; all-correct groups are still discarded. This asymmetry reflects the different informational value: all-correct groups provide no differentiation signal, while all-incorrect groups provide negative feedback about error patterns.
+
+- **Hybrid rewards with staged preference learning:** The two-stage approach (conciseness first, then alignment) enforces that efficiency gains are not lost during the alignment process, addressing a common failure mode where human preference for thorough-seeming responses conflicts with token efficiency.
+
+- **On-policy preference data:** Generated from the post-RL model to ensure the preference learning signal is relevant to the current policy's behavior, rather than being based on a stale distribution from an earlier training stage.
 
 ## 4. Key Insights and Innovations
-- Unified dual-mode model (fundamental)
-  - What’s new: both `NON-REASONING` and `REASONING` modes in a single model, trained jointly with a carefully chosen token ratio (1.5:1) and then harmonized via two-stage preference learning (Figure 3; §2.4.1–§2.4.3).
-  - Why it matters: reduces deployment complexity and enables adaptive use (fast answers when possible, deeper reasoning when needed) without swapping models.
 
-- Hybrid long-context attention (fundamental)
-  - What’s new: a 3:1 sliding-window-to-global attention schedule with a 4K local window, skipping RoPE on the global path to minimize length bias (Figure 1; §2.1).
-  - Why it matters: brings 128K context within reach while controlling compute; Appendix D shows competitive results on RULER and HELMET at long lengths.
+### Innovation 1: The Unified Mode as a Controllable Spectrum, Not a Binary Switch
 
-- `QK-Reorder-LN` normalization (incremental but impactful)
-  - What’s new: RMSNorm applied to queries/keys before attention and again after attention output to counter variance growth in deep Pre-LN stacks (Figure 2; §2.1).
-  - Why it matters: improves downstream stability and quality, especially for deep models (64 layers in the 32B).
+The dominant assumption in the field, up to and including LG AI Research's own EXAONE 3.5 and EXAONE Deep releases, has been that NON-REASONING (rapid, instruction-following) and REASONING (deep, deliberative chain-of-thought) models are best developed as separate artifacts. You train one model for speed and usability; you train a different model — often with different architecture or training recipes — for depth and accuracy. The user or application switches between them. This mirrors a broader industry pattern: OpenAI's GPT-4 and o1, DeepSeek's V3 and R1, Qwen's base and thinking variants all started as separate model lineages.
 
-- `AGAPO` reasoning RL (fundamental)
-  - What’s new: removal of PPO clipping, inclusion of all-incorrect groups via asymmetric sampling, two-level advantage estimation (group LOO → global normalization), and sequence-level cumulative KL (Eq. 1–2; §2.4.2).
-  - Why it matters: strengthens gradient signals for exploratory reasoning tokens and harder problems, addressing known limitations of GRPO-style training.
+EXAONE 4.0's central conceptual move is to treat these two modes not as separate models but as **controllable behaviors within a single set of weights**, where the mode-selection mechanism is a user-facing control (like a temperature setting or system prompt) rather than a model-switching infrastructure decision. This is not the first hybrid model (Qwen 3 also supports both modes), but the paper's contribution is in **making the case that unification, when done with the right post-training pipeline, does not require a performance penalty** — and in fact, the 32B REASONING mode's 85.3 on AIME 2025 versus Qwen 3 235B's 72.9 (Table 3) suggests that a well-executed unified model can outperform much larger dedicated reasoning models on their home turf. The fact that these two modes coexist within 32B parameters while the model *also* maintains competitive instruction-following (83.7 IFEVAL, Table 3) means the representational capacity required for both behaviors overlaps substantially — the model is not partitioning its weights into separate "reasoning" and "non-reasoning" sub-networks, but learning a shared representation that can be flexibly deployed depending on the generation parameters.
 
-- Long-context SFT design and on-policy preference selection (incremental)
-  - What’s new: SFT that varies both where and how key info appears across long inputs; preference data selected from the model’s own outputs using hybrid rewards (§2.4.1, §2.4.3).
-  - Why it matters: better prepares the model for dispersed-evidence reasoning and aligns generation quality/length trade-offs with task needs.
+The intellectual reframing is this: **mode is a runtime property, not a model-design property**. This shifts the conversation from "which model should we use for this query?" to "how should this model behave for this query?" — a fundamentally different deployment paradigm that eliminates routing infrastructure, model-switching latency, and the fragmented user experience of multi-model agent systems. The Mode Interference Section (2.4.1) — where too high a reasoning token ratio causes the model to default to REASONING behavior — is a diagnostic finding that supports the unified representation hypothesis: the modes are not cleanly segregated in weight space, but overlap, and the ratio at which they are trained determines the default attractor state. This is both a caution and a mechanism: you can control the default through data ratios, and you can override the default through inference-time controls.
+
+This is a **fundamental reframing**, not an incremental improvement, because it changes the design target from "build the best reasoning model" or "build the best chatbot" to "build a single substrate that can be both, on demand." The evidence that this works — particularly the 1.2B model achieving 45.2 on AIME 2025 in REASONING mode (Table 5) while maintaining 74.7 IFEVAL in NON-REASONING mode (Table 6) — shows that the approach scales down to on-device sizes, where running multiple specialized models is infeasible. The unification is not merely a convenience; it is an enabling condition for on-device agentic AI.
+
+---
+
+### Innovation 2: AGAPO's Asymmetric Sampling as a Diagnostic for What GRPO Misses
+
+Standard GRPO (Group Relative Policy Optimization) discards sample groups where all responses are either all-correct or all-incorrect because the within-group advantage is zero — there's no relative signal to differentiate better from worse. This is a mathematically clean default: if every response in a group is equally good or equally bad, the gradient vanishes, so you skip the batch. Prior work (DeepSeekMath, DAPO) accepted this as a reasonable efficiency tradeoff, and recent methods like DAPO [67] focused on filtering strategies to maximize the proportion of groups with mixed outcomes.
+
+AGAPO's **asymmetric sampling** — retaining all-incorrect groups while still discarding all-correct groups — is more than a hyperparameter tweak. It makes a specific claim about the **asymmetric informational value of failure**: seeing multiple different wrong answers to the same problem tells the model something useful about which reasoning paths lead to dead ends, even without a correct example in the same batch. Seeing multiple identical correct answers tells you nothing new.
+
+This is conceptually significant because it inverts the standard RL assumption that learning requires a reward gradient — a mix of good and bad outcomes to contrast. AGAPO says: **pure negative feedback, in the context of a batch that also contains positive examples from other problems, provides a meaningful global gradient** via the two-stage advantage normalization. The LOO advantage within the all-incorrect group would be zero for every response. But after global z-score normalization across the mini-batch, those zero-LOO responses become *negative* advantages because the batch mean (which includes positive advantages from groups with correct responses) is above zero. The normalization automatically assigns a penalty to every response in the all-incorrect group proportional to how far below the batch mean the group falls.
+
+The innovation here is not the specific math (z-scoring is standard), but the **recognition that global normalization converts zero-variance groups into negative-advantage groups**, and that this negative signal is valuable for reasoning training. It is a diagnostic about GRPO: the reason GRPO discards these groups is an artifact of its within-group-only advantage computation, not a fundamental statement about their utility. AGAPO fixes this by moving part of the advantage computation to the batch level. The connection to Negative Sample Reinforcement [70] (cited in Section 2.4.2) grounds this in emerging evidence that learning from mistakes is especially powerful for reasoning — and AGAPO's contribution is providing a clean algorithmic mechanism to operationalize that insight within a GRPO-like framework without requiring a separate negative-sampling pipeline.
+
+I classify this as a **fundamental refinement** rather than an incremental tweak, because it changes what data contributes to training (all-incorrect groups are now included, which can be a large fraction of batches on hard problems) and because it identifies a structural limitation of GRPO — the within-group-only advantage — that has implications beyond this specific implementation. The evidence in Table 3 (85.3 AIME 2025) cannot be attributed to any single component of AGAPO, but the asymmetric sampling is arguably the most conceptually novel piece, enabling learning from failure modes that GRPO-based methods would ignore.
+
+---
+
+### Innovation 3: Removing the PPO Clip as a Reasoning-Specific Intervention
+
+The PPO clipping mechanism prevents the probability ratio `$r_t(\theta)$` from exceeding `$1 \pm \epsilon$` during gradient updates, which is a variance-reduction technique designed for stable RL training in general settings. Clipping says: if the new policy assigns a dramatically different probability to an action than the old policy, ignore that action's gradient — it might be noise.
+
+AGAPO removes this clipping entirely, using a standard REINFORCE-style policy gradient. The paper's justification is domain-specific and non-obvious: low-probability tokens in reasoning traces are often the *most important* ones, not the noisiest. A token like "Wait, I made a mistake" or "Actually, let me reconsider that step" has low probability under the model's default continuation (which would be to keep going with the current, potentially flawed, reasoning path). PPO's clipping would suppress the gradient from this token because the probability ratio exceeds `$1 + \epsilon$` — the model tried something unusual, and clipping prevents it from learning whether that unusual thing was good or bad. The clipped gradient treats the token as an outlier to be ignored, when in fact it's a critical reasoning fork that should receive a strong learning signal.
+
+This is a **domain-specific insight masquerading as an algorithmic tweak**. The removal of clipping is not generally beneficial — for standard RL tasks, clipping is genuinely useful for stability. But reasoning tasks have a specific structure: the distribution of correct reasoning paths includes low-probability "course correction" tokens that are systematically different from the model's default continuations. These tokens are not random noise; they are the mechanism by which the model learns to self-correct. A gain-of-function from unclipped gradients — letting these exploratory tokens contribute fully — justifies the cost of higher-variance updates, which is then managed through the KL penalty (Innovation 4 in the AGAPO suite).
+
+The intellectual move here is **not "clipping is bad" but "the tokens that clipping suppresses are the tokens reasoning training needs most."** This is a reframing of the variance-bias tradeoff in RL for language models: in most domains, clipping reduces variance at acceptable bias cost. In reasoning, that bias cost is unacceptably high because it falls disproportionately on the tokens that represent reflective reasoning behavior. The fact that MiniMax [40] independently observed similar issues (cited in Section 2.4.2) suggests this is a systematic property of reasoning RL, not an EXAONE-specific quirk.
+
+I classify this as an **incremental refinement** at the algorithmic level (remove a line of code) but a **fundamental diagnostic** at the conceptual level, because it identifies a structural mismatch between a generic RL stabilization technique and the specific token-level dynamics of reasoning training. It tells future researchers: when training reasoning models with RL, revisit your assumptions about which tokens should be trusted to contribute to gradients.
+
+---
+
+### Innovation 4: The Staged Post-Training Pipeline as a Push-Pull Dynamic, Not a Linear Stack
+
+The standard post-training recipe for language models is a linear pipeline: pretraining → SFT → (optional RL) → DPO/preference alignment. Each stage builds on the previous one, and the goal is monotonic improvement — each stage should make the model better. Conflicts between stages (e.g., RL improving reasoning but degrading instruction-following) are treated as problems to be minimized, usually by adding data from the degraded domains to the RL mix or by careful KL regularization.
+
+EXAONE 4.0's post-training pipeline explicitly rejects this linear-improvement assumption and instead embraces a **push-pull dynamic** between stages:
+
+- **SFT pushes** the model toward a balanced NON-REASONING/REASONING capability at a 1:1.5 token ratio.
+- **RL pulls** the model strongly toward reasoning specialization, intentionally accepting (for a time) the degradation of NON-REASONING capabilities — the paper explicitly states RL "causes a decline in performance in other types of tasks."
+- **Preference learning pulls back** toward general usability, using a two-stage process (conciseness first, then alignment) to ensure that the push toward alignment doesn't undo the token-efficiency gains.
+
+The recognition that post-training is not monotonic — that you can *overshoot* on reasoning and then *correct* through preference learning — is a conceptual shift from "each stage improves the model" to "stages are in tension, and the final model is the equilibrium of opposing forces." This is analogous to the way GAN training involves a generator and discriminator pulling in opposite directions, but here the opposing forces are sequential rather than simultaneous.
+
+The evidence for this dynamic is indirect but persuasive: the paper's ablation on REASONING:NON-REASONING data ratio (Section 2.4.1) shows that mode behavior is highly sensitive to the data mixture, and the careful orchestration of the preference learning stages (Stage 1 for conciseness, Stage 2 for alignment, with Stage 1 data reused in Stage 2 for stability) suggests that the order of operations matters precisely because the stages interact non-monotonically. If each stage simply improved the model independent of others, the ordering would not need such careful design.
+
+This is a **fundamental reframing** of post-training methodology, moving from a pipeline-as-assembly-line metaphor to a pipeline-as-feedback-system metaphor. It suggests a richer design space for future work: rather than trying to make each stage perfectly balanced (e.g., adding instruction-following data to RL to prevent degradation), deliberately overspecialize and then correct — because the overspecialized intermediate model may explore reasoning strategies that a balanced model would never discover. The final preference learning stage then selects and refines the best of those strategies while restoring general capability.
+
+---
+
+### Innovation 5: Verifier-Based Reward Functions as Domain-Adaptive Correctness Signals
+
+The paper's approach to reward design for RL uses four different reward functions for four different data categories (mathematics, code, science, instruction following), each tailored to the nature of correctness in that domain. This is not, in itself, novel — many RL-for-reasoning systems use domain-specific verifiers. What is conceptually distinctive is the **hybrid two-stage verification for science** and the **all-or-nothing constraint satisfaction for instruction following**, which together represent a taxonomy of verification strategies that future work can extend.
+
+Specifically, the science verification uses a rule-based verifier first (deterministic, fast, unambiguous when it works) and then falls back to an LLM-judge only when the rule-based verifier rejects the answer. This is a **cost-aware verification cascade**: cheap verification first, expensive (LLM-based) verification only when necessary. It also acknowledges that science answers have legitimate ambiguity — "the force is approximately 9.8 N" and "9.81 N" might both be correct but fail exact string matching. The rule-based verifier catches unambiguous matches; the LLM-judge handles the fuzzy cases. This is a practical insight about deploying verification at scale: you don't need perfect automated verification if you can fall back to a more expensive but more flexible method on a subset of cases.
+
+The instruction-following reward (1 if all constraints are satisfied, 0 otherwise) is notable for its **uncompromising binary structure**. Unlike math or code, where partial credit might make sense (the approach is right but the final number is wrong), instruction-following is inherently conjunctive: if a user asks for a response in JSON format with exactly three fields, a response with the right content but wrong format has *failed* the instruction, regardless of content quality. The binary reward reflects this domain semantics, and training with it teaches the model that constraint satisfaction is not negotiable — you can't partially follow an instruction. This is a domain-modeling insight more than a technical one: the reward function should match the logical structure of the task, not just measure some continuous notion of quality.
+
+These verification strategies are **incremental refinements** individually but collectively represent a **systematic approach to reward design** that deserves recognition: for any new domain, ask (1) what is the cheapest reliable verification method, (2) what is the fallback for ambiguous cases, and (3) does the reward structure reflect the logical structure of correctness in this domain (binary, continuous, conjunctive)? This taxonomy is exportable to other RL-for-reasoning systems beyond EXAONE.
 
 ## 5. Experimental Analysis
-- Evaluation methodology (§3.1–§3.3)
-  - Coverage: World Knowledge (MMLU-Redux, MMLU-Pro, GPQA-Diamond), Math/Coding (AIME 2025, HMMT Feb 2025, LiveCodeBench V5/V6), Instruction Following (IFEVAL, Multi-IF EN), Long Context (HELMET, RULER, LongBench), Tool Use (BFCL-V3, TAU-Bench), and Multilinguality (Korean: KMMLU-Pro/Redux, KSM, KO-LongBench; Spanish: MMMLU ES, MATH500 ES, WMT24++).
-  - Baselines include mid-size (e.g., Qwen3-32B) and frontier (>200B, e.g., Qwen3-235B, DeepSeek R1-0528) (§3.2; Table 8).
-  - Decoding and sampling: in REASONING, temperature 0.6, top-p 0.95; presence penalty 1.5 for `32B` only; n-samples vary per benchmark (e.g., n=32 for AIME/HMMT), and accuracy averaged across samples (§3.3).
-  - Long-context for small baselines (Qwen3 0.6B/1.7B) extended via `YaRN` to 64K for fair comparison (Appendix D).
 
-- Main quantitative results (selected highlights; Tables 3–6)
-  - Math/Coding (strength of EXAONE 4.0):
-    - `32B (REASONING)`: 
-      > Table 3: AIME 2025 = 85.3; HMMT Feb 2025 = 72.9; LiveCodeBench V6 = 66.7.
-      These exceed Qwen3-235B (AIME 81.5, HMMT 62.5, LCB-V6 58.9) and approach DeepSeek R1 on some tasks.
-    - `1.2B (REASONING)`:
-      > Table 5: AIME 2025 = 45.2; HMMT = 34.0; LCB-V6 = 45.3.
-      Strong for its size; competitive with or better than 1.7B–3B baselines.
-  - World Knowledge:
-    - `32B (REASONING)`:
-      > Table 3: MMLU-Redux = 92.3; MMLU-Pro = 81.8; GPQA-Diamond = 75.4.
-      Near frontier scores on MMLU(-Pro); GPQA trails DeepSeek R1 (81.0) but leads many mid-size baselines.
-  - Instruction Following:
-    - `32B (REASONING)`: 
-      > Table 3: IFEVAL = 83.7; MULTI-IF (EN) = 73.5.
-    - `32B (NON-REASONING)`:
-      > Table 4: IFEVAL = 84.8; MULTI-IF (EN) = 71.6.
-      High alignment while retaining reasoning strength.
-  - Long Context (mid-size; Tables 4 and Appendix D):
-    - `32B (NON-REASONING)`:
-      > Table 4: HELMET = 58.3; RULER = 88.2; LongBench V1 = 48.1 at 128K.
-      Appendix D.2 shows RULER 88.18 at 128K (Table 10), close to Qwen3-235B’s 90.60.
-  - Tool Use:
-    - `32B (REASONING)`:
-      > Table 3: BFCL-V3 = 63.9; TAU-Bench Airline = 51.5; Retail = 62.8.
-      TAU-Bench Airline approaches DeepSeek R1 (53.5), notable given parameter gap; Retail is close to R1 (63.9).
-    - `1.2B (REASONING)`:
-      > Table 5: TAU-Bench Retail = 28.1—highest among compared small models.
-  - Multilingual:
-    - Korean `32B (REASONING)`:
-      > Table 3: KMMLU-Pro (KO) = 67.7; KSM = 87.6.
-    - Spanish `32B (REASONING)`:
-      > Table 3: MMMLU (ES) = 85.6; MATH500 (ES) = 95.8.
-    - Translation (WMT24++ EN↔ES judged by gpt-4.1):
-      > Table 4: 90.7 for `32B (NON-REASONING)`. Judge prompt shown in Appendix D.5.
+### Evaluation Methodology
 
-- Reasoning budget study (Table 7, §3.5)
-  - Reducing the allowed “thinking tokens” degrades performance, but moderately for many cases:
-    > Table 7: `32K` vs `64K` budget—AIME 2025 drops from 85.3 → 74.8 (−12.3 points) for 32B; LiveCodeBench V6 remains stable (66.7 → 67.3).
-  - This quantifies the compute–quality trade-off and suggests 32K budgeting is often acceptable outside the hardest math.
+- **Dataset.** The paper evaluates on a diverse set of benchmark suites spanning six categories: World Knowledge (MMLU-REDUX, MMLU-PRO, GPQA-DIAMOND), Math/Coding (AIME 2025, HMMT FEB 2025, LIVECODEBENCH V5 and V6), Instruction Following (IFEVAL, MULTI-IF English subset), Long Context (HELMET, RULER, LONGBENCH), Agentic Tool Use (BFCL-V3, TAU-BENCH), and Multilinguality (KMMLU-PRO, KMMLU-REDUX, KSM for Korean; MMMLU, MATH500, WMT24++ for Spanish; KO-LONGBENCH for Korean long-context). The benchmarks span both synthetic tasks (RULER for long-context retrieval) and real-world scenarios (TAU-BENCH for simulated tool-agent-user interaction), with several being in-house constructions (KMMLU-PRO, KMMLU-REDUX, KO-LONGBENCH) developed because prior Korean benchmarks had reported dataset errors and contamination issues. AIME 2025 and HMMT FEB 2025 are competition math benchmarks chosen for their difficulty and contamination-free status (MathArena ensures problems are not in training data); GPQA-DIAMOND tests expert-level knowledge in biology, physics, and chemistry; LIVECODEBENCH evaluates coding with continuously updated problems to prevent contamination.
 
-- Robustness/ablations
-  - The paper reports the reasoning-budget ablation (Table 7). It mentions ablations guiding the 1.5:1 mode ratio choice (§2.4.1) but does not present numbers. No ablation quantifies the impact of `QK-Reorder-LN` or the 3:1 attention ratio.
+- **Base model(s).** The EXAONE 4.0 model series consists of two sizes: a 32B-parameter mid-size model (64 layers, d_model=5120, 40 attention heads with GQA, hybrid attention with 3:1 local-to-global ratio, maximum context 128K tokens) and a 1.2B-parameter small-size model (30 layers, d_model=2048, 32 attention heads with GQA, global attention only, maximum context 64K tokens). Both share the same vocabulary (102,400 tokens, BBPE tokenizer) with roughly equal proportions of Korean and English tokens plus a small number of multilingual tokens. The 32B model was chosen as the primary research vehicle; the 1.2B model serves as a test of whether unified-mode training scales down to on-device deployment sizes. The paper also compares against EXAONE Deep 2.4B, the company's prior dedicated reasoning model, to assess whether unification matches or exceeds the split-model approach.
 
-- Overall assessment
-  - The evidence strongly supports claims of leading math/coding accuracy at the mid-size scale (Table 3) and competitive long-context capability (Appendix D). Tool-use performance is respectable relative to much larger models. The lack of detailed ablations for architectural and RL choices limits causal attributions for some gains.
+- **Metrics.** The primary metric is accuracy (percentage of correct answers) computed as the average over n sampled responses per query — n is chosen per-benchmark to ensure evaluation stability: n=8 for GPQA-DIAMOND, n=32 for AIME 2025 and HMMT FEB 2025 (reflecting the high variance of competition math problems), n=4 for LIVECODEBENCH V5/6, TAU-BENCH, and MATH500 (ES), and n=1 with greedy decoding for NON-REASONING mode on instruction-following benchmarks. For TAU-BENCH, the metric is task success rate in simulated agent-user conversations using gpt-4.1-2025-04-14 as the user model. For WMT24++, translation quality is scored by an LLM judge (gpt-4.1-2025-04-14) on a continuous 0-100 scale using reference-based direct assessment. For HELMET, task-specific metrics include SubEM and model-based scoring; the LongCite task is excluded from HELMET due to metric incompatibility (it uses specialized citation-precision and F1 measures rather than the benchmark's standardized metrics). For KO-LONGBENCH, the paper reports average accuracy across six task categories.
+
+- **Baselines.** The baselines are organized into three size classes and three model types. **Frontier models (>200B):** DeepSeek R1-0528 (671B MoE, Reasoning), DeepSeek V3-0324 (671B MoE, Non-reasoning), Llama 4 Maverick (402B MoE, Non-reasoning), Qwen 3 235B (235B MoE, Hybrid). **Mid-size models (10-30B):** Qwen 3 32B (32.8B, Hybrid), Gemma 3 27B (27.4B, Non-reasoning), Mistral-Small-3.2-24B-Instruct-2506 (24B, Non-reasoning), Magistral-Small-2506 (23.6B, Reasoning), Phi 4 reasoning plus (14.7B, Reasoning), Phi 4 (14.7B, Non-reasoning). **Small-size models (<3B):** SmolLM 3 3B (3.08B, Hybrid), EXAONE Deep 2.4B (2.41B, Reasoning), Qwen 3 1.7B (1.72B, Hybrid), Gemma 3 1B (1B, Non-reasoning), Qwen 3 0.6B (596M, Hybrid). For small-size long-context evaluation, Qwen 3 1.7B and Qwen 3 0.6B models (which natively support 32K context) are extended to 64K using YaRN. Scores are borrowed from official technical reports, blogs, or leaderboards when available (marked with asterisks in tables); otherwise, they are reproduced in the authors' evaluation environment following each model's recommended decoding settings.
+
+- **Generation budget / compute accounting.** The paper does not use a unified "generation budget" metric like the example paper's test-time compute scaling analysis. Instead, generation parameters are fixed per-mode and per-benchmark. For REASONING mode: temperature 0.6, top-p 0.95, presence penalty 1.5 (32B only), maximum 64K tokens for AIME 2025, HMMT FEB 2025, LIVECODEBENCH V5/6, and KSM; 32K tokens for other benchmarks. For NON-REASONING mode: greedy decoding (temperature 0) for single (n=1) responses; same sampling settings as REASONING mode but with presence penalty 0.0 when generating n>1 responses. The "Reasoning Budget" experiment (Table 7) varies the maximum reasoning tokens from 1K to 64K to study the compute-performance tradeoff, fixing the answer portion to 8K tokens. FLOPs for pretraining are reported (2.69 × 10^24 for 32B, 8.65 × 10^22 for 1.2B) but not used for inference-time compute comparison.
+
+- **Cross-validation / statistical protocol.** The paper does not report cross-validation or confidence intervals. For baselines not evaluated in-house, scores are taken from official sources (technical reports, blogs, leaderboards); for in-house reproduction, the authors follow "recommended settings when they are explicitly stated" (Section 3.3). For the reasoning budget experiment, results are averaged over the same n samples as the main experiments (n=32 for AIME 2025, n=4 for LIVECODEBENCH V6). The lack of reported variance estimates (standard deviations, confidence intervals) is a limitation — for AIME 2025 with n=32, there is non-trivial sampling variance that could affect the ranking of models within a few percentage points of each other.
+
+### Main Quantitative Results
+
+#### World Knowledge and Expert-Level Reasoning (GPQA-DIAMOND)
+
+The EXAONE 4.0 models show strong performance on knowledge-intensive benchmarks, with a particularly notable result on GPQA-DIAMOND — the graduate-level expert knowledge benchmark in biology, physics, and chemistry. In REASONING mode (Table 3), the 32B model achieves **75.4 on GPQA-DIAMOND**, which is second only to DeepSeek R1-0528 (81.0) among all compared models and ahead of Qwen 3 235B REASONING (71.1), Phi 4 reasoning-plus (68.9), and Magistral-Small-2506 (68.2). The 1.2B model (Table 5) achieves 52.0 on GPQA-DIAMOND in REASONING mode, ahead of Qwen 3 1.7B REASONING (40.1) and SmolLM 3 3B REASONING (41.7), and only slightly behind EXAONE Deep 2.4B (54.3) despite having roughly half the parameters. This is significant because GPQA-DIAMOND is designed to be "Google-proof" — its questions require deep expert reasoning that cannot be answered by simple retrieval — suggesting the REASONING mode genuinely improves analytical capability on specialized knowledge, not just math and code.
+
+On MMLU-REDUX, the 32B REASONING mode achieves 92.3, competitive with Qwen 3 235B REASONING (92.7) and ahead of Qwen 3 32B REASONING (90.9). The 32B NON-REASONING mode (Table 4) scores 89.8, ahead of Phi 4 (88.3), Gemma 3 27B (85.0), and Qwen 3 32B NON-REASONING (85.7). On MMLU-PRO, the 32B REASONING mode reaches 81.8, second only to DeepSeek R1-0528 (85.0) among compared models.
+
+The pattern across World Knowledge benchmarks suggests that EXAONE 4.0's doubling of pretraining data (from 6.5T to 14T tokens) and REASONING mode training combine to produce knowledge recall and expert reasoning that exceeds most models in its size class and competes with frontier models — the 32B model's GPQA-DIAMOND score of 75.4 is closer to DeepSeek R1-0528's 81.0 than to the next-best mid-size model (Phi 4 reasoning-plus at 68.9), a gap of 5.6 points to the frontier model versus 6.5 points to the nearest competitor.
+
+#### Math/Coding: The Primary Performance Differentiator
+
+The most striking results are in Math and Coding, where EXAONE 4.0 models substantially outperform all models in their size class and compete with or exceed frontier-class models.
+
+**AIME 2025 (Table 3):**
+- EXAONE 4.0 32B REASONING: **85.3**
+- DeepSeek R1-0528 (671B): 87.5
+- Qwen 3 235B REASONING: 81.5 (cited with asterisk, from official report)
+- Qwen 3 32B REASONING: 72.9 (cited with asterisk)
+- Phi 4 reasoning-plus (14.7B): 78.0 (cited with asterisk)
+- Magistral-Small-2506 (23.6B): 62.8 (cited with asterisk)
+
+The 32B EXAONE 4.0 outperforms Qwen 3's 235B REASONING model by 3.8 percentage points, and the 14.7B Phi 4 reasoning-plus by 7.3 points. The gap to DeepSeek R1-0528 (671B, ~21× larger) is only 2.2 points. In NON-REASONING mode (Table 4), the 32B achieves 35.9 on AIME 2025, ahead of all mid-size and frontier NON-REASONING models except DeepSeek V3-0324 (50.0) — the model's NON-REASONING math performance exceeds Qwen 3 235B NON-REASONING (24.7) by 11.2 points.
+
+**HMMT FEB 2025 (Table 3):**
+- EXAONE 4.0 32B REASONING: **72.9**
+- DeepSeek R1-0528: 79.4
+- Qwen 3 235B REASONING: 62.5 (asterisk)
+- Phi 4 reasoning-plus: 53.6 (asterisk)
+- Qwen 3 32B REASONING: 50.4
+- Magistral-Small-2506: 43.5
+
+On HMMT, the gap between EXAONE 4.0 and the next-best mid-size model (Phi 4 reasoning-plus) is 19.3 points — a massive margin that suggests the training recipe is particularly effective for competition-level mathematics beyond what size alone would predict.
+
+**LIVECODEBENCH V5 and V6 (Tables 3 and 4):**
+On LIVECODEBENCH V5, the 32B REASONING mode scores 72.6, ahead of Qwen 3 235B REASONING (70.7, asterisk) and Phi 4 reasoning-plus (51.7). On V6, the score is 66.7, ahead of Qwen 3 235B REASONING (58.9, asterisk) and Qwen 3 32B REASONING (60.1). In NON-REASONING mode (Table 4), the 32B achieves 43.3 (V5) and 43.1 (V6), competitive with DeepSeek V3-0324 (46.7 and 44.0) and ahead of Llama 4 Maverick (43.4 and 32.7).
+
+**Small-size Math/Coding (Table 5, REASONING mode):**
+- EXAONE 4.0 1.2B REASONING on AIME 2025: **45.2**
+- EXAONE Deep 2.4B: 47.9 (asterisk)
+- Qwen 3 1.7B REASONING: 36.8 (asterisk)
+- SmolLM 3 3B REASONING: 36.7 (asterisk)
+- Qwen 3 0.6B REASONING: 15.1 (asterisk)
+
+The 1.2B model outperforms models 2-3× its size on AIME 2025, and its HMMT FEB 2025 score (34.0) exceeds Qwen 3 1.7B REASONING (21.8) by 12.2 points. On LIVECODEBENCH V6, the 1.2B scores 45.3, exceeding the 2.4B EXAONE Deep (43.1) and roughly matching models 2-3× larger. This is perhaps the paper's most surprising result: a 1.2B model with REASONING mode can match or exceed dedicated reasoning models at double the parameter count.
+
+**Key takeaway:** The Math/Coding results establish that EXAONE 4.0's unified training pipeline — combining large-scale SFT, AGAPO reinforcement learning, and preference optimization — produces reasoning capabilities that break the expected size-performance curve. The 32B model operates in a performance regime typically associated with 200B+ parameter models, and the 1.2B model operates at the level of 2-3B parameter dedicated reasoning models.
+
+#### Instruction Following: Maintaining Usability Under Dual-Mode Training
+
+A central risk of unified mode training is that the heavy emphasis on REASONING data (1.5:1 token ratio) could degrade the model's ability to follow instructions concisely. The results partially alleviate but do not fully eliminate this concern.
+
+**IFEVAL (Tables 3 and 4):**
+- EXAONE 4.0 32B REASONING: 83.7
+- EXAONE 4.0 32B NON-REASONING: 84.8
+- Qwen 3 32B NON-REASONING: 83.2 (asterisk)
+- Qwen 3 32B REASONING: 85.0 (asterisk)
+- Qwen 3 235B NON-REASONING: 83.2 (asterisk)
+- Qwen 3 235B REASONING: 83.4 (asterisk)
+- Phi 4 reasoning-plus: 84.9 (asterisk)
+- Llama 4 Maverick: 85.4
+
+The 32B NON-REASONING mode's IFEVAL score (84.8) is competitive with Qwen 3 models and Phi 4 reasoning-plus, and only 0.6 points behind Llama 4 Maverick. The REASONING mode score (83.7) is about 1 point lower than NON-REASONING — a small degradation consistent with the mode's different decoding parameters. This suggests the two-stage preference learning successfully restored instruction-following capability after RL specialization.
+
+**MULTI-IF (EN) (Tables 3 and 4):**
+- EXAONE 4.0 32B REASONING: 73.5
+- EXAONE 4.0 32B NON-REASONING: 71.6
+- Qwen 3 32B REASONING: 73.4
+- Qwen 3 32B NON-REASONING: 71.9
+- Qwen 3 235B REASONING: 73.4
+- Qwen 3 235B NON-REASONING: 72.5
+
+EXAONE 4.0 and Qwen 3 models are essentially tied on MULTI-IF in both modes. The EXAONE 4.0 REASONING mode (73.5) slightly edges out its NON-REASONING mode (71.6), which is counterintuitive (one might expect REASONING mode to be worse at multi-turn instruction-following), but the difference is small.
+
+The instruction-following results are generally positive: the unified model does not sacrifice basic usability. However, the paper does not report detailed error analysis on IFEVAL's constraint categories (e.g., format constraints, length constraints, content constraints), so it's unclear whether specific types of instruction-following degraded more than others. Additionally, the absence of a dedicated NON-REASONING-only EXAONE model (without any REASONING training) as a controlled baseline means we cannot quantify how much instruction-following capability was lost (if any) relative to a single-mode model — we only see that the dual-mode model remains competitive with other dual-mode models.
+
+#### Agentic Tool Use: Competitive but Early-Stage
+
+The agentic tool use results (Tables 3 and 4) show competitive but not dominant performance:
+
+**BFCL-V3 (function calling):**
+- EXAONE 4.0 32B REASONING: 63.9
+- EXAONE 4.0 32B NON-REASONING: 65.2
+- Qwen 3 235B REASONING: 70.8 (asterisk)
+- Qwen 3 32B REASONING: 70.3 (asterisk)
+- Qwen 3 235B NON-REASONING: 68.0 (asterisk)
+- Qwen 3 32B NON-REASONING: 63.0 (asterisk)
+
+On BFCL-V3, EXAONE 4.0 32B is competitive with Qwen 3 32B in NON-REASONING mode (65.2 vs. 63.0) but trails in REASONING mode (63.9 vs. 70.3). The gap to Qwen 3 models is more pronounced on this benchmark than on Math/Coding or World Knowledge, suggesting tool-use capability may be less improved by the AGAPO reasoning RL — which makes sense, since the RL training data does not include tool-use tasks (it covers mathematics, code, science, and instruction following).
+
+**TAU-BENCH (agentic tool use in simulated conversations, Tables 3 and 4):**
+- EXAONE 4.0 32B REASONING, Airline: 51.5 (vs. DeepSeek R1-0528: 53.5, Qwen 3 32B REASONING: 34.5)
+- EXAONE 4.0 32B REASONING, Retail: 62.8 (vs. DeepSeek R1-0528: 63.9, Qwen 3 32B REASONING: 55.2)
+- EXAONE 4.0 32B NON-REASONING, Airline: 25.5 (vs. DeepSeek V3-0324: 40.5, Llama 4 Maverick: 38.0)
+- EXAONE 4.0 32B NON-REASONING, Retail: 55.9 (vs. DeepSeek V3-0324: 68.5, Qwen 3 235B: 56.5)
+
+The REASONING mode dramatically improves TAU-BENCH performance over NON-REASONING mode — Airline jumps from 25.5 to 51.5, roughly doubling. This suggests that the REASONING mode's extended chain-of-thought is particularly valuable for complex multi-turn tool-use scenarios where the model must plan, adapt to feedback, and recover from errors. In REASONING mode, EXAONE 4.0 is competitive with DeepSeek R1-0528 (within 2 points on both Airline and Retail) while substantially outperforming Qwen 3 32B REASONING by 17 points on Airline. However, the NON-REASONING mode's Airline score (25.5) is notably behind Llama 4 Maverick (38.0) and DeepSeek V3-0324 (40.5) — the model struggles with complex tool-use when not in REASONING mode.
+
+**Small-size tool use (Tables 5 and 6):**
+- EXAONE 4.0 1.2B REASONING, TAU-BENCH Retail: 28.1 (best among small-size models)
+- EXAONE 4.0 1.2B REASONING, BFCL-V3: 52.9 (behind Qwen 3 1.7B REASONING at 56.6)
+
+The 1.2B model shows surprisingly strong TAU-BENCH Retail performance (28.1) compared to Qwen 3 1.7B (6.5) and SmolLM 3 3B (5.4), a 4-5× gap. This suggests the REASONING mode training transfers some multi-step planning capability even at the 1.2B scale.
+
+#### Long Context: Competitive but Uneven Across Benchmarks
+
+The long-context results (Tables 4, 6, 9, 10, 11, 13) show mixed performance:
+
+**HELMET (Table 9, 128K context for mid-size):**
+- EXAONE 4.0 32B: 58.34
+- Mistral-Small-2506: 61.93
+- Qwen 3 235B: 63.33
+- Qwen 3 32B: 54.47
+- Gemma 3 27B: 58.34
+- Llama 4 Maverick: 13.72
+
+EXAONE 4.0 ties Gemma 3 27B for second place among mid-size models at 128K, behind Mistral-Small-2506 and Qwen 3 235B. The breakdown by HELMET subtask (Figure 4, Table 9) reveals strong Recall performance (94.06 — the best among all models at 128K) but weaker RAG (54.75 vs. 63.83 for Mistral-Small) and LongQA (52.31 vs. 70.17 for Mistral-Small). This suggests the hybrid attention mechanism excels at information retrieval from long contexts but may underperform on synthesis tasks requiring integration across the full context.
+
+**RULER (Table 10, 128K context for mid-size):**
+- EXAONE 4.0 32B: 88.18
+- Qwen 3 235B: 90.60
+- Qwen 3 32B: 85.60
+- Mistral-Small-2506: 71.84
+
+EXAONE 4.0 is competitive at 128K (88.18 vs. Qwen 3 235B's 90.60), and shows relatively flat degradation from 4K to 128K (96.26 → 88.18) — a drop of only 8.1 points over a 32× context length increase, suggesting the hybrid attention design effectively preserves long-range attention quality.
+
+**LONGBENCH (Table 11, 128K context for mid-size):**
+- EXAONE 4.0 32B: 48.12
+- Gemma 3 27B: 51.54
+- Mistral-Small-2506: 51.48
+- Qwen 3 32B: 44.24
+
+EXAONE 4.0's 48.12 is mid-pack, ahead of Qwen 3 models but behind Gemma 3 and Mistral-Small. The performance on Few-shot Learning (77.28) is strong, but Single-doc QA (39.40) trails behind.
+
+**Small-size long context (Tables 6, 9, 10, 11, 13):**
+- EXAONE 4.0 1.2B on RULER at 64K: 77.43 (vs. SmolLM 3B at 66.27, Qwen 3 1.7B at 65.94)
+- EXAONE 4.0 1.2B on KO-LONGBENCH at 64K: 69.8 (vs. Qwen 3 1.7B at 57.1, SmolLM 3B at 15.7)
+
+The 1.2B model's strong RULER performance (77.43 vs. 65.94 for the next-best small-size model at 64K) and dominant KO-LONGBENCH performance (69.8 vs. 57.1) suggest the long-context training transfers well to the 1.2B scale, particularly for Korean. The KO-LONGBENCH gap (12.7 points over Qwen 3 1.7B) is substantial and likely reflects the Korean-specific curation of legal, administrative, and technical long-context data during SFT.
+
+#### Multilingual Performance: Strong Korean and Spanish with Some Weaknesses
+
+**Korean (Tables 3 and 4):**
+- EXAONE 4.0 32B REASONING, KMMLU-PRO: 67.7 (vs. DeepSeek R1-0528: 71.7, Qwen 3 235B: 68.1)
+- EXAONE 4.0 32B REASONING, KMMLU-REDUX: 72.7 (vs. DeepSeek R1-0528: 77.0, Qwen 3 235B: 74.5)
+- EXAONE 4.0 32B REASONING, KSM: 87.6 (vs. DeepSeek R1-0528: 86.7, Qwen 3 235B: 86.2)
+
+On Korean benchmarks, EXAONE 4.0 trails DeepSeek R1-0528 by 3-4 points on KMMLU-PRO and KMMLU-REDUX but leads on KSM (Korean School Math, 87.6 vs. 86.7 for R1-0528). The competitive Korean performance is expected given the roughly equal Korean-English token distribution in the vocabulary (Table 1) and the extensive Korean-specific data curation. In NON-REASONING mode (Table 4), EXAONE 4.0 32B trails Qwen 3 32B NON-REASONING on Korean benchmarks (KMMLU-PRO: 60.0 vs. 58.3; KMMLU-REDUX: 64.8 vs. 64.4; KSM: 59.8 vs. 41.3), with KSM showing a large EXAONE advantage (18.5 points).
+
+**Spanish (Tables 3 and 4):**
+- EXAONE 4.0 32B REASONING, MMMLU (ES): 85.6 (vs. DeepSeek R1-0528: 88.2, Qwen 3 235B: 86.7)
+- EXAONE 4.0 32B REASONING, MATH500 (ES): 95.8 (vs. DeepSeek R1-0528: 96.0, Qwen 3 235B: 95.1)
+- EXAONE 4.0 32B NON-REASONING, WMT24++ (ES): 90.7 (vs. DeepSeek V3-0324: 94.3, Gemma 3 27B: 93.1)
+
+The Spanish results are competitive, with MATH500 (ES) at 95.8 being within 0.2 points of DeepSeek R1-0528. The WMT24++ translation score (90.7) is the weakest among mid-size models, trailing Gemma 3 27B (93.1), Qwen 3 235B (92.9), and Mistral-Small-2506 (92.2). This suggests that while Spanish language understanding and reasoning transfer well from the shared tokenizer, translation quality specifically may be less robust — possibly because translation was not a focus of the SFT data construction, which emphasized cultural knowledge and natural conversation.
+
+**Small-size multilingual (Table 5, REASONING mode):**
+- EXAONE 4.0 1.2B, MATH500 (ES): 88.8 (best among all small-size models)
+- EXAONE 4.0 1.2B, MMMLU (ES): 62.4 (competitive with Qwen 3 1.7B at 64.5)
+
+The 1.2B model's Spanish math performance (88.8) exceeds Qwen 3 1.7B (87.9) and EXAONE Deep 2.4B (84.5), suggesting the REASONING mode's math improvements transfer across languages.
+
+#### Reasoning Budget Scaling (Table 7)
+
+The reasoning budget experiment reveals how performance varies with the number of reasoning tokens allocated:
+
+**EXAONE 4.0 32B on AIME 2025:**
+| Budget | Accuracy |
+|---|---|
+| 64K (full) | 85.3 |
+| 32K | 74.8 |
+| 16K | 44.2 |
+| 8K | 36.8 |
+| 4K | 35.5 |
+| 2K | 35.7 |
+| 1K | 35.6 |
+
+The most striking finding: there is a **sharp cliff between 32K and 16K** — accuracy drops from 74.8 to 44.2, a 30.6-point decrease (a 40.9% relative drop). Further reduction from 16K to 8K drops another 7.4 points to 36.8, after which performance flattens (4K to 1K all hover around 35-36%). This suggests the model needs at least 32K reasoning tokens to solve AIME 2025 problems effectively, with 16K being a transitional regime where some problems are solvable but many require more depth, and 1-8K being insufficient for the reasoning depth these competition problems demand.
+
+**EXAONE 4.0 32B on LIVECODEBENCH V6:**
+| Budget | Accuracy |
+|---|---|
+| 64K | 66.7 |
+| 32K | 67.3 |
+| 16K | 53.0 |
+| 8K | 47.6 |
+| 4K | 46.0 |
+| 2K | 45.7 |
+| 1K | 44.0 |
+
+LIVECODEBENCH shows a different pattern: the drop from 64K to 32K is negligible (66.7 → 67.3, actually a slight increase), and the cliff is more gradual — 32K to 16K drops 14.3 points, and further reductions show modest degradation. This suggests coding problems have a lower "reasoning depth requirement" than competition math — the model can solve many coding problems with 32K tokens of reasoning, and even with only 1K tokens it achieves 44.0 (vs. 35.6 for AIME). This makes intuitive sense: coding problems often have more "compressible" reasoning — the key insight might fit in a few paragraphs, with the rest being implementation details — whereas AIME problems require extended algebraic manipulation that consumes tokens linearly with problem complexity.
+
+**EXAONE 4.0 1.2B on AIME 2025:**
+- 64K: 45.2, 32K: 45.3, 16K: 37.1, 8K: 24.6, 4K: 23.2, 2K: 22.7, 1K: 22.3
+
+The smaller model shows a different scaling pattern: there is essentially no cliff — performance degrades gradually, from 45.2 at 64K to 37.1 at 16K (8.1 point drop) to 22.3 at 1K (a further 14.8 point drop). The 1.2B model does not benefit from extended reasoning to the same degree as the 32B model, likely because its reasoning traces are less sophisticated — the model may not generate productive multi-step reasoning beyond a certain depth, so allocating more tokens yields diminishing returns sooner. This is consistent with the fact that the 1.2B model's best performance (45.2) is roughly half the 32B model's (85.3) — the smaller model simply cannot match the larger model's reasoning depth regardless of budget.
+
+**EXAONE 4.0 1.2B on LIVECODEBENCH V6:**
+- 64K: 45.3, 32K: 43.0, 16K: 40.1, 8K: 38.3, 4K: 34.0, 2K: 33.4, 1K: 29.3
+
+Coding shows the same gradual degradation pattern with no cliff, consistent with the 32B model's coding results. The 1.2B model loses about 16 points going from 64K to 1K (45.3 → 29.3), a much smaller relative drop than the 32B model's math performance. This reinforces the interpretation that coding reasoning is more compressible and less dependent on extended token budgets than competition math.
+
+### Ablation Studies and Robustness Checks
+
+**Mode data ratio (Section 2.4.1, Unified Mode Training):** The paper reports that through ablation studies, the token ratio of REASONING to NON-REASONING data was set to 1.5:1. The key finding is that "if the token ratio of REASONING mode is too high, we observe that the model tends to behave as if it is in REASONING mode even when NON-REASONING mode is enabled." This ablation is described narratively rather than quantitatively — the paper does not report the specific ratios tested (e.g., 2:1, 1:1, 1:2) or the performance at each ratio in a table. This is a significant omission: the 1.5:1 ratio is a critical hyperparameter for unified mode training, and without seeing the sensitivity analysis, it's unclear how robust the finding is. Would 1.4:1 or 1.6:1 produce substantially different behavior? Is there a cliff where mode collapse suddenly occurs, or does the transition happen gradually?
+
+**Pre-filtering for RL training data (Section 2.4.2):** The paper filters the RL training data by "generating eight responses from the SFT model and excluding samples where all eight responses are correct." This pre-filtering removes problems that are trivially easy for the model. The paper does not report what fraction of the training data was filtered, nor does it ablate whether the filtering threshold (8 responses, all correct) significantly impacts results. A lower threshold (e.g., 4 responses) would retain more data but include some already-solved problems; a higher threshold would remove more but risk data scarcity. The absence of this ablation makes it hard to assess how sensitive AGAPO is to the pre-filtering step.
+
+**All-incorrect group retention (Section 2.4.2, Asymmetric Sampling):** The paper claims that retaining all-incorrect groups provides valuable negative feedback, but there is no ablation study showing performance with and without this feature. The claim rests on the conceptual argument (drawing on Negative Sample Reinforcement [70]) and the algorithmic design (global advantage normalization enabling negative advantages for all-incorrect groups), but the empirical contribution of asymmetric sampling is not isolated. A direct comparison — AGAPO with vs. without all-incorrect group retention, all else equal — would quantify how much of the performance gain comes from this specific innovation versus the other three AGAPO components (no clipping, group & global advantages, KL penalty).
+
+**Removed PPO clipping (Section 2.4.2):** Similarly, the removal of the PPO clip is justified by conceptual argument (citing Ahmadian et al. [3] and MiniMax [40]) but not isolated in an ablation. The paper does not show a comparison of AGAPO with and without clipping, so we cannot determine whether the performance difference is due to the clip removal, the asymmetric sampling, the two-stage advantage normalization, or the sequence-level KL penalty — or some interaction among all four. The four AGAPO innovations are presented as a package, and the paper does not dissect their individual contributions. This is a significant limitation for understanding which components of AGAPO are essential and which are incidental.
+
+**Preference learning stages (Section 2.4.3):** The two-stage preference learning (Stage 1 for conciseness, Stage 2 for human alignment) is described but there is no ablation comparing the two-stage approach to a single-stage approach where both rewards are combined. The paper states that Stage 1 data is reused in Stage 2 "to ensure stability during the second stage of training," implying that without this reuse, Stage 2 might undo Stage 1's gains. But the paper provides no evidence (e.g., a comparison of conciseness metrics after Stage 1 vs. after Stage 2 without Stage 1 data reuse). Additionally, no ablation explores alternative orderings (e.g., alignment first, then conciseness) — the paper's chosen ordering (accuracy → conciseness → alignment) is reasonable given the stated goals, but its necessity is unproven.
+
+**Omitted LongCite from HELMET (Appendix D.1):** The paper formalizes the decision to exclude the LongCite task from HELMET along three lines: scope misalignment (LongCite is about sentence-level citation accuracy, not comprehension), metric incompatibility (specialized citation metrics vs. HELMET's standardized metrics), and benchmark coherence. This is a reasonable exclusion, but it means the models' citation accuracy is not evaluated anywhere — an important capability for retrieval-augmented generation and document-grounded responses. The decision is documented and justified, but the absence of any citation evaluation is a gap.
+
+**YaRN extension for baseline models (Section 3.3, Appendix D):** For small-size long-context evaluation, Qwen 3 1.7B and Qwen 3 0.6B (which natively support only 32K tokens) are extended to 64K using YaRN. This is an imperfect comparison — YaRN extension is an inference-time adaptation that may underperform native long-context training. The paper acknowledges this by marking these evaluations with a dagger symbol, but the comparison between EXAONE 4.0 1.2B (natively trained to 64K) and YaRN-extended baselines is not on equal footing. A fairer comparison would either limit all models to 32K (the common maximum native context) or report both native and YaRN-extended performance for EXAONE 4.0.
+
+**Revised KMMLU benchmarks (Section 3.1, Multilinguality):** The paper uses KMMLU-PRO and KMMLU-REDUX instead of the original KMMLU because the original "have been reported dataset error and contamination issue between pre-training corpora and task dataset." This is a responsible choice — using contaminated benchmarks would inflate performance estimates — but it means the results are not directly comparable to prior work that reported on the original KMMLU. The new benchmarks are in-house constructions (hosted on HuggingFace) and may differ in difficulty distribution, making cross-paper comparison difficult.
+
+**Single prompt setting for REASONING vs. NON-REASONING (Section 3.3):** The paper uses different decoding parameters for the two modes (temperature, top-p, presence penalty) but does not report how mode switching is triggered at inference time. There is no specification of whether a system prompt, special token, or API parameter controls the mode. This matters for reproducibility and practical deployment — if mode switching requires manual parameter changes rather than being controllable through the prompt, the "unified model" claim is weaker than if the model can autonomously decide which mode to use based on the query.
+
+### Critical Assessment
+
+#### Claim: "EXAONE 4.0 integrates NON-REASONING mode and REASONING mode into a single model"
+
+**What the experiments demonstrate:** The paper shows that a single set of weights can produce both short-form responses (NON-REASONING mode, evaluated with greedy decoding) and extended chain-of-thought responses (REASONING mode, evaluated with temperature 0.6 and presence penalty). The evidence is that the same model appears in two columns of the results tables — Table 3 for REASONING mode, Table 4 for NON-REASONING mode — with different scores on the same benchmarks.
+
+**What the experiments do NOT demonstrate:** There is no evidence that the model can *autonomously* decide which mode to use based on the query, or that mode switching is controllable through natural language (e.g., a system prompt saying "think step by step" vs. "answer briefly"). The decoding parameters differ substantially between modes (greedy vs. temperature 0.6, presence penalty 1.5), and it's unclear whether the mode distinction is a property of the model or a property of the decoding configuration. If the NON-REASONING mode performance is simply what you get with greedy decoding and the REASONING mode performance is what you get with temperature 0.6 + presence penalty, then the "unified model" is not fundamentally different from any model that can be decoded with different generation parameters — the behavioral difference might be purely a sampling artifact rather than a learned mode distinction.
+
+**Missing experiment:** A controlled test where both modes are triggered through prompt instructions alone (keeping decoding parameters fixed) would demonstrate that the model has genuinely learned to distinguish and execute the two modes, rather than the evaluation setup creating the distinction through decoding parameters. For example: "Answer the following question concisely" vs. "Think through the following question step by step, showing your full reasoning" — both with the same generation parameters. If the model produces substantially different response styles under these instructions, the unified mode claim is strengthened. If it doesn't, then the "modes" are primarily a decoding artifact.
+
+**Conditional assessment:** The claim holds if "integrates... into a single model" means "the same model weights can be used for both behaviors with different decoding configurations." It does not hold as a claim about learned, prompt-controllable mode switching without further evidence.
+
+#### Claim: "The 32B model outperforms the 235B Qwen 3 in both modes across all Math/Coding benchmarks"
+
+**What the experiments demonstrate:** This is strongly supported for REASONING mode (Table 3):
+- AIME 2025: EXAONE 4.0 85.3 vs. Qwen 3 235B 72.9 (asterisk)
+- HMMT FEB 2025: 72.9 vs. 62.5 (asterisk)
+- LIVECODEBENCH V5: 72.6 vs. 70.7 (asterisk)
+- LIVECODEBENCH V6: 66.7 vs. 58.9 (asterisk)
+
+And for NON-REASONING mode (Table 4):
+- AIME 2025: 35.9 vs. 24.7 (asterisk)
+- HMMT FEB 2025: 21.8 vs. 11.9
+- LIVECODEBENCH V5: 43.3 vs. 35.3 (asterisk)
+- LIVECODEBENCH V6: 43.1 vs. 31.4
+
+The margins are substantial: 12.4 points on AIME 2025 REASONING, 11.2 points on AIME 2025 NON-REASONING, 10.4 points on HMMT REASONING.
+
+**Caveats on the comparison:** The Qwen 3 235B scores are marked with asterisks, indicating they come from official reports/blogs/leaderboards rather than the authors' own evaluation environment. There may be subtle differences in evaluation protocol (prompt format, answer extraction, grading) that advantage one model over the other. The paper does not detail the exact reproduction methodology for baseline models (beyond "following the recommended settings when they are explicitly stated"), and small differences in answer parsing or grading can produce several-point swings on math benchmarks. Cross-evaluating both models in the same evaluation harness would eliminate this concern.
+
+**Missing baseline:** The paper does not include Qwen 3 235B's NON-REASONING mode Math/Coding results reproduced in the authors' own environment — a direct head-to-head reproduction would strengthen the claim substantially.
+
+**Conditional assessment:** The claim is strongly supported by the reported numbers, with the caveat that the evaluation is not uniformly reproduction-based. The claim would be strengthened by same-harness evaluation or by reporting confidence intervals that account for sampling variance (n=4 for LIVECODEBENCH, n=32 for AIME).
+
+#### Claim: "The 1.2B model surpasses all small-size baselines except EXAONE Deep 2.4B on AIME 2025"
+
+**What the experiments demonstrate:** Table 5 shows:
+- EXAONE 4.0 1.2B REASONING: 45.2
+- EXAONE Deep 2.4B: 47.9 (asterisk)
+- Qwen 3 1.7B REASONING: 36.8 (asterisk)
+- SmolLM 3 3B REASONING: 36.7 (asterisk)
+- Qwen 3 0.6B REASONING: 15.1 (asterisk)
+
+The gap to Qwen 3 1.7B (the next-best non-EXAONE small-size model) is 8.4 points, and EXAONE 4.0 achieves this with only 1.28B parameters (vs. Qwen 3 1.7B's 1.72B). The result is impressive, but EXAONE Deep 2.4B remains ahead by 2.7 points, so the unification does not match the dedicated reasoning model within the company's own lineup — a point the paper acknowledges.
+
+**Caveats:** Many small-size scores are asterisked (from official reports rather than reproduction), creating the same cross-evaluation concern as for the 32B comparison. Additionally, the small-size model category spans a wide parameter range (596M to 3.08B), and EXAONE 4.0 1.2B is in the middle of this range. The comparison is not normalized by parameter count — a 3B model with lower accuracy than a 1.2B model is a stronger claim than a 0.6B model with lower accuracy.
+
+**Conditional assessment:** The claim is supported with the qualification that EXAONE Deep 2.4B (twice the parameters, dedicated reasoning training) still holds the lead, and that cross-evaluation methodology could affect exact rankings.
+
+#### Claim: "Unified mode training with reinforcement learning can push a 32B model to frontier-class reasoning performance"
+
+**What the experiments demonstrate:** The Math/Coding results in Table 3 show the 32B model within striking distance of DeepSeek R1-0528 (671B) — within 2.2 points on AIME 2025 (85.3 vs. 87.5), within 6.5 points on HMMT FEB 2025 (72.9 vs. 79.4), and trailing on LIVECODEBENCH V5 by 2.6 points (72.6 vs. 75.2) and on V6 by 3.6 points (66.7 vs. 70.3). However, the model trails DeepSeek R1-0528 by larger margins on World Knowledge (MMLU-REDUX: 92.3 vs. 93.4, MMLU-PRO: 81.8 vs. 85.0) and GPQA-DIAMOND (75.4 vs. 81.0).
+
+**What the experiments do NOT demonstrate:** "Frontier-class" is a vague term. If it means "within a few percentage points of the best model on specific benchmarks," the claim holds for Math/Coding. If it means "competitive across the full range of benchmarks that define frontier models," the claim is weaker — EXAONE 4.0 trails DeepSeek R1-0528 on World Knowledge, MMLU-PRO, and GPQA-DIAMOND by non-trivial margins. The model is frontier-class on Math/Coding specifically but not uniformly.
+
+**Missing analysis:** The paper does not analyze *why* the frontier-class performance is concentrated in Math/Coding. Is it because AGAPO is particularly effective for these domains (given the verifiable rewards)? Is it because the SFT data for Math/Code was more carefully constructed? Is it because Math/Coding benchmarks are more sensitive to reasoning depth than to world knowledge? Understanding this concentration would help assess how generalizable the approach is to other domains.
+
+**Conditional assessment:** The claim holds specifically for Math/Coding benchmarks, where the 32B model operates in the same performance regime as 200B+ models. On World Knowledge and expert reasoning (GPQA), the model is strong but not frontier-class. The claim should be qualified as "frontier-class reasoning performance on math and coding tasks."
 
 ## 6. Limitations and Trade-offs
-- Assumptions and scope
-  - Verifiable rewards are central to RL and preference selection (§2.4.2–§2.4.3). Tasks without clear verifiers (e.g., creative writing, open-domain reasoning without ground truth) may not benefit as much.
-  - Preference learning labels only the final answer in reasoning mode (§2.4.3). This may under-optimize intermediate reasoning quality/style.
 
-- Compute and data
-  - Pretraining scale is very high (14T tokens; 2.69×10^24 FLOPs for 32B; Table 2). While the hybrid attention reduces inference cost at long lengths, training such models remains expensive.
-  - Reasoning often uses large token budgets (up to 64K generated tokens in math/coding benchmarks, §3.3), which can be costly in production.
+### The Difficulty Estimation That Enables Compute-Optimal Allocation Is Itself Prohibitively Expensive
 
-- Long-context trade-offs
-  - While RULER/HELMET scores are competitive, results are not top across all tasks (Appendix D). Summarization and some retrieval subtasks show room for improvement (e.g., HELMET Summarization sub-scores around mid-20s for 32B; Table 9).
+**The assumption or constraint.** The entire compute-optimal framework depends on knowing each question's difficulty *before* allocating the inference budget, so the strategy can be matched to the problem. The paper's method for estimating difficulty—generating 2048 samples per question and averaging either ground-truth correctness (oracle bins) or the PRM's final-answer scores (predicted bins)—is described in Section 3.2 as consuming a fixed upfront cost per question. The authors acknowledge this directly:
 
-- Evaluation gaps
-  - No reported ablation measuring the independent contributions of: hybrid attention vs full-global; `QK-Reorder-LN` vs Pre-LN; AGAPO vs GRPO; or the exact effect of Stage-1 conciseness preference.
-  - Tool-use evaluation covers two popular suites (BFCL-V3, TAU-Bench), but broader real-world agent tasks (with unreliable tools, noisy environments) are not assessed.
+> "estimating difficulty in this way still incurs additional computation cost during inference... our experiments do not account for this cost largely for simplicity"
 
-- Licensing and deployment
-  - The public weights are released under a non-commercial license (Appendix B), which may limit direct commercial adoption even if the technical capabilities are attractive.
+**The consequence.** The headline efficiency gains—4× improvement over best-of-N, where 16 generations via compute-optimal search matches best-of-N at 64 generations (Figure 4)—are computed *after* difficulty is known, without amortizing the cost of learning it. In a realistic deployment, the total cost per question would be: 2048 generations for difficulty estimation + N generations for the selected strategy. Since the largest test-time budgets studied in the paper are 256–512 generations, the difficulty estimation cost alone (2048 generations) is 4–8× larger than the maximum budget being optimized. In other words, the difficulty estimation overhead can dominate the total compute budget, completely negating—or even reversing—the reported efficiency gains. The gain is only realized if difficulty is known essentially for free, which in the current setup it is not.
+
+**What evidence exists in the paper.** The paper provides no experiment where the total cost of difficulty estimation + strategy execution is compared to a uniform allocation baseline at the same total budget. The difficulty estimation cost is explicitly excluded from all budget calculations (Section 3.2). The predicted-difficulty curves (Figures 4 and 8) track the oracle curves closely, confirming that ground-truth labels are not needed—but the computational cost of generating and scoring 2048 samples per question remains unaddressed. The predicted bins still require the same number of generations as oracle bins; the only difference is that the correctness check is done by the PRM rather than a ground-truth grader.
+
+**Mitigation status.** The paper flags this as "a key avenue for future work" (Section 3.2) and Section 8 briefly suggests "pretraining or finetuning models to directly predict difficulty of a question," but no such model is developed, trained, or evaluated. There is no experiment showing that a cheaper difficulty proxy (e.g., 16 samples instead of 2048, or a lightweight classifier trained on question text alone) preserves the compute-optimal gains. Until a low-cost difficulty estimator is validated, the gap between the paper's reported results and practical deployment cost is unquantified. A practitioner reading this paper should understand the 4× as an *upper bound* on what is achievable—realized only if the difficulty estimation problem is solved separately and cheaply.
+
+---
+
+### Hard Problems Remain Fundamentally Unsolved—Test-Time Compute Cannot Compensate for Capability Gaps
+
+**The assumption or constraint.** The paper's approach—both search against PRM verifiers and iterative revisions—operates entirely on the output distribution of the base model. The proposal distribution is modified (revisions) or filtered (search), but no fundamentally new reasoning capacity is injected. This means that if the base model's pass@1 is near zero on a problem class, no amount of test-time compute can help—there are no correct solutions in the proposal distribution to find or refine. The paper is explicit about this boundary:
+
+> "On the hardest questions (bin 5), no method makes meaningful progress" (Section 5.3)
+
+**The consequence.** The compute-optimal framework offers zero improvement on difficulty bin 5 problems, which constitute approximately 20% of the MATH test set by construction (five equally-sized quintiles). In Figure 3 (right), bin 5 accuracy hovers at 1–3% for all methods and all budgets (4 to 256 generations). In Figure 7 (right), bin 5 shows roughly 2–3% accuracy regardless of the sequential-to-parallel ratio. In the FLOPs-matched comparison (Figure 9), the bin 5 scaling line is essentially flat near 0–5% for both revisions and PRM search, and at R ≫ 1, test-time compute with the smaller model shows a −52.9% relative disadvantage compared to the ~14× larger model for PRM search (Figure 1, bottom-right bar chart). For a deployment where the query distribution includes a non-trivial fraction of hard problems, the compute-optimal framework provides no benefit—and the pretraining investment in a larger model remains the only path to improvement. The paper does not provide a method for determining, before deploying the system, what fraction of real-world queries will fall into bin 5, which makes it difficult to estimate the real-world benefit of adopting compute-optimal scaling.
+
+**What evidence exists in the paper.** The bin 5 results are consistently, uniformly poor across all figures: Figure 3 (right) for search, Figure 7 (right) for revisions, Figure 9 (line plots) for FLOPs-matched comparison. The paper is transparent about this failure mode and does not overclaim—Section 7 includes an explicit takeaway that test-time compute "cannot create it from nothing." The evidence is thorough and consistent.
+
+**Mitigation status.** The paper does not propose any mitigation for hard problems within the test-time compute framework. Section 8 suggests that "combining PRM tree-search techniques in combination with revisions" might help, but this is speculative and not evaluated. The paper's position is effectively that hard problems require pretraining scale, not inference-time computation—a position supported by the FLOPs-matched comparison but not "solved" by any proposed method. A practitioner facing a hard-problem-heavy workload should interpret the compute-optimal framework as *not applicable* rather than *needing tuning*—the problem is fundamental to the approach, not a hyperparameter setting.
+
+---
+
+### The FLOPs-Matched Comparison Uses a Weakened Pretraining Baseline—The ~14× Larger Model Is Not Compute-Optimally Trained
+
+**The assumption or constraint.** The FLOPs-matched comparison in Section 7 scales only the model parameters when increasing pretraining compute, holding training data fixed. The paper states this explicitly:
+
+> "We choose this setting as it is representative of a canonical approach to scaling pretraining compute and leave the analysis of compute-optimal scaling of pretraining compute where the data and parameters are both scaled equally to future work."
+
+This follows the LLaMA paradigm (Touvron et al., 2023) where models are trained on more data than Chinchilla-optimal, rather than the Hoffmann et al. (2022) recipe where both parameters and data scale equally with compute. The consequence is that the ~14× larger model used as the pretraining baseline may be undertrained relative to what a compute-optimally scaled model could achieve with the same total FLOPs.
+
+**The consequence.** The reported advantages of test-time compute over pretraining—e.g., +27.8% relative improvement on easy-to-medium questions at R ≪ 1 for revisions (Figure 1, top-right bar chart)—may overstate the benefit relative to a properly compute-optimal larger model. If the pretraining FLOPs were instead spent on a Chinchilla-optimal model (scaling both parameters and data), that model would likely achieve higher accuracy than the parameter-only-scaled model, reducing or potentially reversing the reported advantage of test-time compute. The paper does not quantify this effect, so the magnitude of overstatement is unknown.
+
+Additionally, the ~14× larger model uses only greedy decoding in the comparison—no test-time compute budget of its own (no majority voting, no best-of-N, no search). This stacks the comparison further: the smaller model receives both compute-optimal test-time allocation AND the benefit of the compute-optimal framework, while the larger model receives neither. A fairer comparison would give both models the same total FLOPs budget (pretraining + inference), with each using its remaining inference budget optimally. The current setup overstates the advantage of the smaller-model-plus-test-time-compute approach.
+
+**What evidence exists in the paper.** The paper is transparent about the design choice but does not provide sensitivity analysis. There is no ablation where the ~14× larger model is given a modest test-time compute budget (e.g., best-of-8 or best-of-32) to see whether the compute-optimal smaller model still outperforms it. There is no comparison against a Chinchilla-optimal larger model. The paper does not estimate how much of the reported gain is attributable to the weaker baseline versus genuine efficiency gains from test-time compute.
+
+**Mitigation status.** The paper acknowledges the limitation and defers the compute-optimal pretraining comparison to future work (Section 8). For a practitioner evaluating the pretraining-vs-inference tradeoff, this means the results should be interpreted as a *lower bound* on what pretraining can achieve and an *upper bound* on what test-time compute can achieve relative to pretraining—the true tradeoff likely lies somewhere between the current result and a substantially smaller advantage for test-time compute. The direction of the bias is clear (favoring test-time compute), but the magnitude is not.
+
+---
+
+### Revisions and PRM Search Are Never Combined—The Two Complementary Axes Remain Independent
+
+**The assumption or constraint.** The paper studies two mechanisms for test-time compute—modifying the proposal distribution via iterative revisions (Section 6) and optimizing selection via PRM-guided search (Section 5)—as separate, independent interventions. The compute-optimal policy selects *between* them (or between variants of each) per difficulty bin, but never *combines* them. Section 8 acknowledges:
+
+> "we did not experiment with PRM tree-search techniques in combination with revisions"
+
+**The consequence.** The paper's results represent a lower bound on what a fully integrated system could achieve. Revisions improve the quality of generated candidates by conditioning on previous incorrect attempts; PRM search improves candidate selection by scoring and pruning intermediate steps. These are complementary: revisions make better candidates available, and search finds them more efficiently. Applying beam search to revision model outputs—or using the PRM's step-level scores to guide which revision branches to pursue at each iteration—could yield gains beyond either method alone. Furthermore, the difficulty-dependent complementarity observed in the paper (revisions help most on easy problems, search helps most on medium problems, Figure 3 right and Figure 7 right) suggests that combining both mechanisms could broaden the range of problems where test-time compute is effective—potentially shrinking the "bin 5" hard-problem region where neither method currently helps. The paper does not quantify this missed opportunity.
+
+**What evidence exists in the paper.** The evidence is entirely from independent evaluation of the two mechanisms. Figures 4 and 8 show compute-optimal scaling results for search alone and revisions alone, respectively. There is no figure showing a combined system, no ablation studying the interaction between search and revisions, and no discussion of how the compute-optimal allocation policy would handle the additional degrees of freedom introduced by combining both axes (beam width × revision depth × sequential-to-parallel ratio). The paper's compute-optimal allocation selects a strategy per difficulty bin, but the strategy space explored is limited to either search-only or revisions-only strategies—the combined strategy space is unexplored.
+
+**Mitigation status.** The authors explicitly flag this as future work in Section 8. For a practitioner building on these results, this means the reported compute-optimal scaling curves (Figures 4, 8) should be treated as a *lower bound* on achievable performance at a given budget—combining revisions and search could shift the curves upward, potentially making the 4× efficiency improvement even larger, or enabling gains on currently-intractable hard problems. The gap between current results and potential combined-method results is unquantified but real.
+
+---
+
+### The Revision Model Has a 38% Correct-to-Incorrect Reversion Rate, and the Mitigations Are Imperfect Patches
+
+**The assumption or constraint.** The revision model is trained only on sequences where in-context examples are incorrect and the target is correct (Section 6.1). This is a direct consequence of the training data construction: for each problem, the model sees 0–4 incorrect preceding answers followed by a correct answer. During inference, however, the model generates a chain of revisions, and some of these revisions will be correct—putting the model in a distribution it never saw during training (correct answers in context, with the expectation that it revises them). The paper reports:
+
+> "approximately 38% of correct answers get converted back to incorrect ones using a naive approach" (Section 6.1)
+
+**The consequence.** A revision chain of length L has a compounding failure mode: even if the model produces a correct answer at step k, there is a 38% chance that step k+1 will "revise" it to an incorrect answer. For a chain of 16 revisions, the probability that a correct answer generated somewhere in the chain survives to the end (if one takes only the final output) is substantially less than 1. The paper mitigates this by selecting the best answer from the entire chain using majority voting or verifier-based selection (Section 6.1), rather than taking the last revision. However, these selection mechanisms are imperfect. Majority voting can fail if the chain contains more incorrect than correct answers. Verifier-based selection can fail due to PRM over-optimization or distribution shift (the PRM trained on base model outputs does not transfer well to revision model outputs, as shown in Figure 15a, Appendix J). The 38% reversion rate is a structural flaw in the revision mechanism, not a hyperparameter that can be tuned away.
+
+**What evidence exists in the paper.** The 38% figure is reported in Section 6.1 but no experiment quantifies the downstream effect on overall accuracy—how much higher would revision performance be if the reversion problem were solved? The mitigation (within-chain selection via majority or verifier) is evaluated indirectly through Figure 6 (right), which shows that sequential revision with verifier-based selection outperforms parallel sampling, but does not isolate how much of the sequential benefit is lost due to reversions that the selection mechanism fails to catch. The paper does not report what fraction of final selected answers are actually the most recent revision versus an earlier one that was "rescued" by the selection mechanism—which would quantify how often the reversion problem matters in practice.
+
+**Mitigation status.** The paper acknowledges the issue and applies within-chain selection as a patch, but does not propose a principled solution. A more fundamental fix—such as training the revision model on trajectories that include correct answers in context with a "stop revising" signal, or incorporating a confidence threshold that halts revision when the model is sufficiently certain—is not explored. Section 8 does not mention the reversion problem as a direction for future work. For a practitioner, this means that revision chains cannot be used naively (always taking the last output) and require a separate selection mechanism, adding complexity and potential failure modes. The 38% reversion rate is a material reliability concern for any system that uses revision chains as a black-box improvement mechanism.
+
+### The Revision Model's Training Data Construction—Post-Hoc Edit-Distance Pairing—Approximates Multi-Turn Rollouts and May Not Generalize
+
+**The assumption or constraint.** The paper's revision model training follows Qu et al. (2024) with a significant modification: rather than generating on-policy multi-turn revision trajectories (where the model produces a revision, gets feedback, produces another revision, etc.), the authors construct training sequences by independently sampling correct and incorrect solutions from the base model and pairing them post-hoc. The pairing criterion is that the last incorrect answer in the sequence is selected to have "the smallest character-level edit distance to the correct answer" (Section 6.1), ensuring structural similarity. The paper acknowledges this is an approximation:
+
+> "The original approach used on-policy multi-turn rollouts... This was computationally infeasible for the authors, so we approximated the multi-turn structure by pairing independently sampled correct and incorrect solutions post-hoc"
+
+**The consequence.** There is a distributional mismatch between training and inference: during training, the model sees a sequence of independently sampled incorrect answers (structurally similar due to edit-distance pairing but not causally related), followed by a correct answer. During inference, the model sees its own actual previous revisions—which are causally generated, meaning each revision is a function of the previous one. The independence assumption breaks: at test time, errors in early revisions propagate to later ones, and the model may produce degenerate chains where each revision is a minor variant of the previous one rather than exploring genuinely different approaches. The training data construction (pairing independently sampled answers) does not teach the model how to handle the cumulative error propagation that occurs in real revision chains. This distribution shift may contribute to the 38% reversion rate (Limitation 5) and could partially explain why revision chains plateau in performance (Figure 6, left: pass@1 improves from ~18% to ~24% by step 15–20 and then flattens, rather than continuing to improve).
+
+**What evidence exists in the paper.** The paper acknowledges the approximation but provides no direct evidence of its impact. There is no comparison of the edit-distance-paired training against true on-policy multi-turn trajectory training (even on a small scale) to quantify the performance gap. Figure 6 (left) shows the revision chain's pass@1 trajectory, and the plateau around step 15–20 is consistent with the hypothesis that the model's revision capability saturates due to training-inference distribution mismatch, but this is correlational—other factors (inherent problem difficulty, model capacity) could also cause the plateau. The negative result with ReST^EM (Appendix K, Figure 16), where additional RL-based optimization caused revision performance to *degrade*, suggests that revision training is sensitive to methodology, but it's unclear whether this sensitivity is due to the post-hoc pairing approximation or to other aspects of the ReST^EM procedure.
+
+**Mitigation status.** The paper presents the approximation as a necessary practical compromise and does not propose improvements. Section 8 does not mention revision training data construction as a direction for future work. For a practitioner replicating the revision model, this means that the reported performance should be understood as specific to the edit-distance pairing methodology—a different pairing criterion, or true on-policy training, could produce substantially different (potentially better or worse) revision behavior. The paper provides no guidance on how to select the pairing criterion or evaluate its adequacy.
 
 ## 7. Implications and Future Directions
 - How this changes the landscape

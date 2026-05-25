@@ -8,175 +8,817 @@ This paper presents LOOKAHEAD DECODING, a novel parallel decoding algorithm that
 
 ---
 
-## 1. Executive Summary (2-3 sentences)
-This paper introduces LOOKAHEAD DECODING, a lossless, parallel decoding algorithm that accelerates large language model (LLM) inference without using a separate draft model or changing the output distribution. By generating and verifying multiple future n-grams in parallel within each decoding step, it reduces the number of steps required, achieving up to 1.8× speedup on MT-Bench with a single GPU and up to ~4× with multi-GPU strong scaling on code tasks (Figures 6–7).
+## 1. Executive Summary
+
+This paper introduces **LOOKAHEAD DECODING**, a lossless, parallel decoding algorithm that accelerates LLM inference without requiring auxiliary models or data stores. Evaluated on MT-Bench, GSM8K, HumanEval, MBPP, and ClassEval using LLaMA-2 and CodeLlama models (7B–70B), the method exploits Jacobi decoding's ability to generate multiple tokens per step through a **lookahead branch** (a fixed 2D window generating disjoint n-grams from the Jacobi iteration trajectory) and a **verification branch** (a parallel check that integrates those n-grams into the sequence only if they preserve the model's output distribution). The approach achieves up to 1.8× speedup on MT-Bench and 4× speedup with strong scaling on code completion tasks using multiple GPUs via **lookahead parallelism** (a token-distribution strategy that assigns disjoint branches to separate GPUs with near-zero communication), establishing that the per-step memory-bandwidth bottleneck of autoregressive decoding can be circumvented to linearly reduce decoding steps according to per-step log(FLOPs) only when sufficient surplus FLOPs are available and the model operates below the GPU's compute-bound regime.
 
 ## 2. Context and Motivation
-- Problem addressed:
-  - Autoregressive decoding (generating one token at a time conditioned on all previous tokens) is memory-bandwidth-bound and underutilizes modern accelerators’ compute, causing high latency (Abstract; §1).
-  - Two core inefficiencies: it produces only one token per step, and each step underutilizes GPU compute because the attention pattern makes inference I/O-bound (§1, “However, current LLMs…”).
 
-- Why this matters:
-  - Low-latency generation is critical for chatbots, search, and code completion (§1). Reducing end-to-end latency at batch size 1 (common in interactive settings) improves user experience and enables new applications.
+### The Core Problem: Autoregressive Decoding Leaves GPU Compute Idle
 
-- Prior approaches and their gaps:
-  - Speculative decoding accelerates decoding using a cheaper draft model to propose tokens, then verifies them with the base model (Eq. 2; §2 “Guess-And-Verify Paradigm”).
-  - Limitations:
-    - Speedup is capped by the acceptance rate α (fraction of draft tokens accepted) and can degrade when α is low (§1; §4.1, Eq. 4).
-    - Draft models require training, do not generalize across base models/datasets, and complicate deployment (§1).
+The fundamental inefficiency this paper tackles is baked into the architecture of every transformer-based LLM deployed today. When an LLM generates text token-by-token through autoregressive decoding, it processes one token at a time to predict the next one, repeating this serial loop for the entire output sequence. The problem is not that this sequential dependency is logically unnecessary — each token genuinely depends on all preceding tokens — but rather that it creates a severe mismatch with the hardware these models run on.
 
-- Positioning of this paper:
-  - Develops an exact method (no approximation in token distribution) that needs no auxiliary model or datastore.
-  - Exploits the observation that decoding can be reinterpreted as solving a nonlinear system via Jacobi iteration (§2, Eq. 3; “Jacobi Decoding”), then harvests parallelizable structure from that view.
-  - Scales with compute: shows a scaling law linking fewer decoding steps to per-step log(FLOPs) (§4.2).
+Modern GPUs and accelerators are designed for parallelism. They have thousands of cores that can perform many operations simultaneously. Yet each autoregressive decoding step generates exactly one token, and the computation required to produce that single token (a forward pass through the entire model) is **memory bandwidth bounded**, not compute bound. What this means in practice: the GPU spends most of its time waiting for model weights to be loaded from memory (HBM) into its compute units, while the actual computation — the matrix multiplications in attention and MLP layers — finishes quickly and the compute cores sit idle. The paper captures this succinctly in Section 1:
+
+> "each decoding step largely underutilizes the parallel processing capabilities of modern accelerators (e.g., GPUs)"
+
+This is not a minor inefficiency. For latency-sensitive applications — chatbots like ChatGPT (Ouyang et al., 2022), search assistants (Team et al., 2023), and code completion tools — the total generation time scales **linearly with the number of output tokens**. A 500-token response requires 500 sequential forward passes through a model with billions of parameters, each pass bottlenecked by memory bandwidth. The user waits for the entire chain.
+
+The economic and practical stakes are high. As LLMs are integrated into interactive applications, latency directly impacts user experience and adoption. Moreover, the gap between compute capability (which grows rapidly with each GPU generation) and memory bandwidth (which improves more slowly) means this underutilization problem **worsens over time** — future hardware will have even more idle compute waiting on memory fetches during autoregressive decoding.
+
+### Prior Approaches and Their Shortcomings
+
+Several lines of work have attempted to address this bottleneck. The paper situates its contribution relative to two main prior directions: **speculative decoding** and **Jacobi decoding**.
+
+#### Speculative Decoding: Powerful but Dependent on a Hard-to-Obtain Draft Model
+
+The most influential prior approach, speculative decoding (Chen et al., 2023; Leviathan et al., 2023), works via a **guess-and-verify** paradigm. The idea is deceptively straightforward:
+
+1. Use a smaller, cheaper **draft model** to quickly generate a sequence of several predicted future tokens (the "guess").
+2. Feed this entire draft sequence into the base LLM in a single forward pass. The LLM processes all draft tokens in parallel, producing one probability distribution per position.
+3. For each position, check whether the draft token matches what the base LLM would have generated. If it matches (the token is "accepted"), keep it and move to the next position. If it does not match (the token is "rejected"), discard it and all subsequent tokens, then let the base LLM generate the correct token from that point.
+
+Because the base LLM's forward pass on a sequence of length $n$ costs roughly the same as generating a single token autoregressively (the computation is dominated by weight loading, not sequence length), speculative decoding can **verify many tokens for the price of one**. If the draft model is accurate, the speedup is substantial.
+
+However, the paper identifies a critical limitation that prevents speculative decoding from being a universal solution (Section 1):
+
+> "their speedups are bounded by the token acceptance rate... every token that fails verification needs to be regenerated by the base model. In the worst case, if most proposed tokens fail verification, these methods may slow down the decoding process."
+
+The **acceptance rate** ($\alpha$ in the paper's notation) — the fraction of draft tokens that the base model agrees with — is the ceiling on performance. If the draft model guesses wrong frequently, the speculative branch produces tokens that are rejected, wasting the parallel forward pass and forcing the base model to regenerate those positions autoregressively. In the limit where $\alpha \to 0$, speculative decoding degenerates to standard autoregressive decoding plus overhead.
+
+Training a draft model that achieves a high acceptance rate is itself a significant engineering challenge. The draft model must be:
+- **Aligned with the base model's distribution** — if the base model is fine-tuned on a specific task (chat, code, math), the draft model needs similar alignment, which may require separate fine-tuning.
+- **Small enough to be fast** — the whole point is that the draft model's forward pass is cheaper than the base model's. If the draft model is too large, the cost of generating the draft sequence eats into the speedup.
+- **Generalizable** — the paper explicitly states that "the trained draft model does not generalize across base models and datasets" (Section 1). A draft model trained for LLaMA-2-7B will not necessarily work for LLaMA-2-70B or for a completely different architecture like Mistral.
+
+Variants of speculative decoding try to circumvent the draft model requirement by using other sources of speculated tokens: **retrieval-based methods** (REST; He et al., 2023) use the training data as a datastore, and **prompt lookup** (Yang et al., 2023; Saxena, 2023) uses the input prompt itself as a reference for finding repeated token sequences. These avoid training a separate model but introduce their own limitations — retrieval accuracy depends on the relevance of stored data, and prompt lookup only works when the output repeats verbatim from the prompt.
+
+#### Jacobi Decoding: Parallel Generation Without Auxiliary Models, but Impractical
+
+A less widely adopted but conceptually elegant approach is **Jacobi decoding** (Santilli et al., 2023), which the paper builds upon heavily. The key insight (Section 2) is that the autoregressive decoding process can be reformulated as solving a system of non-linear equations:
+
+$$f(y_i, y_{1:i-1}, x_0) = y_i - \arg\max P_M(y_i | y_{1:i-1}, x_0) = 0 \quad \text{for } i = 1, \ldots, m$$
+
+where $x_0$ is the input prompt and $y_1, \ldots, y_m$ are the tokens to be generated. This is a system of $m$ equations in $m$ unknowns. Solving it via **Jacobi iteration** — initializing all $y_i$ randomly, then iteratively updating all positions simultaneously based on the previous iteration's values — produces a trajectory $y^0, y^1, \ldots, y^t$ that converges to the autoregressive solution. Importantly:
+
+- Each Jacobi iteration updates **all $m$ positions in parallel** in a single forward pass, generating $m$ tokens at once.
+- The method is guaranteed to find the correct solution in at most $m$ iterations because the first token stabilizes immediately (its context is fixed to the prompt), the second token stabilizes once the first is correct, and so on.
+- It requires **no auxiliary model, no training, no external data store** — it is a property of the autoregressive system itself.
+
+On paper, this sounds like a perfect solution. In practice, the paper observes (Section 2) that Jacobi decoding **achieves almost no wall-clock speedup**, despite generating many tokens per step, because:
+
+> "the generated tokens are often put in the wrong positions of the sequence, and correctly placed tokens are frequently replaced by subsequent Jacobi iterations."
+
+The random initialization means the first Jacobi iteration produces tokens that are generally wrong. Even when some token at position $i$ happens to be correct by chance, a subsequent iteration can overwrite it with an incorrect value because the tokens at earlier positions (which serve as context) may have changed. The method converges but with so many wasted iterations that the total number of forward passes is barely reduced from standard autoregressive decoding.
+
+Critically, though, the trajectory of Jacobi iterations contains useful information: adjacent tokens from consecutive iterations — $y^{t-1}_i$ and $y^t_{i+1}$ — form **meaningful 2-grams** (pairs that contextually cohere), even if they appear at the wrong absolute position. This observation is the seed idea that LOOKAHEAD DECODING exploits.
+
+#### Other Accelerations: Incompleteness or Distribution Shift
+
+The paper briefly situates itself among other related methods in Section 6. **Medusa** (Cai et al., 2024) adds multiple decoding heads to the LLM through training, predicting several future tokens per step, but requires modifying the model. **Specinfer** (Miao et al., 2023) uses an ensemble of distilled, quantized, and pruned models as draft sources with tree-based verification, but still depends on auxiliary draft models and risk distribution shift issues. **EAGLE** (Li et al., 2023) and **OSD** (Liu et al., 2023) use trained head modules similar to Medusa.
+
+Common to all these speculative variants is a dependency on something **external** to the base model — whether a separately trained draft model, a modified model architecture, or a retrieval corpus. The paper's positioning emphasizes that LOOKAHEAD DECODING requires **none of these** — it uses only the base LLM itself, extracting parallel generation capability from the Jacobi iteration formulation.
+
+### How This Paper Positions Itself
+
+LOOKAHEAD DECODING is positioned as occupying a previously unexplored sweet spot in the design space of LLM decoding acceleration (Figure 1, Section 1 and Section 3):
+
+| Approach | Requires Auxiliary Model? | Requires Training? | Preserves Output Distribution? | Achieves Practical Speedup? |
+|---|---|---|---|---|
+| Autoregressive decoding | No | No | Yes (by definition) | No (baseline, slow) |
+| Speculative decoding | Yes (draft model) | Yes (or retrieval) | Yes | Yes, if acceptance rate high |
+| Jacobi decoding | No | No | Yes | No (too many wasted steps) |
+| **LOOKAHEAD DECODING** | **No** | **No** | **Yes** | **Yes** |
+
+The paper's central insight is that the **memory-bandwidth bottleneck is itself the opportunity**. Because each autoregressive step leaves compute units idle while waiting on memory fetches, the GPU has "free" FLOPs to spend. Jacobi decoding showed that these idle FLOPs can be productively used to generate multiple tokens in parallel — but the naive approach of placing them at fixed positions fails. LOOKAHEAD DECODING solves this by:
+
+1. **Using a sliding 2D window** (the lookahead branch) to track the Jacobi trajectory over multiple steps, generating n-grams (not just 2-grams) from the history of speculation.
+2. **Caching generated n-grams in a pool** so that useful predictions aren't discarded if they appear at the wrong position — they can be retrieved later when the context catches up.
+3. **Verifying n-grams independently** in a verification branch that confirms each candidate against the base model's distribution before integration, ensuring no distribution shift.
+4. **Trading log(FLOPs) per step for fewer steps**, which the paper formalizes as a scaling law (Section 4) — this makes the approach **future-proof** because it can absorb the growing compute-memory gap on next-generation hardware.
+
+The paper also explicitly contrasts itself with prompt lookup methods (Yang et al., 2023; Saxena, 2023), which similarly avoid auxiliary models but only leverage exact substring repetition from the prompt. LOOKAHEAD DECODING generates **novel** n-grams that are not present in the prompt, capturing the LLM's own predictions about what it will generate next — a strictly more powerful source of speculation that can accelerate even when the output is not a verbatim copy of the input.
+
+Finally, the paper introduces **lookahead parallelism** (Section 3.4, Figure 3) as a novel distributed inference strategy that exploits the structural property of LOOKAHEAD DECODING: the lookahead and verification branches contain disjoint sub-graphs with no token interactions during the forward pass. By placing these sub-graphs on separate GPUs (each holding a complete model copy), the algorithm achieves **near-zero communication** per step — in contrast to tensor parallelism or pipeline parallelism, which require frequent and voluminous inter-GPU communication that sits on the critical path of each decoding step. This enables strong scaling: using more GPUs not just to hold larger models (the traditional motivation for model parallelism) but to **actively reduce latency** by increasing the lookahead window and speculation budget per step.
 
 ## 3. Technical Approach
-The method rethinks decoding as a parallel process that generates multiple future n-grams and verifies them in the same forward pass.
 
-- Key terms (defined when first used):
-  - `n-gram`: a contiguous sequence of `n` tokens.
-  - `Jacobi iteration`: an iterative method for solving systems of equations where all variables are updated in parallel using values from the previous iteration.
-  - `Acceptance rate` α: the probability that a proposed next token is the one the base model would produce (used in speculative-style verification).
-  - `W`, `N`, `G`: algorithm controls — lookahead window size (`W` future positions), n-gram length (`N` tokens), and maximum candidates to verify per step (`G`) (§3.1–§3.2).
+### 3.1 Reader Orientation
 
-Step-by-step mechanism:
+LOOKAHEAD DECODING is a parallel decoding algorithm that turns the autoregressive LLM into a speculative n-gram generator *without* training auxiliary models — it uses the base LLM itself, running a modified forward pass with extra token positions that generate and verify multiple future tokens simultaneously. The system solves the problem that autoregressive decoding wastes idle GPU compute during memory-bandwidth-bound single-token generation by filling those idle cycles with speculative n-gram generation (the lookahead branch) and parallel verification (the verification branch), effectively trading the per-step surplus FLOPs for fewer total decoding steps while guaranteeing the output distribution remains identical to standard autoregressive decoding.
 
-1) Reformulate decoding to expose parallelism (§2)
-- Standard greedy autoregressive decoding solves a chain of `m` problems, each picking the next token from the model’s conditional distribution (Eq. 1).
-- Define a nonlinear system f(y) = 0 where each equation encodes that the chosen token equals the model’s argmax at that position given the prior tokens (Eq. 3).
-- Jacobi decoding updates all positions simultaneously from a previous “trajectory” y^(t−1) to y^(t) (Algorithm 1). Although it can generate multiple tokens per iteration, many end up in wrong positions and get overwritten later (§2 “Limitations of Jacobi Decoding”).
+### 3.2 Big-Picture Architecture (Diagram in Words)
 
-2) Core idea: look ahead along the Jacobi trajectory and cache n-grams (§3; Fig. 1)
-- Maintain a fixed-size 2D window across time (previous Jacobi iterations) and sequence (future positions). At each new step `t`, use tokens from the previous `N−1` steps and predict `W` new tokens — one at each of the next `W` positions — in parallel (§3.1).
-- From each “diagonal” across the past `N−1` steps plus the new prediction, form disjoint `N`-grams and store them in an `n-gram pool` for later verification (Algorithm 2, lines 27–31; Fig. 2b example with `W=5, N=4`).
+The system has three major components that execute in a single modified forward pass:
 
-3) Verification to keep the exact output distribution (§3.2)
-- Search the `n-gram pool` for up to `G` “promising” candidates that start with the model’s last generated token (Algorithm 2, lines 21–26).
-- Verify candidates in parallel, like speculative decoding:
-  - Greedy case: accept a token if the base model’s argmax at that position equals the candidate; stop at first mismatch (Algorithm 3). This preserves exact greedy outputs (§3.2; Appendix E shows FP32 equality to HF greedy on MT-Bench).
-  - Sampling case: progressively accept/reject each candidate token using the base model’s probabilities, re-normalizing when a candidate is rejected (Algorithm 4). The method stores only the sampled token per `n-gram` by enforcing greedy selection during n-gram generation, avoiding storage of full distributions (§3.2). Appendix B proves the output distribution equals that of the base model.
+1. **Lookahead Branch** — a fixed-size 2D window (spanning `$W$` future token positions × `$N$` historical Jacobi steps) that generates multiple disjoint n-grams in parallel by running Jacobi iteration steps across the time and sequence dimensions simultaneously. This is the "speculation engine" — it produces candidate future tokens that the LLM *might* generate.
 
-4) Do “decode, predict, and verify” in one forward pass (§3.3)
-- Use a custom attention mask so tokens in the lookahead branch only see allowed past tokens, and tokens in the verification branch only see the ongoing prefix they are verifying (Fig. 2b).
-- Integrate with `FlashAttention` by hard-coding the new attention pattern with adjustable `W`, `N`, `G` (§3.3). This yields ~20% extra end-to-end speedup over a PyTorch implementation (Fig. 6–7; §5.2).
+2. **Verification Branch** — a parallel check that takes promising n-gram candidates from the n-gram pool (selected based on matching the last generated token) and runs them through the base LLM to confirm or reject each token, integrating accepted tokens into the output sequence. This is the "guard" — it ensures the output distribution is preserved exactly.
 
-5) Scale across GPUs with Lookahead Parallelism (LP) (§3.4)
-- Replicate the entire model on each GPU (data-style parallelism over tokens), assign disjoint lookahead branches and verification candidates to devices, and avoid inter-device communication during the forward pass. Only synchronize accepted tokens afterward (Fig. 3).
-- Unlike tensor or pipeline parallelism, LP keeps communication off the critical path of each decoding step (§3.4).
+3. **N-Gram Pool** — a cache that stores all n-grams generated by the lookahead branch across all previous steps. Rather than discarding generated tokens that appeared at incorrect positions (the fatal flaw of vanilla Jacobi decoding), the pool preserves them so they can be retrieved later when the context catches up to the right position.
 
-6) Tuning knobs and compute/latency trade-off (§4)
-- Define `S` (step compression ratio) = number of AR steps divided by number of LOOKAHEAD steps (Eq. 6).
-- With batched speculations of size `b=G=W` and speculation length `γ=N−1`, the expected accepted tokens per “good” step follows the speculative-style formula with batch (Eq. 5).
-- Assume only 1 out of every `f` steps finds a “good” speculation while the rest fall back to AR, giving:
-  - S = (f − 1 + E(#tokens)) / f (Eq. 7).
-- Since per-step FLOPs scale roughly with `(W + G) * (N−1)`, they argue fewer steps can be obtained roughly linearly with log(FLOPs) for large enough `N` (§4.2; Fig. 4).
+Information flows as follows: At each step, (1) the lookahead branch generates `$W$` new tokens across the 2D window using the past `$N-1$` steps of Jacobi history as context; (2) newly formed n-grams are collected and added to the n-gram pool; (3) the verification branch selects up to `$G$` n-grams from the pool that start with the token matching the last output token; (4) these n-grams are verified in parallel against the base LLM's probability distributions; (5) accepted tokens are appended to the output sequence; (6) the 2D window slides forward, discarding the oldest tokens in both time and sequence dimensions.
 
-Design choices and rationale:
-- Keep a fixed-size window: bounds memory footprint and stabilizes throughput (§3.1).
-- Use greedy generation in the lookahead branch so only token IDs (not full distributions) need to be cached, enabling sampling verification without large memory (Algorithm 4; §3.2).
-- Set `G ≈ W` to balance generation and verification (§3.2).
-- Custom mask + FlashAttention: reclaims otherwise idle compute under memory-bound decoding (§3.3).
+All of this — lookahead generation, verification, and pool update — executes in a **single forward pass** using a custom attention mask that enforces the correct visibility constraints (tokens in the lookahead branch cannot see tokens in the verification branch, and vice versa).
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First**, the mathematical reformulation of autoregressive decoding as a non-linear system and Jacobi iteration — this is the theoretical foundation that makes parallel generation possible and explains *why* the lookahead branch can produce meaningful n-grams.
+- **Second**, the lookahead branch in detail — the 2D window structure, how tokens are generated per position, how the time dimension provides n-gram context, and how the window slides.
+- **Third**, the verification branch — how n-grams are selected from the pool, the greedy and sampling verification algorithms, the critical trick of forcing greedy sampling in the lookahead branch to avoid storing full probability distributions, and the proof that output distribution is preserved.
+- **Fourth**, the integration of both branches into a single decoding step — the custom attention mask, FlashAttention compatibility, and how the n-gram pool is updated.
+- **Fifth**, lookahead parallelism — how the structural property of disjoint token sub-graphs enables near-zero-communication distribution across GPUs.
+- **Sixth**, the scaling law — the mathematical relationship between per-step FLOPs and step compression ratio, and why this makes the method future-proof.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily a **systems and algorithms paper** whose core idea is that the memory-bandwidth bottleneck of autoregressive decoding creates surplus FLOPs that can be productively spent on parallel n-gram generation and verification, using only the base model's own forward pass with a modified attention mask.
+
+---
+
+#### Mathematical Reformulation: Autoregressive Decoding as a Non-Linear System
+
+The paper's key theoretical insight is that autoregressive decoding can be exactly reformulated as solving a system of non-linear equations via fixed-point iteration. This reformulation is what makes parallel token generation possible.
+
+**The autoregressive system.** Given a prompt `$x_0$` of length `$s$` and a target output length `$m$`, autoregressive decoding with greedy sampling solves `$m$` sequential optimization problems:
+
+$$
+\begin{cases}
+y_1 = \arg\max P_M(y_1 | x_0) \\
+y_2 = \arg\max P_M(y_2 | y_1, x_0) \\
+\quad \vdots \\
+y_m = \arg\max P_M(y_m | y_{1:m-1}, x_0)
+\end{cases}
+$$
+
+where `$y_i$` is the token generated at step `$i$`, `$P_M(y_i | \text{context})$` is the LLM's output probability distribution at position `$i$` conditioned on all previous tokens, and `$\arg\max$` selects the highest-probability token.
+
+**What this computes:** a deterministic sequence of `$m$` tokens where each token is the LLM's most-likely continuation given everything generated so far. The computation is inherently serial — token `$y_i$` cannot be determined until `$y_1, \ldots, y_{i-1}$` are all known.
+
+**Reformulation as a non-linear system.** Define a function `$f$` for each position `$i$`:
+
+$$
+f(y_i, y_{1:i-1}, x_0) = y_i - \arg\max P_M(y_i | y_{1:i-1}, x_0)
+$$
+
+This function is zero exactly when `$y_i$` is the token the LLM would produce given the preceding tokens. The entire autoregressive decoding process is equivalent to solving:
+
+$$
+\begin{cases}
+f(y_1, x_0) = 0 \\
+f(y_2, y_1, x_0) = 0 \\
+\quad \vdots \\
+f(y_m, y_{1:m-1}, x_0) = 0
+\end{cases}
+$$
+
+**What this computes:** a fixed point where every token `$y_i$` simultaneously satisfies that it equals the argmax of the model's distribution conditioned on all preceding tokens. This is a system of `$m$` equations in `$m$` unknowns.
+
+**Jacobi iteration for solving the system.** Rather than solving sequentially (which recovers autoregressive decoding), we can apply the Jacobi fixed-point iteration method. Starting from an initial guess `$y^0 = (y_1^0, y_2^0, \ldots, y_m^0)$` (random or zero-initialized), we iteratively compute:
+
+$$
+y_i^{t} = \arg\max P_M(y_i^{t} | y_{1:i-1}^{t-1}, x_0) \quad \text{for all } i = 1, \ldots, m \text{ simultaneously}
+$$
+
+where `$y_i^{t}$` is the token at position `$i$` in iteration `$t$`, and `$y_{1:i-1}^{t-1}$` are the tokens from the *previous* iteration at positions 1 through `$i-1$`.
+
+**What this computes:** at each iteration `$t$`, all `$m$` positions are updated **in parallel** using the values from iteration `$t-1$` as context. The first position `$y_1$` depends only on the fixed prompt `$x_0$`, so it stabilizes to the correct value immediately. The second position `$y_2$` stabilizes once `$y_1$` is correct, and so on. The method is guaranteed to converge to the exact autoregressive solution in at most `$m$` iterations because each position needs at most one correction after its predecessors stabilize.
+
+**Why this form matters:** the Jacobi formulation decouples the sequential dependency during the forward pass itself. All `$m$` positions can be processed in a single forward pass through the LLM — the model simply uses tokens from the previous iteration as context. This is the mechanism that enables parallel token generation: a single forward pass produces `$m$` new tokens (one per position) instead of just one.
+
+**The practical failure of vanilla Jacobi decoding.** Despite generating many tokens per step, Jacobi decoding achieves almost no wall-clock speedup because:
+
+- Tokens at early positions are correct immediately, but tokens at later positions are random noise in early iterations (since their context — preceding tokens — has not stabilized).
+- Even when a token at position `$i$` happens to be correct in iteration `$t$`, it may be overwritten with an incorrect value in iteration `$t+1$` because some preceding token `$y_j^{t}$` (with `$j < i$`) changed from iteration `$t-1$` to iteration `$t$`.
+- The result: many iterations converge to the same sequence byte-by-byte from left to right, similar to autoregressive decoding, with most parallel computation wasted on positions that will later change.
+
+**The key observation that enables LOOKAHEAD DECODING.** Despite positional instability, the Jacobi trajectory contains useful information: any two adjacent tokens from consecutive iterations — `$y_i^{t-1}$` and `$y_{i+1}^{t}$` — form a **meaningful 2-gram** because `$y_{i+1}^{t}$` was generated conditioned on `$y_i^{t-1}$`, which is a contextually coherent prefix. The token `$y_i^{t-1}$` may be at the wrong absolute position (it should be at position `$i$` but was generated as the `$i$`-th token of iteration `$t-1$`), but the pair `$(y_i^{t-1}, y_{i+1}^{t})$` is locally coherent. LOOKAHEAD DECODING generalizes this to n-grams by tracking `$N$` consecutive iterations simultaneously, producing n-grams `$(y_i^{t-N+1}, y_{i+1}^{t-N+2}, \ldots, y_{i+N-1}^{t})$` that are contextually coherent as a sequence, even if their absolute positions in the final output are not yet determined.
+
+---
+
+#### The Lookahead Branch: Generating Disjoint N-Grams from the Jacobi Trajectory
+
+The lookahead branch is the engine that produces candidate future tokens. Its design addresses the fundamental limitation of Jacobi decoding: useful token sequences are generated but appear at wrong positions and are immediately discarded. LOOKAHEAD DECODING preserves them by maintaining a 2D sliding window that tracks the Jacobi trajectory over both sequence position and time, then harvests n-grams from this trajectory.
+
+**The 2D window structure.** The lookahead branch maintains a fixed-size 2D grid of tokens characterized by two parameters:
+
+- **`$W$`** — the lookahead size into future token positions (the "width" dimension, spanning positions `$1, 2, \ldots, W$` relative to the current generation front). This controls how many future positions are speculatively generated in each step.
+- **`$N$`** — the lookback size into the past Jacobi trajectory (the "time" dimension, spanning iterations `$t-N+1, \ldots, t$`). This controls the length of the n-grams that can be harvested — with `$N$` steps of history, we can form n-grams of length up to `$N$`.
+
+At each step, the window contains tokens from the current and past `$N-1$` Jacobi iterations across positions `$1$` through `$W$`. The paper illustrates this concretely in Figure 2(b) for `$W = 5$` and `$N = 4$`: the window holds tokens from steps `$t-3$`, `$t-2$`, `$t-1$`, and `$t$` (the current step), at positions 1 through 5. Different colors (orange, green, red, blue) indicate different iterations.
+
+**Token generation in the lookahead branch.** At each decoding step, the lookahead branch generates one new token per position `$j \in \{1, \ldots, W\}$`. The generation follows a modified Jacobi iteration that uses the **full trajectory history**, not just the previous iteration:
+
+For position `$j = 1$` (the immediate next token):
+
+$$
+w_j^t = \arg\max P_M(w_j^t | w^{t-N+1:t-1}_j, o_{1:i}, x_0)
+$$
+
+where `$w_j^t$` is the newly generated token at position `$j$` in step `$t$`, `$w^{t-N+1:t-1}_j$` are the `$N-1$` historical tokens at position `$j$` from previous steps, `$o_{1:i}$` is the sequence of already-accepted output tokens (the "ground truth" prefix generated so far), and `$x_0$` is the original prompt.
+
+For positions `$j > 1$`:
+
+$$
+w_j^t = \arg\max P_M(w_j^t | w^{t-N+1:t-1}_j, w^{t-N+1}_{2:j}, o_{1:i}, x_0)
+$$
+
+where the additional context `$w^{t-N+1}_{2:j}$` refers to tokens at earlier positions within the same trajectory that provide the left context for position `$j$`.
+
+**What this computes:** for each future position `$j$`, the model generates the most likely next token given (a) the history of what has appeared at that position in previous Jacobi iterations, (b) the tokens at earlier positions in the current trajectory, and (c) the already-verified output prefix. This means the model is making an **informed guess** about what token belongs at position `$j$`, using the trajectory history to stabilize its prediction — similar to how humans might revise a draft by looking at previous attempts.
+
+**Why this form (using `$N-1$` steps of history):** using only the immediate previous step (as in vanilla Jacobi) discards information about how tokens at each position have been evolving. By keeping `$N-1$` steps of history, the model can observe patterns — for example, if a token at position `$j$` has been the same for the last 3 iterations, it's likely correct. More importantly, the trajectory history across `$N$` steps enables forming n-grams of length `$N$`: by taking token `$j$` from step `$t-N+1$`, token `$j+1$` from step `$t-N+2$`, ..., token `$j+N-1$` from step `$t$`, we get a sequence of `$N$` tokens where each was generated conditioned on the previous one. This n-gram is contextually coherent even though it spans different absolute positions.
+
+**N-gram harvesting and pool update.** After generating new tokens for all `$W$` positions, each position in the 2D window now has `$N$` tokens along the time dimension (the previous `$N-1$` plus the new one). For each position `$j$`, an n-gram of length `$N$` is formed:
+
+$$
+\text{n-gram}_j = (w_j^{t-N+1}, w_{j+1}^{t-N+2}, \ldots, w_{j+N-1}^{t})
+$$
+
+This n-gram is added to the n-gram pool — a cache that persists across decoding steps. Unlike vanilla Jacobi decoding, which discards tokens from previous iterations, the pool preserves these n-grams indefinitely, allowing them to be retrieved later when the context (the already-generated output prefix) catches up to the right position.
+
+**Example from Figure 1.** With `$W = 5$`, `$N = 3$`, and `$G = 2$`: At step `$t$`, the lookahead branch generates new tokens at positions 1-5 (blue tokens, labeled 0 through 5 relative to the current input). These combine with the orange tokens from step `$t-2$` (positions 0-4) and green tokens from step `$t-1$` (positions 0-5) to form 3-grams. For instance, one 3-gram is `(orange_1, green_2, blue_3)` — three tokens from consecutive positions and consecutive time steps that form a coherent sequence.
+
+**Sliding window update.** At the end of each step, the window slides forward in both dimensions:
+
+- **Time dimension:** the oldest time step (e.g., `$t-N+1$`) is removed from the window. All remaining tokens shift one time step "older," and the newly generated tokens become the most recent time step.
+- **Sequence dimension:** tokens at the earliest relative position (position 1 in the example) are removed from the window, and all remaining tokens shift one position "earlier." A new position at the far end (position `$W$`) becomes available for generation in the next step.
+
+**Why the sliding window is necessary:** without sliding, the window would quickly extend to cover the entire output sequence, making the forward pass prohibitively expensive (the attention computation scales quadratically with sequence length). The fixed window of `$W$` future positions keeps the per-step cost bounded while still capturing the most relevant portion of the Jacobi trajectory — the immediate future where predictions are most useful.
+
+---
+
+#### The Verification Branch: Preserving the Output Distribution
+
+The lookahead branch generates candidate tokens, but these tokens are **speculative** — they are generated using context from previous Jacobi iterations that may not match the final output. If integrated into the output blindly, they would corrupt the output distribution (the LLM would effectively be sampling from a different, uncontrolled distribution). The verification branch ensures that **only tokens the base LLM would have produced autoregressively** are accepted, making LOOKAHEAD DECODING lossless.
+
+**N-gram selection from the pool.** At each decoding step, the verification branch queries the n-gram pool for "promising" candidates. The selection criterion is straightforward (Algorithm 3, line 23):
+
+> For the current last output token `$o_{i-1}$`, find up to `$G$` n-grams in the pool whose **first token** exactly matches `$o_{i-1}$`.
+
+where `$G$` is a configurable cap on the number of parallel verifications (to manage the per-step cost). The paper recommends setting `$G = W$` for a balanced allocation between generation and verification, and empirically confirms this works well (Table 3 shows balanced branches at `$N=5, W=15, G=15$` outperform configurations with large generation but tiny verification, e.g., `$N=5, W=30, G=1$`).
+
+**What this criterion means operationally:** if the current output ends with token "42" (say, the word "the"), the verification branch looks for n-grams in the pool that ALSO start with "the." These n-grams were generated speculatively at some earlier step when the context happened to end with "the." Now that the output actually ends with "the," those speculations become relevant — they represent candidates for what might come next.
+
+**Greedy verification algorithm (Algorithm 3).** The verification process parallels speculative decoding's verification but adapted for multiple **disjoint** n-grams (as opposed to a single draft sequence). The algorithm proceeds token-by-token along the n-gram length:
+
+1. **Extract the suffix** of each selected n-gram (tokens 2 through `$N$`), discarding the first token (which was used only for matching). These suffixes become the candidate sequences to verify — each is a sequence of up to `$N-1$` tokens.
+
+2. **Run the LLM forward pass** on all candidate suffixes in parallel. For each candidate of length `$L = N-1$`, the LLM outputs `$L$` probability distributions — one per position — representing what the model would generate at each position given the prefix including the verified output so far.
+
+3. **Verify token-by-token from position 1 to position `$N-1$`**:
+   - At position `$i$`, let `$P_i$` be the probability distribution from any candidate (all candidates with the same accepted prefix will produce identical distributions at position `$i$`, because the context up to that point is identical).
+   - For each candidate `$c$`, check if its `$i$`-th token `$c_i$` matches `$\arg\max P_i$` (the model's top prediction). If it matches, the token is **accepted**.
+   - All candidates that **do not** match at position `$i$` are discarded (their remaining tokens are never checked).
+   - All candidates that **do** match proceed to position `$i+1$`.
+   - If **no** candidate matches at position `$i$`, the algorithm falls back: `$\arg\max P_i$` is accepted (the model's own top choice), and verification terminates for this step — this guarantees at least **one token is generated per step**, preventing stalls.
+
+4. **After verifying all `$N-1$` positions** (or terminating early due to rejection), if all positions were accepted, the final token is generated as `$\arg\max P_N$` where `$P_N$` is the probability distribution at position `$N$` from any surviving candidate.
+
+**What this computes:** the algorithm simulates what autoregressive decoding would have produced, but it gets to "skip ahead" when the speculatively generated tokens happen to match the model's top choices. The key guarantee is that the sequence of accepted tokens is **exactly** what the LLM would have generated autoregressively — the greedy verification ensures identical `$\arg\max$` decisions at every position.
+
+**Why parallel verification of disjoint n-grams is correct:** the verification of each candidate n-gram is independent of the others because each n-gram's tokens were generated at different times and positions in the lookahead branch. However, once they are being verified, they are all conditional on the same verified output prefix. If two different n-grams both start with the same token at position 1, their probability distributions at position 2 will be identical because the context (prompt + verified prefix + accepted token at position 1) is identical. The algorithm exploits this by grouping candidates that share accepted prefixes (Algorithm 3, lines 21-27).
+
+**Early termination and the "guarantee one step movement" property.** The algorithm includes a crucial safety mechanism (lines 34-40): if all candidates are rejected at position `$i$`, the algorithm accepts `$\arg\max P_i$` and stops. This guarantees that **every LOOKAHEAD DECODING step produces at least one output token**, preventing the possibility of infinite loops or stalls. In the worst case (all speculations are wrong), the method degenerates to exactly one token per step — identical to autoregressive decoding.
+
+**Sampling verification (Algorithm 4).** For non-greedy sampling (e.g., top-K, top-P with temperature), the verification algorithm must preserve the stochastic output distribution, not just the argmax. The paper adapts the tree-based verification from Specinfer (Miao et al., 2023) for disjoint n-grams:
+
+- At position `$i$`, instead of checking if `$c_i = \arg\max P_i$`, sample a uniform random number `$r \sim U(0,1)$`.
+- If `$r \leq P_i(c_i)$`, the token is **accepted** probabilistically — the probability of acceptance equals the model's probability for that token, which is exactly the condition for rejection sampling to preserve the target distribution.
+- If rejected: set `$P_i(c_i) = 0$`, renormalize `$P_i$` to sum to 1 (obtaining `$P_{i+1}$`), and proceed to the next candidate. The renormalized distribution is the correct conditional distribution given that the first candidate was rejected.
+- If all candidates are rejected: sample directly from the final renormalized distribution `$P_j$`.
+
+**The critical memory-saving trick.** Speculative decoding variants typically need to store the full probability distribution (size of vocabulary, e.g., 32,000 or more floats) at each speculative token position to perform the rejection sampling update. With disjoint n-grams cached across many steps, this would require enormous memory. LOOKAHEAD DECODING's key insight:
+
+> The verification is indifferent to how draft tokens were sampled — different sampling methods only influence the acceptance rate but keep the output distribution intact.
+
+Therefore, the lookahead branch can **force greedy sampling** (always pick argmax) when generating n-grams. Under greedy sampling, the probability distribution degenerates into a **one-hot vector** — only one token has probability 1, all others have 0. This means we only need to store **which token was selected**, not the full distribution. The verification algorithm (Algorithm 4) then uses the base LLM's sampling distribution at verification time, not the draft generation distribution, to compute acceptance probabilities. The paper proves in Appendix B that this preserves the output distribution exactly.
+
+**What this means in practice:** the n-gram pool stores only token IDs (integers), not probability vectors. For a pool of thousands of n-grams, this is a memory reduction of `$\text{vocab\_size} \times 4$` bytes per token — for a vocabulary of 32,000 and FP32, that's 128KB per speculative token saved. The trade-off is slightly lower acceptance rates under sampling (since greedy speculations are less diverse than sampling-based speculations would be), which the paper confirms in Table 2: with temperature 1.0, speedups drop from 1.60× (greedy) to 1.50× (sampling) on XSum, but the output distribution quality (measured by ROUGE scores) is preserved.
+
+---
+
+#### Integrated Forward Pass: Lookahead + Verification in One Step
+
+The brilliance of LOOKAHEAD DECODING's design is that the lookahead branch and verification branch, plus the n-gram pool update, all execute in a **single modified forward pass** through the LLM. This integration is what makes the method practical — if lookahead generation and verification required separate forward passes, the overhead would erase any speedup.
+
+**The custom attention mask (Figure 2).** The integration is achieved through a carefully designed attention mask that enforces the causal visibility constraints required for correctness:
+
+- **Standard causal mask (Figure 2a):** each token at position `$i$` can attend only to tokens at positions `$\leq i$`. This enforces autoregressive dependency — a token cannot "see the future."
+
+- **LOOKAHEAD DECODING mask (Figure 2b):** the mask is more complex because there are now multiple "streams" of tokens:
+  - **Lookahead branch tokens:** each token can attend to (a) all tokens in the verified output prefix `$o_{1:i}$`, (b) tokens in the lookahead branch at earlier positions within the same trajectory, and (c) tokens in the lookahead branch at the same position from previous time steps (the Jacobi history). Critically, lookahead tokens **cannot** attend to other lookahead tokens at the same position from the same time step (self-attention is masked), nor to tokens in the verification branch.
+  - **Verification branch tokens:** each token can attend only to the verified output prefix `$o_{1:i}$` and to earlier tokens within the same n-gram being verified. They **cannot** attend to lookahead branch tokens (the speculations that produced them are not yet confirmed) or to other n-grams being verified in parallel.
+
+The mask is constructed by following a simple rule: every token is only visible to tokens with a **larger position index than itself** in the combined sequence, consistent with the causal attention principle (§2). The paper illustrates this in Figure 2(b) with `$W=5$`, `$N=4$`, `$G=2$`: the red token at position 6 in the lookahead branch can see the orange tokens (historical context) and earlier green tokens (same trajectory, earlier positions), but cannot see any tokens in the verification branch (the n-gram candidates being checked).
+
+**What this mask accomplishes computationally:** by enforcing these visibility constraints, a single forward pass simultaneously computes (a) the next-token predictions for all `$W$` positions in the lookahead branch (each using its own historical context), and (b) the verification probability distributions for all `$G$` candidate n-grams. The two computations are independent (no cross-attention between lookahead and verification tokens), so they can be batched together without interference.
+
+**FlashAttention integration.** FlashAttention (Dao et al., 2022; Dao, 2023) is a memory-efficient attention implementation that dramatically speeds up transformer inference by avoiding materializing the full attention matrix in slow HBM (high-bandwidth memory). Standard FlashAttention assumes a simple causal mask (lower triangular) and blocks computation in tiles that respect this causality. LOOKAHEAD DECODING's mask is more complex — different sub-blocks have different visibility rules (lookahead tokens see lookahead history, verification tokens don't see lookahead tokens, etc.).
+
+The paper solves this by **hardcoding LOOKAHEAD DECODING's attention pattern** into FlashAttention, parameterized by `$W$`, `$N$`, and `$G$`. Specifically, they modify FlashAttention's tiling strategy to respect the block-sparse structure of Figure 2(b): certain blocks (e.g., verification → lookahead) are always masked out, while others (e.g., lookahead → lookahead history) follow a shifted-causal pattern. The result is about **20% end-to-end speedup** over a naive PyTorch implementation (Section 3.3, confirmed in Figures 6 and 7).
+
+**N-gram pool update.** After the forward pass completes, the newly generated tokens from the lookahead branch (all `$W$` positions) are harvested into n-grams and added to the pool. For each position `$j$`, the n-gram `$(w_j^{t-N+1}, w_{j+1}^{t-N+2}, \ldots, w_{j+N-1}^{t})$` is formed and cached. The pool is a simple key-value store where the key is the first token of the n-gram and the value is the list of suffix sequences. This lookup structure supports the efficient "find n-grams starting with token `$X$`" query used in verification.
+
+---
+
+#### Lookahead Parallelism: Near-Zero-Communication Multi-GPU Scaling
+
+Traditional model parallelism for LLM inference (tensor parallelism, pipeline parallelism) distributes the model parameters across GPUs, requiring continuous communication during the forward pass to exchange activations and gradients. For autoregressive decoding (batch size 1), this communication sits on the critical path and often causes slowdowns — the paper shows that both TP (DeepSpeed) and PP (Accelerate) achieve only 0.71×–0.82× speedup on multiple GPUs compared to single-GPU (Figures 6 and 7), meaning they actually **increase** latency.
+
+Lookahead parallelism exploits a structural property of LOOKAHEAD DECODING: the lookahead and verification branches contain **disjoint sub-graphs with no token interactions** during the forward pass. In Figure 2(b), for example, the branch with green-1 and red-2 tokens has no attention dependencies with the branch containing green-3 and red-4 tokens. These branches are computationally independent — they share only the verified output prefix as context.
+
+**Distribution strategy (Figure 3).** The workload is partitioned as follows:
+
+1. Each GPU holds a **complete copy** of the model parameters (unlike TP/PP, which shard parameters). This requires more total GPU memory but eliminates parameter synchronization during inference.
+
+2. The lookahead branch's `$W$` positions are partitioned into disjoint groups, with each group assigned to a different GPU. The verified output prefix (the input token "0" in Figure 3) and early-lookahead tokens (orange tokens 0-3) are replicated on all GPUs — this is redundant computation, but it eliminates the need to communicate these tokens between GPUs.
+
+3. The verification branch's `$G$` n-gram candidates are similarly partitioned across GPUs, with each GPU independently verifying its assigned candidates.
+
+4. After the forward pass completes on all GPUs, the only required communication is an **all-gather** of the newly generated tokens from each GPU's lookahead branch and the accepted tokens from each GPU's verification results. This is a single synchronization point per decoding step, with communication volume proportional to `$(W + G) \times \text{token\_size}$` (a few kilobytes), not to model size.
+
+**Why this avoids communication during the forward pass:** the key insight is that the casual attention mask already partitions the computation into independent sub-graphs. Tokens in one sub-graph never attend to tokens in another sub-graph. Therefore, placing different sub-graphs on different GPUs requires no cross-GPU attention, no activation shipping, and no gradient synchronization. Each GPU can execute its portion of the forward pass independently, using its local model copy.
+
+**Scaling behavior.** With more GPUs, the system can increase `$W$`, `$N$`, and `$G$` (since the combined FLOPs budget grows linearly with the number of GPUs). According to the scaling law (Section 4), this enables a **linear reduction in decoding steps** proportional to `$\log(\text{total FLOPs})$`. The paper demonstrates this empirically: for CodeLlama-7B on ClassEval (Figure 6), scaling from 1 GPU to 8 GPUs with LP increases throughput from 2.76× to 3.99× over autoregressive (with FlashAttention), while TP and PP on 8 GPUs achieve only 0.75×–0.78× (i.e., slowdowns). This is the "strong scaling" result — using more GPUs to reduce latency for a fixed workload, rather than to handle larger models.
+
+---
+
+#### Scaling Law: Trading Per-Step FLOPs for Fewer Steps
+
+Section 4 formalizes the relationship between computation invested per step and the reduction in total decoding steps. This scaling law explains **why** LOOKAHEAD DECODING works, **when** it provides speedups, and **how** it will behave on future hardware.
+
+**Step compression ratio.** Define `$S$` as:
+
+$$
+S = \frac{\text{#generated tokens}}{\text{#LOOKAHEAD DECODING steps}}
+$$
+
+where `$S$` is the step compression ratio — the average number of autoregressive-equivalent tokens produced per LOOKAHEAD DECODING step. A ratio of `$S = 1.0$` means no speedup (one token per step, identical to autoregressive); `$S = 4.0$` means 4× fewer steps.
+
+**Expectation of accepted tokens.** The paper models LOOKAHEAD DECODING as speculating `$b$` sequences (n-grams) in parallel, each of length `$\gamma = N-1$` (the n-gram suffix). Under speculative decoding's acceptance model, with per-token acceptance rate `$\beta$` (assumed identical across positions for modeling purposes) and expectation `$E(\beta) = \alpha$`, the expected number of accepted tokens from `$b$` parallel speculations of length `$\gamma$` is:
+
+$$
+E(\#\text{tokens}) = (\gamma + 1) - \sum_{i=1}^{\gamma} (1 - \alpha^i)^b
+$$
+
+where `$\gamma$` is the speculation length (`$N-1$`), `$b$` is the number of parallel speculations (`$G = W$`), and `$\alpha$` is the per-token acceptance probability.
+
+**What this computes:** the first term `$(\gamma + 1)$` is the maximum possible tokens if all speculations are accepted (1 guaranteed token + `$\gamma$` speculative tokens). The summation subtracts the probability that **no** speculation survives to position `$i$` — `$(1 - \alpha^i)^b$` is the probability that all `$b$` speculations fail by position `$i$` (each fails with probability `$1 - \alpha^i$`, and they are independent given identical acceptance rates). This formulation captures the diversity benefit of parallel speculations: even if each individual speculation has a low probability of reaching far, having `$b$` of them means at least one is likely to survive.
+
+**Why this form (as opposed to single-sequence speculative decoding):** with a single draft sequence (`$b = 1$`), the expected tokens reduces to `$(1 - \alpha^{\gamma+1})/(1-\alpha)$` (Equation 4), which saturates as `$\gamma$` increases — the probability of rejecting a token somewhere in a long sequence approaches 1, limiting the maximum expected tokens to `$1/(1-\alpha)$`. Parallel speculations (`$b > 1$`) break this saturation because different n-grams can succeed at different positions, effectively increasing the acceptance probability at each position through diversity. This is why LOOKAHEAD DECODING, with `$b = W = G$` parallel n-grams, can achieve higher step compression than single-sequence speculative decoding with the same acceptance rate.
+
+**Bridging expected tokens to step compression ratio.** The model introduces a fudge factor `$f$` to account for the observation that not every step produces equally good speculations. On average, **one out of every `$f$` steps** has a "good" speculation that yields `$E(\#\text{tokens})$` accepted tokens; the other `$f-1$` steps fall back to producing exactly 1 token (autoregressive-like). The step compression ratio is:
+
+$$
+S = \frac{f - 1 + E(\#\text{tokens})}{f}
+$$
+
+where `$f$` is an empirically fitted parameter (the paper finds `$f = 3.106$` for LLaMA-2-Chat-7B on MT-Bench with `$\alpha = 0.425$`).
+
+**What this computes for the scaling law.** Per-step FLOPs are approximately proportional to the number of input tokens in the combined lookahead + verification forward pass, which is roughly:
+
+$$
+\text{FLOPs per step} \propto (W + G) \times (N - 1) + \text{verified prefix length}
+$$
+
+For fixed `$N$` and `$G = W$`, per-step FLOPs scale as `$O(W \times N)$`. The step compression ratio `$S$` scales as `$O(\log W)$` (because larger `$b = W$` in Equation 5 provides diminishing returns due to the `$(1-\alpha^i)^b$` term). Therefore:
+
+> **Scaling law:** To reduce the number of decoding steps by a factor of `$S$`, we need to increase per-step FLOPs by a factor of `$\exp(S)$`. Equivalently, decoding steps decrease linearly with `$\log(\text{per-step FLOPs})$`.
+
+**Why this matters for hardware trends.** The gap between GPU compute (FLOPs) and memory bandwidth (bytes/second) is widening with each hardware generation. Autoregressive decoding is memory-bandwidth bound, so faster compute doesn't help — the GPU still waits on weight fetches. LOOKAHEAD DECODING can **absorb the growing compute surplus** by increasing `$W$` and `$N$` (more lookahead, more speculation), converting the extra FLOPs into fewer decoding steps. This makes the method **future-proof**: as GPUs get faster relative to memory, LOOKAHEAD DECODING's speedup will automatically increase.
+
+**Empirical validation (Figure 4).** The paper plots the relationship between `$W$` (and hence per-step FLOPs) and the measured step compression ratio `$S$` for LLaMA-2-Chat-7B on MT-Bench (Figure 4a). The curve follows the logarithmic shape predicted by the model: increasing `$W$` from 2 to 15 roughly doubles `$S$`, but increasing from 15 to 30 yields only marginal additional compression. The theoretical curve (Figure 4b, with `$\alpha = 0.425, f = 3.106$`) shows qualitative agreement. The practical implication is captured in Figure 8: on A100 GPUs (ample FLOP surplus), speedups saturate around `$W = 15$` at ~1.9×, while on RTX 3090 (smaller FLOP surplus), speedups peak at `$W = 5$` with only ~1.3× — confirming that the method's effectiveness depends on available surplus compute.
 
 ## 4. Key Insights and Innovations
-- Parallel n-gram speculation from a Jacobi trajectory (fundamental)
-  - Novelty: reframes decoding as parallel fixed-point updates and mines the trajectory to build many disjoint, verifiable `n`-grams in every step (Fig. 1; §3.1).
-  - Significance: avoids the need for a draft model while still proposing many future tokens, using compute that is otherwise idle in memory-bound decoding.
 
-- Unified “decode, predict, verify” in one pass with a custom attention mask (system/algorithmic)
-  - Novelty: a single forward pass contains both the lookahead and verification branches without cross-visibility (Fig. 2b; §3.3).
-  - Significance: enables effective parallelism on a single GPU and compatibility with FlashAttention (§3.3), yielding ~20% additional speedup (§5.2).
+### Innovation 1: The Memory-Bandwidth Bottleneck as an Opportunity, Not Just a Constraint
 
-- Lookahead Parallelism (LP) for multi-GPU strong scaling (systems)
-  - Novelty: token-distribution parallelism where each GPU holds a full model replica and computes disjoint branches independently (Fig. 3; §3.4).
-  - Significance: achieves near-linear strong scaling for latency-sensitive single-batch inference, unlike tensor/pipeline parallelism which incurs communication on the critical path (§3.4; Figures 6–7).
+The dominant framing of LLM inference across the systems and ML communities treats the memory-bandwidth bottleneck — the fact that each autoregressive decoding step loads the entire model from HBM to compute a single token — as an *obstacle* to be endured or mitigated through weight quantization, sparsity, or hardware advances. LOOKAHEAD DECODING performs a conceptual inversion that reframes the bottleneck as an *opportunity*. Because the GPU's compute units sit idle waiting on memory fetches during each decoding step, there exists a pool of "free" FLOPs — computation that can be performed without increasing wall-clock time, since the limiting factor is memory throughput, not arithmetic throughput.
 
-- Output-distribution-preserving verification for disjoint n-grams, including sampling (theoretical + practical)
-  - Novelty: extends speculative-style verification to a set of disjoint n-grams while storing only tokens (not distributions) by forcing greedy lookahead generation (Algorithms 3–4).
-  - Significance: maintains exact distribution under sampling; Appendix B provides a proof. Table 2 shows unchanged ROUGE scores alongside speedups.
+This reframing is not merely rhetorical. It changes the optimization problem from "how do we reduce the memory footprint of each step?" (the quantization/sparsification approach) to "how do we productively spend the idle compute to generate more than one useful token per memory load?" This is a fundamentally different design space, and it is what makes the entire LOOKAHEAD DECODING architecture coherent: the lookahead branch, the verification branch, and the n-gram pool are all mechanisms for *consuming surplus FLOPs* to produce speculations that can be verified in the same forward pass.
 
-- Scaling law linking step reduction to per-step log(FLOPs) (analytical insight)
-  - Novelty: Eq. 7 connects `S` to the expected accepted tokens and the frequency of good speculations; combined with Eq. 5 (batched acceptance) and the fact FLOPs ∝ `(W+G)(N−1)`, this predicts linear step reduction vs. log(FLOPs) (§4.2; Fig. 4).
-  - Significance: clarifies when more compute translates to lower latency and motivates multi-GPU scaling.
+The significance of this reframing extends beyond the immediate method. It identifies a structural property of the autoregressive decoding regime — that per-step computation is memory-bandwidth-bound, not compute-bound — that is **universal across model architectures and hardware generations**. As long as weight loading dominates the critical path, any accelerator will have idle compute cycles during autoregressive decoding. Moreover, the compute-to-memory-bandwidth ratio is *increasing* with each hardware generation (GPU FLOPs grow faster than HBM bandwidth), meaning the pool of free FLOPs is growing over time. LOOKAHEAD DECODING's scaling law (Section 4) provides the first quantitative framework for predicting how much speedup can be extracted from this growing surplus: a linear reduction in decoding steps requires an exponential increase in per-step FLOPs, which is sustainable precisely because the surplus is expanding.
+
+Prior work recognized the memory-bandwidth bottleneck as a performance limiter but did not conceptualize it as a resource. Speculative decoding (Chen et al., 2023; Leviathan et al., 2023) uses a separate draft model to generate candidate tokens, consuming additional FLOPs in the draft model's forward pass rather than in the base model's idle cycles. Jacobi decoding (Santilli et al., 2023) generates multiple tokens in the base model's forward pass but fails to productively use them because correct tokens at wrong positions are discarded. LOOKAHEAD DECODING is the first method to argue that the base model's own idle compute — not an auxiliary model, not a modified architecture — can be the engine of speculation, and to provide a complete mechanism (n-gram caching + disjoint verification) for harvesting useful tokens from that speculation.
+
+The evidence for this reframing is empirical but conceptual in nature: Figure 8 shows that on an A100 (large FLOP surplus), LOOKAHEAD DECODING achieves ~1.9× speedup, while on an RTX 3090 (smaller FLOP surplus), the same configuration achieves only ~1.3× speedup — the method's effectiveness scales with available idle compute exactly as the reframing predicts.
+
+---
+
+### Innovation 2: The Speculation-Verification Decomposition Achieved Without Any External Component
+
+The dominant paradigm for accelerating LLM decoding prior to this paper is the **guess-and-verify** decomposition, instantiated most influentially by speculative decoding. The decomposition itself is elegant and powerful: separate the problem into (a) cheaply generating candidate future tokens, and (b) efficiently checking those candidates against the base model's distribution. The field's research energy has been directed almost entirely at improving the *guess* step — training better draft models (Medusa, EAGLE, OSD), using ensembles of draft models (Specinfer), or retrieving candidates from data stores (REST, prompt lookup).
+
+LOOKAHEAD DECODING's distinctive contribution is to demonstrate that the guess-and-verify decomposition can be implemented **using only the base model itself**, with no auxiliary model, no training, no data store, and no architectural modification to the LLM. The guess step is performed by the lookahead branch — a modified Jacobi iteration across a 2D window that generates n-grams from the model's own trajectory. The verify step is performed by the verification branch — a parallel forward pass through the same model with a custom attention mask that checks candidate n-grams against the model's distribution. Both execute in a single forward pass. The n-gram pool is simply a cache of the model's own previously generated tokens.
+
+This is a fundamental shift, not an incremental improvement. Speculative decoding variants all face a **generalization barrier**: a draft model trained for one base model does not transfer to another, and even within the same model family, distribution shift between base and draft limits acceptance rates. Retrieval-based methods face a **coverage barrier**: they can only speculate tokens that appear verbatim in the reference corpus or prompt. LOOKAHEAD DECODING faces neither barrier — it speculates tokens *the base model itself would generate*, so the acceptance rate depends only on how well the Jacobi trajectory predicts the model's future output, not on alignment between two different models. It can speculate novel tokens that never appeared in the prompt or training data because they are produced by the model's own generative process.
+
+The practical consequence is that LOOKAHEAD DECODING is **immediately deployable** on any autoregressive LLM without the engineering effort of training, aligning, and maintaining a draft model. The paper's experiments demonstrate this across model sizes (7B to 70B), model families (LLaMA-2-Chat, CodeLlama, CodeLlama-Inst, CodeLlama-Python), and tasks (chat, math, code completion, code infilling, summarization) — all with the same algorithm and no per-model or per-task tuning beyond selecting W, N, and G based on available FLOPs (Table 4).
+
+The evidence that this independence from external components is the key differentiator comes from the ablation in Table 3. Configurations that use only prompt lookup (②) or minimal lookahead branches with prompt augmentation (③④⑥) achieve 1.36×–1.46× speedups — competitive with some speculative decoding implementations but bounded by what the prompt contains. The balanced lookahead + verification configuration without prompt augmentation (⑧) achieves 1.78×, and adding prompt augmentation (⑨) pushes to 1.88× — demonstrating that the model's own Jacobi-generated n-grams provide speculation power beyond what prompt repetition alone can offer, while prompt repetition provides a complementary boost on top.
+
+---
+
+### Innovation 3: Disjoint N-Gram Verification That Preserves the Output Distribution Without Storing Full Probability Vectors
+
+A subtle but practically critical innovation is the verification algorithm's handling of sampling (Algorithm 4, Appendix B). Prior speculative decoding methods that support non-greedy sampling (most notably Specinfer; Miao et al., 2023) use rejection sampling to preserve the target distribution: when a draft token is rejected, the probability distribution must be adjusted (setting the rejected token's probability to zero and renormalizing) before checking the next candidate. This requires storing the full probability distribution — a vector of vocabulary size — for every speculative token position.
+
+For LOOKAHEAD DECODING, this would be catastrophic. The n-gram pool caches thousands of speculative tokens across many decoding steps. Storing a full probability vector per token would inflate the memory footprint by `vocab_size × 4 bytes` per token (~128KB per token for a 32K vocabulary in FP32), making the pool impractically large. The paper's key insight is a clean theoretical observation:
+
+> "the verification is indifferent to how draft tokens were sampled — different sampling methods only influence the acceptance rate but keep the output distribution intact" (Section 3.2)
+
+This observation is **provably correct** (the proof is in Appendix B) and has a powerful consequence: the lookahead branch can use **greedy sampling** when generating n-grams, regardless of the sampling method used for the final output. Under greedy sampling, the probability distribution degenerates to a one-hot vector — only the selected token ID needs to be stored. The verification branch then applies the target sampling distribution (e.g., top-P with temperature) at verification time, using rejection sampling on the *base model's* probabilities, not the draft generation probabilities.
+
+This is not merely a memory optimization. It is a **separation of concerns** that decouples the generation mechanism (which can be greedy for simplicity) from the output distribution (which can be arbitrary). The price is a modest reduction in acceptance rate under sampling (Table 2 shows speedups drop from 1.60× to 1.50× on XSum when moving from greedy to temperature 1.0), because greedy speculations are less diverse than sampling-based speculations would be. But this price is acceptable because it enables the entire n-gram pool architecture — without this trick, LOOKAHEAD DECODING with sampling would be memory-prohibitive.
+
+The theoretical significance extends beyond LOOKAHEAD DECODING. The insight that draft token generation can use a different sampling method than output generation, as long as verification uses the correct target distribution, applies to any speculation-based decoding method. It suggests that draft models could be optimized for high acceptance rates under greedy sampling without concern for preserving diversity — diversity comes from the verification step's rejection sampling, not from the draft. This is a clean separation that prior work blurred.
+
+---
+
+### Innovation 4: Lookahead Parallelism as a New Inference Parallelism Strategy That Exploits Computational Independence Rather Than Sharding Parameters
+
+The paper introduces **lookahead parallelism (LP)** as a novel distributed inference strategy that is fundamentally different from existing model parallelism approaches. The standard approaches — tensor parallelism (TP; Shoeybi et al., 2019) and pipeline parallelism (PP; Narayanan et al., 2021) — distribute the model's parameters across GPUs, with each GPU responsible for a portion of the computation for every token. This requires continuous inter-GPU communication during the forward pass to exchange activations, and this communication sits on the **critical path** of each decoding step. For batch-1 inference (the typical serving scenario), the communication overhead often dominates, causing multi-GPU setups to be *slower* than single-GPU. The paper confirms this: TP achieves 0.75×–0.82× speedup and PP achieves 0.71×–0.79× on multiple GPUs compared to single-GPU (Figures 6 and 7) — these are slowdowns, not speedups.
+
+Lookahead parallelism inverts this logic. Instead of sharding the model across GPUs, LP **replicates the entire model on each GPU** and shards the *tokens* — specifically, the disjoint sub-graphs of the lookahead and verification branches. Because these sub-graphs have no attention dependencies on each other (their only shared context is the verified output prefix, which is replicated), each GPU can execute its assigned sub-graph independently, with no communication during the forward pass. The only synchronization point is an all-gather after the forward pass to share the newly generated tokens — a transfer of a few kilobytes per step rather than the gigabytes of activation data in TP.
+
+This is a **structural insight** about LOOKAHEAD DECODING's computation graph: the custom attention mask (Figure 2b) creates block-sparse connectivity where certain sub-blocks (different branches at the same sequence depth) are completely disconnected. This sparsity is not an optimization to be discovered — it is designed into the attention pattern and can be statically partitioned. LP exploits this by mapping disconnected sub-graphs to different GPUs.
+
+The significance is twofold. First, it enables **strong scaling** for inference — using more GPUs to reduce latency for a fixed model size and workload, rather than to accommodate larger models. This is demonstrated dramatically in Figure 6: scaling from 1 GPU to 8 GPUs with LP on CodeLlama-7B increases throughput from 2.65× to 3.99× over autoregressive on ClassEval, while TP and PP on 8 GPUs remain at 0.75×–0.78× (worse than single-GPU). Second, it changes the design space for inference hardware: LP benefits from many GPUs with moderate memory (since each holds a full model copy) and high inter-GPU bandwidth (for the post-forward-pass synchronization), which is a different hardware profile than what TP/PP optimize for.
+
+There is a precedent for token-level distribution in training (data parallelism distributes batches across devices), but for inference with batch size 1, there are no batches to distribute. LP is, to my knowledge, the first inference parallelism strategy that distributes *tokens within a single sequence* across GPUs without introducing inter-GPU dependencies on the critical path. It is enabled specifically by LOOKAHEAD DECODING's attention pattern and is not applicable to standard autoregressive decoding.
+
+---
+
+### Innovation 5: A Scaling Law for Inference-Time Compute That Formalizes the FLOPs-for-Steps Tradeoff
+
+Section 4 of the paper derives a scaling law that relates per-step FLOPs to the reduction in total decoding steps, and this effort is intellectually distinctive beyond providing performance predictions. Prior work on test-time compute scaling (see the companion paper analyzed in the related discussion on compute-optimal test-time scaling) has studied how different inference strategies trade compute for accuracy, but the scaling law here operates at a lower level of abstraction: it models the **mechanical efficiency** of speculation — how many tokens can be verified per forward pass as a function of speculation budget and acceptance rate.
+
+The derivation connects LOOKAHEAD DECODING to the mathematics of speculative decoding's acceptance model (Equations 4, 5, 7), but generalizes from single-sequence speculation to **parallel multi-sequence speculation**. The key term `$(1 - \alpha^i)^b$` — the probability that all `$b$` parallel speculations fail by position `$i$` — captures why parallel n-gram verification scales differently from single-sequence verification. With a single draft sequence, the expected accepted tokens saturates at `$1/(1-\alpha)$` regardless of how long the draft is, because the probability of a rejection somewhere in a long sequence approaches 1. With `$b$` parallel n-grams, each position gets `$b$` independent chances to succeed, pushing the saturation point to `$O(\log b)$` rather than constant. This is the mathematical basis for the paper's central claim: **decoding steps decrease linearly with log(per-step FLOPs)**.
+
+The significance of this scaling law is not its precision — the paper acknowledges it uses simplified assumptions (identical per-token acceptance rate `$\alpha$`, the fudge factor `$f$` to account for uneven speculation quality) — but rather its **conceptual structure**. It identifies the fundamental tradeoff axis: per-step FLOPs (controlled by `$W$` and `$N$`) vs. step compression ratio `$S$`. It provides a predictive framework for configuring LOOKAHEAD DECODING on new hardware: given the FLOP surplus (the gap between available compute and the memory-bandwidth-limited minimum per-step cost), one can estimate the optimal `$W$` and `$N$`. It explains the diminishing returns observed in Figure 4a and Figure 8: because `$S$` scales logarithmically with `$b$`, doubling the per-step FLOPs yields progressively smaller reductions in step count. And it provides a **future-proofing argument**: as GPUs get faster and the compute-to-memory-bandwidth ratio grows, larger `$W$` and `$N$` become viable, and the method automatically extracts more speedup without algorithmic changes.
+
+This is an incremental contribution in mathematical depth but a fundamental one in practical impact: it answers *why* LOOKAHEAD DECODING works, *when* it will provide speedups (sufficient FLOP surplus, memory-bandwidth-bound regime), and *how* it will evolve with hardware (monotonically improving). No prior decoding acceleration method provided this level of analytical scaffolding for understanding its own scaling behavior.
 
 ## 5. Experimental Analysis
-- Evaluation setup (§5; Table 1)
-  - Models: `LLaMA-2` (7B, 13B, 70B), `CodeLlama` (7B, 13B, 34B), `CodeLlama-Python` (7B, 13B).
-  - Hardware:
-    - S1: single A100 80GB for 7B/13B/34B; 70B uses 2×A100 with pipeline parallelism (§5).
-    - S2: DGX with 8×A100 40GB + NVLink, used to evaluate LP and FlashAttention (§5.2).
-  - Datasets/tasks:
-    - MT-Bench (multi-turn chat), GSM8K (math), MBPP (instruction code gen), HumanEval (completion + infill), ClassEval (class-level completion) (§5; Table 1).
-    - Summarization (CNN/DailyMail, XSum) for distributional quality under sampling (Table 2).
-  - Baselines:
-    - HuggingFace greedy; variants with FlashAttention. For distributed: TP (DeepSpeed), PP (Accelerate) (§5).
 
-- Main results (throughput in tokens/s, speedup vs. baseline)
-  - Single-GPU end-to-end (no FlashAttention/LP): Figure 5.
-    - MT-Bench: 7B 1.64×, 13B 1.51×, 70B 1.45×.
-    - GSM8K: 7B 1.89×, 13B 1.72×, 34B 1.70×.
-    - MBPP: 7B 1.87×, 13B 1.75×, 34B 1.76×.
-    - HumanEval (completion): 7B 2.25×, 13B 2.26×, 34B 1.72×.
-    - HumanEval (infill): 7B 1.55×, 13B 1.40×.
-    - Interpretation: larger gains on code completion tasks (more repetition → higher acceptance; §5.1).
-  - With FlashAttention and LP (multi-GPU strong scaling): Figures 6–7.
-    - For 7B:
-      - MT-Bench: single-GPU FA lookahead 1.90×; LP+FA scales to 2.05× on 8 GPUs (Fig. 6).
-      - HumanEval: LP+FA reaches 3.87× on 8 GPUs (Fig. 6).
-      - ClassEval: LP+FA reaches 3.99× on 8 GPUs (≈4×; Fig. 6).
-    - For 13B:
-      - MT-Bench: single-GPU FA lookahead 1.67×; LP+FA up to 1.97× (8 GPUs; Fig. 7).
-      - HumanEval: LP+FA up to 3.42× (8 GPUs; Fig. 7).
-      - ClassEval: LP+FA up to 3.79× (8 GPUs; Fig. 7).
-    - Contrast with TP/PP: both slow down at single-batch due to communication (0.71–0.82× across tasks; Figures 6–7), confirming LP’s advantage.
-    - FlashAttention adds ~20% on top of PyTorch lookahead (§5.2).
-  - Quality under sampling (Table 2):
-    - CNN/DailyMail (temperature 1.0): ROUGE-1/2/L essentially unchanged (36.55/13.20/22.68 AR vs. 36.53/13.27/22.71 LA); speedup 1.46×; S=1.64×.
-    - XSum (temperature 1.0): ROUGE-1/2/L unchanged (19.15/4.53/12.84 AR vs. 19.20/4.53/12.87 LA); speedup 1.50×; S=1.67×.
-    - At temperature 0.0 (greedy), scores are identical; speedups increase slightly (1.57–1.60×).
-    - Appendix E further shows FP32 identity with HF greedy and negligible differences with FA/LP.
-  - Ablations (Table 3; MT-Bench, LLaMA-2-7B-Chat, FA on):
-    - Prompt lookup baseline (no lookahead window): 1.44×, S=1.55×.
-    - Minimal lookahead with `W=1` and large `G` gives limited gains (e.g., (5,1,30) without prompt-as-reference is 1.04×).
-    - Heavy lookahead with tiny verification (5,30,1) = 1.61× shows verifying capacity matters.
-    - Balanced branches perform best: (5,15,15) without prompt-as-reference 1.78× (S=1.96); adding prompt-as-reference rises to 1.88× (S=2.05).
-    - Takeaway: both lookahead breadth and verification bandwidth are necessary; prompt-as-reference can further boost candidate quality (§5.4).
+### Evaluation Methodology
 
-- Do the experiments support the claims?
-  - Yes for single-batch latency: consistent 1.5–2.3× single-GPU gains (Fig. 5) and strong scaling to ~4× with LP+FA on code tasks (Fig. 6).
-  - Quality preserved: unchanged ROUGE on summarization (Table 2) and FP32 identity with greedy (Appendix E). Sampling correctness is supported by the proof in Appendix B.
+- **Datasets.** The paper evaluates on five diverse benchmarks spanning chat, math reasoning, and code generation. **MT-Bench** (Zheng et al., 2023) is a multi-turn chat dataset with diverse, open-ended questions and many unique tokens — chosen to test performance on natural conversational tasks. **GSM8K** (Cobbe et al., 2021) contains grade-school math word problems; the authors use the first 1,000 questions. **HumanEval** (Chen et al., 2021) covers both code completion and code infilling tasks. **MBPP** (Austin et al., 2021) tests instruction-based code generation. **ClassEval** (Du et al., 2023) evaluates class-level code completion with longer generations (maximum sequence length set to 2,048 tokens, aligned with prior work). For generation quality experiments under sampling, the paper additionally uses **XSum** (Narayan et al., 2018) and **CNN/Daily Mail** (See et al., 2017) summarization datasets. For code tasks, maximum sequence lengths are set to 512 on HumanEval and 2,048 on ClassEval, following established conventions (Ben Allal et al., 2022; Du et al., 2023). The paper does not report training/validation/test splits for most datasets, but uses the standard evaluation protocols for each benchmark.
 
-- Notable patterns and conditions:
-  - Gains are larger on code tasks (more repetitive patterns increase acceptance; Fig. 5; §5.1).
-  - Speedups diminish on larger models at fixed hardware because per-step FLOPs saturate GPU compute sooner (§5.1).
-  - LP outperforms TP/PP for latency at batch size 1; TP/PP incur communication overhead (Figures 6–7).
+- **Base models.** Experiments use the **LLaMA-2** family (Touvron et al., 2023b) — specifically LLaMA-2-Chat (7B, 13B, 70B) for chat benchmarks — and the **CodeLlama** family (Roziere et al., 2023) — specifically CodeLlama (7B, 13B, 34B) for code completion, CodeLlama-Inst (7B, 13B, 34B) for instruction-based code and math tasks, and CodeLlama-Python (7B, 13B) for class-level code generation. The model scale range (7B to 70B) is chosen to demonstrate that the method works across model sizes, and the paper tests on both single-GPU and multi-GPU configurations. All models are served with FP16 precision and batch size 1 unless otherwise specified (matching standard latency-sensitive serving deployments).
 
-> “FlashAttention-integrated LOOKAHEAD DECODING shows 1.8× speedups for the 7B model on MT-Bench… strong scaling to multiple GPUs reaches ~4× on ClassEval” (Figures 6 and 7; §5.2).
+- **Metrics.** The primary metric is **throughput** measured in **tokens per second**, computed as total generated tokens divided by wall-clock generation time. Speedups are reported as throughput ratios: `$speedup = throughput(Lookahead) / throughput(autoregressive baseline)$`. The paper also reports the **step compression ratio** `$S$`, defined as the number of output tokens generated divided by the number of LOOKAHEAD DECODING steps (Equation 6), which measures algorithmic efficiency independent of implementation. For generation quality, the paper reports **ROUGE-1, ROUGE-2, and ROUGE-L** scores (Lin, 2004) on summarization tasks, following the evaluation convention of speculative decoding papers (Chen et al., 2023; Leviathan et al., 2023).
+
+- **Baselines.** The primary baseline is HuggingFace's implementation of **autoregressive greedy search** (Wolf et al., 2020). A stronger baseline uses **FlashAttention** (Dao et al., 2022; Dao, 2023) to accelerate autoregressive decoding — this is the baseline against which FlashAttention-integrated LOOKAHEAD DECODING is compared. For multi-GPU experiments, the baselines are **tensor parallelism (TP)**, supported by DeepSpeed (Aminabadi et al., 2022), and **pipeline parallelism (PP)**, supported by Accelerate (Gugger et al., 2022). For ablation studies, the paper compares against **prompt lookup decoding** (Yang et al., 2023; Saxena, 2023) using the implementation in HuggingFace Transformers v4.37. The paper does not compare against speculative decoding with a trained draft model on throughput, since the core claim is about achieving speedups *without* any auxiliary model — the comparison target is the best available autoregressive implementation.
+
+- **Generation budget and compute accounting.** The paper does not use a generation budget in the traditional sense (e.g., number of samples). Instead, compute is implicitly accounted through the **per-step FLOPs** controlled by the hyperparameters `$W$` (lookahead window size), `$N$` (n-gram size), and `$G$` (maximum parallel verifications). Per-step FLOPs are roughly proportional to `$(W + G) \times (N - 1)$`, representing the total number of speculative token positions processed per step. The key efficiency metric is whether the **reduction in number of steps** (the step compression ratio `$S$`) outweighs the **increase in per-step cost** to yield a net wall-clock speedup. The paper sweeps different `$W$` and `$N$` values (Figure 8, Table 3) to empirically identify configurations that maximize throughput on specific hardware. There is no formal FLOPs budget matching between LOOKAHEAD DECODING and autoregressive decoding; the comparison is purely on observed wall-clock throughput.
+
+- **Cross-validation and statistical protocol.** The paper does not employ cross-validation or report confidence intervals. For throughput measurements (Figures 5-8), the paper reports single-number speedups without error bars or variance estimates. For generation quality (Table 2), ROUGE scores are reported to two decimal places without standard deviations. The step compression ratio comparisons (mentioned in Appendix E) report averages over 18 generations for FlashAttention comparisons and 6-12 generations for LP comparisons, with differences reported as percentages (<0.3% for FlashAttention, <0.1% for LP). The generation quality verification in Appendix E uses 160 turns on MT-Bench as a baseline for comparing exact token matches between LOOKAHEAD DECODING outputs and FP32 autoregressive greedy outputs. The paper does not discuss whether throughput measurements were averaged over multiple runs, whether prompt order was randomized, or whether any form of statistical testing was applied. This is a notable methodological limitation — the reported speedups could be sensitive to system noise, GPU thermal throttling, or other sources of variance that are not quantified.
+
+- **Hardware testbeds.** Two GPU setups are used: **S1** — NVIDIA A100 GPUs with 80GB memory, where 7B, 13B, and 34B models run on a single A100 and the 70B model runs on 2 A100s with pipeline parallelism via Accelerate. **S2** — a DGX machine with 8 NVIDIA A100 GPUs with 40GB memory and NVLink, used for multi-GPU experiments with lookahead parallelism, TP, and PP.
+
+---
+
+### Main Quantitative Results
+
+#### Single-GPU End-to-End Throughput (Figure 5)
+
+Figure 5 reports end-to-end throughput across all datasets and model sizes on the S1 testbed (A100 80GB, single GPU except 70B which uses 2 GPUs with PP). The headlining result: LOOKAHEAD DECODING achieves 1.4×–2.3× speedup over HuggingFace's greedy search across all configurations.
+
+**By dataset (averaging across model sizes):**
+- **MT-Bench (chat):** 1.45×–1.64× speedup (7B: 1.64×, 13B: 1.51×, 70B: 1.45×). The lower speedup on 70B reflects the fact that larger models consume more FLOPs per token, leaving less surplus for speculation — the 70B model "quickly hits the GPU FLOPs cap" as stated in Section 5.1.
+- **GSM8K (math):** 1.70×–1.89× speedup (7B: 1.89×, 13B: 1.72×, 34B: 1.70×). Math problems show better speedups than chat, likely because mathematical reasoning steps follow more predictable patterns.
+- **MBPP (instruction-based code):** 1.76×–1.87× speedup (7B: 1.87×, 13B: 1.75×, 34B: 1.76×).
+- **HumanEval (code completion):** 1.72×–2.26× speedup. This is the strongest result: 7B and 13B both achieve ~2.25×. The paper attributes this to "the higher occurrence of repetitive tokens during code completions, making predictions easier" (Section 5.1). The 34B model shows a drop to 1.72×, consistent with the larger-model-hitting-FLOPs-cap pattern.
+- **HumanEval (code infilling):** 1.40×–1.55× speedup (7B: 1.55×, 13B: 1.40×). Code infilling shows the lowest speedups, suggesting that infilling tasks have less predictable token sequences than completion tasks.
+
+**Key pattern across model sizes:** smaller models uniformly achieve higher speedups. For MT-Bench: 7B (1.64×) > 13B (1.51×) > 70B (1.45×). For GSM8K: 7B (1.89×) > 13B (1.72×) > 34B (1.70×). This trend is consistent with the scaling law — larger models have higher per-step FLOPs costs (more parameters to load from memory), reducing the FLOP surplus available for speculation at fixed `$W$` and `$N$`. The paper explicitly notes that "a larger model requires more FLOPs and quickly hits the GPU FLOPs cap compared to a smaller model" (Section 5.1).
+
+**What these results do and don't show:** Figure 5 demonstrates that LOOKAHEAD DECODING provides consistent speedups across diverse tasks and model sizes, but it does not establish whether these speedups result from the lookahead branch, the verification branch, the n-gram pool, or some combination. The speedups are reported against HuggingFace's greedy search, which is a relatively weak baseline — FlashAttention-augmented autoregressive decoding (shown in Figures 6-7) is substantially faster, and the speedup against that stronger baseline is lower (1.8× vs. 1.64× for 7B on MT-Bench). The figure also does not report the hyperparameters (`$W$`, `$N$`, `$G$`) used for each configuration — the paper only provides recommended settings in Table 4, and it is unclear whether these were the settings used for Figure 5.
+
+---
+
+#### Multi-GPU Performance with Lookahead Parallelism and FlashAttention (Figures 6 and 7)
+
+Figures 6 and 7 present the most impressive and novel results in the paper: the scaling behavior of LOOKAHEAD DECODING with lookahead parallelism on multiple GPUs, augmented with FlashAttention. Results are shown for 7B models (Figure 6) and 13B models (Figure 7) on MT-Bench, HumanEval, and ClassEval, using the S2 testbed (DGX with 8× A100 40GB, NVLink).
+
+**FlashAttention integration benefit.** On a single GPU, FlashAttention increases LOOKAHEAD DECODING throughput by approximately 20% across configurations. For LLaMA-2-Chat-7B on MT-Bench: Lookahead without FlashAttention achieves 1.73× speedup; with FlashAttention, 1.90× speedup. For CodeLlama-7B on HumanEval: 2.42× without FlashAttention vs. 2.65× with FlashAttention. This 20% improvement is roughly consistent across all configurations and model sizes, validating the claim in Section 3.3 that FlashAttention brings "about 20% end-to-end speedup compared to a straightforward implementation on top of native PyTorch."
+
+**Single-GPU speedups against the FlashAttention-augmented autoregressive baseline.** The strongest single-GPU results (with FlashAttention):
+- **MT-Bench (7B):** 1.90× (vs. 1.07× for autoregressive with FlashAttention over native autoregressive)
+- **HumanEval (7B):** 2.65×
+- **ClassEval (7B):** 2.76×
+- **MT-Bench (13B):** 1.67×
+- **HumanEval (13B):** 2.44×
+- **ClassEval (13B):** 2.46×
+
+Code tasks consistently outperform chat tasks by a substantial margin (2.44×–2.76× vs. 1.67×–1.90×), confirming the intuition that code contains more predictable repeating patterns useful for n-gram speculation.
+
+**Multi-GPU strong scaling — the headline result.** Figures 6 and 7 show throughput scaling from 1 to 4 to 8 GPUs for three parallelism strategies: LOOKAHEAD DECODING with lookahead parallelism (LP), tensor parallelism (TP via DeepSpeed), and pipeline parallelism (PP via Accelerate). The key findings:
+
+- **LP achieves near-linear scaling.** For CodeLlama-7B on ClassEval: 1 GPU → 2.76×, 4 GPUs → 3.88×, 8 GPUs → 3.99×. The scaling from 1 to 8 GPUs is approximately 1.45× throughput improvement (3.99/2.76), which, combined with the 8× GPU count increase, achieves 4× speedup over single-GPU autoregressive decoding. For CodeLlama-13B on ClassEval: 1 GPU → 2.46×, 4 GPUs → 3.52×, 8 GPUs → 3.79× — consistent scaling but with slightly lower absolute speedups for the larger model.
+
+- **TP and PP cause slowdowns, not speedups.** Across all configurations and GPU counts, TP achieves 0.71×–0.82× of single-GPU throughput, and PP achieves 0.74×–0.82×. The paper states these results "echo DeepSpeed's documentation" (Section 5.2, referencing dee, 2023). For batch-1 inference, the communication overhead of model parallelism dominates any benefit from distributing the computation.
+
+- **The 4× speedup claim.** The paper's abstract claims "4× with strong scaling on multiple GPUs in code completion tasks." This is substantiated by ClassEval on 7B with 8 GPUs: LP with FlashAttention achieves approximately 4× the throughput of single-GPU autoregressive decoding without FlashAttention (the baseline). However, against the FlashAttention-augmented autoregressive baseline on the same 8 GPUs, the speedup is lower — the paper does not directly report this ratio but it is visually apparent from Figure 6 that autoregressive+flash achieves roughly 1.07× the native baseline, while LP+flash on 8 GPUs achieves roughly 4×, so the net speedup over the strongest baseline is approximately 3.7×. The 4× figure uses the weaker baseline for headline impact.
+
+**What these results demonstrate about LP.** Lookahead parallelism is the first inference parallelism strategy that achieves speedup from adding GPUs at batch size 1. Traditional model parallelism (TP, PP) is designed for training (large batch sizes) or serving very large models (where a single GPU cannot hold the parameters). For latency-sensitive single-batch inference, TP and PP are actively harmful because their communication overhead exceeds any computational benefit. LP succeeds because it exploits the structural sparsity of LOOKAHEAD DECODING's attention pattern — disjoint sub-graphs require zero communication during the forward pass, and the only synchronization is a lightweight token exchange after each step. This is a genuinely novel contribution to distributed inference, not merely an incremental improvement.
+
+However, LP comes with a significant memory cost: each GPU must hold a complete copy of the model parameters. For LLaMA-2-7B at FP16, this is approximately 14GB per GPU. On the DGX with 8× 40GB A100s, this is feasible (8 copies × 14GB = 112GB total, well under 320GB available). But for larger models (70B at FP16 is ~140GB), LP would be impossible on current hardware — each GPU would need 140GB just for the model, exceeding the available 40GB or 80GB per GPU. The paper does not discuss this memory constraint, which limits LP to models that fit in a single GPU's memory.
+
+---
+
+#### Generation Quality Preservation (Table 2 and Appendix E)
+
+Table 2 verifies that LOOKAHEAD DECODING preserves the output distribution on summarization tasks for LLaMA-2-7B-Chat. The results compare autoregressive decoding against LOOKAHEAD DECODING under both greedy (temperature 0.0) and sampling (temperature 1.0) settings:
+
+**CNN/Daily Mail:**
+- Greedy: ROUGE-1 37.79 (both methods), ROUGE-2 14.59 (both), ROUGE-L 23.96 (both). Speedup: 1.57×, step compression `$S$`: 1.72×.
+- Sampling (T=1.0): ROUGE-1 36.55 (AR) vs. 36.53 (LA), ROUGE-2 13.20 vs. 13.27, ROUGE-L 22.68 vs. 22.71 — differences are at or below 0.03 ROUGE points, which is negligible. Speedup: 1.46×, step compression: 1.64×.
+
+**XSum:**
+- Greedy: ROUGE-1 19.38 (AR) vs. 19.39 (LA), ROUGE-2 4.78 vs. 4.79, ROUGE-L 13.05 vs. 13.06 — differences of 0.01 ROUGE points. Speedup: 1.60×, step compression: 1.77×.
+- Sampling: ROUGE-1 19.15 vs. 19.20, ROUGE-2 4.53 (both), ROUGE-L 12.84 vs. 12.87. Speedup: 1.50×, step compression: 1.67×.
+
+**Key observations from Table 2:**
+
+1. **The output distribution is preserved exactly under greedy decoding** — ROUGE scores are identical to two decimal places for CNN/Daily Mail (37.79, 14.59, 23.96). The near-identical scores under sampling (differences of 0.02–0.05 ROUGE points) are within the range of sampling variance and confirm preservation of the output distribution, not just the argmax.
+
+2. **Sampling reduces speedup compared to greedy.** On XSum, greedy achieves 1.60× speedup with compression ratio 1.77×; sampling at T=1.0 achieves 1.50× speedup with ratio 1.67×. On CNN/Daily Mail: 1.57× (greedy) vs. 1.46× (sampling). The paper attributes this to "lower acceptance ratio according to the sampling verification Algorithm 4" and notes that this aligns with prior speculative decoding results (Chen et al., 2023; Leviathan et al., 2023). This is expected: under sampling, the verification step uses rejection sampling where the acceptance probability equals the model's probability for the speculative token (Algorithm 4), which is always ≤1. Under greedy, acceptance is deterministic (token matches argmax or not), so acceptance rates are higher.
+
+3. **Step compression ratio `$S$` is always higher than speedup.** This is a crucial observation: `$S$` measures the algorithmic reduction in decoding steps, while speedup measures the actual wall-clock improvement. The gap (e.g., `$S = 1.77$` vs. speedup = 1.60× on XSum greedy) represents the overhead of the lookahead and verification computation — each LOOKAHEAD DECODING step costs more FLOPs and wall-clock time than an autoregressive step, so `$S$` must be substantially greater than 1 to achieve net speedup.
+
+**Appendix E numerical precision verification.** The paper reports that with FP32 (single precision) inference, LOOKAHEAD DECODING produces exactly identical outputs to HuggingFace's greedy search across 160 turns on MT-Bench. With FP16 (half precision), HuggingFace's greedy search has 35/160 (without FlashAttention) and 42/160 (with FlashAttention) answers not perfectly aligned with the FP32 baseline output. LOOKAHEAD DECODING and its FlashAttention/multi-GPU variants have 35–44 out of 160 answers differing from the FP32 baseline. The paper claims this demonstrates that LOOKAHEAD DECODING "can retain the output distribution using a greedy search within the numerical error range (not worse than huggingface's half-precision inference)."
+
+**What this verification does and doesn't show.** The FP32 exact match is strong evidence that LOOKAHEAD DECODING's algorithm is mathematically correct — it confirms the theoretical guarantee that greedy verification produces identical argmax sequences. The FP16 results show that LOOKAHEAD DECODING introduces no additional numerical error beyond what standard FP16 autoregressive decoding already produces. However, the paper does not report whether the *same* 35-44 examples differ between methods, or whether LOOKAHEAD DECODING differs on a different subset. Without this analysis, the claim that it is "not worse" is qualitative rather than quantitative.
+
+---
+
+#### Ablation Studies (Table 3)
+
+Table 3 reports ablation studies on LLaMA-2-7B-Chat and MT-Bench on a single A100 (S1 testbed, FlashAttention activated) to isolate the contributions of the lookahead branch, verification branch, n-gram pool, and prompt-as-reference augmentation. Nine configurations are tested, labeled ① through ⑨.
+
+**① Autoregressive baseline:** Speedup = 1.00×, `$S$` = 1.00.
+
+**② Prompt lookup (transformers v4.37 implementation):** Speedup = 1.44×, `$S$` = 1.55. This is the baseline for comparison against methods that use only prompt repetition for speculation, without any lookahead branch. The paper notes that their prompt lookup implementation checks "several starting tokens for a better speculation" which makes it stronger than LOOKAHEAD DECODING's default prompt-as-reference implementation (which checks only one token).
+
+**Configurations with minimal lookahead branch (`$W = 1$`):**
+- **③ (`$N = 10, W = 1, G = 3$`) with prompt:** Speedup = 1.36×, `$S$` = 1.45.
+- **④ (`$N = 5, W = 1, G = 10$`) with prompt:** Speedup = 1.36×, `$S$` = 1.51.
+- **⑤ (`$N = 5, W = 1, G = 30$`) without prompt:** Speedup = 1.04×, `$S$` = 1.12.
+- **⑥ (`$N = 5, W = 1, G = 30$`) with prompt:** Speedup = 1.46×, `$S$` = 1.59.
+
+The key finding from ③–⑥: when the lookahead branch has minimal width (`$W = 1$`, meaning it only speculates one future position), the method degenerates to something closer to prompt lookup — it relies heavily on the n-gram pool's cached tokens from previous steps, but generates few new speculations per step. Configurations with prompt augmentation (③, ④, ⑥) outperform ② (pure prompt lookup) only marginally (1.46× vs. 1.44× for ⑥ vs. ②), suggesting that a minimal lookahead branch adds little beyond what prompt repetition already provides. Configuration ⑤ (no prompt augmentation, `$W = 1$`) achieves only 1.04× speedup — essentially no improvement — indicating that with a minimal lookahead branch and no initial n-gram pool seeding from the prompt, the method cannot bootstrap useful speculations.
+
+**⑦ Large lookahead, tiny verification (`$N = 5, W = 30, G = 1$`) without prompt:** Speedup = 1.61×, `$S$` = 1.79. This configuration generates many speculations (`$W = 30$`) but can only verify one n-gram per step (`$G = 1$`). The result shows "lower performance due to lower potential in accepting speculations compared with a balanced branch" (Section 5.4). The step compression ratio (1.79) is decent — the lookahead branch is producing useful n-grams — but the bottleneck is that only one can be verified per step, limiting how many tokens can be accepted.
+
+**⑧ Balanced branches (`$N = 5, W = 15, G = 15$`) without prompt:** Speedup = 1.78×, `$S$` = 1.96. This is the best configuration without prompt augmentation, validating the design choice to balance generation (`$W$`) and verification (`$G$`) budgets. `$S = 1.96$` means nearly two autoregressive-equivalent tokens per step on average.
+
+**⑨ Balanced branches with prompt augmentation (`$N = 5, W = 15, G = 15$`):** Speedup = 1.88×, `$S$` = 2.05. This is the best overall configuration, combining LOOKAHEAD DECODING's own n-gram generation with prompt-derived n-grams to seed the pool. The improvement over ⑧ (1.88× vs. 1.78×) shows that prompt augmentation provides a complementary benefit — the prompt contains verbatim sequences that may recur in the output, and having these in the pool from step 1 accelerates early decoding before the lookahead branch has built up its own trajectory history.
+
+**What these ablation results establish:**
+
+- **Both branches are necessary for high speedup.** Minimal lookahead (③–⑥) and minimal verification (⑦) both underperform balanced configurations (⑧⑨). The optimal configuration uses `$W = G = 15$`.
+- **Prompt augmentation helps but is not the primary driver.** Configuration ⑧ (1.78× without prompt) substantially outperforms prompt lookup alone (②, 1.44×), demonstrating that the lookahead branch generates useful speculations beyond simple repetition. Adding prompt augmentation (⑨, 1.88×) provides a ~5.6% further improvement.
+- **The n-gram pool matters even without the lookahead branch.** Configuration ⑤ (`$W = 1$`, no prompt) achieves `$S = 1.12$` and speedup 1.04× — the pool is collecting n-grams from previous steps, but without a meaningful lookahead branch (`$W = 1$` generates only one new token per step), the pool's contents are too sparse to provide useful verifications.
+
+**Limitations of the ablation.** The ablation only tests configurations on one model (LLaMA-2-7B-Chat) and one dataset (MT-Bench) on one GPU (A100). The optimal balance of `$W$` and `$G$` likely depends on the FLOP surplus available — on a GPU with less surplus compute (e.g., RTX 3090, Figure 8), the optimal `$W$` would be smaller. The paper does not ablate `$N$` (n-gram size) independently of `$W$` and `$G$` — all configurations with balanced branches use `$N = 5$`, and it is unclear whether longer or shorter n-grams would perform differently. The ablation also does not test the contribution of the **sliding window mechanism** vs. keeping a fixed window — all configurations use the same sliding window design, so the importance of window sliding (vs. keeping all historical tokens) is not assessed.
+
+---
+
+#### Impact of FLOP Surplus: A100 vs. RTX 3090 (Figure 8)
+
+Figure 8 directly tests the scaling law's prediction that LOOKAHEAD DECODING's speedup depends on available FLOP surplus. The experiment compares compression ratio (`$S$`) and speedup for LLaMA-2-7B-Chat on MT-Bench across two GPUs with very different compute-to-memory-bandwidth ratios: A100 (high compute surplus) and RTX 3090 (lower compute surplus). All configurations use `$N = 5$` with FlashAttention, varying `$W = G$` from 2 to 30.
+
+**Compression ratio (`$S$`, blue and orange curves):** The two curves overlap almost perfectly across all `$W$` values, confirming that `$S$` is hardware-independent — it measures algorithmic efficiency, which depends only on the model and the hyperparameters. `$S$` increases from ~1.5 at `$W = 2$` to ~2.0 at `$W = 15$`, then saturates (little improvement from `$W = 15$` to `$W = 30$`). This logarithmic shape matches the scaling law prediction.
+
+**Speedups (red and green curves):** The two hardware platforms diverge dramatically:
+- **A100:** Speedup increases from ~1.2× at `$W = 2$` to ~1.9× at `$W = 15$`, then plateaus. The speedup curve roughly tracks the compression ratio curve, meaning the per-step overhead is manageable on the A100's larger FLOP surplus.
+- **RTX 3090:** Speedup increases from ~1.15× at `$W = 2$` to ~1.3× at `$W = 5$`, then **declines** — at `$W = 30$`, speedup drops below 1.0× (i.e., LOOKAHEAD DECODING becomes slower than autoregressive). The RTX 3090 has less compute surplus, so the per-step overhead of large `$W$` outweighs the benefit of fewer steps.
+
+**The critical insight:** On the RTX 3090, the optimal `$W = 5$` achieves only ~1.3× speedup, and even this modest speedup requires careful tuning — setting `$W` too high actually causes slowdown. On the A100, the method is more robust: speedups are higher (~1.9×) and the optimal `$W` range is broader (5–15 all work well). This directly validates the paper's claim that LOOKAHEAD DECODING "needs large surplus FLOPs to obtain high speedups" (Section 5.5) and that "running in compute-bound environments (e.g., serving with a large batch size) may cause slowdowns."
+
+**What Figure 8 doesn't show.** The experiment only tests one model (7B) on one dataset (MT-Bench). The relationship between FLOP surplus and speedup likely depends on model size — larger models have less FLOP surplus relative to their memory bandwidth requirements, so the RTX 3090's sub-1.0× speedup at high `$W$` may occur at lower `$W` for 13B or 34B models. The paper does not provide analogous A100 vs. RTX 3090 comparisons for other model sizes. Additionally, the figure only varies `$W$` (and `$G$`, since `$G = W$`); it does not explore whether adjusting `$N$` could recover speedup on the RTX 3090 (e.g., using shorter n-grams might reduce per-step overhead more than it reduces step compression).
+
+---
+
+#### Recommended Configurations (Table 4)
+
+Table 4 provides the paper's recommended hyperparameter settings for LOOKAHEAD DECODING on A100 GPUs with `$G = W$`:
+
+| Model Size | Window Size (`$W$`) | N-gram Size (`$N$`) |
+|---|---|---|
+| 7B | 15 | 5 |
+| 13B | 10 | 5 |
+| 34B | 7 | 5 |
+
+The paper states these configurations "work near optimally in most cases for single batch serving." The decreasing `$W$` with model size reflects the diminishing FLOP surplus: 7B can support `$W = 15$` (120× extra FLOPs per step by the paper's estimate), 13B supports `$W = 10$` (80× extra FLOPs), and 34B supports `$W = 7$` (56× extra FLOPs).
+
+**An important caveat:** these recommendations are based on empirical throughput measurements on A100 GPUs. They are not derived from the scaling law — no fitted parameters are reported. The paper does not provide recommendations for other hardware (e.g., RTX 3090, H100), for multi-GPU configurations (where larger `$W$` would be viable), or for non-A100 GPUs. The user must empirically tune `$W$`, `$N$`, and `$G$` for their specific hardware, model, and dataset — the paper provides the framework (Figure 4, the scaling law) but not a predictive model that outputs optimal hyperparameters given hardware specs.
+
+---
+
+### Ablation Studies and Robustness Checks
+
+- **FlashAttention vs. native PyTorch implementation:** FlashAttention provides approximately 20% end-to-end speedup across configurations (compare "w/o flash" vs. "w/ flash" for LP in Figures 6 and 7). On 7B MT-Bench with 1 GPU: 1.73× (no FlashAttention) vs. 1.90× (with FlashAttention). On 7B HumanEval with 1 GPU: 2.42× vs. 2.65×. The step compression ratio is unaffected (<0.3% difference in `$S$`, Appendix E), confirming that FlashAttention is a pure implementation optimization that does not change the algorithmic behavior.
+
+- **Generation quality under greedy sampling with FP16:** The paper verifies in Appendix E that LOOKAHEAD DECODING's greedy output matches FP32 autoregressive greedy on 160 MT-Bench turns with FP32 precision (perfect match). With FP16, HuggingFace's greedy search differs from the FP32 baseline on 35/160 turns without FlashAttention and 42/160 with FlashAttention. LOOKAHEAD DECODING and its variants differ on 35–44 turns across configurations. The paper claims this shows LOOKAHEAD DECODING is "not worse than huggingface's half-precision inference" — the numerical errors from FP16 quantization are the dominant source of output differences, not any algorithmic error in LOOKAHEAD DECODING.
+
+- **FlashAttention and LP do not affect compression ratio:** Appendix E reports that average step compression ratio `$S$` differs by <0.3% (w/ vs. w/o FlashAttention, 18 generations across 3 datasets) and <0.1% (single GPU vs. LP, 6–12 generations across 3 datasets). This confirms that these optimizations are implementation-level and do not alter the speculative behavior — the accepted n-grams are identical regardless of whether FlashAttention or LP is used.
+
+- **Sampling vs. greedy acceptance rates (Table 2):** Under sampling (temperature 1.0), speedups drop compared to greedy: XSum goes from 1.60× to 1.50×; CNN/Daily Mail from 1.57× to 1.46×. The compression ratio drops correspondingly (XSum: 1.77× to 1.67×; CNN: 1.72× to 1.64×). This is expected because sampling verification (Algorithm 4) has lower per-token acceptance probability than greedy verification (Algorithm 3). The paper does not provide an ablation testing whether using sampling in the lookahead branch (instead of forced greedy) would recover some of this gap — the memory argument (Section 3.2) makes this impractical, but the actual magnitude of the tradeoff is not quantified.
+
+- **Prompt augmentation benefit (Table 3, ⑧ vs. ⑨):** Adding prompt-as-reference to a balanced configuration (`$N=5, W=15, G=15$`) improves speedup from 1.78× to 1.88× and `$S$` from 1.96 to 2.05. This is a ~5.6% speedup improvement, confirming that prompt augmentation is complementary but not the primary driver of performance.
+
+- **Verification branch width vs. lookahead branch width (Table 3, ⑦ vs. ⑧):** Configuration ⑦ (`$N=5, W=30, G=1$` — large lookahead, tiny verification) achieves 1.61× speedup with `$S = 1.79$`. Configuration ⑧ (`$N=5, W=15, G=15$` — balanced) achieves 1.78× with `$S = 1.96$`. Despite generating twice as many speculations (`$W=30$` vs. `$W=15$`), the unbalanced configuration performs worse because only one n-gram can be verified per step (`$G=1$`). This demonstrates that **verification bandwidth is a critical bottleneck** — generating more speculations is useless if they cannot be verified in parallel.
+
+- **Negative result: diminishing returns of large `$W$` and `$N$` (Figure 4a, Figure 8):** The compression ratio `$S$` follows a logarithmic curve with `$W$` — increasing `$W$` from 2 to 15 roughly doubles `$S$`, but increasing from 15 to 30 yields negligible improvement. The speedup on RTX 3090 actually *declines* for `$W > 5$` (Figure 8). This confirms the scaling law prediction that gains require exponential increases in per-step FLOPs, and that the method faces hard diminishing returns on hardware with limited FLOP surplus.
+
+- **What is not ablated:** The paper does not ablate: (1) the sliding window mechanism vs. a fixed window; (2) n-gram size `$N$` independently of `$W$` and `$G$`; (3) the contribution of using `$N-1$` steps of Jacobi history vs. using only the last step (which would reduce LOOKAHEAD DECODING to a 2-gram version of Jacobi decoding with caching); (4) the n-gram pool size cap or eviction policy (is there a limit, and does pool size affect speedup?); (5) the sensitivity to the "promising n-gram" selection criterion (matching only the first token vs. matching longer prefixes); (6) the choice of greedy sampling in the lookahead branch vs. sampling-based generation (though the paper argues this is memory-prohibitive, the actual memory cost is not reported). These missing ablations leave open questions about which design choices are essential and which are incidental.
+
+---
+
+### Critical Assessment
+
+#### Claim 1: "LOOKAHEAD DECODING accelerates LLM decoding without needing any auxiliary component."
+
+**This claim is strongly supported by the evidence, with qualifications about the nature of the acceleration.**
+
+The paper demonstrates consistent speedups across five datasets, four model families, and three model scales (7B–70B), all without training a draft model, modifying the LLM architecture, or using external data stores. The ablation in Table 3 further shows that the primary speedup (1.78× for balanced configuration ⑧ without prompt augmentation) comes from LOOKAHEAD DECODING's own n-gram generation and verification, not from prompt repetition or any other external source.
+
+However, the "acceleration" claim requires careful qualification. The speedups are **hardware-dependent** — on the RTX 3090 (lower FLOP surplus), the method achieves only 1.3× speedup at optimal settings, and can cause slowdowns if misconfigured (Figure 8). On the A100 (ample FLOP surplus), speedups reach 1.5×–2.3× depending on the task and model size (Figure 5). The method does not provide universal acceleration; it provides acceleration **conditional on sufficient FLOP surplus**. For deployment scenarios that are already compute-bound (e.g., large batch serving, inference on older GPUs), LOOKAHEAD DECODING may provide no benefit or even slow down decoding. The paper is transparent about this limitation (Section 5.5: "Running in compute-bound environments may cause slowdowns"), but the abstract and introduction present the speedup figures without this hardware dependency caveat.
+
+Furthermore, the "without any auxiliary component" claim is strictly true — no external model, training, or data store — but the method does require a **modified CUDA implementation** of FlashAttention with hardcoded attention patterns for specific `$W$`, `$N$`, `$G$` values. This is not an "auxiliary component" in the sense of a draft model, but it is a non-trivial engineering dependency that limits out-of-the-box deployability. A user cannot simply import LOOKAHEAD DECODING and run it on any model — they need the custom FlashAttention kernel compiled for their specific configuration. The paper open-sources the implementation, but the engineering barrier is higher than the "no auxiliary component" framing suggests.
+
+#### Claim 2: "LOOKAHEAD DECODING linearly reduces the number of decoding steps according to per-step log(FLOPs)."
+
+**This claim is supported by the theoretical modeling (Section 4) but the empirical evidence is incomplete.**
+
+The scaling law derivation (Equations 5, 7) establishes that step compression ratio `$S$` should scale as `$O(\log b)$` where `$b = W$` is the number of parallel speculations. The curve in Figure 4a (measured `$S$` vs. `$W$` for LLaMA-2-Chat-7B on MT-Bench) shows the qualitative logarithmic shape — `$S$` increases from ~1.5 at `$W=2$` to ~2.0 at `$W=15$`, then saturates. The empirical curve in Figure 8 (A100, `$S$` vs. `$W$`) shows the same pattern.
+
+However, the claim of "linear reduction" (i.e., `$S$` scales linearly with `$\log(\text{FLOPs})$`) is tested only over a narrow range of `$W$` values (2 to 30) on a single model and dataset. The paper does not demonstrate that the relationship holds for other models (13B, 34B, 70B), other datasets, or larger `$W$` values (which would require more FLOPs than a single A100 provides but would be testable with LP on multiple GPUs). The scaling law contains a fitted parameter `$f$` (the fraction of steps with good speculations) that is empirically determined for one configuration (`$f = 3.106$` for LLaMA-2-Chat-7B on MT-Bench) — it is unclear whether this parameter generalizes across models and tasks, or whether it would need to be re-fitted for each deployment.
+
+The theoretical claim that "decoding steps decrease linearly with log(per-step FLOPs)" is also somewhat tautological given the model: `$S$` is defined in terms of `$E(\#\text{tokens})$` (Equation 7), which is defined in terms of `$b$` (Equation 5), and per-step FLOPs are proportional to `$b \times N$`. The `$\log b$` scaling comes from the `$(1-\alpha^i)^b$` term in Equation 5, which indeed decreases exponentially with `$b$`. But this is a property of the mathematical model (parallel independent speculations with identical per-token acceptance rate `$\alpha$`), not an empirically discovered law. The model's assumptions — identical `$\alpha$` across all positions, independent speculations, and the `$f$` parameter to patch over step-to-step variability — are substantial simplifications. The paper does not validate these assumptions empirically (e.g., by measuring whether `$\alpha$` is actually constant across token positions).
+
+#### Claim 3: "LOOKAHEAD DECODING is compatible with concurrent memory-efficient attention (e.g., FlashAttention)."
+
+**This claim is well-supported, with the important caveat that it requires a custom FlashAttention implementation.**
+
+The paper demonstrates that FlashAttention provides approximately 20% end-to-end speedup across configurations (Figures 6 and 7), and that the step compression ratio `$S$` is preserved to within 0.3% (Appendix E). This confirms that LOOKAHEAD DECODING's custom attention mask (Figure 2b) can be implemented within FlashAttention's tiling framework without algorithmic degradation.
+
+However, "compatible" obscures the fact that standard off-the-shelf FlashAttention cannot be used — the attention pattern in Figure 2b is not a simple causal mask, and the paper had to "hardcode LOOKAHEAD DECODING's attention pattern with adjustable W, N, and G in FlashAttention" (Section 3.3). This is a non-trivial modification to a complex CUDA kernel. The paper does not discuss whether the modified FlashAttention supports all features of the original (e.g., different sequence lengths for lookahead and verification branches, variable `$W$` and `$N$` at runtime, or support for ALiBi or other positional encoding variants). The claim of compatibility is accurate but understates the engineering effort required to achieve it.
+
+#### Claim 4: "LOOKAHEAD DECODING preserves the output distribution."
+
+**This claim is strongly supported theoretically (Appendix B) and empirically (Table 2 and Appendix E).**
+
+The theoretical proof in Appendix B establishes that the disjoint n-gram verification algorithm (Algorithm 4) preserves the target sampling distribution. The empirical results in Table 2 confirm that ROUGE scores are nearly identical between autoregressive and LOOKAHEAD DECODING under both greedy and sampling — differences are within 0.03 ROUGE points, which is negligible. The FP32 exact-match verification in Appendix E confirms that LOOKAHEAD DECODING produces bit-identical outputs to autoregressive greedy decoding when numerical precision is not a factor.
+
+One limitation: the generation quality experiments are run only on summarization tasks (CNN/Daily Mail, XSum) with LLaMA-2-7B-Chat. The paper does not verify quality preservation on code generation or math tasks where the acceptance patterns might differ (e.g., if code has longer repeated sequences, acceptance rates might be higher, but the paper doesn't measure whether this introduces any subtle distribution shift). The 160-turn MT-Bench comparison in Appendix E is for exact match of greedy outputs, not a quality metric — it shows bit-identical outputs under FP32, but doesn't assess whether outputs that *differ* under FP16 are of equivalent quality (they differ due to numerical noise, but are they systematically worse?).
+
+#### Claim 5: "Lookahead parallelism achieves strong scaling on multiple GPUs."
+
+**This claim is strongly supported by Figures 6 and 7, with a significant memory constraint.**
+
+The results convincingly demonstrate that LP achieves speedup from adding GPUs (4× on 8 GPUs for ClassEval), while TP and PP cause slowdowns. This is the first inference parallelism strategy to demonstrate strong scaling for batch-1 LLM serving, and it exploits a structural property of LOOKAHEAD DECODING that is genuinely novel.
+
+The critical unstated limitation: LP requires each GPU to hold a **complete model copy**. For a 7B model at FP16, this is ~14GB per GPU — feasible on 8× 40GB A100s. For a 70B model at FP16 (~140GB), LP would require 8 GPUs with >140GB each, which does not exist in current hardware. The paper experiments only with 7B and 13B models for LP (Figure 6 and 7), not 34B or 70B. The strong scaling claim therefore applies only to models that fit comfortably in a single GPU's memory — which, for current hardware, means roughly <20B parameters at FP16. This is a significant constraint that the paper does not discuss in the main text. The "strong scaling" is genuine but applies to a specific (though practically important) regime: relatively small models where latency, not model capacity, is the bottleneck.
+
+Additionally, the 4× speedup figure (abstract) compares 8-GPU LP against single-GPU autoregressive decoding without FlashAttention. Against the stronger FlashAttention-augmented single-GPU baseline, the speedup is closer to 3.7× (visually estimated from Figure 6). This is still impressive, but the headline number inflates the comparison by using the weaker baseline.
+
+#### Missing Experiments That Would Have Strengthened the Paper
+
+1. **Comparison against speculative decoding with a draft model.** The paper argues that LOOKAHEAD DECODING avoids the need for a draft model, which is a legitimate contribution. But it would be informative to see how the achieved speedups compare against a well-tuned speculative decoding setup on the same hardware and models — does LOOKAHEAD DECODING achieve comparable speedups to a method that *does* use a draft model, or is there a substantial performance gap? Without this comparison, the practical value proposition is unclear: if speculative decoding with a small draft model achieves 2.5× speedup and LOOKAHEAD DECODING achieves 1.8×, the convenience of avoiding draft model training must be weighed against the 0.7× performance gap. The paper provides no data to inform this tradeoff.
+
+2. **Throughput measurements with error bars or multiple runs.** All throughput and speedup numbers are reported as point estimates without variance. GPU inference throughput can vary due to thermal throttling, GPU boost clock behavior, and system noise. Without variance estimates, it is impossible to assess whether reported differences (e.g., 1.78× vs. 1.88× for ⑧ vs. ⑨ in Table 3) are statistically meaningful or within measurement noise.
+
+3. **Scaling law validation across models and tasks.** The scaling law analysis (Section 4, Figure 4) is performed only for LLaMA-2-Chat-7B on MT-Bench. Validating the model on 13B, 34B, and code tasks would strengthen the claim that the logarithmic relationship is universal. In particular, measuring how the empirical parameters `$\alpha$` and `$f$` vary across models and tasks would provide actionable guidance for practitioners configuring LOOKAHEAD DECODING on new setups.
+
+4. **Memory overhead analysis.** The paper does not report the GPU memory consumption of LOOKAHEAD DECODING compared to autoregressive decoding. The lookahead branch (`$W \times N$` speculative tokens), verification branch (`$G \times (N-1)$` tokens), and n-gram pool all consume additional memory. For large `$W$` and `$N$`, or for models already near the GPU memory limit, this overhead could prevent LOOKAHEAD DECODING from running at all. The paper's silence on memory consumption is a notable omission for a systems paper.
+
+5. **Latency, not just throughput.** The paper reports throughput (tokens/second) but not latency (time to generate a complete response). For interactive applications, latency is arguably more important than throughput — a method that generates tokens in bursts with variable per-step time might have lower latency variance, which matters for user experience. The step compression ratio `$S$` provides an indirect measure (fewer steps → lower latency), but the per-step time is higher for LOOKAHEAD DECODING, so the net latency impact is not directly reported.
+
+6. **Performance at larger batch sizes.** All experiments use batch size 1 (stated in Section 5). The paper argues that LOOKAHEAD DECODING exploits the memory-bandwidth-bound nature of batch-1 decoding. At larger batch sizes, the decoding process becomes more compute-bound (more tokens per weight load), reducing the FLOP surplus. The paper mentions this as a limitation (Section 5.5) but provides no experimental characterization of where the break-even point lies — at what batch size does LOOKAHEAD DECODING stop providing speedup? This is crucial information for practitioners deciding whether to deploy the method in their serving systems.
+
+7. **Interaction with quantization.** The paper uses FP16 throughout. Many production deployments use INT8 or INT4 quantization to reduce memory footprint and memory bandwidth pressure. Since LOOKAHEAD DECODING relies on FLOP surplus (which increases when memory bandwidth pressure is reduced via quantization?), or decreases (because quantization reduces per-token computation, shrinking the gap between compute and memory)? The interaction is non-obvious and not explored.
+
+#### Summary of Experimental Strengths and Weaknesses
+
+**Strengths:**
+- Broad empirical coverage: 5 datasets, 4+ model families, 7B–70B scale.
+- Convincing demonstration of LP as a novel parallelism strategy with strong scaling.
+- Clean ablation showing the contribution of each component (Table 3).
+- Careful verification of output distribution preservation (Table 2, Appendix B, Appendix E).
+- Hardware-dependence analysis (Figure 8) that contextualizes when the method works.
+
+**Weaknesses:**
+- No comparison against speculative decoding with a draft model — the dominant baseline in the literature.
+- Speedup numbers are point estimates without variance, and some headline figures use weaker baselines for impact.
+- The scaling law is validated only on one model and one dataset; the fitted parameters have unclear generality.
+- Memory overhead is not reported.
+- Latency (not just throughput) is not analyzed.
+- The strong scaling claim for LP is restricted to models that fit in a single GPU's memory — the paper does not discuss this constraint.
+- No batch size >1 experiments, leaving the practical deployment regime (where batching is used for throughput) uncharacterized.
+- Missing ablations on n-gram size, pool eviction policy, and sliding window mechanism leave important design choices unjustified.
 
 ## 6. Limitations and Trade-offs
-- Extra compute per step:
-  - Per-step FLOPs scale with `(W + G) * (N−1)` (§5.5). Recommended single-GPU A100 configs imply 56–120× extra per-step FLOPs for 34B→7B models (Table 4).
-  - Since decoding is memory-bandwidth-bound, many of these FLOPs are “free” on A100 at batch size 1, but not on smaller GPUs or when the workload becomes compute-bound (Fig. 8 and §5.5).
 
-- Diminishing returns:
-  - The step compression `S` grows only linearly with log(FLOPs) for sufficiently large `N` (§4.2). Achieving further reductions requires exponentially more per-step compute.
+### 6.1 Requirement for Large FLOP Surplus Restricts Hardware Applicability
 
-- Hardware and workload dependence:
-  - Gains shrink on devices with less compute headroom (e.g., RTX 3090 vs. A100; Fig. 8).
-  - Large batches (compute-bound regimes) or very large models on limited hardware can reduce or negate gains (§5.5).
+**The assumption or constraint.** LOOKAHEAD DECODING's entire value proposition rests on the existence of idle compute cycles during the memory-bandwidth-bound autoregressive forward pass. When those idle cycles are insufficient — because the GPU is closer to compute-bound — the per-step overhead of the lookahead and verification branches outweighs the benefit of fewer decoding steps, and the method causes slowdowns rather than speedups. The paper is explicit about this requirement in Section 5.5:
 
-- Implementation complexity:
-  - Requires a custom attention mask and modifications to FlashAttention (§3.3), which increases engineering effort.
-  - Multi-GPU LP needs full model replication on each GPU, raising memory requirements (§3.4).
+> "LOOKAHEAD DECODING needs large surplus FLOPs to obtain high speedups. Running in compute-bound environments (e.g., serving with a large batch size) may cause slowdowns."
 
-- Candidate availability:
-  - While the `n-gram pool` grows over time, actual acceptance depends on task structure; domains with fewer local repetitions (e.g., creative open-ended chat) yield smaller speedups than code completion (Fig. 5).
+**The consequence.** This limitation partitions the deployment landscape into two regimes with sharply different outcomes. In the favorable regime (single-batch inference on high-end GPUs with ample compute relative to memory bandwidth, such as the A100), LOOKAHEAD DECODING provides 1.5×–2.3× speedups. In the unfavorable regime (inference on consumer GPUs, large-batch serving where weight loading is amortized over many sequences, or older hardware), the method provides marginal benefit or actively degrades throughput. The RTX 3090 results in Figure 8 demonstrate this concretely: at `W = 30`, LOOKAHEAD DECODING becomes *slower* than autoregressive decoding (speedup drops below 1.0×), and even at the optimal `W = 5`, the speedup is only ~1.3×. The paper also notes that "a larger model requires more FLOPs and quickly hits the GPU FLOPs cap compared to a smaller model" (Section 5.1), which means the method's effectiveness degrades with model scale even on the same hardware — 70B models achieve only 1.45× on MT-Bench vs. 1.64× for 7B (Figure 5).
 
-- Search/verification caps:
-  - A cap `G` is needed to limit verification cost; setting `G` too small underutilizes good candidates, too large increases per-step compute (§3.2, §5.4).
+Moreover, this limitation implies that LOOKAHEAD DECODING provides **no benefit** for the standard throughput-optimized serving paradigm where requests are batched to maximize hardware utilization. In batch serving, the GPU is already kept compute-busy by processing multiple sequences simultaneously; there is no idle FLOP surplus to convert into speculation. The paper does not provide any batch size >1 experiments, leaving unanswered the question of where the break-even point lies. A practitioner running even batch size 2 or 4 cannot determine from the paper's results whether LOOKAHEAD DECODING helps, hurts, or is neutral.
 
-Open questions:
-- How to dynamically tune `W`, `N`, `G` per prompt or per step to optimize acceptance vs. compute?
-- How large can the `n-gram pool` grow in long generations, and what is the best policy for pool management beyond windowing?
+**What evidence exists in the paper.** Figure 8 provides the direct comparison between A100 (1.9× peak speedup) and RTX 3090 (1.3× peak speedup, slowdowns at high `W`). The per-model-size speedup trend in Figure 5 shows declining speedups with larger models (7B > 13B > 34B/70B across all tasks), consistent with shrinking FLOP surplus as model parameter count increases. Table 4 quantifies the extra FLOPs required: the recommended configurations require 120× (7B), 80× (13B), and 56× (34B) extra FLOPs per step. The paper states the compute-bound failure mode explicitly in Section 5.5 but does not characterize it experimentally beyond the A100/RTX 3090 comparison in Figure 8 — there are no experiments at batch size 2, 4, 8, or with other GPU models (V100, H100, T4) that would map out the boundary of applicability.
+
+**Mitigation status.** The paper does not attempt to mitigate this limitation. It provides recommended configurations for A100 GPUs (Table 4) and suggests smaller `W` for smaller FLOP surpluses, but offers no predictive model or heuristic for selecting `W` on arbitrary hardware. The scaling law (Section 4) provides the conceptual framework — step compression scales as `O(log(per-step FLOPs))` — but the empirical parameters (`\alpha`, `f`) are not characterized across hardware or models, so a practitioner cannot predict whether their specific GPU and model combination has sufficient surplus for a net speedup. The paper acknowledges the issue in Section 5.5 and frames it as inherent to the approach's mechanism, not as a solvable problem. The discussion of diminishing returns in Section 4 and Figure 4 implicitly accepts that exponential increases in per-step FLOPs are required for linear step reductions, which is a hard tradeoff rather than a limitation that can be engineered away.
+
+---
+
+### 6.2 Lookahead Parallelism Requires Full Model Replication on Each GPU
+
+**The assumption or constraint.** Lookahead parallelism (LP) distributes the *tokens* in the lookahead and verification branches across GPUs, with each GPU executing its assigned token sub-graph independently. This requires that **every GPU holds a complete copy of the model parameters** (Section 3.4: "LP maintains an entire copy of the model for each GPU (thus needing more memory)"). This is fundamentally different from tensor parallelism (which shards parameters) and pipeline parallelism (which distributes layers). The paper acknowledges this memory requirement parenthetically — "thus needing more memory" — but does not analyze its implications.
+
+**The consequence.** LP is viable only for models that fit **entirely within a single GPU's memory**. For LLaMA-2-7B at FP16, this is approximately 14GB — feasible on an A100 (40GB or 80GB). For LLaMA-2-13B at FP16, approximately 26GB — feasible on 40GB+ GPUs. But for LLaMA-2-70B at FP16, approximately 140GB — **impossible** on any current single GPU (the largest available is 80GB H100/A100). Even with INT8 quantization (halving the memory to ~70GB), the 70B model would not fit on a 40GB A100 and would barely fit on an 80GB GPU with no room for KV cache or the n-gram pool.
+
+This fundamentally limits LP's strong scaling results (Figures 6 and 7) to the small-to-medium model regime. The paper only demonstrates LP for 7B and 13B models — the largest 34B and 70B models are tested only in single-GPU (or PP-assisted) configurations (Figure 5). The 4× speedup headline figure (abstract) is achieved on CodeLlama-7B — a model size where LP's memory requirement is trivially satisfied on 8× 40GB GPUs. For models where LP would be most beneficial (large models with the highest inference latency), it is infeasible on current hardware.
+
+Furthermore, even for models that fit, LP's memory cost multiplies linearly with the number of GPUs: 8 GPUs running LP on LLaMA-2-13B consume 8 × 26GB ≈ 208GB of aggregate GPU memory, compared to tensor parallelism which would use approximately 26GB total (distributed across GPUs). For organizations with limited GPU resources, this 8× memory multiplier may be unacceptable even if it delivers latency improvements.
+
+**What evidence exists in the paper.** The paper states the memory requirement explicitly in Section 3.4 and demonstrates LP only on 7B and 13B models (Figures 6 and 7). The 34B and 70B results in Figure 5 use single-GPU or PP configurations, not LP. The paper does **not** report: (1) the actual GPU memory consumption of LOOKAHEAD DECODING compared to autoregressive decoding (the additional memory for the lookahead window, verification branch, and n-gram pool), (2) whether the 13B LP experiments on S2 (8× 40GB A100s) were near the memory limit, or (3) the largest model size that could feasibly run LP on current hardware. The memory overhead of the n-gram pool — which grows over the course of generation as more n-grams are cached — is not quantified at all.
+
+**Mitigation status.** The paper does not attempt to mitigate this limitation. It frames LP as a benefit ("advantageous in inference as it introduces near-zero communication per step") without discussing the memory constraint as a tradeoff. Section 3.4 mentions that LP is "different from previous parallelism methods" but does not position it as applicable only to a specific model-size regime. There is no discussion of hybrid strategies (e.g., combining LP with tensor parallelism to distribute large models across GPUs while still exploiting disjoint sub-graphs for speculation) or of memory-efficient pool management to reduce overhead. The recommended configurations in Table 4 are only for single-GPU, with no LP-specific guidance. The strong scaling claim in the abstract — "4× with strong scaling on multiple GPUs in code completion tasks" — does not qualify the model size constraint.
+
+---
+
+### 6.3 The Scaling Law Is Empirically Underdetermined and Not Validated as Predictive
+
+**The assumption or constraint.** Section 4 derives a scaling law that relates step compression ratio `S` to the number of parallel speculations `b = W` and the per-token acceptance rate `\alpha`. The derivation relies on several simplifying assumptions: (1) all tokens across all positions and n-grams share the same acceptance rate `\alpha` (i.e., `E(\beta) = \alpha` for all positions), (2) parallel speculations are independent (the acceptance of one n-gram's token at position `i` does not affect another n-gram's probability at the same position), and (3) the step-to-step variability in speculation quality is captured by a single fudge factor `f` representing "for every `f` step, we have one good speculation." The paper fits `\alpha` and `f` to one specific configuration (LLaMA-2-Chat-7B on MT-Bench) and plots the resulting theoretical curve in Figure 4b.
+
+**The consequence.** The scaling law as presented is **descriptive of past behavior**, not **predictive of future performance**. A practitioner deploying LOOKAHEAD DECODING on a new model, dataset, or hardware cannot use the scaling law to predict their expected speedup or to select optimal hyperparameters without first running the actual method to measure `\alpha` and `f` — at which point they have already done most of the work. The law does not provide a way to estimate `\alpha` and `f` from model architecture, dataset characteristics, or hardware specifications; these parameters are purely empirical and must be measured post-hoc.
+
+The identical-`\alpha` assumption is particularly questionable. In practice, tokens at the beginning of an n-gram (immediately following the verified output) should have higher acceptance rates than tokens further into the speculation, because the model's uncertainty compounds with each speculative step. The paper's model assumes all positions are identical, which is analytically convenient but likely overestimates the benefit of long n-grams (since acceptance probability should decay with position). The independence assumption similarly may not hold: if two n-grams share a common prefix, their acceptance at early positions is correlated. The `f` factor is a black-box correction that absorbs all model misspecification, but its fitted value (`f = 3.106` for the single tested configuration) has no clear interpretation — why 3.106 and not 2 or 5? How does `f` vary with dataset difficulty, model size, or `N`? The paper provides no sensitivity analysis.
+
+**What evidence exists in the paper.** The scaling law is tested only in Figure 4a (empirical `S` vs. `W` for LLaMA-2-Chat-7B on MT-Bench) and Figure 4b (the fitted theoretical curve). The qualitative agreement — logarithmic shape, saturation at large `W` — is shown for exactly one (model, dataset) pair. No other models, datasets, or `N` values are tested against the law. The paper does not report goodness-of-fit statistics, prediction intervals, or out-of-sample validation (e.g., fitting on one dataset and testing on another). The recommended configurations in Table 4 are derived empirically, not from the scaling law — if the law were predictive, one could compute the optimal `W` analytically, but the paper does not do this.
+
+**Mitigation status.** The paper does not present the scaling law as a predictive tool; it is framed as revealing the fundamental tradeoff ("we can linearly reduce the number of decoding steps according to per-step log(FLOPs) given a large enough N"). The qualitative insight — that step compression scales logarithmically with per-step FLOPs — is supported by the empirical curve shape and the mathematical form of Equation 5, even if the precise parameters are not generalizable. However, the paper does not acknowledge the scaling law's limitations as a predictive instrument, nor does it suggest validation across models and tasks as future work. The phrase "scaling law" implies a degree of universality that the single-configuration validation does not support.
+
+---
+
+### 6.4 Verification Branch Throughput Is a Hard Bottleneck That the Method Cannot Circumvent
+
+**The assumption or constraint.** The verification branch can process at most `G` n-gram candidates per step. The paper recommends setting `G = W` (Section 3.2: "Empirically we suggest to set G proportional to W to balance generation and verification") and uses this equality in all balanced configurations. The per-step FLOP cost is roughly proportional to `(W + G) × (N − 1)`, so doubling `W` approximately doubles `G` and therefore roughly quadruples the per-step FLOPs (since both `W` and `G` appear multiplicatively with `N-1`).
+
+**The consequence.** The verification branch imposes a **quadratic cost scaling** with `W` (when `G = W`): the per-step FLOPs grow as `O(W × N)` for generation plus `O(G × N)` for verification, which is `O(W × N + W × N) = O(W × N)` — apparently linear in `W`. But since the scaling law shows that step compression `S` scales only as `O(log W)`, the **efficiency** (step compression per unit FLOP) decays rapidly. In other words, to double the step compression ratio, one must square the per-step FLOPs — a deeply unfavorable tradeoff that fundamentally limits how far LOOKAHEAD DECODING can scale, regardless of hardware improvements.
+
+The ablation in Table 3 directly demonstrates this bottleneck: configuration ⑦ (`W = 30, G = 1` — large generation, minimal verification) achieves only 1.61× speedup despite having 30× the generation budget of the baseline, because only one n-gram can be verified per step. The balanced configuration ⑧ (`W = 15, G = 15`) outperforms ⑦ (1.78× vs. 1.61×) despite generating half as many speculative tokens, because the verification bandwidth allows more parallel acceptance. This reveals that **generation without verification bandwidth is wasted** — simply producing more speculations (larger `W`) provides no benefit unless accompanied by proportional verification capacity (`G`), which drives up per-step cost.
+
+This bottleneck is structural, not an implementation artifact. The verification branch must check each candidate against the base model's distribution to preserve output quality — this is the core mechanism that makes LOOKAHEAD DECODING lossless. Without verification, the method would degenerate into Jacobi decoding (which fails because tokens are placed at wrong positions). But verification requires running the base LLM on the candidate n-grams, which costs FLOPs. There is no way around this: to accept `k` tokens per step on average, the verification branch must check enough candidates to have a high probability of at least one surviving to position `k`. The scaling law's `(1 − \alpha^i)^b` term captures precisely this — to make the probability of all `b` candidates failing at position `i` small, `b` must be large relative to `1/\alpha^i`. As target acceptance length increases, the required `b` grows exponentially.
+
+**What evidence exists in the paper.** Table 3 configuration ⑦ vs. ⑧ provides the direct evidence. Figure 4a shows that step compression ratio `S` saturates at `W ≈ 15` for LLaMA-2-Chat-7B on MT-Bench — further increasing `W` yields negligible additional step reduction. The scaling law derivation (Equation 5) shows mathematically that `E(#tokens)` depends on `(1-\alpha^i)^b`, which decays exponentially with `b` for any `\alpha < 1`, confirming the diminishing returns. Figure 8 shows that speedup plateaus or declines on both A100 and RTX 3090 for `W > 15`, consistent with the verification bottleneck dominating. The paper does not experiment with `G > W` (could larger verification budget than generation budget help?) or with adaptive verification (checking only the most promising subset of candidates rather than all `G`).
+
+**Mitigation status.** The paper does not present this as a limitation; it is implicit in the scaling law's mathematical structure. The recommendation to set `G = W` is pragmatic but does not address the underlying bottleneck. Section 8 (future work) is absent — the paper has no dedicated future work section — so there is no discussion of potential mitigations such as hierarchical verification (first filter candidates with a cheap heuristic before full LLM verification), learned candidate selection (train a lightweight classifier to predict which n-grams are most likely to succeed), or adaptive `G` that varies based on observed acceptance rates. The verification bottleneck is fundamental to any lossless speculation-based method, but the paper does not acknowledge it as a limitation or discuss its implications for scaling LOOKAHEAD DECODING to much larger `W` or `N` on future hardware.
+
+---
+
+### 6.5 Output Distribution Preservation Is Verified Only on Summarization and for Greedy Decoding
+
+**The assumption or constraint.** The paper claims that LOOKAHEAD DECODING is "exact" (abstract), "lossless" (Section 1), and "preserves the output distribution" (Section 3.2). The theoretical proof in Appendix B establishes this for the sampling verification algorithm (Algorithm 4) under the assumption that the base LLM's forward pass produces the correct probability distributions — an assumption shared by all speculative decoding methods. The empirical validation of output quality is performed only on two summarization datasets (CNN/Daily Mail and XSum, Table 2) using ROUGE scores for LLaMA-2-7B-Chat.
+
+**The consequence.** The generation quality validation has significant scope gaps that weaken the general claim of output distribution preservation:
+
+**First**, ROUGE scores on summarization measure n-gram overlap with reference summaries — they are coarse metrics that can mask subtle distribution shifts. Two decoding methods could produce systematically different outputs (e.g., one consistently shorter, one with different word choice preferences) while achieving similar ROUGE scores, because ROUGE does not directly measure adherence to the model's target distribution. The paper does not report metrics that directly test distribution preservation, such as KL divergence between autoregressive and LOOKAHEAD output distributions, perplexity of generated text under the base model, or human evaluation of output quality.
+
+**Second**, the quality experiments are limited to summarization tasks with LLaMA-2-7B-Chat. The paper's main speedup results span chat (MT-Bench), math (GSM8K), code completion (HumanEval), instruction-based code (MBPP), and class-level code (ClassEval). None of these datasets have their output quality evaluated — the paper implicitly assumes that the verification algorithm guarantees preservation, but does not empirically confirm it on the primary benchmarks. Code generation, in particular, has different statistical patterns than summarization (repetitive structure, specific syntax constraints, longer exact-match sequences), and the greedy verification algorithm may interact differently with these patterns. A subtle bug in verification that causes, say, systematic dropping of closing brackets or indentation could devastate code quality while being invisible to summarization ROUGE.
+
+**Third**, Table 2 shows that under sampling (temperature 1.0), speedup drops from 1.57× to 1.46× on CNN/Daily Mail and from 1.60× to 1.50× on XSum. The paper attributes this to lower acceptance rates but does not investigate whether the *types* of tokens that get rejected under sampling differ systematically from those accepted under greedy — if rejection disproportionately affects rare or diverse tokens, the sampling verification could subtly shift the output toward more common tokens even though the algorithm is mathematically correct. The theoretical guarantee holds for the *expected* distribution over many runs, but the paper does not test this empirically with distribution-level metrics across multiple runs.
+
+**Fourth**, the Appendix E verification that LOOKAHEAD DECODING produces exact-match outputs to FP32 autoregressive greedy on MT-Bench is strong evidence for greedy correctness, but only 160 turns are tested (a small sample), and the FP16 comparison shows that LOOKAHEAD DECODING differs from the FP32 baseline on 35–44 out of 160 turns — the paper claims this is "not worse than huggingface's half-precision inference," but without analyzing *which* examples differ and whether the differences are semantically equivalent or genuinely wrong, this claim is qualitative. The 35–44 differing examples under FP16 could include reasoning errors, factual mistakes, or nonsensical outputs that HuggingFace's FP16 decoding does not produce — the paper does not check.
+
+**What evidence exists in the paper.** Table 2 (ROUGE on summarization) and Appendix E (exact match on MT-Bench) constitute the entirety of the quality evaluation. The paper does **not** report: quality metrics for any code or math dataset, perplexity under the base model, KL divergence from autoregressive outputs, human evaluation, or diversity metrics. The theoretical proof in Appendix B is mathematically sound but does not address the empirical question of whether LOOKAHEAD DECODING's greedy-speculation-with-sampling-verification mechanism introduces subtle biases in practice.
+
+**Mitigation status.** The paper provides a formal proof (Appendix B) that the sampling verification algorithm preserves the output distribution, and this proof is a genuine contribution. The empirical validation is minimal but not absent — the ROUGE scores in Table 2 are nearly identical, and the FP32 exact-match result in Appendix E is compelling for greedy decoding. However, the paper does not acknowledge the scope limitation of its quality evaluation, does not call for more comprehensive quality testing on code and math tasks, and does not discuss the possibility that the interaction between greedy speculation and sampling verification could introduce distribution shifts that the proof does not capture (e.g., due to floating-point arithmetic or the truncation of n-grams at arbitrary boundaries). The term "lossless" in the abstract implies a stronger guarantee than the empirical validation supports across all tested tasks.
+
+---
+
+### 6.6 No Comparison Against Speculative Decoding — the Dominant Paradigm in the Literature
+
+**The assumption or constraint.** LOOKAHEAD DECODING is positioned as an alternative to speculative decoding that eliminates the need for a draft model. The paper's entire motivation is built around the difficulty of obtaining good draft models: they are "nontrivial to obtain and unable to generalize" (abstract), "their speedups are bounded by the token acceptance rate" (Section 1), and "training a draft model to achieve a high acceptance rate is non-trivial, and the trained draft model does not generalize across base models and datasets" (Section 1). Given this positioning, the natural empirical question is: how does LOOKAHEAD DECODING compare against a well-tuned speculative decoding setup on the same hardware, models, and datasets? The paper provides **zero** such comparisons.
+
+**The consequence.** Without a speculative decoding baseline, the paper's central value proposition is unquantified. The argument is: "speculative decoding requires a draft model, which is hard; our method provides speedup without one." But the reader cannot assess the *cost* of avoiding the draft model. If speculative decoding with a small distil-led draft model achieves 2.5× speedup on MT-Bench and LOOKAHEAD DECODING achieves 1.8×, the practitioner must weigh the 0.7× performance gap against the engineering effort of training a draft model. If the gap is small (e.g., 1.8× vs. 1.9×), LOOKAHEAD DECODING's convenience is compelling. If the gap is large (1.8× vs. 3.0×), draft model training may be worth the effort for latency-critical applications. The paper provides no data to inform this tradeoff.
+
+Moreover, the paper's criticism of speculative decoding — that draft models don't generalize — is itself a claim that could be tested. A draft model trained on LLaMA-2-7B might perform poorly on LLaMA-2-70B, but *how* poorly? A draft model trained on chat might fail on code, but *how badly*? Without quantifying the generalization gap, the paper's critique of speculative decoding remains rhetorical rather than empirical. LOOKAHEAD DECODING's advantage is that it requires no training and thus "generalizes" across models and datasets automatically. But if the generalization penalty for speculative decoding is small in practice (e.g., a 10% drop in acceptance rate), the convenience argument weakens.
+
+This omission is particularly striking because the paper's related work section (Section 6) discusses speculative decoding extensively, acknowledging it as the dominant approach. The experimental setup includes comparisons against prompt lookup (Table 3, configuration ②), which is a much weaker baseline than speculative decoding with a trained draft model. The decision to compare against prompt lookup but not speculative decoding suggests either that speculative decoding implementations were not available for LLaMA-2 at the time of writing, or that the comparison would be unfavorable to LOOKAHEAD DECODING — but neither explanation is provided.
+
+**What evidence exists in the paper.** The paper compares against: HuggingFace greedy search (throughout), FlashAttention-augmented autoregressive decoding (Figures 6, 7), prompt lookup (Table 3), and various distributed parallelism strategies (TP, PP; Figures 6, 7). There is **no comparison against any speculative decoding variant** — not the original method (Leviathan et al., 2023; Chen et al., 2023), not Specinfer (Miao et al., 2023), not Medusa (Cai et al., 2024), not EAGLE (Li et al., 2023), and not REST (He et al., 2023). The paper does not explain this omission.
+
+**Mitigation status.** The paper does not acknowledge the absence of speculative decoding baselines as a limitation. The related work section (Section 6) positions LOOKAHEAD DECODING relative to speculative decoding conceptually but does not attempt empirical comparison. This is the most significant methodological gap in the paper's evaluation — the central claim ("accelerates LLM decoding without needing auxiliary models") is established against weak baselines, but the performance relative to the dominant paradigm that *does* use auxiliary models remains entirely unknown. A reader evaluating whether to invest in LOOKAHEAD DECODING integration vs. training a draft model for their specific deployment has no evidence from this paper to guide that decision.
 
 ## 7. Implications and Future Directions
 - Field impact:

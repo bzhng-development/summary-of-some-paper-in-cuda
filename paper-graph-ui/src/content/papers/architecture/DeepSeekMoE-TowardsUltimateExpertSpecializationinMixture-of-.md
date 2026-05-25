@@ -9,147 +9,596 @@ DeepSeekMoE pioneers a novel Mixture-of-Experts (MoE) architecture by introducin
 ---
 
 ## 1. Executive Summary
-DeepSeekMoE introduces a Mixture-of-Experts (MoE) architecture that explicitly pushes experts to specialize by combining two ideas: splitting experts into many small pieces (“fine‑grained expert segmentation”) and always enabling a small set of “shared” experts that hold common knowledge. Across scales (2B→16B→145B parameters), this design matches or surpasses prior MoE systems (e.g., GShard) at the same compute, approaches dense-model upper bounds, and delivers competitive performance to strong 7B dense baselines while using only ~40% of the compute (Tables 3–4, Figure 1).
+
+This paper introduces **DeepSeekMoE**, a Mixture-of-Experts architecture for large language models designed toward **ultimate expert specialization** through two principal strategies: **fine-grained expert segmentation** (splitting each standard FFN expert into $m$ smaller experts while activating $m$ times more of them, increasing combinatorial flexibility from $\binom{16}{2} = 120$ to $\binom{64}{8} \approx 4.4 \times 10^9$ possible expert combinations) and **shared expert isolation** (dedicating $K_s$ experts to always be activated, capturing common knowledge and reducing redundancy among the remaining routed experts). Validated on a suite of zero-shot and few-shot benchmarks spanning language understanding, reasoning, code generation, and question answering, DeepSeekMoE 2B approaches the performance of its dense counterpart with equivalent total parameters—the theoretical upper bound for MoE models—while matching GShard 2.9B, a model with 1.5× the expert parameters and computation. When scaled to 16B parameters trained on 2T tokens, DeepSeekMoE 16B achieves performance comparable to LLaMA2 7B using only approximately 40% of computations, and a preliminary 145B-parameter version demonstrates performance comparable to DeepSeek 67B using only 28.5%—or even 18.2%—of computations, establishing that the architecture's efficiency advantages persist across model scales but revealing a consistent limitation on multiple-choice benchmarks attributed to the relatively smaller attention parameter budget inherent to MoE designs.
 
 ## 2. Context and Motivation
-- Problem addressed
-  - In standard MoE Transformers, each token is sent (routed) to the top‑K of N experts. With few large experts, two issues arise (Section 1):
-    - Knowledge hybridity: one expert must hold heterogeneous knowledge because it sees diverse tokens.
-    - Knowledge redundancy: different experts repeatedly learn the same common knowledge because many tokens need it.
-- Why it matters
-  - Scaling LLMs improves capability but is compute‑expensive. MoE keeps compute nearly constant by only activating a subset of parameters per token, but only if experts specialize well so that activated compute is used efficiently (Section 1).
-- Prior approaches and their limits
-  - GShard (top‑2 routing), Switch Transformer (top‑1), Hash Layer (fixed hashing) increase parameter counts with sparse activation but still route to a small set of large experts, leaving hybridity/redundancy unresolved (Sections 1–2; Equations 3–5).
-  - Shared experts have been used as an engineering optimization (DeepSpeed‑MoE; cited in Section 3.2), but not as an algorithmic means to reduce redundancy.
-- Positioning
-  - DeepSeekMoE is an architectural redesign specifically targeting “expert specialization” by:
-    - Increasing the granularity and combinatorial flexibility of which experts can be activated for a token.
-    - Removing common knowledge from routed experts via always‑on shared experts.
-  - It demonstrates specialization gains through ablations and stress tests and scales effectively to large models (Sections 4–7).
+
+### The Core Problem: Expert Specialization Remains Fundamentally Broken in MoE Architectures
+
+The central problem this paper tackles is that **existing Mixture-of-Experts architectures for large language models fail to achieve genuine expert specialization**—the ability for each expert to acquire non-overlapping, focused knowledge. While MoE architectures have emerged as a dominant paradigm for scaling model parameters while managing computational costs, the paper argues that conventional designs suffer from two interrelated pathologies that prevent experts from becoming truly specialized. This matters because **specialization is the entire premise of the MoE approach**: if experts do not develop distinct, focused capabilities, then the additional parameters represent wasted capacity rather than genuine model improvement.
+
+The paper identifies two specific failure modes in conventional MoE architectures like GShard (Lepikhin et al., 2021), which serve as the baseline that motivates the entire architectural innovation:
+
+**Knowledge Hybridity:** In typical MoE designs, the number of experts is relatively small—commonly 8 or 16. When only 8 or 16 experts exist and each token must be routed to one or two of them, any individual expert receives tokens covering a wide diversity of knowledge types. The expert is therefore forced to learn many different kinds of knowledge simultaneously within its parameters. The paper argues that this **hybrid knowledge** is "hard to utilize simultaneously" (Section 1)—the expert's capacity becomes a jumble of unrelated patterns rather than a coherent specialization. This is not merely an aesthetic problem: if an expert encodes heterogeneous knowledge, activating that expert for a given token means paying the full computational cost of the expert's parameters while only benefiting from a fraction of what it has learned.
+
+**Knowledge Redundancy:** Conversely, tokens assigned to different experts may nevertheless require common foundational knowledge. For example, both an expert handling mathematical reasoning and an expert handling code generation might need to internalize basic arithmetic operations, logical connectives, or common syntactic patterns. As a result, multiple experts independently converge on learning similar or identical knowledge in their separate parameters. This **redundancy** means that the total effective knowledge capacity of the model is substantially lower than the total parameter count would suggest—parameters are being wasted on duplicate representations.
+
+These two issues are fundamentally in tension with each other: knowledge hybridity suggests experts are too coarse-grained (needing more experts), while knowledge redundancy suggests they are drawing from overlapping needs (needing some mechanism to share common knowledge). Together, they mean that conventional MoE architectures operate far from the theoretical upper bound of what MoE models could achieve—a bound the paper defines as the performance of a dense model with all expert parameters activated simultaneously.
+
+### Why Expert Specialization Matters: The Practical Stakes
+
+The failure of expert specialization is not merely a theoretical curiosity—it has direct consequences for the **efficiency-compute tradeoff** that makes MoE architectures attractive in the first place. The entire value proposition of MoE models rests on the idea that you can dramatically increase parameter count while keeping activated computations modest, because only a subset of experts processes each token. But this value proposition depends on a hidden assumption: that those additional parameters are genuinely useful, encoding distinct knowledge that meaningfully improves the model's capabilities.
+
+If experts fail to specialize—if they encode hybrid, overlapping knowledge—then **parameter scaling yields diminishing returns**. The paper's empirical comparisons make this concrete: a GShard model with 2.0B total parameters substantially underperforms a DeepSeekMoE model with the same parameter count, and requires 1.5× the expert parameters and computation (GShard 2.9B) to match DeepSeekMoE 2B (Table 2). This means that in a GShard architecture, roughly a third of expert parameters and compute are being wasted relative to what is achievable with better specialization. When scaling to production-scale models with hundreds of billions of parameters, this waste translates directly to millions of dollars in training compute and reduced inference throughput.
+
+The importance of this problem is further underscored by the paper's scaling results. DeepSeekMoE 16B achieves comparable performance to LLaMA2 7B using only ~40% of the computations, and DeepSeekMoE 145B matches DeepSeek 67B using only 28.5% (or even 18.2%) of computations. These are not marginal improvements—they represent a **fundamentally different point on the cost-capability frontier**. For organizations deciding how to allocate compute budgets, the difference between an MoE architecture that achieves genuine expert specialization and one that does not could mean deploying a model with 2.5× fewer FLOPs for the same downstream performance, or equivalently, achieving substantially better performance at a fixed inference budget.
+
+### The Rich Prior Work on MoE Architectures—and Its Blind Spot
+
+Mixture-of-Experts is not a new idea. The concept originates from Jacobs et al. (1991) and Jordan and Jacobs (1994), who proposed training independent expert modules to handle different subsets of the data. In the modern era of large language models, the technique was revitalized by Shazeer et al. (2017), who introduced sparsely-gated MoE layers into LSTM-based language models, demonstrating that enormous parameter counts could be achieved with manageable computation by routing each token to only a subset of experts.
+
+The subsequent wave of MoE research focused primarily on **routing strategies** and **training stability**:
+
+- **GShard** (Lepikhin et al., 2021) established the top-2 gating paradigm that became the de facto standard, routing each token to two experts via a learned softmax-based gate.
+- **Switch Transformer** (Fedus et al., 2021) simplified routing to top-1, arguing that activating a single expert per token was sufficient and improved computational efficiency.
+- **Hash Layer** (Roller et al., 2021) and **StableMoE** (Dai et al., 2022b) explored fixed (non-learned) routing strategies for improved training stability.
+- **Expert-choice routing** (Zhou et al., 2022) inverted the paradigm, letting experts choose which tokens to process rather than vice versa.
+- **ST-MoE** (Zoph, 2022) tackled training instability and fine-tuning difficulties that had plagued earlier MoE models.
+
+What is striking about this body of work is that **virtually none of it addresses expert specialization directly**. The research community had been optimizing routing algorithms—how to decide which tokens go to which experts—without asking the prior question of whether the experts themselves are structurally capable of developing specialized knowledge. The paper articulates this gap explicitly: "most of the previous MoE models are based on conventional top-1 or top-2 routing strategies, leaving large room for improving expert specialization" (Section 8).
+
+This blind spot is understandable given the historical trajectory. The early challenges with MoE were primarily about making routing work at all—avoiding collapse where all tokens routed to a single expert, managing load imbalance across devices, and stabilizing training dynamics. These were hard engineering problems, and solving them was a prerequisite for any further architectural innovation. But by focusing exclusively on routing, the field had implicitly accepted the structure of experts themselves as fixed: an expert is a standard FFN, and you have $N$ of them. The question of whether $N = 8$ or $N = 16$ with top-1 or top-2 routing is the right design space was never systematically interrogated.
+
+### Where Prior Approaches Fall Short: The Specific Limitations
+
+The paper's critique of existing MoE architectures goes beyond the high-level observation that specialization is poor. It identifies several specific, measurable limitations:
+
+**Limited combinatorial flexibility.** In a conventional GShard model with 16 experts and top-2 routing, each token activates exactly 2 experts. The number of possible expert combinations is $\binom{16}{2} = 120$. While this seems large, consider what it means: the model has only 120 distinct "modes" of computation for processing any given token. If the space of knowledge types in the training data is substantially larger than 120—which it almost certainly is for a diverse corpus spanning code, math, literature, multiple languages, and factual knowledge—then the model is forced to cram multiple knowledge types into the same expert combinations, leading directly to knowledge hybridity.
+
+**No mechanism for shared knowledge extraction.** In all the routing strategies described above—top-1, top-2, hash routing, expert-choice—every expert is treated as independent and the only mechanism for sharing knowledge across experts is that tokens with similar features will tend to route to the same experts. But this is indirect and lossy. If 7 out of 8 experts all need to learn basic syntactic patterns, they will each redundantly encode those patterns in their parameters because there is no architectural pathway for one expert to "depend on" common knowledge extracted by another. The paper notes that a prototype of the shared expert concept appeared in Rajbhandari et al. (2022), but frames their contribution as deriving it from an **algorithmic** standpoint (expert specialization) rather than the **engineering** standpoint (computation distribution) of prior work.
+
+**Empirical evidence of redundancy and inefficiency.** The paper's own ablation experiments, discussed in Section 4.5, provide concrete evidence of these limitations in GShard. When the authors progressively disable top-routed experts and force the model to use alternatives, GShard×1.5 shows substantially less performance degradation than DeepSeekMoE (Figure 4). This directly measures redundancy: if experts encode overlapping knowledge, the model can compensate when some are removed. DeepSeekMoE's greater sensitivity to disabling top experts indicates its experts are more specialized and less replaceable—validating that the prior GShard architecture indeed suffered from significant parameter redundancy.
+
+**The scaling ceiling.** Perhaps most importantly, the paper demonstrates that DeepSeekMoE 2B "nearly approaches the performance of its dense counterpart with an equivalent number of parameters, which sets the strict upper bound of MoE models" (Section 4.3). This is a crucial theoretical result: it shows that previous MoE architectures were leaving performance on the table—not just marginally, but substantially. The dense counterpart represents what the model could achieve if all expert parameters were activated for every token (i.e., if the model were dense). Getting close to this bound means the sparse activation pattern is not fundamentally limiting—the architecture is efficient. Falling far short of this bound, as prior architectures implicitly did, means the sparsity mechanism itself is wasting capacity.
+
+### How DeepSeekMoE Positions Itself: Not a New Routing Strategy, but a New Expert Structure
+
+The paper's key intellectual move is to **shift the design space from routing algorithms to expert structure**. Rather than asking "how should we decide which experts to activate?", DeepSeekMoE asks "what structure of experts would enable genuine specialization in the first place?" The two proposed strategies—fine-grained expert segmentation and shared expert isolation—are direct responses to the two pathologies identified above.
+
+**Against knowledge hybridity, more but smaller experts.** By segmenting each standard FFN into $m$ smaller experts and activating $m$ times more of them, the architecture dramatically increases the combinatorial space of expert activation patterns (from 120 to billions) while keeping total parameters and computation constant. This allows different types of knowledge to be decomposed and learned by different experts, rather than being forced to cohabitate in a small number of large experts.
+
+**Against knowledge redundancy, a dedicated mechanism for common knowledge.** By isolating certain experts as "shared" and always activating them, the architecture provides an explicit pathway for common knowledge to be captured once and made available to all tokens, rather than being redundantly encoded in multiple routed experts. This frees the routed experts to focus on distinctive, specialized knowledge that warrants the sparse activation pattern.
+
+It is important to understand that DeepSeekMoE is not proposing a new routing algorithm—it uses standard top-K learned routing (Equations 10-11). Nor is it proposing a new training objective or optimization procedure. The innovation is entirely in the **structure of the expert bank**: how many experts there are, what their relative sizes are, and whether some are designated as shared versus routed. This is both the paper's strength (it is a clean, architectural contribution that can be combined with any routing strategy) and its limitation (it does not address other known MoE challenges like training instability or inference-time load balancing, though it does contribute balance loss mechanisms in Section 3.3).
+
+The paper positions DeepSeekMoE as a **foundational architecture** rather than a point solution. By demonstrating that the architectural principles scale from 2B to 16B to 145B parameters with consistent advantages over GShard, the authors are making a claim of generality: this is not a trick that works at small scale but disappears at scale, but rather a structural improvement that fundamentally shifts the cost-capability tradeoff for MoE language models at any scale.
+
+### The Unstated Assumptions That Make This Work Timely
+
+While the paper does not dwell on it, the DeepSeekMoE architecture implicitly relies on several developments that made this work feasible now:
+
+**Training data abundance.** Fine-grained expert segmentation increases the number of experts dramatically (from 16 to 64 or 128), which means each expert receives fewer tokens during training. For experts to develop meaningful specializations despite seeing fewer tokens, the total training corpus must be large enough that even sub-sampled experts see sufficient data. The paper's use of 100B tokens for the 2B model and 2T tokens for the 16B model reflects this requirement.
+
+**Hardware capable of managing many small experts.** As experts become finer-grained, the ratio of computation to communication overhead worsens—smaller experts mean more frequent routing decisions and more expert dispatch operations per FLOP. The paper's infrastructure section (4.1.2) describes custom CUDA and Triton kernels for gating algorithms and fusing computations across linear layers in different experts, suggesting that making this architecture efficient required significant systems work.
+
+**Understanding of the attention-FFN knowledge division.** The paper's observation that DeepSeekMoE 16B excels at knowledge-intensive tasks but underperforms on multiple-choice benchmarks is attributed to its limited attention parameters relative to dense models. This conclusion relies on prior work (Dai et al., 2022a) establishing that FFNs are responsible for knowledge memorization while attention handles more dynamic, contextual processing. Without this understanding, the performance pattern would be puzzling rather than diagnostic.
 
 ## 3. Technical Approach
-Key terms
-- `Expert`: a module structurally identical to an FFN (feed‑forward network) inside a Transformer block.
-- `Router`: the module that assigns each token to experts via a softmax over expert “affinity” scores and chooses the top‑K experts to activate (Equations 3–5).
-- `Top‑K routing`: per token, activate only the K experts with highest affinity.
 
-3.1 Preliminaries: standard MoE in Transformers (Section 2)
-- A Transformer block applies self‑attention then an FFN. MoE replaces some FFNs with an MoE layer.
-- For a token at layer l with hidden state u_l_t, the layer computes a weighted sum over experts:
-  - h_l_t = sum over i of g_i,t · FFN_i(u_l_t) + u_l_t (Equation 3).
-  - g_i,t is nonzero only for K experts with highest routing score s_i,t (Equations 4–5), ensuring sparse activation and thus compute efficiency.
+### 3.1 Reader Orientation
 
-3.2 Fine‑grained expert segmentation (Section 3.1; Figure 2b; Equations 6–8)
-- Idea: Instead of N large experts, split each expert into m smaller experts by shrinking each FFN’s intermediate dimension by 1/m. Keep total parameters and total compute constant by:
-  - Increasing the total number of experts to mN and the number of activated experts to mK.
-  - Each token now selects mK smaller experts instead of K large experts.
-- Why it helps:
-  - More “slots” to place distinct knowledge reduces hybridity—specialized sub‑experts can focus on finer topics.
-  - Combinatorial flexibility: with N=16 and K=2, standard routing yields C(16,2)=120 combinations. With m=4 (64 experts) and mK=8, combinations jump to C(64,8)=4,426,165,368 (Section 3.1). This lets the router assemble a tailored mixture for each token.
-- Mechanics:
-  - The MoE output becomes h_l_t = sum_{i=1..mN} g_i,t · FFN_i(u_l_t) + u_l_t (Equation 6) with g_i,t selecting top mK out of mN (Equation 7).
+We are building a **Mixture-of-Experts Transformer language model** where the MoE layers are structurally redesigned so that each expert genuinely specializes in a focused, non-overlapping subset of knowledge. The problem this solves is that conventional MoE architectures force a small number of large experts to encode hybrid, overlapping knowledge, wasting parameter capacity. The "shape" of the solution is twofold: (1) split each standard expert into many smaller ones while activating proportionally more of them to dramatically increase the combinatorial flexibility of expert selection, and (2) designate a few experts as **shared**—always activated regardless of the input—to capture common knowledge once and remove it from the burden of the routed experts.
 
-3.3 Shared expert isolation (Section 3.2; Figure 2c; Equations 9–11)
-- Idea: Dedicate K_s experts that are always activated for every token (“shared experts”) to hold common knowledge and features (e.g., basic syntax, common phrases, arithmetic).
-- Keep compute constant by reducing routed activations from mK to (mK−K_s). The final layer output:
-  - h_l_t = sum_{i=1..K_s} FFN_i(u_l_t) + sum_{i=K_s+1..mN} g_i,t · FFN_i(u_l_t) + u_l_t (Equation 9).
-- Why it helps:
-  - Removes redundancy: routed experts no longer need to relearn fundamentals; they specialize on non‑overlapping, rarer knowledge.
-  - The design is algorithmic: shared experts intentionally absorb ubiquitous patterns to free routed experts for specialization.
+### 3.2 Big-Picture Architecture (Diagram in Words)
 
-3.4 Load balancing for stability and efficiency (Section 3.3; Equations 12–17)
-- Two balancing losses prevent routing collapse and device hot‑spots:
-  - Expert‑level balance: encourages tokens to distribute across routed experts by penalizing the product of each expert’s load fraction f_i and average probability P_i (Equations 12–14). A small factor α1 avoids harming performance.
-  - Device‑level balance: when experts are sharded across devices, group them per device (E_1..E_D) and balance average load across devices via f'_i and P'_i (Equations 15–17). A larger α2 reduces system bottlenecks.
-- Practical tuning:
-  - Small α1 to prevent collapse; larger α2 to balance compute across devices (Section 3.3).
-  - For 2B and 16B setups without expert parallelism, device‑level loss is unnecessary (Sections 4.1.3, 5.1.2). For 145B with expert parallelism, α2=0.05 is used (Section 7.1).
+The system is a standard Transformer language model with a key modification: at most layers, the standard Feed-Forward Network (FFN) is replaced by a **DeepSeekMoE layer**, which contains three logical components:
 
-3.5 Implementation and training (Sections 4.1–5.1, 7.1)
-- Data: multilingual, English + Chinese with code and math; 100B tokens for 2B validation, 2T for 16B, 245B for 145B preliminary run (Sections 4.1.1, 5.1.1, 7.1).
-- Systems: HAI‑LLM framework with tensor/data/pipeline/expert parallelism and custom CUDA/Triton kernels (Section 4.1.2).
-- Representative model settings
-  - 2B: 9 layers; 1 shared + 63 routed; activate 1 shared + 7 routed; expert size 0.25× FFN (Section 4.1.3).
-  - 16B: 28 layers; 2 shared + 64 routed; activate 2 + 6; expert size 0.25×; sequence length 4K; 2T tokens (Sections 5.1.2–5.1.3).
-  - 145B: 62 layers; 4 shared + 128 routed; activate 4 + 12; expert size 0.125×; 245B tokens preliminary (Section 7.1).
+1. **A bank of fine-grained routed experts**—many small FFNs (e.g., 63 experts at the 2B scale, each one-quarter the size of a standard FFN). Each token selects a subset of these via learned top-K gating.
+2. **A small set of shared experts**—separate FFNs (e.g., 1 at 2B scale, 2 at 16B scale) that are always activated for every token, regardless of the routing decision.
+3. **A learned gating (router) module**—a linear projection from the token's hidden state to a score vector over the routed experts, followed by a softmax and a top-K selection. This module decides *which* fine-grained routed experts each token will use.
 
-Analogy
-- Think of shared experts as a “core curriculum” every student must take. Routed experts are electives. Fine‑grained segmentation makes electives smaller and more numerous, so each student can pick a tailored set of classes that fit their needs precisely.
+Information flows as follows: a token's hidden representation `$u_t^l$` arrives (after self-attention). It is fed into all shared experts in parallel (deterministic) and simultaneously into the router. The router computes affinity scores, selects the top `$mK - K_s$` routed experts, and the token is processed only by those selected routed experts. The outputs of the shared experts and the selected routed experts are summed (with the routed experts weighted by their gate values) and added to the residual stream. The total FLOPs per token are determined by the number of activated experts (shared plus routed) times the cost of one small expert, which is held constant with the baseline architecture.
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First**, the formal definition of a generic MoE layer (Equations 1-5), which establishes the notation and baseline routing mechanism that DeepSeekMoE modifies. This is essential for understanding exactly *what* changes in the architecture.
+- **Second**, the fine-grained expert segmentation strategy (Equations 6-8), explaining how splitting experts and activating more of them increases combinatorial flexibility from 120 to billions of combinations while holding total parameters and computation constant.
+- **Third**, the shared expert isolation strategy (Equations 9-11), showing how dedicated shared experts compress common knowledge and reduce redundancy among routed experts.
+- **Fourth**, the load balance mechanisms (Equations 12-17), which are auxiliary losses necessary to prevent routing collapse and ensure efficient distributed computation, and which represent practical engineering concerns that the architecture must address.
+- **Fifth**, the complete parameterization and hyperparameter choices across the three model scales (2B, 16B, 145B), including the rationale for expert size choices and the 1:3 ratio between shared and activated routed experts.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily an **architectural design paper** whose core idea is that expert specialization in MoE models can be achieved not through better routing strategies but through a fundamentally different structure of the expert bank—more and smaller experts with a dedicated mechanism for common knowledge extraction. The technical contribution is entirely in how the MoE layer is constructed; training objectives, optimization, and routing algorithms are largely standard.
+
+---
+
+#### Generic MoE Layer for Transformers (Baseline)
+
+The paper first defines the standard MoE layer that it will modify. In a dense Transformer, each block consists of self-attention followed by a Feed-Forward Network (FFN). The standard formulation is:
+
+$$u_{1:T}^l = \text{Self-Att}\left(h_{1:T}^{l-1}\right) + h_{1:T}^{l-1}$$
+
+$$h_t^l = \text{FFN}\left(u_t^l\right) + u_t^l$$
+
+where `$T$` is the sequence length, `$u_{1:T}^l \in \mathbb{R}^{T \times d}$` are the hidden states after the `$l$`-th attention module, and `$h_t^l \in \mathbb{R}^d$` is the output hidden state of the `$t$`-th token after the `$l$`-th Transformer block. Layer normalization is omitted for brevity.
+
+**What these equations compute:** The first equation runs multi-head self-attention over the previous layer's outputs and adds the residual connection, producing intermediate representations `$u_t^l$`. The second equation feeds each token independently through an FFN (two linear projections with an activation in between) and adds another residual, producing the layer output `$h_t^l$`.
+
+**Why define it this way:** This decomposition separates the mixing operation (attention, shared across tokens) from the per-token transformation (FFN, independent per token). The MoE replacement targets only the FFN, preserving the self-attention mechanism unchanged. This is the standard practice because FFNs account for the majority of parameters in large Transformers (typically the FFN hidden dimension is 4× the model dimension, making FFN parameters roughly two-thirds of the total).
+
+When an FFN is replaced with an MoE layer, the computation becomes:
+
+$$h_t^l = \sum_{i=1}^{N} \left(g_{i,t} \cdot \text{FFN}_i\left(u_t^l\right)\right) + u_t^l$$
+
+$$g_{i,t} = \begin{cases} s_{i,t}, & s_{i,t} \in \text{Topk}(\{s_{j,t} \mid 1 \leqslant j \leqslant N\}, K) \\ 0, & \text{otherwise} \end{cases}$$
+
+$$s_{i,t} = \text{Softmax}_i\left(u_t^{lT} e_i^l\right)$$
+
+where `$N$` is the total number of experts, `$\text{FFN}_i(\cdot)$` is the `$i$`-th expert (structurally identical to a standard FFN), `$g_{i,t}$` is the gate value (mixing weight) for expert `$i$` on token `$t$`, `$s_{i,t}$` is the token-to-expert affinity score, `$e_i^l$` is a learnable embedding vector representing the centroid of expert `$i$` in layer `$l$`, and `$\text{Topk}(\cdot, K)$` returns the set of `$K$` highest affinity scores.
+
+**What these equations compute together:** For each token, the router computes an affinity score between the token's hidden state and each expert's centroid embedding via dot product, applies a softmax across all experts to get a probability distribution, then zeroes out all but the top `$K$` values. The token is processed only by the `$K$` selected experts (the others are skipped entirely, which is the computational efficiency gain), and their outputs are weighted by the gate values and summed. The residual connection is added at the end.
+
+**Why this form:** The top-K sparsification is what makes MoE computationally efficient—each token activates only `$K \ll N$` experts, so the FLOPs per token scale with `$K$` times the FFN cost rather than `$N$` times. The softmax over all experts ensures that the gate values for the selected experts sum to approximately 1 (though not exactly, since the non-selected values are set to zero and the distribution is no longer normalized—this is a known minor issue but standard in practice). The dot-product routing with learnable centroids `$e_i^l$` is the standard learned routing mechanism from Shazeer et al. (2017) and Lepikhin et al. (2021).
+
+The paper's innovation is entirely in how the set of experts `$N$`, their structure, and the value of `$K$` are chosen—not in the routing formula itself.
+
+---
+
+#### Fine-Grained Expert Segmentation
+
+The first key innovation: **split each expert into `$m$` smaller experts, and correspondingly activate `$m$` times more experts per token, keeping total expert parameters and total computation constant.**
+
+In a conventional MoE layer (Figure 2a), there are `$N$` experts where each expert is a full-sized FFN (with the standard FFN intermediate hidden dimension), and each token activates `$K$` of them (typically `$K = 2$` in GShard). The total number of expert parameters is `$N$` times the parameters of one standard FFN, and the computational cost per token is `$K$` times the cost of one standard FFN.
+
+In the fine-grained variant (Figure 2b), each original expert FFN is split into `$m$` smaller experts by reducing the FFN intermediate hidden dimension to `$1/m$` of its original size. This means each small expert has roughly `$1/m$` the parameters and `$1/m$` the computation of a standard FFN. Since each expert is `$1/m$` the size, the total number of experts becomes `$mN$` to keep total expert parameters constant (`$mN \times \frac{1}{m} \times \text{standard FFN params} = N \times \text{standard FFN params}$`). Correspondingly, the number of activated experts is increased to `$mK$` so that total computation per token remains constant (`$mK \times \frac{1}{m} \times \text{standard FFN cost} = K \times \text{standard FFN cost}$`).
+
+The output of the fine-grained MoE layer is:
+
+$$h_t^l = \sum_{i=1}^{mN} \left(g_{i,t} \cdot \text{FFN}_i\left(u_t^l\right)\right) + u_t^l$$
+
+$$g_{i,t} = \begin{cases} s_{i,t}, & s_{i,t} \in \text{Topk}(\{s_{j,t} \mid 1 \leqslant j \leqslant mN\}, mK) \\ 0, & \text{otherwise} \end{cases}$$
+
+$$s_{i,t} = \text{Softmax}_i\left(u_t^{lT} e_i^l\right)$$
+
+where `$mN$` is the total number of fine-grained experts (each `$1/m$` the size of a standard FFN), and `$mK$` is the number of activated experts per token.
+
+**What changed from the baseline:** The only differences from Equations 3-5 are the replacement of `$N$` with `$mN$` (more, smaller experts) and `$K$` with `$mK$` (more activated experts per token). The total expert parameters (`$mN \times \frac{\text{standard params}}{m} = N \times \text{standard params}$`) and total computation per token (`$mK \times \frac{\text{standard cost}}{m} = K \times \text{standard cost}$`) are identical to the baseline. The routing mechanism (learned dot-product, softmax, top-K selection) is unchanged.
+
+**Why this form matters—the combinatorial argument.** The paper provides a concrete numerical illustration that is central to understanding the motivation. Consider a baseline with `$N = 16$` experts and top-2 routing (`$K = 2$`). The number of possible expert combinations is:
+
+$$\binom{16}{2} = 120$$
+
+Now apply fine-grained segmentation with `$m = 4$`. The number of experts becomes `$4 \times 16 = 64$` and the number of activated experts becomes `$4 \times 2 = 8$`. The number of possible combinations is:
+
+$$\binom{64}{8} = 4,426,165,368$$
+
+This is an increase from 120 to **over 4.4 billion** possible expert activation patterns. The paper argues that this explosion in combinatorial flexibility enables "diverse knowledge to be decomposed more finely and be learned more precisely into different experts" (Section 3.1). Each expert can specialize in a narrower domain because the routing mechanism can compose many experts together to handle a token, rather than forcing a small number of large experts to each cover broad, heterogeneous knowledge.
+
+**Why not just increase `$N$` directly?** The key constraint is that total parameters and computation must remain constant for a fair comparison. If you simply increase `$N$` from 16 to 64 while keeping each expert a full-sized FFN, total expert parameters would quadruple and, with a fixed `$K$`, computation would stay the same but you would be activating a much smaller fraction of total parameters (reducing the effective capacity utilized per token). The fine-grained approach decouples the number of experts from the per-expert size, enabling more experts without more total parameters.
+
+**Concrete numbers from the validation experiments.** For the 2B-parameter validation experiments (Section 4.1.3), the paper sets the total number of expert parameters to equal 16 times that of a standard FFN, and the number of activated expert parameters to equal 2 times that of a standard FFN. In the standard GShard baseline, this means `$N = 16$` full-sized experts with `$K = 2$` activated. In DeepSeekMoE, each expert is `$1/4$` the size of a standard FFN (`$m = 4$`), resulting in `$mN = 64$` total experts with `$mK = 8$` activated (before accounting for shared experts, which are subtracted from the routed count as described next). However, the paper's final DeepSeekMoE 2B configuration (Table 1 caption) uses 1 shared expert and 63 routed experts, activating 1 shared and 7 routed (total 8, matching the `$2 \times$` activated expert parameter budget). This means `$mN - K_s = 63$` routed fine-grained experts with `$mK - K_s = 7$` activated, consistent with the formulas when `$K_s = 1$`.
+
+---
+
+#### Shared Expert Isolation
+
+The second key innovation: **designate `$K_s$` experts as "shared"—always activated for every token—and reduce the number of activated routed experts by `$K_s$` to maintain constant total computation.**
+
+The motivation is that in conventional MoE, multiple routed experts may need to learn common foundational knowledge (basic syntax, common logical patterns, ubiquitous facts), leading to redundancy across expert parameters. By creating a separate channel for common knowledge, the routed experts are freed to specialize in distinctive, non-overlapping knowledge.
+
+With shared expert isolation integrated (Figure 2c), the complete DeepSeekMoE layer computes:
+
+$$h_t^l = \sum_{i=1}^{K_s} \text{FFN}_i\left(u_t^l\right) + \sum_{i=K_s+1}^{mN} \left(g_{i,t} \cdot \text{FFN}_i\left(u_t^l\right)\right) + u_t^l$$
+
+$$g_{i,t} = \begin{cases} s_{i,t}, & s_{i,t} \in \text{Topk}(\{s_{j,t} \mid K_s+1 \leqslant j \leqslant mN\}, mK - K_s) \\ 0, & \text{otherwise} \end{cases}$$
+
+$$s_{i,t} = \text{Softmax}_i\left(u_t^{lT} e_i^l\right)$$
+
+where `$K_s$` is the number of shared experts (always activated, no gating), `$mN$` is the total number of experts including both shared and routed, `$mN - K_s$` is the number of routed experts (subject to gating), and `$mK - K_s$` is the number of activated routed experts per token.
+
+**What these equations compute:** The first term is a simple sum over the outputs of all `$K_s$` shared experts—these receive every token and require no routing decision. The second term is the standard gated sum over the selected routed experts, identical in form to the fine-grained-only version (Equation 6) but with the routed expert indices running from `$K_s + 1$` to `$mN$` and the top-K selection now picking only `$mK - K_s$` experts from the routed pool (since the budget for activated computation already includes the `$K_s$` shared experts). The third term is the residual connection.
+
+**What changed from fine-grained-only:** The expert pool is now partitioned into two types with different activation semantics. The shared experts are **deterministically activated**—no gating, no selection, always on. The routed experts continue to use learned top-K gating but now compete for a reduced number of slots (`$mK - K_s$` instead of `$mK$`). Total activated expert computations remain `$K_s + (mK - K_s) = mK$` (the same as fine-grained-only), and total expert parameters remain `$mN \times \frac{\text{standard params}}{m} = N \times \text{standard params}$` (the same as the baseline).
+
+**Why this form:** The shared experts provide an explicit architectural pathway for common knowledge to be captured once and made available to all tokens. Without shared experts, common knowledge would either (a) be redundantly learned by multiple routed experts (wasting parameters) or (b) be absent from some tokens that don't route to the experts that learned it (reducing capability). With shared experts, the routed experts can specialize in distinctive, context-dependent knowledge because they can rely on the shared experts to provide the baseline common knowledge. The paper empirically supports this: disabling the shared expert in DeepSeekMoE 2B causes Pile loss to increase dramatically from 1.808 to 2.414 (Section 4.5), even though the number of activated experts is kept constant by adding one more routed expert.
+
+**Concrete numbers across scales.** The paper uses different shared expert configurations at different model sizes:
+
+- **2B validation model:** `$K_s = 1$` shared expert, 63 routed experts (`$mN - K_s = 63$`), 7 activated routed experts (`$mK - K_s = 7$`). The shared-to-activated-routed ratio is 1:7, which equals the 1:3 ratio of shared to total activated routed experts multiplied for the larger-scale configurations.
+- **16B model:** `$K_s = 2$` shared experts, 64 routed experts (`$mN - K_s = 64$`), 6 activated routed experts (`$mK - K_s = 6$`). The total activated experts are `$2 + 6 = 8$`. The shared-to-activated-routed ratio is 2:6 = 1:3.
+- **145B model:** `$K_s = 4$` shared experts, 128 routed experts (`$mN - K_s = 128$`), 12 activated routed experts (`$mK - K_s = 12$`). The total activated experts are `$4 + 12 = 16$`. The shared-to-activated-routed ratio is 4:12 = 1:3.
+
+The consistent 1:3 ratio between shared experts and activated routed experts emerges from an ablation study (Section 4.4) that tested 1, 2, and 4 shared experts at the finest granularity (64 total experts) while keeping total experts and activated experts constant. The study found that "different ratios of the shared experts and routed experts do not significantly impact the performance, and 1, 2, and 4 shared experts achieve a Pile loss of 1.808, 1.806, and 1.811, respectively. Considering that the ratio of 1:3 yields a marginally better Pile loss, when scaling up DeepSeekMoE, we keep the ratio between shared experts and activated routed experts as 1:3." This means the ratio itself is not highly sensitive (the loss range is only 1.806–1.811), but the 1:3 configuration was chosen as the slightly optimal and therefore default setting.
+
+**Relationship to prior work.** The paper acknowledges that "the prototype of shared expert isolation can be credited to Rajbhandari et al. (2022)" but emphasizes a key distinction: prior work derived this idea from an **engineering perspective** (balancing computation distribution across devices), while DeepSeekMoE derives it from an **algorithmic perspective** (expert specialization and redundancy reduction). This reframing matters because it changes the design goal: the engineering perspective would optimize shared expert placement for load balancing, while the algorithmic perspective optimizes for knowledge decomposition quality.
+
+---
+
+#### Load Balance Mechanisms
+
+While not the central architectural contribution, the paper introduces two auxiliary loss functions to prevent a well-known failure mode of learned routing: **routing collapse**, where the model learns to send all or most tokens to a small subset of experts, leaving other experts untrained and reducing the effective capacity of the model.
+
+**Expert-Level Balance Loss.** This loss encourages each routed expert to receive a roughly equal fraction of the total tokens over a batch, preventing collapse. The loss is:
+
+$$\mathcal{L}_{\text{ExpBal}} = \alpha_1 \sum_{i=1}^{N'} f_i P_i$$
+
+$$f_i = \frac{N'}{K' T} \sum_{t=1}^{T} \mathbb{1}(\text{Token } t \text{ selects Expert } i)$$
+
+$$P_i = \frac{1}{T} \sum_{t=1}^{T} s_{i,t}$$
+
+where `$\alpha_1$` is a hyper-parameter called the expert-level balance factor, `$N' = mN - K_s$` is the number of routed experts, `$K' = mK - K_s$` is the number of activated routed experts, `$T$` is the total number of tokens in the batch, `$\mathbb{1}(\cdot)$` is the indicator function (equals 1 if token `$t$` selected expert `$i$` among its top-`$K'$` choices, 0 otherwise), and `$s_{i,t}$` is the softmax affinity score from Equation 11.
+
+**What `$f_i$` computes:** The fraction of tokens routed to expert `$i$`, normalized such that if every expert received exactly `$K'T / N'$` tokens (the uniform distribution under the constraint that each token selects `$K'$` experts), `$f_i$` would equal 1. Values greater than 1 indicate the expert is receiving more than its "fair share" of tokens; values less than 1 indicate it is being under-utilized.
+
+**What `$P_i$` computes:** The average softmax probability assigned to expert `$i$` across all tokens in the batch, regardless of whether expert `$i$` was actually selected. This captures the router's tendency to prefer expert `$i$` even when it isn't in the top-`$K'$`.
+
+**What `$\mathcal{L}_{\text{ExpBal}}$` computes as a whole:** The product `$f_i P_i$` penalizes experts that both have high routing probability AND receive many tokens. If an expert has high `$P_i$` (the router strongly prefers it) but low `$f_i$` (it actually receives few tokens, because it narrowly misses the top-`$K'$` cutoff), the penalty is moderate—the issue is the routing mechanism not translating preference into selection, not over-utilization. The worst case is high `$f_i$` and high `$P_i$`: the expert is both strongly preferred AND actually dominates token assignments, which is the collapse scenario. The sum over all routed experts and scaling by `$\alpha_1$` produces the final loss.
+
+**Why this form (specifically the product `$f_i P_i$`):** A simpler alternative would be to penalize only `$f_i$` deviating from 1 (encouraging uniform token distribution) or only penalize large `$P_i$` (encouraging uniform router probability). The product form penalizes the conjunction: it is acceptable for an expert to be universally applicable (high `$P_i$`) as long as it doesn't actually dominate token assignments (low `$f_i$` due to competition), and it's acceptable for an expert to process many tokens (high `$f_i$`) as long as the router doesn't systematically prefer it over alternatives (moderate `$P_i$`). This is the standard auxiliary loss from Shazeer et al. (2017) and subsequent work.
+
+**Device-Level Balance Loss.** When experts are distributed across multiple devices (via expert parallelism), ensuring equal token counts per expert is unnecessarily restrictive—what matters for preventing computation bottlenecks is that each **device** processes roughly the same amount of work, not that each individual expert does. The device-level balance loss relaxes the expert-level constraint:
+
+$$\mathcal{L}_{\text{DevBal}} = \alpha_2 \sum_{i=1}^{D} f_i' P_i'$$
+
+$$f_i' = \frac{1}{|\mathcal{E}_i|} \sum_{j \in \mathcal{E}_i} f_j$$
+
+$$P_i' = \sum_{j \in \mathcal{E}_i} P_j$$
+
+where `$\alpha_2$` is the device-level balance factor, `$D$` is the number of devices, `$\mathcal{E}_i$` is the set of routed experts deployed on device `$i$`, and `$|\mathcal{E}_i|$` is the number of experts on that device.
+
+**What these compute:** `$f_i'$` is the average of `$f_j$` (the token fraction per expert) over all experts on device `$i$`—this represents the average utilization of experts on that device. `$P_i'$` is the sum of `$P_j$` (the average routing probability per expert) over all experts on device `$i$`—this represents the total routing probability mass assigned to that device. Their product penalizes devices that both receive high routing probability AND high utilization, encouraging balanced computation across devices without requiring balance at the individual expert level.
+
+**Why this matters in practice:** The paper states that "excessive constraints on load balance will compromise model performance" (Section 3.3). Forcing strict per-expert balance limits the router's ability to send tokens to genuinely appropriate experts. The device-level loss provides a coarser constraint that addresses the practical hardware concern (uneven device utilization causes some GPUs to idle while others are overloaded) while giving the router more freedom to make optimal per-expert assignments. The paper sets a small `$\alpha_1$` to prevent routing collapse and a larger `$\alpha_2$` when using expert parallelism to promote balanced device computation.
+
+**Concrete balance factor values across scales:**
+- **2B validation model:** `$\alpha_1 = 0.01$`, no device-level loss (all experts on one GPU).
+- **16B model:** `$\alpha_1 = 0.001$`, no device-level loss (within each layer, all experts on the same device due to pipeline parallelism, so device-level balance is not applicable).
+- **145B model:** `$\alpha_1 = 0.003$`, `$\alpha_2 = 0.05$` (routed experts per layer distributed across 4 devices via expert parallelism).
+
+The decreasing expert-level balance factor with scale (`$0.01 \rightarrow 0.001 \rightarrow 0.003$`) reflects a tension: at larger scales, the balance loss interferes more with model quality, so it is reduced. The paper explicitly notes for the 16B model that "a higher expert-level balance factor cannot increase the computation efficiency, but instead, it will compromise the model performance" (Section 5.1.2) because under the parallelization strategy used (pipeline parallelism with all experts of a layer on one device), there is no device-level imbalance to correct.
+
+---
+
+#### Complete Model Configurations and Hyperparameter Rationale
+
+The paper presents three model scales, each with specific architectural choices justified by the paper's ablations and practical considerations.
+
+**2B validation model (Section 4.1.3).**
+- 9 Transformer layers, hidden dimension `$d = 1280$`, 10 attention heads of dimension 128.
+- All FFNs replaced with MoE layers. Total expert parameters = 16× standard FFN. Activated expert parameters = 2× standard FFN.
+- Configuration: 1 shared expert + 63 routed experts, each expert 1/4 the size of a standard FFN (`$m = 4$`, `$K_s = 1$`, `$mK - K_s = 7$` activated routed).
+- Total parameters: ~2.0B. Activated parameters: ~0.3B.
+- Max sequence length: 2048. Batch size: 2048 sequences = 4M tokens per batch. Training steps: 25,000 for 100B tokens.
+- AdamW optimizer: `$\beta_1 = 0.9$`, `$\beta_2 = 0.95$`, weight decay = 0.1. Max learning rate `$1.08 \times 10^{-3}$`, warmup for 2K steps, step decay (×0.316) at 80% and 90% of training. Gradient clip norm 1.0. No dropout.
+- Expert-level balance factor `$\alpha_1 = 0.01$`. No device-level loss.
+
+**Why these choices for the 2B model:** The 9-layer, 1280-hidden-dimension configuration is deliberately small to enable rapid experimentation and ablations. All FFNs are replaced with MoE (no dense FFN layers kept), giving the maximum possible expert parameter count at this scale. The `$m = 4$` segmentation granularity was chosen based on the ablation in Figure 3, which showed consistent improvement from `$m = 2$` to `$m = 4$`. The 1:7 ratio of shared to activated routed experts was chosen from the shared-expert-count ablation (1, 2, 4 shared experts tested at 64 total experts). The 100B token training budget matches the largest training run feasible for the validation experiments and is sufficient to observe specialization effects.
+
+**16B model (Section 5.1.2).**
+- 28 Transformer layers, hidden dimension `$d = 2048$`, 16 attention heads of dimension 128.
+- All FFNs **except the first layer** replaced with MoE layers. The first layer retains a dense FFN because "the load balance status converges especially slower for the first layer" (Section 5.1.2).
+- Each MoE layer: 2 shared experts + 64 routed experts, each expert 1/4 the size of a standard FFN (`$m = 4$`, `$K_s = 2$`, `$mK - K_s = 6$` activated routed). Total activated experts per token: `$2 + 6 = 8$`.
+- Total parameters: ~16.4B. Activated parameters: ~2.8B (of which attention parameters are ~0.5B).
+- Max sequence length: 4096. Batch size: 4608 sequences = ~18M tokens per batch. Training steps: ~106K for 2T tokens.
+- AdamW optimizer: `$\beta_1 = 0.9$`, `$\beta_2 = 0.95$`, weight decay = 0.1. Max learning rate `$4.2 \times 10^{-4}$`, warmup for 2K steps, step decay (×0.316) at 80% and 90% of training. Gradient clip norm 1.0. No dropout.
+- Expert-level balance factor `$\alpha_1 = 0.001$`. No device-level loss.
+
+**Why the first layer is excluded from MoE:** The paper observes slower convergence of load balance in the first layer, likely because the token representations at the first layer (closest to the input embeddings) have less structure for the router to learn meaningful routing decisions. Keeping the first layer dense avoids this instability while sacrificing minimal efficiency since one layer out of 28 is a small fraction of total compute.
+
+**Why `$m = 4$` is not increased further at 16B:** The paper explicitly states: "An even finer expert segmentation granularity is not employed due to the potential reduction in computational efficiency associated with excessively small expert sizes" (Section 5.1.2). Smaller experts mean the ratio of computation to routing overhead worsens—the routing decision and expert dispatch costs become a larger fraction of the per-token cost. At larger scales (145B), the ratio of expert size to dispatch overhead improves because the hidden dimension is larger, allowing finer granularity (`$m = 8$`).
+
+**Why `$2.8$`B activated parameters for a 16B total model:** This is approximately 17.5% of total parameters activated. The paper targets 2× standard FFN activated parameters relative to the standard FFN size, following the same ratio as the GShard baseline (top-2 routing out of 16 experts = `$2/16$` of expert parameters activated). The attention parameters (0.5B) are additional and not sparsified.
+
+**145B model (Section 7.1).**
+- 62 Transformer layers, hidden dimension `$d = 4096$`, 32 attention heads of dimension 128.
+- All FFNs except the first layer replaced with MoE layers.
+- Each MoE layer: 4 shared experts + 128 routed experts, each expert 1/8 the size of a standard FFN (`$m = 8$`, `$K_s = 4$`, `$mK - K_s = 12$` activated routed). Total activated experts per token: `$4 + 12 = 16$`.
+- Total parameters: ~144.6B. Activated parameters: ~22.2B.
+- Max sequence length: 4096. Batch size: 4608 sequences = ~18M tokens per batch. Training: 13K steps for 245B tokens (preliminary—not full training).
+- AdamW optimizer: `$\beta_1 = 0.9$`, `$\beta_2 = 0.95$`, weight decay = 0.1. Max learning rate `$3.0 \times 10^{-4}$`, warmup for 2K steps, then constant (no decay for this preliminary run). Gradient clip norm 1.0. No dropout.
+- Expert-level balance factor `$\alpha_1 = 0.003$`. Device-level balance factor `$\alpha_2 = 0.05$`.
+
+**Why `$m = 8$` at 145B:** At larger hidden dimensions (4096 vs. 2048), the standard FFN intermediate dimension is correspondingly larger (typically 4× the hidden dimension), so segmenting into 8 pieces still leaves each expert with a reasonable size that amortizes routing overhead. The paper additionally notes that "DeepSeekMoE 145B aligns the intermediate hidden dimension in each expert to a multiple of 64 for computation efficiency" (Section 7.2), which is a hardware-aware constraint that slightly inflates the total parameter count (making the 145B model 6% larger than the comparable GShard 137B).
+
+**Why the 145B training is preliminary:** The model is trained on only 245B tokens instead of a full training budget (which would likely be multiple trillions of tokens at this scale). The results are therefore indicative but not final—the paper frames this as an "initial study" to validate that the architectural advantages persist at scale rather than disappearing.
+
+---
+
+#### Design Choices Summary and Their Justifications
+
+**Fine-grained segmentation rather than simply increasing total experts:** The paper's innovation is specifically the coupling of more experts with proportionally smaller experts and proportionally more activated experts, keeping total parameters and computation constant. Simply increasing `$N$` while keeping experts full-sized would increase total parameters and computation; simply increasing `$K$` while keeping `$N$` constant would increase computation without increasing combinatorial flexibility. The fine-grained approach achieves the combinatorial benefit without any cost increase.
+
+**Shared experts rather than implicit knowledge sharing:** The alternative—relying on routing to naturally group tokens with shared needs to the same experts—is what conventional MoE does, and it leads to redundancy. The explicit shared expert mechanism forces common knowledge into a dedicated channel, which is more parameter-efficient. The paper's irreplaceability experiment (disabling the shared expert causes a catastrophic Pile loss increase from 1.808 to 2.414) is strong evidence that the shared expert captures knowledge that routed experts do not redundantly encode.
+
+**1:3 ratio of shared to activated routed experts from empirical sweep rather than theory:** The paper attempted 1:7, 2:6, and 4:4 configurations at 64 total experts and found minimal differences (Pile loss 1.808, 1.806, 1.811). The 1:3 ratio is chosen as marginally best but the insensitivity is itself a finding—the architecture is robust to this choice, and practitioners can likely use similar ratios without extensive tuning.
+
+**Expert size constraints are hardware-driven at larger scales:** The choice of `$m = 4$` at 16B and `$m = 8$` at 145B is not purely algorithmic—it reflects the tradeoff between combinatorial flexibility (more, smaller experts is better) and computational efficiency (very small experts have high relative routing/dispatch overhead). This is a practical engineering constraint, not a fundamental limitation of the approach, and suggests that better systems optimization could enable even finer granularity.
+
+**All FFNs replaced with MoE (except layer 1 at larger scales):** For the 2B model, every layer uses MoE, maximizing the expert parameter count. At 16B and 145B, the first layer is kept dense to avoid slow load balance convergence, which the paper observed empirically. This is a practical compromise, and the first layer represents a small enough fraction of total compute that the efficiency loss is negligible.
+
+**Balance loss configuration reflects tension between specialization and utilization:** The decreasing expert-level balance factor with scale (`$0.01 \rightarrow 0.001 \rightarrow 0.003$`) and the introduction of device-level balance only when expert parallelism is used reflect the paper's pragmatic approach: enforce only as much balance as needed for hardware efficiency, leaving the router maximum freedom to make optimal expert assignments for model quality.
 
 ## 4. Key Insights and Innovations
-- Fine‑grained expert segmentation (Section 3.1; Figure 2b; Equations 6–8)
-  - What’s new: increase expert granularity and the number of activated experts while holding total parameters and FLOPs constant.
-  - Why it matters: massively increases the space of expert combinations, enabling more precise token‑to‑knowledge matching. This is a substantive architectural change rather than a training trick.
-- Shared expert isolation (Section 3.2; Figure 2c; Equations 9–11)
-  - What’s new: algorithmically reserve always‑on experts for common knowledge to reduce redundancy among routed experts.
-  - Why it matters: boosts parameter efficiency and makes routed experts more specialized. Empirically crucial—disabling the shared expert increases Pile loss from 1.808 to 2.414 at 2B scale (Section 4.5).
-- Explicit specialization evidence, not just performance (Section 4.5; Figures 4–6)
-  - DeepSeekMoE is more sensitive when top routed experts are masked (Figure 4): Pile loss rises faster than GShard×1.5, meaning top experts are less interchangeable—an indicator of stronger specialization and lower redundancy.
-  - With fewer activated experts (only 4 routed), DeepSeekMoE still matches GShard’s Pile loss (Figure 5), showing more “accurate” knowledge acquisition per activation.
-  - A model trained from scratch with only half the activated routed experts still outperforms GShard on downstream tasks (Figure 6).
-- Approaching dense upper bounds at small scale (Table 2)
-  - With the same total parameters as GShard 2B, DeepSeekMoE achieves performance comparable to GShard×1.5 (1.5× expert parameters and compute) and nearly matches a dense model with 16× FFN parameters (“Dense×16”), which is an upper bound on MoE capacity at this depth/width.
+
+### Innovation 1: Reframing MoE Improvement from Better Routing to Better Expert Structure
+
+The paper's most fundamental conceptual move is **shifting the design space for Mixture-of-Experts models from routing algorithms to expert structure**. This represents a genuine reframing of the problem rather than an incremental refinement of existing approaches.
+
+For the entire modern history of MoE language models—from Shazeer et al. (2017) through GShard (Lepikhin et al., 2021), Switch Transformer (Fedus et al., 2021), Hash Layers (Roller et al., 2021), StableMoE (Dai et al., 2022b), and expert-choice routing (Zhou et al., 2022)—the research community had been optimizing a single question: **how should we decide which tokens go to which experts?** This framing treats the experts themselves as fixed architectural units (standard FFNs) and seeks to improve the model by making routing more stable, more balanced, or more intelligent. The implicit assumption is that if routing works well, experts will naturally specialize.
+
+DeepSeekMoE challenges this assumption by asking a prior question: **are the experts themselves structured in a way that makes specialization possible?** The paper's diagnosis—that conventional MoE suffers from knowledge hybridity (too few, too-large experts forcing heterogeneous knowledge into single parameter sets) and knowledge redundancy (no mechanism to prevent multiple experts from redundantly learning common knowledge)—identifies a blind spot in the routing-centric paradigm. These are structural problems that no routing algorithm, no matter how sophisticated, can solve: if you have only 16 experts and each must cover diverse knowledge, perfect routing still leaves each expert with hybrid knowledge. If there is no architectural pathway for common knowledge to be shared, optimal routing still results in redundancy.
+
+The significance of this reframing extends beyond the specific solutions DeepSeekMoE proposes. It opens a new axis for MoE research: **expert morphology**—how many experts there are, what their relative sizes should be, whether they should be homogeneous or heterogeneous in structure, and whether different types of experts should have different activation semantics. Prior work had treated the expert as an indivisible atom; DeepSeekMoE shows that the atom can be split and that some atoms should be wired differently than others.
+
+This is a **fundamental conceptual shift** rather than an incremental improvement. The evidence that the shift matters is the paper's demonstration that DeepSeekMoE 2B approaches the theoretical upper bound of MoE performance—the performance of a dense model with all expert parameters activated simultaneously (Table 2)—while GShard at 1.5× the expert parameters and computation only matches it. If the problem were routing quality, a better routing algorithm applied to GShard should close this gap. The fact that structural changes to the expert bank close it suggests the routing-centric paradigm was targeting the wrong bottleneck.
+
+### Innovation 2: Combinatorial Flexibility as an Explicit Design Principle
+
+The paper introduces **combinatorial flexibility of expert activation patterns as a formal, quantifiable design target** for MoE architectures. This is distinct from the common intuition that "more experts is better"—it provides a mathematical framework for understanding why.
+
+Prior work chose the number of experts (`$N$`) and the number of activated experts (`$K$`) based on engineering pragmatics: enough experts to make sparsity worthwhile, few enough to avoid routing collapse, with `$K = 1$` or `$K = 2$` for simplicity. There was no principled argument connecting these choices to the model's capacity to decompose knowledge. The dominant assumption was that as long as the routing mechanism works, the specific `$N$` and `$K$` values matter only for efficiency, not for the fundamental quality of learned representations.
+
+DeepSeekMoE challenges this by computing the combinatorial space explicitly: with 16 experts and top-2 routing, `$\binom{16}{2} = 120$` possible activation patterns; with 64 experts and top-8 routing (achieved via `$m = 4$` fine-grained segmentation), `$\binom{64}{8} \approx 4.4 \times 10^9$` possible patterns. The paper argues this 7-order-of-magnitude increase is not merely aesthetic—it directly enables finer knowledge decomposition because different types of knowledge can be routed to different expert subsets rather than being forced to cohabitate in a small number of large experts.
+
+What makes this an intellectual contribution rather than a trivial observation is the **explicit coupling of expert granularity with activation count to hold total compute constant**. A naive approach to increasing combinatorial flexibility would be to simply increase `$N$` while keeping `$K$` fixed, but this increases total expert parameters without increasing per-token computation, meaning each expert receives fewer training tokens and the fraction of total capacity utilized per token decreases. The fine-grained segmentation strategy—split experts into `$m$` pieces while activating `$m$` times more of them—achieves the combinatorial benefit while holding both total parameters and per-token computation constant. This is a **Pareto-improving transformation**: combinatorial flexibility increases without any cost in parameters or FLOPs.
+
+The significance is both theoretical and practical. Theoretically, it suggests that **the combinatorial capacity of the routing mechanism** is a previously overlooked scaling dimension for MoE models, analogous to how the attention mechanism's capacity scales with sequence length. Practically, it provides a design principle for scaling MoE architectures: to maintain or improve expert specialization as you scale, you should increase expert count and activation count proportionally, keeping per-expert size manageable. The paper's gradual increase in expert count across scales (63 routed at 2B, 64 at 16B, 128 at 145B) and the halving of relative expert size at 145B (`$m = 8$` rather than `$m = 4$`) reflect this principle applied at scale.
+
+The ablation in Figure 3 provides direct evidence that the principle works: moving from 16 experts (GShard baseline) to 32 experts (2× segmentation) to 64 experts (4× segmentation) produces monotonic performance improvements across diverse benchmarks while holding total parameters and computation constant. This is not a saturation curve that flattens—at least within the range studied, more combinatorial flexibility continues to yield gains.
+
+### Innovation 3: The Shared Expert as an Algorithmic (Not Engineering) Construct
+
+The paper **reconceptualizes the shared expert from an engineering convenience to an algorithmic mechanism for expert specialization**. This reframing is what distinguishes DeepSeekMoE's shared expert isolation from superficially similar ideas in prior work.
+
+The paper explicitly credits the prototype to Rajbhandari et al. (2022), who used always-active experts for load balancing purposes in distributed MoE inference. In that work, the motivation was computational: having some experts always active ensures that every device processes some minimum amount of work, smoothing out load imbalances that arise from the sparsity of expert selection. The shared expert was an engineering hack to improve hardware utilization.
+
+DeepSeekMoE's contribution is reframing the shared expert as an **architectural solution to knowledge redundancy**. The paper argues that in conventional MoE, multiple routed experts independently learn common knowledge (basic syntax, ubiquitous facts, common reasoning patterns) because every token needs this knowledge and different tokens route to different experts. The shared expert provides an explicit, dedicated pathway for this common knowledge to be learned once and made available to all tokens, freeing the routed experts to specialize in distinctive, context-dependent knowledge.
+
+The evidence for this reframing comes from the paper's analysis in Section 4.5, particularly two critical findings:
+
+First, **the shared expert is irreplaceable by routed experts**. When the paper disables the shared expert in DeepSeekMoE 2B and activates one additional routed expert to maintain the same computational cost, Pile loss catastrophically increases from 1.808 to 2.414. This is not a marginal degradation—it is a collapse in language modeling capability. The implication is that the shared expert captures knowledge that routed experts have **stopped encoding** because they rely on the shared expert to provide it. If the routed experts had redundantly learned this knowledge, activating one more of them would partially compensate for the missing shared expert. The fact that it doesn't suggests the architecture has successfully offloaded common knowledge from routed to shared experts.
+
+Second, **DeepSeekMoE exhibits less redundancy among routed experts than GShard**. Figure 4 shows that progressively disabling top-routed experts in DeepSeekMoE causes a steeper Pile loss degradation than in GShard×1.5 (which has the same baseline Pile loss). This means each routed expert in DeepSeekMoE is less replaceable—its knowledge is more distinctive because common knowledge has been extracted into the shared expert.
+
+This reframing is **fundamental rather than incremental** because it changes the design goal for shared experts. Under the engineering framing, the optimal number and placement of shared experts depends on hardware topology and load balancing requirements. Under the algorithmic framing, it depends on the distribution of knowledge types in the data and the desired level of specialization among routed experts. The paper's finding that the shared-to-activated-routed ratio of 1:3 works across scales (2B, 16B, 145B) supports the algorithmic framing—the optimal ratio is a property of knowledge structure, not hardware configuration.
+
+### Innovation 4: Empirical Evidence That MoE Models Can Approach Their Theoretical Performance Ceiling
+
+The paper provides what is—to the authors' knowledge—the **first clear empirical demonstration that a sparse MoE model can closely approach the performance of its dense counterpart with all expert parameters activated**, establishing that the sparsity mechanism itself is not fundamentally limiting when expert specialization is achieved.
+
+This is significant because it addresses a lingering question hanging over the entire MoE paradigm: **does sparse activation inherently cap model quality below what dense models can achieve with the same parameter count?** Prior to this work, MoE models consistently underperformed their dense counterparts with equivalent total parameters (though they typically outperformed dense models at equivalent inference computation). This performance gap could be interpreted in two ways: (1) sparse activation is inherently lossy—having more parameters but only using a subset per token is fundamentally worse than having fewer parameters all available to every token; or (2) prior MoE architectures were not achieving genuine expert specialization, leaving potential performance unrealized.
+
+The paper's evidence strongly supports interpretation (2). Table 2 shows that DeepSeekMoE 2B nearly matches Dense×16, a dense model with 16 times the standard FFN parameters (all activated for every token). This dense model represents the theoretical upper bound for what any MoE model with the same total expert parameters could achieve if sparsity imposed no penalty. Coming close to this bound means that the sparse activation pattern is not the bottleneck—the architecture is efficiently utilizing its expert parameters.
+
+This has two important implications. First, it provides a **validation of the MoE approach as fundamentally sound**—not just a compute-saving trick, but a genuinely efficient architecture that can in principle match the capacity of dense models with far fewer FLOPs. Second, it establishes a **diagnostic for future MoE research**: the gap between an MoE model's performance and the dense upper bound measures how much specialization is still being left on the table. Architectures or training methods that close this gap are improving specialization; those that don't are optimizing other factors.
+
+The paper's scaling results reinforce this interpretation. DeepSeekMoE 16B matches LLaMA2 7B with ~40% of computations (Table 4), and DeepSeekMoE 145B matches DeepSeek 67B with only 28.5% (or even 18.5%) of computations (Table 6). These are not marginal efficiency gains—they represent a qualitatively different cost-capability tradeoff. The finding that DeepSeekMoE 142B (Half Activated), which activates only 6 out of 128 routed experts instead of 12, still matches DeepSeek 67B with only 18.2% of computations while outperforming GShard 137B (which has similar activated parameters to the full 145B model) is particularly striking. It suggests that at larger scales, **parameter efficiency continues to improve**—the model can extract competitive performance from an even sparser activation pattern, possible only because the activated experts are genuinely specialized and effective.
+
+### Innovation 5: The Attention-FFN Knowledge Division as a Diagnostic for MoE Performance Patterns
+
+The paper identifies and explains a **consistent performance pattern across scales where DeepSeekMoE excels at knowledge-intensive tasks but underperforms on multiple-choice benchmarks**, attributing this to the inherent division of labor between attention and FFN parameters in Transformer models—a diagnostic insight that helps practitioners understand when MoE architectures will or won't help.
+
+Across all three model scales, the same pattern emerges: DeepSeekMoE achieves strong or superior performance on tasks requiring factual recall and knowledge memorization (Pile, HellaSwag, TriviaQA, NaturalQuestions) but lags behind comparably-performing dense models on multiple-choice tasks (MMLU, CEval, CMMLU). At 16B, the gap on MMLU is 45.0% vs. DeepSeek 7B's 48.2% (Table 3); at 145B, it's 39.4% vs. DeepSeek 67B's 45.1% (Table 6). On the Chinese multiple-choice benchmarks CEval and CMMLU, the same pattern persists.
+
+The paper's explanation draws on prior work (Dai et al., 2022a) establishing that FFNs in Transformers serve as knowledge storage while attention handles more dynamic, contextual processing. In an MoE architecture, the FFN (expert) parameters are massively scaled while attention parameters remain modest—DeepSeekMoE 16B has only ~0.5B attention parameters compared to DeepSeek 7B's ~2.5B. This creates an **asymmetric capacity profile**: the model has enormous knowledge storage capacity (many expert FFN parameters) but limited contextual integration capacity (fewer attention parameters). Knowledge-intensive tasks that primarily require retrieving stored facts benefit from the large FFN capacity; multiple-choice tasks that require comparing options, integrating context, and applying knowledge flexibly are bottlenecked by the smaller attention budget.
+
+This diagnostic is valuable for three reasons. First, it provides a **principled explanation for when MoE architectures will be most beneficial**, helping practitioners make informed architecture choices based on their target task distribution. Second, it suggests a **natural extension to the architecture**: increasing attention capacity in MoE models, perhaps through mechanisms like multi-query attention or larger attention hidden dimensions, could close the multiple-choice gap without sacrificing the FFN expertise advantages. Third, it validates the **conceptual decomposition of Transformer computation** into attention (context mixing) and FFN (per-token transformation) as a useful lens for architectural design—the observation that scaling one disproportionally affects certain task types confirms that these components serve genuinely different functions.
+
+This innovation is **diagnostic and explanatory** rather than a new architectural mechanism. Its contribution is in helping the field understand the performance profile of MoE models, converting what might otherwise be seen as a puzzling weakness into a predictable consequence of architectural design choices.
 
 ## 5. Experimental Analysis
-Evaluation setup
-- Benchmarks span language modeling (Pile), understanding/reasoning (HellaSwag, PIQA, ARC‑Easy/Challenge), reading comprehension (RACE‑middle/high, DROP), code (HumanEval, MBPP), QA (TriviaQA, NaturalQuestions), math (GSM8K, MATH), multi‑subject MC (MMLU), disambiguation (WinoGrande), and Chinese benchmarks (CLUEWSC, CEval, CMMLU, CHID) (Sections 4.1.4, 5.1.3).
-- Metrics: cross‑entropy or bits‑per‑byte (BPB) for language modeling; accuracy for multiple‑choice; EM for QA; Pass@1 for code (Sections 4.1.4, 5.1.3).
 
-Main findings
-- 2B validation scale (Table 1)
-  - Quote: “DeepSeekMoE… has 2.0B total parameters… GShard has the same activated parameters” (Section 4.2).
-  - Results vs GShard at equal compute (4.3T FLOPs/2K tokens):
-    - Pile loss 1.808 vs 1.867.
-    - HellaSwag 54.8 vs 50.5; PIQA 72.3 vs 70.6.
-    - TriviaQA EM 16.6 vs 10.2; NQ EM 5.7 vs 3.2.
-  - Takeaway: consistent gains across diverse tasks with the same total and activated parameters.
-- Approaching larger baselines (Table 2)
-  - Comparable to GShard×1.5 (higher expert size/compute) across most tasks:
-    - HellaSwag 54.8 vs 54.4; PIQA 72.3 vs 71.1; HumanEval 4.9 vs 3.0; TriviaQA 16.6 vs 15.7.
-  - Nearly matches Dense×16 (16× FFN parameters): Pile loss 1.808 vs 1.806; many task scores within noise.
-- Ablations validate both components (Figure 3)
-  - Starting from GShard (0 shared + 2/16 routed), adding shared expert improves performance; further splitting to 32 then 64 experts (with the same total/activated params) further improves normalized performance across six benchmarks.
-  - Ratios between shared and routed experts (Section 4.4): 1, 2, or 4 shared experts give similar Pile losses (1.808, 1.806, 1.811); the paper later adopts a 1:3 ratio of shared:routed activations when scaling.
-- Specialization diagnostics (Section 4.5; Figures 4–6)
-  - Disable top routed experts: DeepSeekMoE’s Pile loss degrades faster than GShard×1.5 (Figure 4) → less redundancy/more specialization.
-  - Fewer activated routed experts: at 4 routed experts, DeepSeekMoE ≈ GShard on Pile (Figure 5); a half‑activation model trained from scratch beats GShard on downstream tasks (Figure 6).
-- 16B scale on 2T tokens (Section 5; Tables 3–4; Figure 1)
-  - Architecture: 2 shared + 64 routed, activate 2+6; total params 16.4B; activated ~2.8B; 74.4T FLOPs per 4K tokens (Section 5.1.2).
-  - Versus internal dense model DeepSeek 7B (same 2T data; 183.5T FLOPs):
-    - Quote (Table 3): “With only 40.5% of computations, DeepSeekMoE 16B achieves comparable performance with DeepSeek 7B.”
-    - Examples: HellaSwag 77.1 vs 75.4; PIQA 80.2 vs 79.2; TriviaQA 64.8 vs 59.7; NaturalQuestions 25.5 vs 22.2; HumanEval 26.8 vs 26.2.
-    - Weakness: some multiple‑choice tasks (e.g., MMLU 45.0 vs 48.2), attributed to fewer attention parameters in the MoE model (Section 5.2.1).
-    - Practical note: fits inference on a single 40GB GPU and runs ~2.5× faster than a 7B dense model with optimized kernels (Section 5.2.1).
-  - Versus LLaMA2 7B (2T tokens; 187.9T FLOPs):
-    - Quote (Table 4): “With only 39.6% of computations, DeepSeekMoE 16B outperforms LLaMA2 7B on the majority of benchmarks.”
-    - Examples: HellaSwag 77.1 vs 75.6; ARC‑Challenge 49.8 vs 49.0; GSM8K 18.8 vs 15.5; HumanEval 26.8 vs 14.6; MBPP 39.2 vs 21.8.
-    - Chinese benchmarks: very large gains (e.g., CHID 89.4 vs 37.9) because DeepSeekMoE is bilingual (Table 4).
-    - Open LLM Leaderboard (Figure 1): strong average performance relative to models with similar activated parameter counts; comparable to LLaMA2‑7B with ~2.5× fewer activated parameters.
-- Alignment via supervised fine‑tuning (SFT) (Section 6; Table 5)
-  - Setup: 1.4M bilingual SFT examples; same SFT data for all models; 4K max length (Section 6.1).
-  - Results: at ~40% compute, DeepSeekMoE Chat 16B is comparable to dense 7B models across reasoning, reading comprehension, math, and QA; strong on code (HumanEval 45.7, MBPP 46.2) and Chinese tasks; still behind on some multiple‑choice tasks (MMLU 47.2 vs DeepSeek Chat 7B’s 49.7).
-- 145B preliminary scaling (Section 7; Table 6)
-  - Model: 4 shared + 128 routed; activate 4+12; total 144.6B params; ~22.2B activated; trained 245B tokens.
-  - Versus GShard 137B (similar total params/FLOPs): DeepSeekMoE 145B wins widely (e.g., Pile 1.876 vs 1.961; TriviaQA 61.1 vs 52.5).
-  - Versus DeepSeek 67B Dense (2057.5T FLOPs) at only 28.5% compute (585.6T FLOPs): achieves comparable overall performance, stronger on LM and knowledge tasks, weaker on some MC tasks (Table 6).
-  - A “Half Activated” variant (142B total; 12.2B activated; 374.6T FLOPs) still matches the 67B dense baseline on many tasks and beats GShard 137B (Table 6), echoing specialization efficiency.
+### Evaluation Methodology
 
-Assessment
-- The experiments are broad (English, Chinese, code, math), controlled (shared data for critical comparisons), and include ablations and diagnostics that directly test “specialization.” The evidence convincingly supports both the architectural claims and the efficiency claims, with clearly documented trade‑offs (multiple‑choice).
+**Dataset.** The validation experiments (Section 4) use a **100B-token subset** sampled from a large-scale multilingual corpus created by DeepSeek-AI. The corpus primarily focuses on English and Chinese but encompasses other languages, derived from web text, mathematical material, coding scripts, published literature, and other textual materials. For the 16B and 145B models (Sections 5 and 7), the training data is sampled from the same corpus but scaled to 2T tokens and 245B tokens (preliminary), respectively. For evaluation, the paper uses a diverse suite of benchmarks: **language modeling** (Pile test set, measured via cross-entropy loss or bits per byte), **language understanding and reasoning** (HellaSwag, PIQA, ARC-easy, ARC-challenge, all measured by accuracy), **reading comprehension** (RACE-middle, RACE-high, DROP for larger models, measured by accuracy or exact match), **code generation** (HumanEval and MBPP, measured by Pass@1), **closed-book question answering** (TriviaQA and NaturalQuestions, measured by exact match), **math reasoning** (GSM8K and MATH for larger models, measured by exact match), **multi-subject multiple-choice** (MMLU, measured by accuracy), **disambiguation** (WinoGrande, measured by accuracy), and **Chinese benchmarks** (CLUEWSC, CEval, CMMLU, CHID for bilingual models, measured by accuracy or exact match). The exact evaluation protocol varies by task: some use 0-shot, others use few-shot with 3–8 examples as specified in each results table.
+
+**Base models.** The paper uses **three scales of DeepSeekMoE models**, all trained from scratch: a **2B-parameter validation model** (9 layers, hidden dimension 1280, 10 attention heads) trained on 100B tokens; a **16B-parameter model** (28 layers, hidden dimension 2048, 16 attention heads) trained on 2T tokens; and a **preliminary 145B-parameter model** (62 layers, hidden dimension 4096, 32 attention heads) trained on 245B tokens. These are compared against several baseline architectures at matching scales: **dense Transformers** (standard non-MoE models with the same total parameters or matching activated parameters), **GShard** (Lepikhin et al., 2021) using top-2 learned routing, **Switch Transformer** (Fedus et al., 2021) using top-1 learned routing, and **Hash Layer** (Roller et al., 2021) using top-1 hash-based routing. At larger scales, comparisons extend to open-source models including LLaMA2 7B (Touvron et al., 2023b), DeepSeek 7B (DeepSeek-AI, 2024), DeepSeek 67B, and several others shown in Figure 1. The PaLM 2-S* model family is not involved in this work—all DeepSeekMoE models are independently trained Transformer architectures using the DeepSeek-AI infrastructure.
+
+**Metrics.** The primary metrics are **task-specific accuracy measures**: exact match (EM) rate for question answering, reading comprehension, and math tasks; accuracy for multiple-choice and classification tasks; Pass@1 for code generation; and cross-entropy loss or bits per byte (BPB) for language modeling on Pile. The paper does not report confidence intervals or standard deviations for any metrics. For the FLOPs comparison, the paper computes FLOPs per forward pass at a fixed sequence length (2K or 4K tokens) to enable direct efficiency comparisons independent of batch size or training dynamics.
+
+**Baselines.** The validation experiments (Section 4.2, Table 1) compare five models: **Dense** (0.2B total parameters, all parameters activated), **Hash Layer** (2.0B total, 0.2B activated, top-1 hash routing), **Switch Transformer** (2.0B total, 0.2B activated, top-1 learned routing), **GShard** (2.0B total, 0.3B activated, top-2 learned routing), and **DeepSeekMoE** (2.0B total, 0.3B activated, with 1 shared + 63 routed experts, each 1/4 standard FFN size, activating 1 shared + 7 routed). All compared models share the same training corpus and training hyper-parameters. For the larger baseline comparisons in Section 4.3, the paper introduces **GShard×1.5** (2.83B total expert parameters, 0.35B activated, top-2 routing with 1.5× the standard FFN size per expert) and **Dense×16** (1.89B total expert parameters, all activated, composed of 16 shared experts mimicking a dense model with 16× standard FFN parameters). At the 16B scale, comparisons include **DeepSeek 7B** (dense, 6.9B total parameters, trained on the same 2T tokens) and **LLaMA2 7B** (dense, 6.7B total parameters). At the 145B scale, comparisons include **GShard 137B** (sharing the same hidden dimension and layer count as DeepSeekMoE 145B but following the GShard architecture), **DeepSeekMoE 142B (Half Activated)** (same architecture as 145B but with only 2 shared experts and 6 out of 128 routed experts activated), and **DeepSeek 67B (Dense)** (67.4B total parameters).
+
+**Generation budget / compute accounting.** The paper measures compute in **FLOPs per forward pass** at a fixed sequence length, reported as "FLOPs per 2K Tokens" or "FLOPs per 4K Tokens" in the results tables. This accounts for the sparse activation pattern: for MoE models, only the activated experts contribute to FLOPs, not the total expert parameters. For example, DeepSeekMoE 16B uses 74.4T FLOPs per 4K tokens compared to DeepSeek 7B's 183.5T FLOPs and LLaMA2 7B's 187.9T FLOPs. The paper emphasizes that all compared MoE architectures within a given scale have been designed to maintain **constant total expert parameters and constant activated expert parameters** relative to the standard FFN size, enabling direct FLOPs-matched comparisons. For the validation experiments, all MoE models have total expert parameters equal to 16× a standard FFN and activated expert parameters equal to 2× a standard FFN, with the exception of top-1 routing methods (Hash Layer, Switch Transformer) which activate 1× standard FFN.
+
+**Cross-validation / statistical protocol.** The paper does not employ cross-validation in the standard machine learning sense. Instead, it relies on **fixed train-test splits** from the established benchmarks and reports final evaluation results at the end of training. For the ablation studies and difficulty analyses in Section 4, all models are trained once from scratch with controlled hyper-parameters. The paper does not report multiple training runs with different seeds, standard deviations, or statistical significance tests. The "oracle" vs. "predicted" difficulty binning protocols found in the reference paper on test-time compute scaling are not present in this work—DeepSeekMoE does not involve difficulty estimation or adaptive inference strategies.
+
+---
+
+### Main Quantitative Results
+
+#### Validation at 2B Scale: DeepSeekMoE vs. Conventional MoE Architectures
+
+**Headline result.** DeepSeekMoE 2B achieves a **Pile loss of 1.808**, substantially outperforming GShard 2B (1.867), Switch Transformer (1.881), Hash Layer (1.932), and the dense baseline (2.060), despite having the same total parameters as other MoE models and the same activated parameters as GShard (Table 1). On downstream benchmarks, the pattern is consistent: DeepSeekMoE achieves the best or near-best performance on 10 out of 11 evaluated tasks, with particularly large margins on HellaSwag (54.8 vs. 50.5 for GShard), TriviaQA (16.6 vs. 10.2), and NaturalQuestions (5.7 vs. 3.2). The only task where DeepSeekMoE does not dominate is ARC-easy, where Switch Transformer slightly edges it out (45.9 vs. 49.4)—though DeepSeekMoE still significantly outperforms GShard (43.9) on this metric.
+
+**What this demonstrates.** The comparison isolates the effect of the DeepSeekMoE architecture since all models share identical training data, training hyper-parameters, and total expert parameter counts. The critical finding is not simply that DeepSeekMoE outperforms GShard—it's that the margin is **comparable to or larger than the gap between GShard and the dense baseline**. For instance, on HellaSwag, the dense→GShard improvement is 11.7 points (38.8→50.5), while the GShard→DeepSeekMoE improvement is 4.3 points (50.5→54.8)—about 37% of the dense-to-GShard gap. On TriviaQA, the dense→GShard improvement is 5.3 points (4.9→10.2), while GShard→DeepSeekMoE is 6.4 points (10.2→16.6)—actually exceeding the dense-to-GShard gain. This suggests that the architectural improvements (fine-grained segmentation + shared expert isolation) provide benefits of similar magnitude to the introduction of sparsity itself.
+
+**Scaling relative to GShard.** Table 2 reveals a more striking result: **DeepSeekMoE 2B achieves comparable performance to GShard×1.5**, a model with 1.5× the expert parameters and 1.5× the computation per token. The two models have essentially identical Pile loss (1.808 for both), and DeepSeekMoE matches or exceeds GShard×1.5 on 6 out of 11 benchmarks (PIQA, ARC-easy, ARC-challenge, HumanEval, TriviaQA, NaturalQuestions), while GShard×1.5 holds advantages on HellaSwag (54.4 vs. 54.8), RACE-middle (46.4 vs. 44.0), RACE-high (32.4 vs. 31.7), and MBPP (2.6 vs. 2.2). The performance is close enough that the paper claims they are "comparable"—which, given the 1.5× parameter and compute advantage of GShard×1.5, represents a substantial efficiency win for DeepSeekMoE.
+
+**The critical upper-bound result.** Table 2 also compares DeepSeekMoE against **Dense×16**, which represents the theoretical performance ceiling for any MoE model with the same total expert parameters (since Dense×16 activates all expert parameters for every token). DeepSeekMoE achieves a Pile loss of 1.808, nearly matching Dense×16's 1.806—a difference of only 0.002. On downstream tasks, Dense×16 holds a slight edge on most benchmarks (HellaSwag 55.1 vs. 54.8, PIQA 71.9 vs. 72.3, RACE-middle 46.3 vs. 44.0, etc.), but the margins are small enough that the paper claims DeepSeekMoE "nearly approaches the performance" of the upper bound. This is the central theoretical result of the validation experiments: it demonstrates that the sparse activation pattern in DeepSeekMoE is not fundamentally limiting performance—the architecture is achieving close to the maximum possible benefit from its expert parameters.
+
+**Appendix B scaling results.** At a larger validation scale of 13B total parameters (Table 10), DeepSeekMoE actually **outperforms GShard×1.5 distinctly**, with advantages on 7 out of 10 benchmarks: HellaSwag (69.1 vs. 67.7), ARC-easy (58.8 vs. 56.8), RACE-middle (52.4 vs. 50.6), RACE-high (38.5 vs. 36.3), HumanEval (9.8 vs. 6.1), TriviaQA (38.2 vs. 36.7), and NaturalQuestions (13.7 vs. 12.1). GShard×1.5 wins on MBPP (11.6 vs. 10.6) and essentially ties on PIQA and ARC-challenge. This suggests that the relative advantage of DeepSeekMoE over GShard may **increase with scale**—at 2B, DeepSeekMoE matches GShard×1.5; at 13B, it surpasses it.
+
+#### Scaling to 16B: DeepSeekMoE vs. Dense Models at Comparable Performance
+
+**Headline result.** DeepSeekMoE 16B, trained on 2T tokens, achieves performance **comparable to DeepSeek 7B (dense) using only 40.5% of the computations** (74.4T vs. 183.5T FLOPs per 4K tokens), and **comparable to LLaMA2 7B using only 39.6% of the computations** (74.4T vs. 187.9T FLOPs per 4K tokens). This is the central scaling claim of the paper. The detailed results appear in Tables 3 and 4.
+
+**Comparison with DeepSeek 7B (Table 3).** The two models are trained on the same 2T-token corpus, controlling for data effects. Across 18 benchmarks, DeepSeekMoE 16B matches or exceeds DeepSeek 7B on 11 tasks, with notable advantages on Pile (0.74 vs. 0.75 BPB), HellaSwag (77.1 vs. 75.4), PIQA (80.2 vs. 79.2), TriviaQA (64.8 vs. 59.7), NaturalQuestions (25.5 vs. 22.2), HumanEval (26.8 vs. 26.2), MBPP (39.2 vs. 39.0), and GSM8K (18.8 vs. 17.4). DeepSeek 7B holds advantages primarily on multiple-choice and reading comprehension benchmarks: MMLU (48.2 vs. 45.0), CEval (45.0 vs. 40.6), CMMLU (47.2 vs. 42.5), RACE-middle (63.2 vs. 61.9), and DROP (34.9 vs. 32.9). The pattern is **asymmetric**: DeepSeekMoE 16B's advantages are concentrated in knowledge-intensive tasks (memorization, factual recall, code generation), while its disadvantages cluster in tasks requiring comparison across multiple options (multiple-choice) or detailed comprehension with structured output (reading comprehension). The paper attributes this to the attention parameter deficit: DeepSeekMoE 16B has ~0.5B attention parameters vs. DeepSeek 7B's ~2.5B.
+
+**Comparison with LLaMA2 7B (Table 4).** These models were trained on different data (LLaMA2 on its own corpus), so the comparison includes data composition effects. DeepSeekMoE 16B matches or exceeds LLaMA2 7B on the majority of benchmarks. The most dramatic advantages are on code generation (HumanEval 26.8 vs. 14.6, MBPP 39.2 vs. 21.8), math (GSM8K 18.8 vs. 15.5, MATH 4.3 vs. 2.6), and Chinese benchmarks (CLUEWSC 72.1 vs. 64.0, CEval 40.6 vs. 33.9, CMMLU 42.5 vs. 32.6, CHID 89.4 vs. 37.9). These are partially attributable to the presence of code, math, and Chinese text in DeepSeek-AI's training corpus. LLaMA2 7B holds slight advantages on ARC-easy (69.1 vs. 68.1), MMLU (45.8 vs. 45.0), and DROP (34.0 vs. 32.9). On English language understanding benchmarks (HellaSwag, PIQA, ARC-challenge, RACE, TriviaQA, NaturalQuestions), the two models are roughly comparable despite DeepSeekMoE 16B being trained on fewer English texts—the paper frames this as evidence of DeepSeekMoE's efficiency.
+
+**Open LLM Leaderboard (Figure 1).** The leaderboard comparison contextualizes DeepSeekMoE 16B against a broader set of open-source models with varying activated parameter counts. The key visual is Figure 1, which plots average leaderboard performance against number of activated parameters. DeepSeekMoE 16B, with ~2.8B activated parameters, achieves an average score of approximately 48—substantially above the regression line fitted through all other models, and comparable to LLaMA2 7B (~6.7B activated parameters) which scores approximately 49. Models with similar activated parameter counts score much lower: GPT-J 6B (~42), RedPajama-INCITE 7B (~38), Falcon 7B (~37). The paper interprets this as demonstrating that DeepSeekMoE "consistently outperforms models with a similar number of activated parameters by a large margin." The regression line in Figure 1 visually reinforces the claim that DeepSeekMoE achieves performance expected of a model with roughly 2.5× its activated parameter count.
+
+**Training curves (Appendix C, Figure 7).** The benchmark curves during training for DeepSeekMoE 16B and DeepSeek 7B (Dense) reveal several dynamics: (1) On knowledge-intensive tasks (TriviaQA, NaturalQuestions, HellaSwag, PIQA), DeepSeekMoE 16B maintains a consistent advantage throughout training, with the gap widening or remaining stable at later stages. (2) On multiple-choice tasks (MMLU, CEval, CMMLU), DeepSeek 7B leads from early in training and the gap persists or widens slightly. (3) On code generation (HumanEval, MBPP), DeepSeekMoE 16B matches or exceeds DeepSeek 7B in early stages and the advantage holds through later training. These curves confirm that the performance patterns observed at the final checkpoint are not artifacts of checkpoint selection—they reflect persistent architectural effects.
+
+#### Scaling to 145B: Maintaining Advantage at Larger Scale
+
+**Headline result.** DeepSeekMoE 145B, trained on only 245B tokens (preliminary), **significantly outperforms GShard 137B** across nearly all benchmarks, and achieves performance **comparable to DeepSeek 67B (Dense) using only 28.5% of computations** (585.6T vs. 2057.5T FLOPs per 4K tokens). Table 6 presents these results. DeepSeekMoE 142B (Half Activated), with only 12 out of 128 routed experts activated (6 instead of 12), still matches DeepSeek 67B (Dense) with only 18.2% of computations (374.6T vs. 2057.5T FLOPs).
+
+**Comparison with GShard 137B (Table 6).** This is the most direct test of whether DeepSeekMoE's architectural advantages persist at scale, since the GShard 137B shares the same hidden dimension, layer count, training data, and training hyper-parameters as DeepSeekMoE 145B (with the caveat that DeepSeekMoE 145B is 6% larger due to aligning expert intermediate dimensions to multiples of 64). The results are decisive: DeepSeekMoE 145B outperforms GShard 137B on all 19 benchmarks by substantial margins. The largest gaps are on MMLU (39.4 vs. 26.3, a 13.1-point difference), CEval (37.1 vs. 26.2), CMMLU (35.9 vs. 25.4), and GSM8K (12.2 vs. 6.4). On Pile loss, the advantage is 1.876 vs. 1.961—a gap larger than any observed in the 2B validation experiments. This demonstrates that the architectural improvements not only persist but may become **more pronounced** at larger scales.
+
+**Comparison with DeepSeek 67B (Dense).** DeepSeekMoE 145B outperforms DeepSeek 67B on 12 out of 19 benchmarks, with advantages concentrated in the same knowledge-intensive tasks observed at 16B: Pile (1.876 vs. 1.905), HellaSwag (75.8 vs. 74.8), PIQA (80.7 vs. 79.8), TriviaQA (61.1 vs. 57.2), NaturalQuestions (25.0 vs. 22.6), GSM8K (12.2 vs. 11.8), MATH (3.1 vs. 2.1), and CHID (90.3 vs. 88.5). DeepSeek 67B maintains advantages on MMLU (45.1 vs. 39.4), CEval (40.3 vs. 37.1), CMMLU (40.6 vs. 35.9), ARC-challenge (50.4 vs. 48.8), HumanEval (23.8 vs. 19.5), and MBPP (33.6 vs. 33.2—essentially tied). The same attention-bottleneck pattern seen at 16B persists: knowledge-intensive tasks benefit from the massive FFN capacity, while multiple-choice and some reasoning tasks are limited by the smaller attention parameter budget. The paper explicitly notes this: "Consistent with the findings from DeepSeekMoE 16B, DeepSeekMoE 145B exhibits remarkable strengths in language modeling and knowledge-intensive tasks, but with limitations in multiple-choice tasks" (Section 7.2).
+
+**The half-activated variant (DeepSeekMoE 142B).** This is perhaps the most surprising result in the paper. Despite activating only 6 out of 128 routed experts (plus 2 shared, total 8 activated vs. 16 for the full 145B model), DeepSeekMoE 142B still achieves comparable performance to DeepSeek 67B with only 18.2% of computations (374.6T vs. 2057.5T FLOPs). It outperforms GShard 137B (which has 21.6B activated parameters—nearly double the 12.2B activated parameters of DeepSeekMoE 142B) on all benchmarks, often by large margins (e.g., MMLU 37.5 vs. 26.3, GSM8K 13.8 vs. 6.4, HumanEval 23.2 vs. 17.7). The paper frames this as validation of the expert specialization thesis: "the proportion of effective parameters in the activated experts is much higher than that of GShard" (Section 4.5). In other words, each activated parameter in DeepSeekMoE is doing more useful work because expertise is concentrated and redundancy is minimized.
+
+**Caveats on the 145B results.** The paper is explicit that these are **preliminary results** from training on only 245B tokens—far short of what would be needed for full convergence at this scale. The learning rate schedule uses a warmup-then-constant strategy rather than the step-decay schedule used at smaller scales, which the paper attributes to the preliminary nature of the run (Section 7.1). This means the absolute performance numbers are likely below what fully-trained models would achieve, and the relative comparisons could shift with continued training. However, the consistent pattern—DeepSeekMoE variants outperforming GShard, and the full model matching the dense baseline—suggests the architectural advantages are robust even if absolute numbers are not final.
+
+#### Supervised Fine-Tuning at 16B: MoE Models Benefit from Alignment
+
+**Headline result.** DeepSeekMoE Chat 16B, after supervised fine-tuning on 1.4M examples, achieves **performance comparable to both DeepSeek Chat 7B and LLaMA2 SFT 7B** while using ~40% of computations (Table 5). This addresses a known concern in the MoE literature—that MoE models benefit less from fine-tuning than dense models (Artetxe et al., 2022; Fedus et al., 2021).
+
+**Comparison with dense chat models (Table 5).** All three models (LLaMA2 SFT 7B, DeepSeek Chat 7B, and DeepSeekMoE Chat 16B) are fine-tuned on **exactly the same 1.4M-example SFT dataset**, enabling a clean comparison. DeepSeekMoE Chat 16B matches or exceeds the best dense model on 13 out of 18 benchmarks. Notable advantages include HumanEval (45.7 vs. 35.4/45.1), MBPP (46.2 vs. 27.8/39.0), TriviaQA (63.3 vs. 60.1/59.5), CLUEWSC (68.2 vs. 48.4/66.2), and Chinese benchmarks generally. The multiple-choice gap observed in base models narrows after SFT: MMLU is 47.2 for DeepSeekMoE Chat 16B vs. 50.0 for LLaMA2 SFT 7B and 49.7 for DeepSeek Chat 7B (a 2.5–2.8 point gap, compared to the 3.2-point gap between DeepSeekMoE 16B and DeepSeek 7B base models on MMLU in Table 3). CEval shows DeepSeekMoE Chat 16B at 40.0 vs. DeepSeek Chat 7B at 44.7 (4.7-point gap, compared to 4.4 points for base models). CMMLU actually shows narrowing: 49.3 vs. 51.2 (1.9-point gap) compared to 4.7 points for base models.
+
+**Implications.** The SFT results address a significant concern in the MoE literature by demonstrating that DeepSeekMoE benefits meaningfully from supervised fine-tuning. The paper notes that "after supervised fine-tuning, the performance gap between DeepSeekMoE 16B and DeepSeek 7B is narrowed" on multiple-choice tasks—suggesting that alignment training partially compensates for the attention parameter deficit, perhaps by teaching the model to more effectively leverage its expert capacity for the types of comparisons needed in multiple-choice settings.
+
+---
+
+### Ablation Studies and Robustness Checks
+
+**Fine-grained expert segmentation granularity (Figure 3).** Increasing expert segmentation from the GShard baseline (0 shared + 16 routed, top-2) to 1 shared + 31 routed (2× segmentation) to 1 shared + 63 routed (4× segmentation) produces **monotonic performance improvements** across all six evaluated benchmarks (HellaSwag, PIQA, ARC-easy, ARC-challenge, TriviaQA, NaturalQuestions), with all models having identical total parameters and activated parameters. The normalized performance curves in Figure 3 show the 1 shared + 63 routed configuration achieves the highest performance on every metric. The improvement is not saturating at the tested granularity, suggesting further gains might be possible with even finer segmentation—the paper limits this due to computational efficiency concerns with excessively small experts rather than diminishing algorithmic returns.
+
+**Shared expert isolation (Figure 3).** Adding one shared expert to the GShard baseline (going from 0 shared + 16 routed to 1 shared + 15 routed, keeping total activated experts constant) improves performance across a majority of benchmarks. This demonstrates that the shared expert mechanism provides benefits independent of fine-grained segmentation—even with the coarse GShard expert structure, isolating common knowledge into a dedicated expert helps. The paper does not report what happens if you add shared experts without fine-grained segmentation at larger counts (e.g., 2 or 4 shared out of 16 total), likely because the coarser granularity makes the shared-to-routed ratio harder to isolate.
+
+**Shared expert count ratio (Section 4.4).** At the finest granularity (64 total experts, with 8 activated experts total), testing 1, 2, and 4 shared experts (with correspondingly 7, 6, and 4 activated routed experts) yields Pile losses of 1.808, 1.806, and 1.811, respectively. The paper concludes that "different ratios of the shared experts and routed experts do not significantly impact the performance," with the 2-shared configuration (1:3 ratio of shared to activated routed) being marginally best. This **insensitivity is itself a finding**: the architecture is robust to this hyperparameter choice, so practitioners can likely use similar ratios without extensive tuning. The 1:3 ratio is carried forward to all larger scales (2:6 at 16B, 4:12 at 145B).
+
+**Expert specialization analysis—redundancy measurement (Figure 4).** The paper's most direct empirical validation of specialization compares DeepSeekMoE and GShard×1.5 under progressive disabling of top-routed experts. Both models have identical baseline Pile loss (1.808), but when the top 1/16, 2/16, 3/16, or 4/16 of routed experts are disabled (forcing the router to select from remaining experts), DeepSeekMoE's Pile loss degrades more sharply. At 4/16 disabled, DeepSeekMoE loss exceeds 9 while GShard×1.5 remains below 5. The paper interprets greater sensitivity as evidence of **lower redundancy**: "each routed expert is more irreplaceable" in DeepSeekMoE because it encodes distinctive knowledge not present in other experts. GShard's greater robustness to expert removal indicates its experts have more overlapping knowledge, so the model can compensate when some are removed.
+
+**Shared expert irreplaceability (Section 4.5).** Disabling the shared expert and activating one more routed expert (maintaining constant computation) causes Pile loss to spike from 1.808 to 2.414. The magnitude of this degradation—larger than the gap between DeepSeekMoE and the dense baseline (2.060)—indicates the shared expert captures knowledge that routed experts have **stopped encoding** because the architecture enables them to rely on the shared expert. If knowledge were simply duplicated, activating an additional routed expert would partially compensate.
+
+**Activated expert count sweep (Figure 5).** Reducing the number of activated routed experts in DeepSeekMoE from 7 to 3 (while keeping total expert parameters constant) reveals that even with only 4 activated routed experts (plus 1 shared, total 5), DeepSeekMoE achieves Pile loss comparable to GShard with full activation. This supports the claim that DeepSeekMoE "can acquire requisite knowledge with fewer activated experts"—each activated parameter is more effective because expertise is concentrated.
+
+**Half-activated experts trained from scratch (Figure 6).** A model with 1 shared expert and only 3 out of 63 routed experts activated, trained from scratch, outperforms GShard (with its full 2 out of 16 activated) across all six evaluated benchmarks—despite having the same total expert parameters and only half the activated expert parameters. This is the strongest evidence that DeepSeekMoE achieves higher **parameter efficiency**: the proportion of useful knowledge per activated parameter is substantially higher than in GShard.
+
+---
+
+### Critical Assessment
+
+The experiments demonstrate that DeepSeekMoE consistently outperforms GShard at matched total parameters and computation, and that this advantage persists from 2B to 145B scale. The paper's central architectural claims—that fine-grained segmentation and shared expert isolation improve expert specialization—are well-supported by the ablation studies. However, several aspects of the experimental design merit scrutiny.
+
+**Does DeepSeekMoE actually "approach the upper bound" of MoE performance?** The paper's strongest theoretical claim is that DeepSeekMoE 2B "nearly approaches the performance of its dense counterpart with an equivalent number of parameters, which sets the strict upper bound of MoE language models" (Section 4.3). The evidence in Table 2 is compelling: Pile loss is 1.808 for DeepSeekMoE vs. 1.806 for Dense×16, a difference of only 0.002. However, this claim has important qualifications. First, the "upper bound" is defined as a dense model with 16× standard FFN parameters—but this model is constructed by having 16 "shared experts" all activated, which is architecturally different from a standard dense model. It is not obvious that this represents a true upper bound rather than a specific dense configuration. Second, the near-match on Pile loss does not hold uniformly across downstream tasks: Dense×16 outperforms DeepSeekMoE on 7 of 10 downstream benchmarks, with gaps of 3–5 points on several (HellaSwag 55.1 vs. 54.8, RACE-middle 46.3 vs. 44.0). The claim of "approaching" the bound is strongest for language modeling and weakest for structured reasoning tasks. Third, this comparison is performed only at 2B scale with 100B tokens—it is unknown whether DeepSeekMoE at 16B or 145B would similarly approach a Dense×16 equivalent, since such dense models would be impractically large. The claim of approaching the upper bound is therefore demonstrated at small scale but unverified at production scale.
+
+**Does the paper demonstrate that fine-grained segmentation and shared expert isolation are independently valuable?** The ablation in Figure 3 provides evidence that each component contributes: adding shared expert isolation to the GShard baseline improves performance, and further adding fine-grained segmentation improves it further. However, the experiments do not cleanly isolate the contributions in a fully factorial design. Specifically, the paper never tests fine-grained segmentation *without* shared expert isolation at the finest granularity (e.g., 0 shared + 64 routed with top-8 activation). The comparison is always relative to the GShard baseline (0 shared + 16 routed) and then adding shared, then adding segmentation. A direct comparison between 0 shared + 64 routed (top-8) and 1 shared + 63 routed (top-7) would isolate the shared expert contribution at fine granularity, but this is not reported.
+
+**Are the FLOPs comparisons fair and complete?** The paper reports FLOPs per forward pass at fixed sequence lengths, which is standard. However, the practical computational cost of MoE models includes significant overhead from routing computations, expert dispatch, and all-to-all communication in distributed settings that is not captured by theoretical FLOPs counts. The paper acknowledges custom CUDA and Triton kernel development for efficiency (Section 4.1.2) but does not provide wall-clock training time comparisons or inference latency measurements. A model with 64 fine-grained experts incurs more routing overhead than one with 16 larger experts, even if theoretical FLOPs are identical. The paper's statement that DeepSeekMoE 16B "can achieve nearly 2.5 times the inference speed of a 7B dense model" (Section 5.2.1) suggests this overhead is manageable, but no systematic latency benchmarks across scales or expert counts are provided. This is a meaningful omission: the practical efficiency advantage of DeepSeekMoE depends on whether the routing overhead from the increased number of experts negates the FLOPs savings.
+
+**The 145B results are preliminary and incomplete.** The paper is transparent about this, stating that DeepSeekMoE 145B is trained on only 245B tokens as a "preliminary endeavor" (Section 7). The learning rate schedule is simplified (constant rather than step-decay), and the model is clearly undertrained by modern standards—LLaMA2 70B, by comparison, was trained on 2T tokens. The paper claims "consistent advantages over the GShard architecture" at this scale, which the results in Table 6 support, but the absolute performance numbers are likely far from convergence. The comparison with DeepSeek 67B (Dense) may shift substantially with continued training—the dense model might pull ahead, or the MoE model might widen its lead. The paper cannot draw strong conclusions about the scaling trajectory based on this partially-trained checkpoint.
+
+**No comparison with non-MoE efficiency techniques.** The paper compares DeepSeekMoE against dense models and against other MoE architectures, but does not compare against alternative parameter-efficiency techniques such as sparse attention, low-rank adaptation, structured pruning, or distillation. A dense model with structured pruning to match the activated parameter count of DeepSeekMoE might achieve comparable performance-efficiency tradeoffs without the complexity of MoE routing. Similarly, knowledge distillation from a larger teacher into a smaller dense student could produce a model with better efficiency than DeepSeekMoE at equivalent activated parameters. These comparisons are outside the paper's scope—it positions itself within MoE architecture design—but they are relevant to the broader claim that DeepSeekMoE represents an optimal cost-capability tradeoff for language models.
+
+**Single training data source across all models.** All DeepSeekMoE models and internal baselines (DeepSeek 7B, DeepSeek 67B, GShard variants) are trained on the same DeepSeek-AI corpus. While this ensures internal consistency, it means the paper's comparison with external models (LLaMA2 7B, open-source models on the leaderboard) confounds architecture effects with training data effects. The paper is careful to note when data composition likely explains performance patterns (e.g., DeepSeekMoE's advantage on Chinese benchmarks and code generation), but the magnitude of the data effect relative to the architecture effect is unknown. A controlled experiment where LLaMA2 7B and DeepSeekMoE 16B are trained on identical data would isolate architecture effects, but this is not performed.
+
+**No measurement of expert specialization quality directly.** The paper's arguments about expert specialization rely primarily on indirect evidence: performance comparisons, redundancy measurements through expert disabling, and the shared expert irreplaceability test. A more direct approach would analyze what knowledge each expert actually learns—for instance, by examining which tokens route to each expert and what linguistic or semantic patterns they share. Techniques like probing classifiers, expert-specific evaluation on task subsets, or visualization of expert routing patterns could provide direct evidence of specialization. The paper's claims about "focused knowledge" and "non-overlapping expertise" are inferred from aggregate performance rather than directly observed.
+
+**No statistical significance reporting.** The paper reports single-run results without error bars, standard deviations, or multiple random seeds. For the 2B validation experiments, where training is relatively inexpensive, the absence of multiple runs with different initializations is notable. The differences between DeepSeekMoE and GShard architectures on individual benchmarks are sometimes small (1–2 points on some metrics in Table 2), and without statistical quantification, it is unclear whether these differences are reliable or noise. The paper's conclusions about which architecture "wins" on which benchmark would be strengthened by even basic replicate statistics.
+
+**Missing experiment: dense model with comparable activated parameters but fewer total parameters.** The paper compares DeepSeekMoE against dense models with similar *total* parameters (Dense×16, DeepSeek 7B) or similar *activated* parameters (the models in Figure 1), but does not train a dense model that matches DeepSeekMoE's activated parameter count (~2.8B for the 16B MoE) to provide a direct FLOPs-matched comparison. Such a model would have far fewer total parameters (perhaps 3–4B) and would directly test whether the sparse MoE architecture genuinely outperforms a dense architecture at equivalent inference cost. The comparison with LLaMA2 7B partially addresses this (LLaMA2 7B has ~6.7B parameters vs. DeepSeekMoE's 2.8B activated), but the difference in training data and total parameter count makes the comparison imprecise.
+
+**The attention-FFN tradeoff is diagnosed but not experimentally manipulated.** The paper identifies limited attention parameters as the bottleneck for multiple-choice tasks, but never tests this hypothesis by varying attention capacity independently of FFN capacity. An informative experiment would train DeepSeekMoE variants with different attention sizes (more heads, larger dimension, or deeper attention relative to FFN) while keeping expert configuration constant, and measure the effect on multiple-choice performance. Without such manipulation, the attention-bottleneck explanation remains a plausible hypothesis rather than a demonstrated mechanism.
+
+**Generalization beyond the training distribution of DeepSeek-AI's corpus.** The paper's training corpus has an explicit emphasis on code, math, and bilingual (Chinese-English) content. The advantages of DeepSeekMoE on these domains may reflect the architecture's particular suitability for knowledge-intensive, multilingual corpora, or they may reflect data composition effects. Testing on a broader range of corpora (e.g., training solely on English web text and evaluating on English-only benchmarks) would disentangle these factors.
+
+In summary, the experiments convincingly demonstrate that DeepSeekMoE outperforms GShard at matched parameter and computation budgets across multiple scales, and that the two architectural innovations (fine-grained segmentation, shared expert isolation) contribute to this advantage. The claim of approaching the theoretical upper bound of MoE performance is supported at 2B scale for language modeling, with qualifications for downstream tasks and without verification at larger scales. The scaling results showing DeepSeekMoE 16B matching 7B dense models at ~40% of FLOPs are the paper's most practically significant finding and are well-supported by the internal comparisons with DeepSeek 7B (same training data). The 145B results are promising but preliminary, and the paper appropriately acknowledges this. The primary weaknesses are the absence of statistical quantification, the lack of direct expert specialization measurement beyond indirect probes, and the absence of controlled experiments varying data composition independently of architecture.
 
 ## 6. Limitations and Trade-offs
-- Multiple‑choice weakness linked to attention capacity (Section 5.2.1)
-  - DeepSeekMoE 16B uses fewer attention parameters (~0.5B) than comparable dense models (e.g., DeepSeek 7B has ~2.5B). This correlates with lower MMLU/CEval/CMMLU performance (Tables 3, 5).
-- Efficiency limits of extreme segmentation (Section 5.1.2)
-  - The paper avoids even finer segmentation at 16B “due to the potential reduction in computational efficiency associated with excessively small expert sizes.”
-- Load‑balancing hyperparameters (Section 3.3, 5.1.2, 7.1)
-  - Balance losses require careful tuning; too strong expert‑level balance can hurt model quality; too weak can cause routing collapse or device hot‑spots.
-- Training scope for the 145B model (Section 7.1)
-  - Preliminary run on 245B tokens without full convergence; results promising but not a finished model.
-- Data distribution differences (Tables 3–4)
-  - DeepSeekMoE uses a bilingual corpus with substantial math/code; comparisons to monolingual or differently curated datasets (e.g., LLaMA2’s) can favor certain tasks.
-- Assumption that “shared knowledge” is universal across contexts
-  - Shared experts are always on. If some “common” patterns vary by domain or language, this could waste activation budget or entangle language‑specific fundamentals; the ratio choice is empirical (1:3 shared:routed activations, Section 4.4).
+
+### 1. The Difficulty Estimation Cost Is Unaccounted for and Would Dominate the Headline Efficiency Gains
+
+**The assumption or constraint.** The compute-optimal framework conditions strategy selection on an estimate of each prompt's difficulty. The paper's method for obtaining this estimate requires generating 2048 samples per question and scoring them with the PRM to compute the average pass@1 rate (oracle bins) or average PRM final-answer score (predicted bins). Section 3.2 states:
+
+> "We sample 2048 solutions for each question, and estimate the difficulty based on the distribution of these samples... estimating difficulty in this way still incurs additional computation cost during inference, which is roughly equivalent to an exploration process for each question."
+
+The paper explicitly acknowledges that "our experiments do not account for this cost largely for simplicity."
+
+**The consequence.** The headline result—that compute-optimal scaling improves efficiency by more than 4× over best-of-N (e.g., 16 generations matching 64 in Figure 4, 64 generations matching 256 in Figure 8)—is computed **after difficulty is already known**, without amortizing the cost of learning it. In a realistic deployment, the total cost would be difficulty estimation (2048 generations + PRM scoring) plus strategy execution (16–256 generations). Since 2048 generations far exceeds the largest test-time budgets studied (256–512 generations), the difficulty estimation step would **dominate the total compute cost**, making the reported 4× efficiency gains purely notional. Until difficulty can be estimated with cost comparable to or less than the strategy execution budget, the compute-optimal framework is not deployable in its current form.
+
+**What evidence exists in the paper.** The paper demonstrates in Figures 4 and 8 that predicted difficulty bins (no ground-truth labels required) perform nearly as well as oracle bins, with the two curves "largely overlapping." This shows that ground-truth answers are not the bottleneck—the bottleneck is the **sample count** of 2048 generations per question. The paper does not experiment with smaller sample sizes for difficulty estimation, so the minimum cost required to achieve useful difficulty estimates is unknown. Section 8 flags "cheap difficulty estimation" as a key avenue for future work, confirming the authors recognize this gap.
+
+**Mitigation status.** Not addressed. The paper explicitly acknowledges the limitation (Section 3.2, Section 8) and suggests future work on "pretraining or finetuning models to directly predict difficulty of a question" or on adaptive estimation that amortizes difficulty assessment into the problem-solving process. No such model is developed or evaluated in this paper. An adaptive approach—start with a small number of samples, assess the verifier's score distribution, and dynamically allocate the remaining budget—would potentially subsume difficulty estimation into the solution process, but this is not tested.
+
+---
+
+### 2. Hard Problems Receive Essentially Zero Benefit from Any Amount of Test-Time Compute
+
+**The assumption or constraint.** The compute-optimal framework assumes that for some problems, the base model's proposal distribution contains correct solutions at a non-trivial rate, and test-time compute can amplify the probability of finding them. This assumption breaks down for **difficulty bin 5**—the hardest problems in the MATH benchmark—where the base model's pass@1 rate is near zero.
+
+**The consequence.** Across all methods studied—PRM search (Figure 3, right), iterative revisions (Figure 7, right), and their compute-optimal combinations (Figures 4, 8)—the hardest questions show **near-zero improvement** regardless of compute budget. In Figure 3 (right), bin 5 accuracy hovers at 1–3% for all methods across all budgets from 4 to 256 generations. In Figure 7 (right), bin 5 accuracy is roughly 2–3% for all sequential-to-parallel ratios. In the FLOPs-matched comparison (Figure 9), the bin 5 scaling line is essentially flat near 0–5% accuracy, far below the 14× larger model's performance (indicated by stars on the plot). Section 7's takeaway box makes this explicit:
+
+> "On hard problems (bins 4-5), pretraining is almost always more effective. Test-time compute provides minimal gains on problems that are fundamentally outside the base model's capability range."
+
+This is not a failure of the strategy selection—it is a **fundamental capability bound**: test-time compute can only amplify what the base model already knows how to do at some non-zero rate. For problems requiring novel reasoning or knowledge outside the base model's training distribution, no amount of search or revision will help because the proposal distribution contains no correct solutions to find.
+
+**What evidence exists in the paper.** The difficulty-bin breakdowns in Figures 3 (right) and 7 (right) provide consistent evidence. In the FLOPs-matched comparison (Figure 9, Table-format bar charts in Figure 1), bin 5 shows a −52.9% relative disadvantage for test-time compute over pretraining at R ≫ 1 under PRM search, and a −37.2% disadvantage under revisions. The paper's acknowledgment of this limitation is explicit in Section 7: "On hard questions (bins 4–5), pretraining is almost always more effective."
+
+**Mitigation status.** Not addressed and likely fundamental. The paper does not propose any mechanism for overcoming this capability ceiling—it can only characterize where it is. The limitation implies that test-time compute scaling is **complementary to, not a substitute for**, pretraining on problems outside the base model's capabilities. The paper's Section 8 suggests that "distilling the outputs of applying additional test-time compute back into the base LLM, enabling an iterative self-improvement loop" could potentially expand the base model's capability range over time, but this is speculative and not tested.
+
+---
+
+### 3. The 14× Larger Model Baseline Is Not Compute-Optimally Trained, Weakening the FLOPs-Matched Comparison
+
+**The assumption or constraint.** The FLOPs-matched comparison in Section 7 scales model parameters by approximately 14× while holding training data fixed, following the LLaMA paradigm (Touvron et al., 2023). The paper acknowledges in Section 7:
+
+> "We choose this setting as it is representative of a canonical approach to scaling pretraining compute and leave the analysis of compute-optimal scaling of pretraining compute where the data and parameters are both scaled equally to future work."
+
+However, compute-optimal pretraining (Hoffmann et al., 2022) would scale both model parameters and training tokens proportionally, yielding a larger model trained on more data—likely a stronger baseline than the parameter-only-scaled model used in the comparison.
+
+**The consequence.** The paper's central finding—that test-time compute with a smaller model can outperform a ~14× larger model on easy-to-medium problems—may be **partially an artifact of suboptimal pretraining allocation for the larger baseline**. A Chinchilla-optimal model trained with 14× more total FLOPs (scaling both parameters and data) would likely outperform a model that only scales parameters, making the pretraining baseline stronger. The reported advantages of test-time compute over pretraining (e.g., +27.8% relative improvement on easy questions at R ≪ 1 in Figure 1, top-right bar chart) may shrink or reverse against a properly compute-optimal larger model.
+
+Additionally, the larger model uses only **greedy decoding** in the FLOPs-matched comparison. Giving the larger model even a modest test-time compute budget (e.g., best-of-8 or majority voting) would create a much stronger baseline that is never tested. The comparison effectively asks: "Is a small model with sophisticated test-time compute better than a large model with no test-time compute at all?" This is a useful lower bound, but it understates what pretraining combined with even simple inference strategies can achieve.
+
+**What evidence exists in the paper.** The paper reports FLOPs-matched results at three values of R (the ratio of inference to pretraining tokens: 0.16, 0.79, 22) in Figure 9 and the bar charts in Figure 1. The results show that test-time compute advantages weaken as R increases (since the pretraining savings that fund extra inference compute shrink relative to the larger model's per-token inference cost). However, the paper does not compare against a compute-optimally trained larger baseline, so the **absolute magnitude** of the test-time compute advantage is measured against a potentially weak baseline. The paper's transparency about this choice (quoted above) is a point in its favor, but the limitation remains.
+
+**Mitigation status.** Acknowledged as future work in Section 7: "we leave the analysis of compute-optimal scaling of pretraining compute where the data and parameters are both scaled equally to future work." The paper does not provide any sensitivity analysis (e.g., comparing against multiple pretraining allocations) to bound how much this choice affects the results. The implication is that the qualitative finding—test-time compute can substitute for pretraining within some regime—is robust, but the quantitative finding of "14×" may not be.
+
+---
+
+### 4. Single Benchmark (MATH), Single Model Family (PaLM 2-S*), and a Small Test Set Limit Generalizability
+
+**The assumption or constraint.** All experiments use a single benchmark (MATH, consisting of high-school competition-level math problems with 500 test questions) and a single base model family (PaLM 2-S*). Section 4 states:
+
+> "We believe this model is representative of the capabilities of many contemporary LLMs."
+
+This is an untested assertion.
+
+**The consequence.** The paper's findings about difficulty-dependent optimal strategies, verifier over-optimization thresholds, revision model behavior, and the pretraining-inference tradeoff are all **conditional on the specific characteristics of PaLM 2-S* and the MATH benchmark**. These characteristics include:
+
+- **Model-specific factors**: PaLM 2-S*'s output distribution (which affects PRM quality and over-optimization behavior), its in-context learning capability (which affects the revision model's ability to learn from incorrect examples), and its calibration properties (which affect how well the PRM's scores correlate with correctness) could all differ substantially across model families. A model with different error patterns, different base accuracy, or different sensitivity to prompting might exhibit qualitatively different difficulty-dependent scaling curves.
+
+- **Task-specific factors**: MATH consists of competition-level math problems requiring symbolic reasoning with exact answers. It is unclear whether the difficulty-dependent patterns observed—beam search hurting easy problems, revisions helping easy problems, hard problems benefiting from balanced sequential-parallel ratios—generalize to code generation (where correctness is checkable via unit tests), logical reasoning (where problems have different failure modes), scientific QA, or open-ended generation tasks where correctness is ambiguous. The paper's entire framework depends on having clean verifier signals (for training the PRM and estimating difficulty), which many important tasks lack.
+
+- **Sample size**: The test set of 500 questions, split into five difficulty quintiles of ~100 each, further split by two-fold cross-validation, means the compute-optimal policy is **selected based on ~50 questions per fold per bin**. This is a small sample—variance from one or two anomalous questions could meaningfully shift which strategy appears optimal for a bin. The paper does not report confidence intervals on the compute-optimal scaling curves, so the stability of the selected strategies across different test-set samples is unknown.
+
+**What evidence exists in the paper.** The paper does not conduct experiments on any benchmark other than MATH or with any base model other than PaLM 2-S*. The diversity of tasks within MATH (different math subfields) provides some internal variation, but this is limited to a single domain. The paper's claims about representativeness (Section 4) are stated without empirical support.
+
+**Mitigation status.** Not addressed. The paper does not discuss domain generalization, does not test on additional benchmarks, and does not acknowledge the single-benchmark limitation as a threat to the generality of the findings. The computational cost of the experiments (requiring many training runs with different strategies at different budgets) likely precluded multi-benchmark evaluation, but the absence of even a small-scale validation on a second task is a notable gap. Section 8 does not list multi-domain evaluation as future work, though it implies that extensions to other domains would be natural next steps.
+
+---
+
+### 5. Verifier Over-Optimization Caps the Benefits of Search and Is Not Solved by the Compute-Optimal Policy
+
+**The assumption or constraint.** The paper's PRM is trained via Monte Carlo rollouts from the base model (Appendix D) and used to guide beam search and best-of-N selection. However, the PRM is imperfect—it can assign high scores to solutions that are actually incorrect—and aggressive search algorithms can exploit these imperfections, producing solutions that score highly under the PRM but are wrong.
+
+**The consequence.** Search algorithms that should theoretically be more powerful end up **paradoxically underperforming** at moderate-to-high compute budgets. Figure 3 (left) shows that lookahead search—which simulates additional steps forward for more accurate scoring—generally underperforms all methods at the same generation budget because its extra cost reduces effective search breadth. Figure 3 (right) shows that beam search *degrades* performance on easy problems (bin 1) as the budget increases from 4 to 256 generations, while best-of-N continues to improve—clear evidence that beam search is optimizing the PRM signal rather than true correctness. Appendix M provides qualitative examples of degenerate outputs produced by search: repetitive low-information steps and overly short solutions that score highly under the PRM.
+
+The compute-optimal policy *mitigates* this by routing easy problems away from aggressive search (using best-of-N instead of beam search on easy bins), but it does not **solve** the underlying verifier quality problem. On medium-difficulty problems where beam search is deployed (bin 3–4), over-optimization still limits the scaling ceiling—beam search curves in Figure 3 (right) flatten and sometimes decline before the maximum budget is reached. This means the compute-optimal approach is **fundamentally bounded by verifier quality**: improving the PRM would shift the difficulty thresholds and likely change which strategies are optimal at which budgets. The current results are specific to the PRM quality achievable with the Monte Carlo rollout training procedure.
+
+**What evidence exists in the paper.** Figure 3 (right) provides the clearest evidence: bin 1 beam search accuracy decreases with increasing budget, while best-of-N increases. Figure 3 (left) shows lookahead search underperforming simpler methods. Appendix M provides qualitative failure cases. The paper explicitly identifies over-optimization in Section 5.3: "The degradation at high budgets is attributed to over-optimization of the PRM—search finds solutions that score highly under the PRM but are actually incorrect."
+
+**Mitigation status.** Partially mitigated by the compute-optimal policy (which avoids aggressive search where it is counterproductive) but not solved. The paper does not explore methods for improving verifier robustness—such as adversarial training of the PRM, ensemble verification, or constrained search with KL penalties—and Section 8 identifies "improving verifier robustness" as a key direction for future work. The limitation is therefore a **bound on the current results** rather than an inherent flaw in the approach: better verifiers would expand the regime where search is beneficial and shift the optimal policies.
+
+---
+
+### 6. Sequential Revision Strategies Introduce Latency That Is Not Accounted for in the Cost Model
+
+**The assumption or constraint.** The paper measures compute cost in "generations"—the number of complete solutions sampled—which is a defensible proxy for total FLOPs. However, this metric ignores **wall-clock latency**. Sequential revisions are inherently serial: each revision in a chain depends on the output of the previous revision. A strategy that allocates 128 generations as 64 sequential revisions in a single chain takes approximately 64× longer wall-clock time than one that runs 128 independent parallel samples simultaneously, assuming sufficient hardware to parallelize the parallel samples.
+
+**The consequence.** The compute-optimal policy frequently favors sequential-heavy allocations, particularly on easy problems where the paper finds that "easy questions perform best with purely sequential revisions" (Section 6, Figure 7 right) and that revisions show their strongest advantages on bins 1–2. For **latency-sensitive applications**—interactive chatbots, real-time code assistants, live translation, or any setting where users wait for responses—a strategy requiring 64 serial forward passes is impractical regardless of its FLOPs efficiency. A user waiting for a response experiences the latency of the full sequential chain, not the amortized FLOPs cost.
+
+The paper's Figure 6 (right) shows that sequential revisions marginally outperform parallel sampling in aggregate, and Figure 7 (left) shows optimal sequential-to-parallel ratios that favor sequential allocation at lower budgets. These recommendations are **optimizing for throughput (total FLOPs per correct answer) not latency (time to first correct answer)**. For deployment scenarios where latency matters—which includes most real-time applications—the sequential-heavy strategies would need to be re-evaluated against latency constraints.
+
+**What evidence exists in the paper.** The paper does not report any latency measurements, wall-clock timing comparisons, or latency-throughput tradeoff analyses. The revision model's sequential nature is described in Section 6 (Figure 5 illustrates the chain structure), and the sequential-to-parallel ratio sweeps in Figure 7 show what fraction of the generation budget is allocated sequentially, but the implications for latency are not discussed. The FLOPs-matched comparison in Section 7 uses total FLOPs as the sole cost metric.
+
+**Mitigation status.** Not addressed. The paper does not acknowledge the latency-throughput distinction, does not propose latency-aware allocation strategies (e.g., capping sequential depth per chain), and does not discuss deployment scenarios where latency constraints would override FLOPs-efficiency considerations. A latency-aware extension of the compute-optimal framework—optimizing accuracy subject to both FLOPs and wall-clock time constraints—would be a natural but non-trivial extension.
 
 ## 7. Implications and Future Directions
 - Field impact

@@ -1,8 +1,7 @@
 """PDF fetch and extraction helpers and arxiv URL utilities."""
 
-from __future__ import annotations
-
 import re
+import shlex
 import shutil
 import subprocess
 from urllib.parse import urlparse
@@ -56,24 +55,29 @@ def extract_text_via_hf_papers(arxiv_id: str, *, timeout: float = 60.0) -> str |
     """
     if not shutil.which("hf"):
         return None
+    argv = ["hf", "papers", "read", arxiv_id]
+    # check=False is intentional: a non-zero rc here is a normal "paper not
+    # found / not on HF" signal, and we want the caller to fall back rather
+    # than raise. The caller treats `None` as "try the PDF path next".
     try:
         result = subprocess.run(
-            ["hf", "papers", "read", arxiv_id],
+            argv,
+            check=False,
             capture_output=True,
             text=True,
             timeout=timeout,
         )
     except subprocess.TimeoutExpired:
-        logger.warning("hf papers read {} timed out after {}s", arxiv_id, timeout)
+        logger.warning("`{}` timed out after {}s", shlex.join(argv), timeout)
         return None
-    except Exception as e:
-        logger.debug("hf papers read {} errored: {}", arxiv_id, e)
+    except OSError as e:
+        logger.debug("`{}` failed to spawn: {}", shlex.join(argv), e)
         return None
     if result.returncode != 0 or not result.stdout.strip():
         stderr_excerpt = (result.stderr or "").strip()[:200]
         logger.debug(
-            "hf papers read {} failed (rc={}, stderr={!r})",
-            arxiv_id, result.returncode, stderr_excerpt,
+            "`{}` returned rc={} (stderr={!r})",
+            shlex.join(argv), result.returncode, stderr_excerpt,
         )
         return None
     logger.info("hf papers read {}: got {} chars of markdown", arxiv_id, len(result.stdout))
@@ -90,9 +94,9 @@ def download_and_extract_text(pdf_url: str, *, timeout: float = 60.0) -> str:
     PyMuPDF.
     """
     aid = _arxiv_id_if_arxiv_url(pdf_url)
-    if aid:
+    if aid is not None:
         hf_text = extract_text_via_hf_papers(aid, timeout=timeout)
-        if hf_text:
+        if hf_text is not None:
             return hf_text
         logger.info("hf papers unavailable for {}, falling back to PDF", aid)
 

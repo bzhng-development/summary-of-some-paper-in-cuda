@@ -9,68 +9,91 @@ batch:
     482), else preserve the old s7 from the existing .md
 
 Usage:
-    uv run python throaway_script/regen_to_md.py \
-        --backup-dir local_data/regen_backup_20260525_095404 \
-        --content-dir paper-graph-ui/src/content/papers \
+    uv run python throaway_script/regen_to_md.py \\
+        --backup-dir local_data/regen_backup_20260525_095404 \\
+        --content-dir paper-graph-ui/src/content/papers \\
         [--dry-run] [--limit 5]
 """
-from __future__ import annotations
 
 import argparse
 import json
 import re
 import sys
+from dataclasses import dataclass, fields
 from pathlib import Path
 
 
 ARXIV_FN_RE = re.compile(r"^(\d{4}\.\d{4,5})")
 ARXIV_BODY_RE = re.compile(r"\*\*ArXiv:\*\*\s*\[?(\d{4}\.\d{4,5})")
 SECTION_HEAD_RE = re.compile(r"^##\s+(\d+)\.\s", re.MULTILINE)
+SECTION_RANGE = range(1, 8)
+
+
+@dataclass(slots=True)
+class RegenStats:
+    scanned: int = 0
+    no_arxiv_id: int = 0
+    not_in_regen: int = 0
+    no_sections_parsed: int = 0
+    rewrote: int = 0
+    s7_new: int = 0
+    s7_kept_old: int = 0
+    s7_missing: int = 0
+
+    def display(self) -> None:
+        for f in fields(self):
+            print(f"  {f.name:20s} {getattr(self, f.name)}")
 
 
 def extract_arxiv_id(md_path: Path, md_text: str) -> str | None:
-    m = ARXIV_FN_RE.match(md_path.stem)
-    if m:
+    """Pull arxiv_id from the filename prefix or the ``**ArXiv:** [id]`` body line."""
+    if m := ARXIV_FN_RE.match(md_path.stem):
         return m.group(1)
-    m = ARXIV_BODY_RE.search(md_text[:2000])
-    if m:
+    if m := ARXIV_BODY_RE.search(md_text[:2000]):
         return m.group(1)
     return None
 
 
 def load_section_jsonls(backup_dir: Path) -> dict[int, dict[str, str]]:
-    """Return {section_num: {arxiv_id: section_text}} for sections 1..7."""
+    """Return ``{section_num: {arxiv_id: section_text}}`` for sections 1..7.
+
+    Missing checkpoint files yield an empty dict for that section, rather than
+    failing — the script supports partial regen state by design (s7 was only
+    partially done).
+    """
     out: dict[int, dict[str, str]] = {}
-    for n in range(1, 8):
-        p = backup_dir / f"regen_output_FULL.s{n}.jsonl"
-        if not p.exists():
-            print(f"[warn] missing {p}", file=sys.stderr)
+    for n in SECTION_RANGE:
+        path = backup_dir / f"regen_output_FULL.s{n}.jsonl"
+        try:
+            raw_lines = path.read_text(encoding="utf-8").splitlines()
+        except FileNotFoundError:
+            print(f"[warn] missing {path}", file=sys.stderr)
             out[n] = {}
             continue
-        d: dict[str, str] = {}
-        with p.open("r", encoding="utf-8") as fh:
-            for line in fh:
-                if not line.strip():
-                    continue
-                rec = json.loads(line)
-                aid = rec.get("arxiv_id")
-                text = rec.get("text")
-                if aid and isinstance(text, str) and text.strip():
-                    d[aid] = text
-        out[n] = d
-        print(f"[load] s{n}: {len(d)} records")
+        records: dict[str, str] = {}
+        for line in raw_lines:
+            if not line.strip():
+                continue
+            rec = json.loads(line)
+            aid = rec.get("arxiv_id")
+            text = rec.get("text")
+            if aid and isinstance(text, str) and text.strip():
+                records[aid] = text
+        out[n] = records
+        print(f"[load] s{n}: {len(records)} records")
     return out
 
 
 def split_md(md_text: str) -> tuple[str, dict[int, str]]:
-    """Return (header_block, {section_num: section_text}).
+    """Return ``(header_block, {section_num: section_text})``.
 
-    header_block is everything BEFORE the first numbered section heading
-    (H1 + ArXiv line + Pitch block + any --- separator). Trailing whitespace
-    is normalized to one blank line.
+    ``header_block`` is everything BEFORE the first numbered section heading
+    (H1 + ArXiv line + Pitch block + any ``---`` separator). Trailing
+    whitespace is normalized to one blank line.
 
-    section_text includes the heading itself (e.g. '## 1. Executive Summary...'
-    plus its body up to but not including the next '## N.' heading).
+    ``section_text`` includes the heading itself (e.g. ``## 1. Executive
+    Summary...``) plus its body up to but not including the next ``## N.``
+    heading.
     """
     matches = list(SECTION_HEAD_RE.finditer(md_text))
     if not matches:
@@ -97,30 +120,28 @@ def assemble_new_md(
     """
     parts: list[str] = [header.rstrip()]
     for n in range(1, 7):
-        text = new_sections.get(n) or old_sections.get(n)
-        if text:
+        if text := (new_sections.get(n) or old_sections.get(n)):
             parts.append(text.rstrip())
-    s7 = new_sections.get(7) or old_sections.get(7)
-    if s7:
+    if s7 := (new_sections.get(7) or old_sections.get(7)):
         parts.append(s7.rstrip())
     return "\n\n".join(parts) + "\n"
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--backup-dir", default="local_data/regen_backup_20260525_095404")
-    ap.add_argument("--content-dir", default="paper-graph-ui/src/content/papers")
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--backup-dir", type=Path, default=Path("local_data/regen_backup_20260525_095404"))
+    ap.add_argument("--content-dir", type=Path, default=Path("paper-graph-ui/src/content/papers"))
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--limit", type=int, default=0, help="only update the first N matching files")
     args = ap.parse_args()
 
-    backup_dir = Path(args.backup_dir)
-    content_dir = Path(args.content_dir)
+    backup_dir: Path = args.backup_dir
+    content_dir: Path = args.content_dir
 
-    if not backup_dir.exists():
+    if not backup_dir.is_dir():
         print(f"[error] backup dir missing: {backup_dir}", file=sys.stderr)
         return 1
-    if not content_dir.exists():
+    if not content_dir.is_dir():
         print(f"[error] content dir missing: {content_dir}", file=sys.stderr)
         return 1
 
@@ -129,53 +150,43 @@ def main() -> int:
     md_files = sorted(p for p in content_dir.rglob("*.md") if p.name != "index.md")
     print(f"[scan] {len(md_files)} md files in {content_dir}")
 
-    stats = {
-        "scanned": 0,
-        "no_arxiv_id": 0,
-        "not_in_regen": 0,
-        "no_sections_parsed": 0,
-        "rewrote": 0,
-        "s7_new": 0,
-        "s7_kept_old": 0,
-        "s7_missing": 0,
-    }
+    stats = RegenStats()
 
     for md in md_files:
-        stats["scanned"] += 1
+        stats.scanned += 1
         text = md.read_text(encoding="utf-8")
         aid = extract_arxiv_id(md, text)
-        if not aid:
-            stats["no_arxiv_id"] += 1
+        if aid is None:
+            stats.no_arxiv_id += 1
             continue
-        # Use s1 presence as proof the paper was in the regen batch.
+        # s1 presence proves the paper was in the regen batch.
         if aid not in by_section[1]:
-            stats["not_in_regen"] += 1
+            stats.not_in_regen += 1
             continue
         header, old_sections = split_md(text)
         if not old_sections:
-            stats["no_sections_parsed"] += 1
+            stats.no_sections_parsed += 1
             continue
-        new_sections: dict[int, str] = {}
-        for n in range(1, 8):
-            t = by_section.get(n, {}).get(aid)
-            if t:
-                new_sections[n] = t
+        new_sections: dict[int, str] = {
+            n: t
+            for n in SECTION_RANGE
+            if (t := by_section.get(n, {}).get(aid))
+        }
         if 7 in new_sections:
-            stats["s7_new"] += 1
+            stats.s7_new += 1
         elif 7 in old_sections:
-            stats["s7_kept_old"] += 1
+            stats.s7_kept_old += 1
         else:
-            stats["s7_missing"] += 1
+            stats.s7_missing += 1
         new_body = assemble_new_md(header, old_sections, new_sections)
         if not args.dry_run:
             md.write_text(new_body, encoding="utf-8")
-        stats["rewrote"] += 1
-        if args.limit and stats["rewrote"] >= args.limit:
+        stats.rewrote += 1
+        if args.limit and stats.rewrote >= args.limit:
             break
 
     print("\n=== summary ===")
-    for k, v in stats.items():
-        print(f"  {k:20s} {v}")
+    stats.display()
     if args.dry_run:
         print("(dry-run: no files written)")
     return 0

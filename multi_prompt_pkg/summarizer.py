@@ -160,8 +160,17 @@ class MultiPromptSummarizer:
     async def generate_pitch(self, full_summary: str, paper_text: str) -> PitchOutput:
         """Extract an exact title plus a short pitch via structured output."""
         system = (
-            "Extract the exact paper title and generate a compelling 2-3 sentence pitch. "
-            "The pitch should capture the core contribution and why it matters."
+            "Extract the exact paper title from the PDF, then write a 2-3 sentence pitch designed to make a busy reader open the full summary.\n\n"
+            "The pitch is NOT a paraphrase of the executive summary. It must have a different voice and angle:\n"
+            "- **Lead with the surprising or counter-intuitive finding**, not a methodology recap. (E.g., open with \"A smaller model can beat a 14× larger one if it spends its inference budget right.\" rather than \"This paper studies how to allocate compute...\".)\n"
+            "- **Be punchier and less academic** than the executive summary — short clauses, vivid framing, no nested mechanism descriptions.\n"
+            "- **Concrete numbers in the lead** when they sharpen the hook (4×, 14×, etc.).\n"
+            "- **Hint at the conditions** that bound the claim, but in passing — don't enumerate them.\n\n"
+            "Hard rules:\n"
+            "- 2-3 sentences MAX. No bullets.\n"
+            "- DO NOT reproduce phrasings from the executive summary verbatim. If you find yourself writing \"this paper studies/analyses/proposes...\", rewrite.\n"
+            "- Title must be the EXACT title as it appears in the PDF, not a paraphrase.\n"
+            "- Plain Unicode for math (`4×`, `~14×`)."
         )
         user_msg = f"<paper>\n{paper_text[:5000]}\n</paper>\n\nPaper Analysis (for context):\n{full_summary[:3000]}..."
 

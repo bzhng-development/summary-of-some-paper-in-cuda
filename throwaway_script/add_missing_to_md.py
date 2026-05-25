@@ -16,7 +16,7 @@ For each missing arxiv_id:
     multi_prompt_pkg/storage.py:save_summary_markdown
 
 Usage:
-    DATABASE_URL=... uv run python throaway_script/add_missing_to_md.py \\
+    DATABASE_URL=... uv run python throwaway_script/add_missing_to_md.py \\
         --backup-dir local_data/regen_backup_20260525_095404 \\
         --content-dir paper-graph-ui/src/content/papers \\
         [--dry-run] [--limit N]

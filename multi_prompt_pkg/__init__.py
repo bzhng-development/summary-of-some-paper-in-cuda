@@ -57,7 +57,7 @@ from .storage import (
 from .summarizer import MultiPromptSummarizer
 
 # Legacy alias retained so ``from multi_prompt import _SYSTEM_PREAMBLE`` in
-# throaway_script/ keeps working during the migration.
+# throwaway_script/ keeps working during the migration.
 _SYSTEM_PREAMBLE = SYSTEM_PREAMBLE
 
 __all__ = [

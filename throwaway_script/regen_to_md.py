@@ -9,7 +9,7 @@ batch:
     482), else preserve the old s7 from the existing .md
 
 Usage:
-    uv run python throaway_script/regen_to_md.py \\
+    uv run python throwaway_script/regen_to_md.py \\
         --backup-dir local_data/regen_backup_20260525_095404 \\
         --content-dir paper-graph-ui/src/content/papers \\
         [--dry-run] [--limit 5]

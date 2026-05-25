@@ -1,0 +1,715 @@
+# Visualizing Data using t-SNE
+
+**URL:** [https://www.jmlr.org/papers/volume9/vandermaaten08a/vandermaaten08a.pdf](https://www.jmlr.org/papers/volume9/vandermaaten08a/vandermaaten08a.pdf)
+
+## 🎯 Pitch
+
+This paper introduces **t-Distributed Stochastic Neighbor Embedding** (**t-SNE**), a new technique for visualizing high-dimensional data in two or three dimensions by converting pairwise distances into joint probabilities and minimizing the Kullback-Leibler divergence between the high- and low-dimensional probability distributions. t-SNE modifies Stochastic Neighbor Embedding (SNE) through two key
+
+---
+
+## 1. Executive Summary
+
+This paper introduces **t-Distributed Stochastic Neighbor Embedding** (**t-SNE**), a new technique for visualizing high-dimensional data in two or three dimensions by converting pairwise distances into joint probabilities and minimizing the Kullback-Leibler divergence between the high- and low-dimensional probability distributions. t-SNE modifies Stochastic Neighbor Embedding (SNE) through two key mechanisms: a symmetrized cost function with simpler gradients and a heavy-tailed Student-t distribution in the low-dimensional space (replacing the Gaussian), which together alleviate the crowding problem that caused SNE maps to collapse points toward the center. Across experiments on MNIST, Olivetti faces, and COIL-20 datasets, t-SNE produces visualizations that clearly separate natural classes—for instance, nearly perfectly segregating all ten digit classes on MNIST where Sammon mapping, Isomap, and LLE failed to do so—and reveals multi-scale structure such as orientation manifolds for objects in COIL-20. For datasets exceeding ~10,000 points, the paper further introduces a random-walk landmark approach that integrates path information from the full dataset when displaying only a subset, establishing that t-SNE scales to large real-world collections while preserving local neighborhood structure and global cluster organization, provided that the intrinsic dimensionality of the data is not so high as to violate the local linearity assumption on which the method implicitly relies.
+
+## 2. Context and Motivation
+
+### The Core Problem: Visualizing High-Dimensional Data on a Flat Screen
+
+The fundamental challenge this paper addresses is deceptively simple: **how do you display a dataset with hundreds or thousands of dimensions in a way that a human being can look at it and understand something meaningful?** The human visual system is fundamentally two-dimensional — we perceive the world through a 2D retina, and we interpret scatterplots, graphs, and diagrams that live on flat surfaces. When a dataset has, say, 784 dimensions (like an MNIST digit image) or 10,304 dimensions (like an Olivetti face image), we cannot simply "look at" the raw data. We need a mathematical technique that converts the high-dimensional points into a 2D or 3D map while preserving as much of the *meaningful* structure as possible.
+
+The authors frame this around a specific use case: given a set of high-dimensional datapoints $\mathbf{X} = \{\mathbf{x}_1, \mathbf{x}_2, \ldots, \mathbf{x}_n\}$, produce a low-dimensional embedding $\mathbf{Y} = \{\mathbf{y}_1, \mathbf{y}_2, \ldots, \mathbf{y}_n\}$ (typically 2D or 3D) such that the spatial relationships among the $\mathbf{y}_i$ reflect the relationships among the $\mathbf{x}_i$. The resulting scatterplot lets domain experts see clusters, outliers, continuous manifolds, and hierarchical groupings — structure that would otherwise be invisible.
+
+This matters for real-world impact across many domains. The paper cites examples: cell nuclei described by ~30 variables for breast cancer diagnosis (Street et al., 1993), pixel intensity vectors for images (thousands of dimensions), and word-count vectors for documents (also thousands of dimensions). In each case, practitioners want to *see* whether natural classes separate, whether there are sub-clusters within classes, and whether the data lies on a low-dimensional manifold. Without effective visualization, exploratory data analysis in high dimensions is blind.
+
+The paper also touches on theoretical significance: the problem forces us to confront what "structure" means. Do we care more about preserving large distances (global structure) or small distances (local structure)? For data that lies on or near a low-dimensional nonlinear manifold — like images of an object rotating through space — preserving local neighborhoods is typically more important than preserving exact distances between far-apart points. A good visualization technique must make principled choices about this tradeoff.
+
+### Prior Approaches and Their Limitations
+
+#### Linear Techniques: PCA and Classical MDS
+
+The earliest approaches to dimensionality reduction are linear transformations. Principal Components Analysis (PCA; Hotelling, 1933) finds the directions of maximum variance in the data and projects onto the top two or three. Classical multidimensional scaling (MDS; Torgerson, 1952) finds a linear mapping that minimizes the squared error between pairwise distances in the high-dimensional space and their low-dimensional representatives. Both are well-understood, computationally efficient, and have convex cost functions.
+
+The problem, as the authors explain, is that these linear methods **focus on keeping dissimilar points far apart** — they prioritize global structure over local structure. For data that lies on a curved, nonlinear manifold, a linear projection fundamentally cannot capture the intrinsic geometry. Imagine a "Swiss roll" — a 2D sheet curled up in 3D space. PCA would project through the roll, collapsing points that are intrinsically far apart on the manifold into nearby 2D positions. The authors frame this clearly:
+
+> "For high-dimensional data that lies on or near a low-dimensional, non-linear manifold it is usually more important to keep the low-dimensional representations of very similar datapoints close together, which is typically not possible with a linear mapping."
+
+So linear methods fail on curved manifolds — but they also fail on a more subtle level: they don't adapt to varying data density. A single global linear projection applies the same transformation everywhere, regardless of whether some regions of the space are densely populated and others are sparse.
+
+#### The First Wave of Nonlinear Techniques: Sammon Mapping, Isomap, LLE, and Others
+
+The paper references seven nonlinear dimensionality reduction techniques that were state-of-the-art at the time of writing:
+
+1. **Sammon mapping** (Sammon, 1969): Modifies the classical MDS cost function by dividing each squared error by the original high-dimensional distance. This has the effect of emphasizing the faithful representation of small distances — a step toward preserving local structure. The cost function is:
+
+   $$C = \frac{1}{\sum_{i j}\|\mathbf{x}_i - \mathbf{x}_j\|} \sum_{i \neq j} \frac{(\|\mathbf{x}_i - \mathbf{x}_j\| - \|\mathbf{y}_i - \mathbf{y}_j\|)^2}{\|\mathbf{x}_i - \mathbf{x}_j\|}$$
+
+   The authors identify a key weakness: **the importance of retaining small pairwise distances depends heavily on small differences in those distances**. Two points that are extremely close together in the high-dimensional space produce a huge contribution to the cost function if their low-dimensional distance is even slightly off. This creates an unbalanced optimization landscape where a tiny number of very-near-neighbor pairs dominate the objective, and moderately-close pairs — which also carry important local structure — are relatively neglected.
+
+2. **Isomap** (Tenenbaum et al., 2000): Constructs a neighborhood graph on the data and estimates geodesic distances (shortest path distances through the graph) between all pairs of points, then applies classical MDS to these geodesic distances. This can "unfold" curved manifolds. But Isomap suffers from **short-circuiting**: a single noisy datapoint that provides a spurious bridge between two otherwise-separated regions of the manifold can dramatically distort the geodesic distance estimates, causing the embedding to collapse distinct structures together. Additionally, Isomap requires a connected neighborhood graph — if the data consists of multiple well-separated clusters, the graph may be disconnected, and Isomap either fails or must visualize each component separately, losing information about inter-cluster relationships.
+
+3. **Locally Linear Embedding** (LLE; Roweis and Saul, 2000): Reconstructs each point as a linear combination of its neighbors, then finds a low-dimensional embedding that preserves these reconstruction weights. The authors identify a basic weakness: **the only thing preventing all points from collapsing to a single point is a covariance constraint on the low-dimensional representation**. In practice, this constraint is often satisfied by placing most points near the center and using a few widely-scattered outliers to create the required covariance — producing maps that look "curdled" and fail to reveal genuine cluster structure (a pattern visible in Figure 3(b) and 4(d) of the paper). For nearly-disconnected neighborhood graphs, LLE can produce maps where a few collapsed, widely-separated subsets satisfy the covariance constraint, again obscuring real structure.
+
+4. **Maximum Variance Unfolding** (MVU; Weinberger et al., 2004): Treats the preservation of small distances as hard constraints (they must be exactly preserved) and maximizes the variance of the embedding subject to these constraints. The problem: **a single erroneous constraint can severely affect performance**. If there is a short-circuit in the neighborhood graph, MVU is forced to preserve an incorrect local distance, which can cascade into a globally distorted embedding. Moreover, MVU "makes no attempt to model longer range structure" — it simply pushes points apart as much as the local constraints allow, so unlike t-SNE, it cannot be expected to produce sensible global organization.
+
+5. **Laplacian Eigenmaps** (Belkin and Niyogi, 2002): Minimizes a weighted sum of squared distances between neighboring points, with a constraint to avoid the trivial zero solution. Like LLE, it uses a covariance-type constraint, and the authors note that "it is easy to cheat on this constraint," leading to similar collapse behavior.
+
+6. **Curvilinear Components Analysis** (CCA; Demartines and Hérault, 1997): Uses a hard threshold $\lambda$ to define which pairwise distances count as "local." Within this threshold, CCA behaves similarly to Sammon mapping — it assigns extremely high importance to modeling the smallest distances. The hard border creates a discontinuous optimization landscape and doesn't gracefully handle varying density.
+
+7. **Stochastic Neighbor Embedding** (SNE; Hinton and Roweis, 2002): This is the direct predecessor of t-SNE. SNE converts Euclidean distances into conditional probabilities using a Gaussian kernel centered on each point, then minimizes the KL divergence between the high-dimensional and low-dimensional probability distributions. The full mechanics are explained in Section 2 of the paper and referenced in the Executive Summary, but the critical limitations that motivate t-SNE are:
+
+   - **Difficult optimization**: SNE requires simulated annealing with carefully-tuned parameters (initial noise variance, decay rate), momentum scheduling, and step size — and these interact in complex ways. The authors note, "It is therefore common to run the optimization several times on a data set to find appropriate values for the parameters."
+   
+   - **The crowding problem**: This is perhaps the most conceptually important limitation. When reducing from a high-dimensional to a low-dimensional space, the "volume" available to place points at moderate distances shrinks dramatically. Consider a sphere of radius $r$ in $m$ dimensions — its volume scales as $r^m$. In 10 dimensions, there is vastly more "room" to place moderately-distant neighbors than in 2 dimensions. The authors explain:
+   
+     > "the area of the two-dimensional map that is available to accommodate moderately distant datapoints will not be nearly large enough compared with the area available to accommodate nearby datapoints."
+   
+     The consequence: in SNE, the many moderately-distant points in high dimensions must be placed much too far away in the 2D map. Each of these creates a small attractive spring force (since the low-dimensional distance is larger than the high-dimensional similarity would dictate), and **the cumulative effect of many small attractive forces crushes points toward the center of the map**, preventing gaps between natural clusters from forming. This is why SNE maps often show a dense central blob with cluster structure visible only at the fringes.
+   
+   - **Asymmetric cost function**: SNE minimizes the sum of KL divergences between conditional distributions $p_{j|i}$ and $q_{j|i}$. The gradient involves both $p_{j|i} - q_{j|i}$ and $p_{i|j} - q_{i|j}$, making it more complex than necessary.
+
+#### Why Existing Techniques Fail on Real Data
+
+The paper makes a pointed claim in the introduction:
+
+> "Despite the strong performance of these techniques on artificial data sets, they are often not very successful at visualizing real, high-dimensional data. In particular, most of the techniques are not capable of retaining both the local and the global structure of the data in a single map."
+
+This is the central gap. Techniques like Isomap and LLE can produce beautiful unfoldings of toy manifolds (Swiss rolls, S-curves), but when faced with real data like 6,000 MNIST digits or 400 face images, they fail to separate natural classes — a basic requirement for useful visualization. The paper cites a study showing that even a semi-supervised variant of MVU "is not capable of separating handwritten digits into their natural clusters" (Song et al., 2007).
+
+The failure modes differ by method but share common themes:
+
+- **Sammon mapping** over-weights the tiniest distances, creating unstable optimization.
+- **Isomap and LLE** require connected neighborhood graphs, fail on multi-cluster data, and are vulnerable to short-circuits.
+- **SNE** produces maps where clusters are crushed together by the crowding problem.
+- **MVU** is brittle to erroneous local distance constraints.
+- **Most techniques** lack a principled way to balance local and global structure — they either focus almost entirely on local neighborhoods (LLE, Laplacian Eigenmaps) or handle local and global distances with the same mechanism (Isomap, Sammon mapping), rather than adaptively emphasizing different scales.
+
+### How t-SNE Positions Itself
+
+Van der Maaten and Hinton frame t-SNE not as a radical departure but as **a targeted fix to SNE** that addresses its two main weaknesses: optimization difficulty and the crowding problem. The positioning is incremental in mechanism but transformative in outcome.
+
+The paper identifies two specific modifications:
+
+1. **Symmetric cost function** (Section 3.1): By minimizing a single KL divergence between joint probability distributions $p_{ij}$ and $q_{ij}$ (rather than a sum over conditional distributions), the gradient simplifies dramatically. The gradient becomes:
+
+   $$\frac{\delta C}{\delta \mathbf{y}_i} = 4\sum_j (p_{ij} - q_{ij})(\mathbf{y}_i - \mathbf{y}_j)$$
+
+   which is "faster to compute" and, in preliminary experiments, "produces maps that are just as good as asymmetric SNE, and sometimes even a little better." This addresses the optimization complexity of the original SNE.
+
+2. **Heavy-tailed low-dimensional distribution** (Section 3.3): Instead of using a Gaussian to convert low-dimensional distances into probabilities, t-SNE uses a Student t-distribution with one degree of freedom (a Cauchy distribution):
+
+   $$q_{ij} = \frac{(1 + \|\mathbf{y}_i - \mathbf{y}_j\|^2)^{-1}}{\sum_{k \neq l} (1 + \|\mathbf{y}_k - \mathbf{y}_l\|^2)^{-1}}$$
+
+   This is the key innovation that addresses the crowding problem. The logic is elegant: in high dimensions, we use a Gaussian to create a soft neighborhood around each point (the Gaussian's light tails mean that beyond a certain distance, probabilities drop to near zero). In the low-dimensional map, the heavy tails of the t-distribution mean that a moderate high-dimensional distance can be represented by a much larger low-dimensional distance without the corresponding $q_{ij}$ becoming vanishingly small. This eliminates the unwanted attractive forces that crushed SNE maps. The authors explain:
+
+   > "This allows a moderate distance in the high-dimensional space to be faithfully modeled by a much larger distance in the map and, as a result, it eliminates the unwanted attractive forces between map points that represent moderately dissimilar datapoints."
+
+The choice of exactly one degree of freedom is motivated by the property that $(1 + \|\mathbf{y}_i - \mathbf{y}_j\|^2)^{-1}$ approaches an inverse square law for large distances, which makes the representation "almost invariant to changes in the scale of the map for map points that are far apart." Additionally, the Student-t is an infinite mixture of Gaussians with different variances, giving it a theoretical connection to the Gaussian used in the high-dimensional space.
+
+The positioning relative to prior SNE variants is also important. Cook et al. (2007) proposed UNI-SNE, which adds a uniform background distribution to prevent $q_{ij}$ from becoming too small for far-apart points. But UNI-SNE has its own optimization problems: "two map points that are far apart will get almost all of their $q_{ij}$ from the uniform background. So even if their $p_{ij}$ is large, there will be no attractive force between them." t-SNE's heavy-tailed approach elegantly avoids this, providing meaningful gradients at all distance scales without resorting to simulated annealing.
+
+In summary, t-SNE positions itself as **SNE done right** — keeping the probabilistic, information-theoretic framework that made SNE conceptually appealing (converting distances to probabilities, minimizing KL divergence to preserve neighborhood structure) while fixing the two problems that made SNE impractical and ineffective on real data. The result is a technique that the authors claim (and demonstrate) can produce maps revealing both local neighborhood relationships and global cluster organization in a single visualization, on data where all prior methods failed.
+
+## 3. Technical Approach
+
+### 3.1 Reader Orientation
+
+t-SNE is a **non-parametric algorithm that takes a high-dimensional dataset and produces a 2D or 3D scatterplot** — a visual map where each original datapoint gets coordinates such that points that were similar in the original high-dimensional space appear close together, and points that were dissimilar appear far apart. The core problem it solves is that existing nonlinear dimensionality reduction techniques either collapse clusters into a central blob (the "crowding problem") or require brittle optimization procedures (simulated annealing), making them unreliable for exploring real-world datasets; t-SNE solves both problems simultaneously by using a **symmetric probability matching framework with mismatched tail behavior** — a Gaussian in the high-dimensional space to define local neighborhoods and a heavy-tailed Student-t distribution in the low-dimensional map to give clusters room to separate.
+
+### 3.2 Big-Picture Architecture (Diagram in Words)
+
+The t-SNE pipeline has four major processing stages:
+
+1. **Pairwise Similarity Computation (high-dimensional space):** Given the input data `$\mathbf{X} = \{\mathbf{x}_1, \ldots, \mathbf{x}_n\}$`, compute a joint probability `$p_{ij}$` for every pair `$(i, j)$` that represents how similar those two datapoints are. This is done by centering a Gaussian kernel on each point, using a per-point bandwidth `$\sigma_i$` that is calibrated so that the distribution over neighbors has a user-specified perplexity (effective number of neighbors). The resulting conditional probabilities `$p_{j|i}$` are symmetrized to obtain `$p_{ij}$`. This stage encodes the structure that the embedding must preserve.
+
+2. **Initialization of the Low-Dimensional Map:** Sample initial map coordinates `$\mathbf{Y}^{(0)} = \{\mathbf{y}_1, \ldots, \mathbf{y}_n\}$` from an isotropic Gaussian with small variance centered at the origin. These are the variables that gradient descent will optimize.
+
+3. **Iterative Gradient Descent Optimization:** For each iteration, compute the low-dimensional joint probabilities `$q_{ij}$` using a Student-t distribution with one degree of freedom applied to the current map distances, compute the gradient of the KL divergence `$\text{KL}(P \| Q)$` with respect to each map point, and update the coordinates using gradient descent with momentum and an adaptive learning rate. Two optional "tricks" — early compression and early exaggeration — improve the global organization.
+
+4. **Output:** The final coordinates `$\mathbf{Y}^{(T)}$` after `$T = 1000$` iterations form the visualization, displayed as a scatterplot.
+
+Information flows linearly: high-dimensional similarities `$p_{ij}$` are computed once and fixed; low-dimensional similarities `$q_{ij}$` are recomputed each iteration; gradients pull map points to make `$q_{ij}$` match `$p_{ij}$` more closely.
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First**, the symmetrized probability construction in the high-dimensional space (`$p_{j|i} \to p_{ij}$`), including the perplexity-based bandwidth calibration — because the quality of the embedding depends fundamentally on what "similarity" means.
+- **Second**, the Student-t distribution in the low-dimensional space and the `$q_{ij}$` computation — because this is the central innovation that distinguishes t-SNE from SNE and solves the crowding problem.
+- **Third**, the KL divergence cost function and its gradient — because understanding the gradient reveals *why* the heavy tails work and what forces act on map points.
+- **Fourth**, the gradient descent optimization procedure including momentum, adaptive learning rates, early compression, and early exaggeration — because t-SNE is non-convex and these practical choices determine whether optimization finds a good local minimum.
+- **Fifth**, the random-walk landmark extension for large datasets — because the standard algorithm has `$O(n^2)$` complexity and the landmark approach is necessary for scaling beyond ~10,000 points.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily a **methodological paper** whose core idea is that the crowding problem in SNE can be solved by using a mismatched pair of probability distributions: a light-tailed Gaussian in the high-dimensional space to define local neighborhoods, and a heavy-tailed Student-t in the low-dimensional map to allow moderate distances to be represented by much larger spatial separations, thereby eliminating the compressive forces that collapse clusters.
+
+---
+
+#### High-Dimensional Pairwise Similarities: From Euclidean Distances to Joint Probabilities
+
+The first stage of t-SNE converts the raw dataset `$\mathbf{X}$` into a matrix of pairwise similarities that capture which points are neighbors of which other points. This conversion involves three steps: computing per-point bandwidths, forming conditional probabilities, and symmetrizing.
+
+**Per-point bandwidth calibration via perplexity.**
+
+For each datapoint `$\mathbf{x}_i$`, the algorithm centers a Gaussian kernel and computes, for every other datapoint `$\mathbf{x}_j$` (`$j \neq i$`), the conditional probability that `$\mathbf{x}_i$` would select `$\mathbf{x}_j$` as a neighbor:
+
+$$p_{j|i} = \frac{\exp\left(-\|\mathbf{x}_i - \mathbf{x}_j\|^2 / 2\sigma_i^2\right)}{\sum_{k \neq i} \exp\left(-\|\mathbf{x}_i - \mathbf{x}_k\|^2 / 2\sigma_i^2\right)}$$
+
+where `$\|\mathbf{x}_i - \mathbf{x}_j\|$` is the Euclidean distance between the two points, and `$\sigma_i$` is the bandwidth (standard deviation) of the Gaussian centered at `$\mathbf{x}_i$`.
+
+**What it computes:** For a fixed `$\mathbf{x}_i$` and a fixed `$\sigma_i$`, this equation produces a probability distribution `$P_i$` over all other datapoints. Points very close to `$\mathbf{x}_i$` receive high probability; points far away receive probability that decays exponentially with squared distance. The denominator normalizes so that `$\sum_{j \neq i} p_{j|i} = 1$`. This distribution can be interpreted as: "if I were to pick a neighbor of `$\mathbf{x}_i$` by drawing from a Gaussian centered at `$\mathbf{x}_i$`, what is the probability I would pick `$\mathbf{x}_j$`?"
+
+**Why this form:** The Gaussian kernel provides a soft threshold between "near" and "far." Unlike a hard k-nearest-neighbor cutoff, the Gaussian assigns smoothly decreasing weights, so the optimization landscape is continuous. The per-point bandwidth `$\sigma_i$` is crucial because data density varies across the space — in dense regions, a small `$\sigma_i$` captures meaningful local structure, while in sparse regions, a larger `$\sigma_i$` is needed to include enough neighbors. Using a single global `$\sigma$` would either miss local structure in dense regions or fail to connect points in sparse regions.
+
+The value of `$\sigma_i$` is determined not by hand-tuning but by a **binary search** that targets a user-specified perplexity. The perplexity of `$P_i$` is:
+
+$$\text{Perp}(P_i) = 2^{H(P_i)}$$
+
+where `$H(P_i)$` is the Shannon entropy of `$P_i$` measured in bits:
+
+$$H(P_i) = -\sum_{j} p_{j|i} \log_2 p_{j|i}$$
+
+**What this computes:** The perplexity is `$2$` raised to the entropy — it can be interpreted as a smooth measure of the effective number of neighbors. If `$\sigma_i$` is very small, only the few closest points receive non-negligible probability, entropy is low, and perplexity is small (perhaps 2–3 neighbors). If `$\sigma_i$` is very large, the distribution is nearly uniform, entropy is high, and perplexity approaches `$n-1$`. The binary search adjusts `$\sigma_i$` until `$\text{Perp}(P_i)$` equals the target value specified by the user (the paper uses `$\text{Perp} = 40$` for all experiments — see Table 1).
+
+**Why this form:** The perplexity-based calibration abstracts away from the raw data scale and density. Rather than the user having to guess appropriate bandwidths for each dataset, they specify a single intuitive parameter — "how many neighbors should each point effectively have?" — and the algorithm adapts locally. The paper notes that "the performance of SNE is fairly robust to changes in the perplexity, and typical values are between 5 and 50." The entropy `$H(P_i)$` increases monotonically with `$\sigma_i$`, which is why the binary search works: there is a unique `$\sigma_i$` for each target perplexity. The paper explicitly states that `$p_{i|i}$` is set to zero "because we are only interested in modeling pairwise similarities."
+
+**Symmetrization of conditional probabilities.**
+
+The conditional probabilities `$p_{j|i}$` are not symmetric — `$p_{j|i} \neq p_{i|j}$` in general because the bandwidths `$\sigma_i$` and `$\sigma_j$` differ. The paper converts these to symmetric joint probabilities:
+
+$$p_{ij} = \frac{p_{j|i} + p_{i|j}}{2n}$$
+
+**What it computes:** The joint probability that the pair `$(i, j)$` is "similar" is the average of the two directed conditional probabilities, divided by `$n$`. The division by `$n$` ensures that `$\sum_{i,j} p_{ij} = 1$` (since each directed sum over `$j$` for a fixed `$i$` equals 1, and there are `$n$` such sums, the total over all ordered pairs is `$n$`, so dividing by `$2n$` accounts for the symmetry).
+
+**Why this form:** The authors compare this to a "natural" alternative — directly defining joint probabilities with a global Gaussian:
+
+$$\text{(problematic alternative)} \quad p_{ij} = \frac{\exp\left(-\|\mathbf{x}_i - \mathbf{x}_j\|^2 / 2\sigma^2\right)}{\sum_{k \neq l} \exp\left(-\|\mathbf{x}_k - \mathbf{x}_l\|^2 / 2\sigma^2\right)}$$
+
+The problem with this alternative is that **outliers break it**. If `$\mathbf{x}_i$` is an outlier — all its pairwise distances are large — then `$\exp(-\|\mathbf{x}_i - \mathbf{x}_j\|^2 / 2\sigma^2)$` is extremely small for all `$j$`. The resulting `$p_{ij}$` values are all near zero, meaning `$\sum_j p_{ij}$` is tiny, and "the location of its low-dimensional map point `$\mathbf{y}_i$` has very little effect on the cost function." The symmetrized conditional approach guarantees that `$\sum_j p_{ij} > \frac{1}{2n}$` for every point `$\mathbf{x}_i$`, ensuring every datapoint makes a meaningful contribution to the gradient. The paper also sets `$p_{ii} = 0$` since self-similarity carries no information about relative positioning.
+
+---
+
+#### Low-Dimensional Similarities: The Student-t Distribution
+
+In the low-dimensional map, t-SNE computes joint probabilities `$q_{ij}$` from the Euclidean distances between map points `$\mathbf{y}_i$` and `$\mathbf{y}_j$`, but using a **Student t-distribution with one degree of freedom** (equivalent to a Cauchy distribution) rather than a Gaussian:
+
+$$q_{ij} = \frac{\left(1 + \|\mathbf{y}_i - \mathbf{y}_j\|^2\right)^{-1}}{\sum_{k \neq l} \left(1 + \|\mathbf{y}_k - \mathbf{y}_l\|^2\right)^{-1}}$$
+
+where `$\|\mathbf{y}_i - \mathbf{y}_j\|$` is the Euclidean distance between the two map points. As in the high-dimensional case, `$q_{ii} = 0$`.
+
+**What it computes:** The numerator converts pairwise distance into a similarity score using an inverse-power-law kernel `$(1 + d^2)^{-1}$` rather than an exponential kernel `$\exp(-d^2)$`. The denominator `$Z = \sum_{k \neq l} (1 + \|\mathbf{y}_k - \mathbf{y}_l\|^2)^{-1}$` normalizes so that `$\sum_{i,j} q_{ij} = 1$`. The resulting `$q_{ij}$` is the model's predicted probability that `$i$` and `$j$` are neighbors in the map, given the current embedding.
+
+**Why this form — the deep reason (solving the crowding problem):** This is the central innovation of the paper, and understanding it requires revisiting the crowding problem mechanistically.
+
+In SNE, the low-dimensional probabilities use a Gaussian: `$q_{ij} \propto \exp(-\|\mathbf{y}_i - \mathbf{y}_j\|^2)$`. Consider a datapoint `$\mathbf{x}_i$` in a 10-dimensional manifold embedded in a higher-dimensional space. `$\mathbf{x}_i$` has a few very close neighbors (the local cluster), many moderately-distant points (other clusters), and many very distant points. In the 10-dimensional space, there is abundant "volume" at moderate distances — geometrically, the volume of a shell at radius `$r$` scales as `$r^{m-1}$`, so with `$m = 10$`, moderately-distant shells contain many points. In the 2D map, the volume at moderate distances scales as `$r$` — far less capacity. The Gaussian `$q_{ij}$` drops to near-zero for even modest distances in the map, so to keep `$q_{ij}$` from being too small for the many moderately-distant pairs (and thus incurring large KL penalty), the optimizer is forced to pull those map points closer to `$\mathbf{y}_i$`. The result: points from different clusters are compressed toward each other, filling the center of the map.
+
+The Student-t kernel `$(1 + d^2)^{-1}$` has heavy tails — it decays polynomially rather than exponentially. For large `$d$`, `$(1 + d^2)^{-1} \approx d^{-2}$`, an inverse square law. This means that even map points placed far apart in the 2D map still have non-negligible `$q_{ij}$` values, so there is no urgent pressure to pull them closer. The optimizer can place different clusters at comfortable distances without the `$q_{ij}$` values for between-cluster pairs becoming so small that they generate large gradients. As the authors explain:
+
+> "This allows a moderate distance in the high-dimensional space to be faithfully modeled by a much larger distance in the map and, as a result, it eliminates the unwanted attractive forces between map points that represent moderately dissimilar datapoints."
+
+**Why one degree of freedom specifically:** With one degree of freedom, the kernel `$(1 + d^2)^{-1}$` has the property of being **approximately scale-invariant** for large distances. If all map coordinates are scaled by a factor `$s$`, then for far-apart points, `$q_{ij}$` changes very little because `$(1 + (s d)^2)^{-1} \approx s^{-2} d^{-2}$` and both numerator and denominator are scaled similarly. This means "large clusters of points that are far apart interact in just the same way as individual points, so the optimization operates in the same way at all but the finest scales."
+
+A secondary computational advantage: the Student-t density does not involve an exponential, making it "much faster to evaluate" despite the Student-t being an infinite mixture of Gaussians. The theoretical connection is that the Student-t with `$\nu$` degrees of freedom can be written as `$\int_0^\infty \mathcal{N}(\mathbf{y}_i - \mathbf{y}_j | 0, \tau^{-1} I) \cdot \text{Gamma}(\tau | \nu/2, \nu/2) \, d\tau$` — a continuous mixture of Gaussians with different variances, where the Gamma prior on the precision `$\tau$` causes heavy-tailed behavior when marginalized.
+
+---
+
+#### The Cost Function: Kullback-Leibler Divergence Between Joint Distributions
+
+t-SNE minimizes a single Kullback-Leibler (KL) divergence between the high-dimensional joint distribution `$P$` and the low-dimensional joint distribution `$Q$`:
+
+$$C = \text{KL}(P \| Q) = \sum_i \sum_j p_{ij} \log \frac{p_{ij}}{q_{ij}}$$
+
+where `$p_{ij}$` is fixed (computed once from the high-dimensional data) and `$q_{ij}$` is a function of the map coordinates `$\mathbf{Y}$`.
+
+**What it computes:** The KL divergence measures how much information is lost when `$Q$` is used to approximate `$P$`. Expanding: `$C = \sum_i \sum_j p_{ij} \log p_{ij} - \sum_i \sum_j p_{ij} \log q_{ij}$`. The first term is the negative entropy of `$P$`, which is constant with respect to `$\mathbf{Y}$`. The second term is the cross-entropy; minimizing `$C$` is equivalent to minimizing the cross-entropy, which means making `$q_{ij}$` as large as possible wherever `$p_{ij}$` is large.
+
+**Why this form — asymmetry matters:** The KL divergence is not symmetric: `$\text{KL}(P \| Q) \neq \text{KL}(Q \| P)$`. The choice `$\text{KL}(P \| Q)$` means we are summing terms `$p_{ij} \log(p_{ij} / q_{ij})$`. This has a crucial property for visualization:
+
+- When `$p_{ij}$` is large (points are similar in high dimensions) and `$q_{ij}$` is small (they are placed far apart in the map), the term `$p_{ij} \log(p_{ij} / q_{ij})$` is **large** — a heavy penalty. This means t-SNE strongly penalizes splitting apart points that should be neighbors.
+
+- When `$p_{ij}$` is small (dissimilar points) and `$q_{ij}$` is large (placed nearby in the map), the term `$p_{ij} \log(p_{ij} / q_{ij})$` is **small** — a light penalty. The paper describes this as "wasting some of the probability mass in the relevant `$Q$` distributions."
+
+The consequence: the cost function **prioritizes preserving local structure** — keeping similar points together — while being relatively forgiving about where dissimilar points end up, as long as they don't crowd out the similar ones. If the opposite direction `$\text{KL}(Q \| P)$` were used, the cost function would heavily penalize placing dissimilar points too close (since small `$p_{ij}$` with large `$q_{ij}$` would have the term `$q_{ij} \log(q_{ij}/p_{ij})$` which is large when `$p_{ij}$` is tiny), making the embedding focus on global structure instead.
+
+This is distinct from the asymmetric SNE formulation, which minimizes `$\sum_i \text{KL}(P_i \| Q_i)$` — a sum of per-point KL divergences over conditional distributions. The symmetric formulation uses a **single global joint distribution**, simplifying the gradient and making the optimization cleaner.
+
+---
+
+#### The Gradient: Forces on Map Points
+
+The gradient of the cost function with respect to each map point `$\mathbf{y}_i$` is derived in Appendix A of the paper. The result is:
+
+$$\frac{\delta C}{\delta \mathbf{y}_i} = 4 \sum_j (p_{ij} - q_{ij})(\mathbf{y}_i - \mathbf{y}_j)\left(1 + \|\mathbf{y}_i - \mathbf{y}_j\|^2\right)^{-1}$$
+
+where `$p_{ij}$` is the fixed high-dimensional similarity, `$q_{ij}$` is the current low-dimensional similarity defined by Equation 4, and `$(\mathbf{y}_i - \mathbf{y}_j)$` is the vector from `$\mathbf{y}_j$` to `$\mathbf{y}_i$`.
+
+**What it computes:** For each other point `$\mathbf{y}_j$`, the gradient contribution is a vector proportional to `$(\mathbf{y}_i - \mathbf{y}_j)$` with magnitude determined by three factors: (1) the mismatch `$(p_{ij} - q_{ij})$` between the target and current similarity, (2) the Euclidean distance `$\|\mathbf{y}_i - \mathbf{y}_j\|$` (since `$(\mathbf{y}_i - \mathbf{y}_j)$` is proportional to it), and (3) the damping factor `$(1 + \|\mathbf{y}_i - \mathbf{y}_j\|^2)^{-1}$`. The factor of 4 comes from the algebraic derivation in Appendix A.
+
+**Physical interpretation — spring forces:** The gradient can be interpreted as the resultant force on `$\mathbf{y}_i$` from a set of springs connecting it to every other map point `$\mathbf{y}_j$`:
+
+- When `$p_{ij} > q_{ij}$`, the spring is **attractive**: the force pulls `$\mathbf{y}_i$` toward `$\mathbf{y}_j$`, reducing the distance `$\|\mathbf{y}_i - \mathbf{y}_j\|$` so that `$q_{ij}$` increases to better match `$p_{ij}$`.
+
+- When `$p_{ij} < q_{ij}$`, the spring is **repulsive**: the force pushes `$\mathbf{y}_i$` away from `$\mathbf{y}_j$`.
+
+- The spring stiffness is proportional to `$(p_{ij} - q_{ij})$` — larger mismatches exert stronger forces.
+
+- The damping factor `$(1 + \|\mathbf{y}_i - \mathbf{y}_j\|^2)^{-1}$` reduces the force when points are already far apart. This is the mathematical manifestation of the heavy-tailed distribution: without it, the force would be proportional to `$\|\mathbf{y}_i - \mathbf{y}_j\|$` times the mismatch, causing far-apart points to exert very large forces relative to nearby points. The damping ensures that long-range interactions are gentle.
+
+**Why this gradient form matters — comparing with SNE and UNI-SNE:** Figure 1 in the paper plots the gradient as a function of both the high-dimensional distance and the low-dimensional distance for symmetric SNE, UNI-SNE, and t-SNE. The plots reveal why t-SNE works better:
+
+- **SNE (Figure 1a):** The maximum attraction is approximately 19 (for points that are close in high dimensions but far in the map), while the maximum repulsion is only approximately 1 (for points far in high dimensions but close in the map). This asymmetry means that attractive forces dominate, pulling everything toward the center — the crowding problem in gradient form.
+
+- **UNI-SNE (Figure 1b):** Repulsion is stronger and persists at larger distances, but the repulsion for far-apart map points is *proportional* to their distance. This can cause dissimilar points to "move much too far away from each other." Additionally, once two clusters separate, the uniform background component of `$q_{ij}$` dominates, and the attractive force vanishes — clusters that get separated early cannot be pulled back together.
+
+- **t-SNE (Figure 1c):** The gradient shows strong repulsion for points that are dissimilar in high dimensions but close in the map (the negative region when high-dimensional distance is large and low-dimensional distance is small), and this repulsion does not diverge. At the same time, there is meaningful attraction when points are similar in high dimensions but far in the map (the positive region). The damping factor `$(1 + d^2)^{-1}$` ensures that both attractive and repulsive forces operate at all scales without any one regime dominating.
+
+The authors summarize the effect:
+
+> "t-SNE introduces long-range forces in the low-dimensional map that can pull back together two (clusters of) similar points that get separated early on in the optimization. SNE and UNI-SNE do not have such long-range forces, as a result of which SNE and UNI-SNE need to use simulated annealing to obtain reasonable solutions."
+
+This is why t-SNE does not require simulated annealing — the gradient landscape itself is well-behaved enough that standard optimization finds good local minima.
+
+---
+
+#### Optimization Procedure: Gradient Descent with Momentum and Adaptive Learning Rates
+
+The paper presents a specific optimization recipe (Algorithm 1 and the surrounding description in Section 3.4) that the authors use for every experiment in the paper:
+
+**Initialization.** Map points `$\mathbf{Y}^{(0)}$` are sampled from an isotropic Gaussian with mean zero and small variance: `$\mathcal{N}(0, 10^{-4}I)$`. The small variance ensures that all points start very close to the origin, so initial distances are tiny.
+
+**Gradient descent update with momentum.** At iteration `$t$`, the update rule is:
+
+$$\mathbf{Y}^{(t)} = \mathbf{Y}^{(t-1)} + \eta \frac{\delta C}{\delta \mathbf{Y}} + \alpha(t)\left(\mathbf{Y}^{(t-1)} - \mathbf{Y}^{(t-2)}\right)$$
+
+where `$\eta$` is the learning rate (initially set to 100), `$\frac{\delta C}{\delta \mathbf{Y}}$` is the gradient computed from Equation 5, and `$\alpha(t)$` is the momentum coefficient. The momentum term adds a fraction of the previous update direction to the current update, which smooths the trajectory and helps escape shallow local minima.
+
+The momentum schedule is: `$\alpha(t) = 0.5$` for the first 250 iterations, then `$\alpha(t) = 0.8$` for `$t \geq 250$`. The smaller initial momentum allows rapid exploration early on; the larger later momentum stabilizes convergence once the global structure has formed.
+
+**Adaptive learning rate (Jacobs, 1988).** The learning rate `$\eta$` is not fixed. The algorithm tracks, for each dimension, whether the sign of the gradient has been consistent across recent iterations. Dimensions where the gradient direction is stable (sign hasn't flipped) get their effective learning rate increased — the algorithm can make faster progress in these directions. Dimensions where the gradient is oscillating get their learning rate decreased to avoid overshooting. The initial learning rate is `$\eta = 100$` and it is updated after every iteration. The paper describes this as speeding up the algorithm "using the adaptive learning rate scheme that is described by Jacobs (1988), which gradually increases the learning rate in directions in which the gradient is stable."
+
+**Early exaggeration (first 50 iterations).** For the first 50 iterations, all `$p_{ij}$` values are multiplied by 4. This means:
+
+$$p_{ij}^{\text{exaggerated}} = 4 \times p_{ij}$$
+
+Since `$\sum_{i,j} q_{ij} = 1$` always, the `$q_{ij}$` values are initially far too small to match the exaggerated `$p_{ij}$` values. The effect: the optimizer is forced to focus almost exclusively on making the largest `$p_{ij}$` values (the most similar pairs) be represented by large `$q_{ij}$` values. This causes true clusters to form tight, well-separated blobs early on. The authors explain:
+
+> "This creates a lot of relatively empty space in the map, which makes it much easier for the clusters to move around relative to one another in order to find a good global organization."
+
+After iteration 50, the exaggeration is removed, and the `$p_{ij}$` values return to their original scale. The clusters can then relax and reveal internal structure.
+
+**Early compression (optional).** As a less critical optimization trick, the paper mentions adding an L2 penalty to the cost function that is proportional to the sum of squared distances of the map points from the origin. This "forces the map points to stay close together at the start of the optimization," making it easier for clusters to move through one another to find good global arrangements. The magnitude and duration of this penalty are set by hand, and the paper notes it is "fairly robust across variations."
+
+**Number of iterations and convergence.** The algorithm runs for `$T = 1000$` iterations total. There is no explicit convergence criterion — the authors found this number sufficient for all experiments. The paper does not claim convergence to a global minimum; Section 6.2 explicitly acknowledges non-convexity as a weakness:
+
+> "a major weakness of t-SNE is that the cost function is not convex, as a result of which several optimization parameters need to be chosen."
+
+However, the authors argue that in practice, "the quality of the optima does not vary much from run to run," and that "a local optimum of a cost function that accurately captures what we want in a visualization is often preferable to the global optimum of a cost function that fails to capture important aspects of what we want."
+
+**Why no simulated annealing:** SNE requires adding Gaussian noise to map coordinates at each iteration, with the noise variance gradually reduced — a simulated annealing procedure. The noise helps SNE escape poor local minima where clusters are trapped near the center. The authors note this is brittle: the noise schedule "interacts with the amount of momentum and the step size" and "it is therefore common to run the optimization several times on a data set to find appropriate values for the parameters." t-SNE eliminates this entirely — the heavy-tailed gradient provides intrinsic long-range forces that serve the same purpose (pulling separated clusters back together) without requiring stochastic noise. This makes the optimization "much easier" and more reproducible.
+
+---
+
+#### Preprocessing: PCA Dimensionality Reduction to 30 Dimensions
+
+Before running t-SNE, all datasets are preprocessed by applying PCA to reduce the dimensionality to 30 (Section 4.2). The authors state two motivations: (1) it "speeds up the computation of pairwise distances between the datapoints" because Euclidean distance computation scales linearly with dimensionality, and (2) it "suppresses some noise without severely distorting the interpoint distances." Reducing from, say, 784 dimensions (MNIST pixels) to 30 dimensions removes high-frequency noise in the pixel representation while retaining the dominant variance directions that capture meaningful structure. The choice of 30 is a heuristic — high enough to retain most of the data variance, low enough to accelerate pairwise distance computation.
+
+---
+
+#### The Random-Walk Landmark Extension for Large Datasets
+
+The standard t-SNE algorithm has `$O(n^2)$` computational and memory complexity because it requires storing and manipulating the full `$n \times n$` probability matrices `$P$` and `$Q$`. The authors state this "makes it infeasible to apply the standard version of t-SNE to data sets that contain many more than, say, 10,000 points." The random-walk extension (Section 5) allows t-SNE to use information from **all** datapoints when displaying only a selected subset (landmarks).
+
+**Landmark selection and neighborhood graph construction.** First, select a subset of `$n_L$` "landmark" points to display (the paper uses 6,000 landmarks from the full 60,000 MNIST digits). Second, construct a directed neighborhood graph on the **full** dataset using `$k$` nearest neighbors (`$k = 20$` in the experiment). Edge weights from node `$\mathbf{x}_i$` to node `$\mathbf{x}_j$` are proportional to `$\exp(-\|\mathbf{x}_i - \mathbf{x}_j\|^2)$`.
+
+**Random-walk-based similarity `$p_{j|i}$`.** For each landmark point `$\mathbf{x}_i$`, perform random walks starting at `$\mathbf{x}_i$` and terminating as soon as the walk lands on **any** other landmark point (including returning to `$\mathbf{x}_i$`). At each step, the probability of transitioning from the current node `$\mathbf{x}_a$` to a neighbor `$\mathbf{x}_b$` is proportional to `$\exp(-\|\mathbf{x}_a - \mathbf{x}_b\|^2)$`. Define `$p_{j|i}$` as the **fraction of random walks** starting at landmark `$i$` that terminate at landmark `$j$`.
+
+**What it computes:** Rather than measuring direct Euclidean distance between landmarks `$i$` and `$j$`, this measures the **probability that a random diffusion process starting at `$i$` reaches `$j$` before reaching any other landmark**. If there are many undisplayed datapoints forming a dense path between `$i$` and `$j$`, the random walk has high probability of flowing along that path and terminating at `$j$`, so `$p_{j|i}$` will be high — even if `$i$` and `$j$` are far apart in Euclidean space. If `$i$` and `$j$` are similar Euclidean distances apart but there are no intervening points (a gap in the manifold), the random walk has no path and `$p_{j|i}$` will be low.
+
+**Why this approach — connection to Figure 6:** The paper provides an illustrative example (Figure 6). Three landmark points A, B, and C are roughly equidistant in Euclidean space. However, there are many non-landmark datapoints between A and B, and none between A and C. A standard landmark approach that only uses direct Euclidean distances between landmarks would treat the A–B and A–C similarities as roughly equal, missing the fact that A and B belong to the same dense region. The random-walk approach integrates over all paths through the neighborhood graph, so `$p_{B|A}$` will be much larger than `$p_{C|A}$`, correctly reflecting the data manifold's structure.
+
+**Comparison with Isomap and diffusion maps.** Isomap computes the **shortest path** through the neighborhood graph — a single path — which makes it vulnerable to short-circuits: one spurious connection creates a shortcut that dramatically reduces the geodesic distance estimate. The random-walk approach **integrates over all paths** through the graph, weighted by their probability. A short-circuit contributes one low-probability path among many, so its effect is averaged out. Per the authors:
+
+> "the random walk-based affinity measure is much less sensitive to 'short-circuits' (Lee and Verleysen, 2005), in which a single noisy datapoint provides a bridge between two regions of dataspace that should be far apart in the map."
+
+Diffusion maps (Lafon and Lee, 2006) also use random walks, but they define a "diffusion distance" and minimize squared errors in that distance (like classical MDS), which over-emphasizes large distances. The random-walk t-SNE retains the KL-divergence framework with its emphasis on local structure.
+
+**Implementation details.** The paper explicitly simulates random walks rather than using the analytical solution (described in Appendix B) because "this is computationally less expensive" for the data sizes considered. The authors note they "can easily perform one million random walks per second." The random walks terminate deterministically when a landmark is reached, and `$p_{j|i}$` is estimated by the empirical termination frequencies. For the MNIST experiment with 6,000 landmarks and all 60,000 digits, "it took only one hour of CPU time to construct the map."
+
+**Analytical solution (Appendix B) — for sparser landmarks.** For situations where landmarks are very sparse, Monte Carlo random walks may have high variance. Appendix B provides an analytical solution based on the combinatorial Dirichlet problem. The probability that a random walk starting at a non-landmark point reaches a specific landmark before any other is the solution to a sparse linear system `$\mathbf{L}_N \mathbf{x}_N = -\mathbf{B}^T$`, where `$\mathbf{L} = \mathbf{D} - \mathbf{W}$` is the graph Laplacian, `$\mathbf{L}_N$` is the submatrix for non-landmark nodes, and `$\mathbf{B}$` is the submatrix connecting landmarks to non-landmarks. The authors solve this via Cholesky factorization of `$\mathbf{L}_N$`, solving the resulting triangular systems one column at a time due to memory constraints, storing only the rows corresponding to the duplicate landmark points (landmarks are duplicated so that random walks from landmarks can terminate at other landmarks).
+
+**After computing `$p_{j|i}$`:** The random-walk conditional probabilities are symmetrized to obtain `$p_{ij} = (p_{j|i} + p_{i|j}) / 2n$` exactly as in the standard t-SNE procedure. The low-dimensional embedding then proceeds identically: initialize `$\mathbf{Y}$` randomly, compute `$q_{ij}$` using the Student-t kernel, and run gradient descent to minimize `$\text{KL}(P \| Q)$`. The only difference is the source of the `$p_{ij}$` values.
+
+---
+
+#### Summary of Design Choices and Their Justifications
+
+- **Gaussian in high dimensions, Student-t (1 df) in low dimensions:** Mismatched tails compensate for mismatched dimensionalities. The light-tailed Gaussian defines precise local neighborhoods; the heavy-tailed t-distribution gives clusters room in the 2D map without creating spurious attractive forces. One degree of freedom provides approximate scale invariance and the convenient inverse-square asymptotic behavior.
+
+- **Perplexity-based bandwidth calibration:** Automatically adapts to varying data density without requiring the user to specify per-point or per-dataset bandwidths. The effective-neighbors interpretation is intuitive.
+
+- **Symmetric joint probabilities with outlier protection:** The `$p_{ij} = (p_{j|i} + p_{i|j}) / 2n$` construction ensures every point contributes meaningfully to the cost function (lower bound of `$1/(2n)$` on each `$\sum_j p_{ij}$`) while being simpler to differentiate than the asymmetric conditional formulation.
+
+- **KL(P ‖ Q) rather than KL(Q ‖ P) or squared-error:** Prioritizes preserving local neighborhoods (large `$p_{ij}$` must be matched by large `$q_{ij}$`) over global distances (small `$p_{ij}$` matched by small `$q_{ij}$` is less critical). This aligns with the goal of revealing cluster and manifold structure.
+
+- **No simulated annealing:** The long-range attractive forces in the t-SNE gradient (from the heavy-tailed `$q_{ij}$`) naturally pull separated clusters back together, eliminating the need for stochastic noise injection with carefully-tuned schedules. This dramatically simplifies practical usage.
+
+- **Early exaggeration (×4 for 50 iterations):** Forces tight cluster formation early, creating empty space for global reorganization before relaxing to reveal internal structure. Used in every experiment in the paper.
+
+- **Momentum with schedule (0.5 → 0.8) and adaptive learning rates:** Standard optimization techniques that the authors found work reliably across all datasets without per-dataset tuning of the base learning rate or momentum parameters.
+
+- **PCA preprocessing to 30 dimensions:** A pragmatic speed-quality tradeoff that accelerates pairwise distance computation while removing pixel-level noise. The choice of 30 is not theoretically justified but empirically effective.
+
+- **Random-walk landmark extension integrates over all paths:** Compared to Isomap's shortest-path approach, this provides robustness to short-circuits and exploits information from undisplayed datapoints to better estimate landmark similarities. This is what enables t-SNE to scale beyond 10,000 points while maintaining embedding quality.
+
+## 4. Key Insights and Innovations
+
+### Innovation 1: Mismatched Distribution Tails as a Principled Solution to the Crowding Problem
+
+The most intellectually distinctive move in this paper is not the use of a Student-t distribution per se — heavy-tailed distributions were well-known in statistics — but the insight that **the crowding problem in dimensionality reduction is fundamentally a dimensionality mismatch problem, and that mismatched distribution tails can compensate for it**. This is a diagnostic reframing, not just a technical fix.
+
+Before t-SNE, the crowding problem was recognized as a practical nuisance: SNE maps tended to collapse clusters toward the center, and practitioners compensated with ad-hoc measures. Cook et al. (2007) attempted to address it in UNI-SNE by adding a uniform background distribution to prevent `$q_{ij}$` from becoming too small for moderately-distant points, creating a slight repulsion. This was a *patch* — it treated the symptom (insufficient repulsion) without diagnosing the cause.
+
+Van der Maaten and Hinton's conceptual leap was to recognize that the crowding problem has a geometric origin: the volume available to place points at moderate distances scales as `$r^{m-1}$` in `$m$` dimensions, so when reducing from a high-dimensional manifold to 2D, the "capacity" for moderately-distant neighbors shrinks dramatically. The Gaussian kernel's light tails in the low-dimensional map mean that any point placed more than a few standard deviations away has a `$q_{ij}$` value that is effectively zero — the model insists that moderate high-dimensional distances be represented by small low-dimensional distances. The mismatch between the volume scaling in the two spaces makes this impossible without crushing points together.
+
+The innovation is the recognition that **this is a tail-matching problem, not just a repulsion-tuning problem**. By using a heavy-tailed distribution in the low-dimensional space, t-SNE allows a moderate high-dimensional distance to map to a large low-dimensional distance without the corresponding `$q_{ij}$` becoming pathologically small. The Gaussian in the high-dimensional space defines precise local neighborhoods (its light tails mean that beyond a certain radius, points are effectively "dissimilar"); the Student-t in the low-dimensional space provides the capacity to place those dissimilar points far apart without generating large attractive gradients. The tails are mismatched *because the dimensionalities are mismatched*, and the heavy tails compensate.
+
+This is a fundamental conceptual contribution, not an incremental refinement. It reframes the problem from "how do we add enough repulsion?" (the UNI-SNE approach) to "how do we correctly model the probability mass for moderately-distant pairs given the reduced capacity of a 2D space?" The answer — use a distribution whose tail decay matches the volume scaling mismatch — is elegant in its simplicity and has implications beyond t-SNE: it suggests that any dimensionality reduction method that converts distances to probabilities should consider mismatched kernels when the target space has substantially lower intrinsic dimensionality.
+
+The evidence that this reframing matters, beyond just "t-SNE works better," is the gradient analysis in Figure 1. The t-SNE gradient (Figure 1c) shows strong but bounded repulsion for points that are dissimilar in high dimensions but placed close in the map — exactly the behavior needed to prevent cluster collapse — while maintaining meaningful attraction at all distance scales. SNE's gradient (Figure 1a) shows repulsion an order of magnitude weaker than its maximum attraction. UNI-SNE's gradient (Figure 1b) shows repulsion that grows unboundedly with distance, which can push clusters too far apart. t-SNE's gradient achieves what neither predecessor could: the right balance between attraction and repulsion across all distance scales, derived from a principled choice of kernel rather than a hand-tuned background term.
+
+---
+
+### Innovation 2: Perplexity-Based Bandwidth Calibration as a Density-Adaptive Neighborhood Definition
+
+The second conceptual contribution is the method for defining local neighborhoods through a user-specified perplexity rather than a fixed bandwidth or a fixed number of neighbors. While this technique originated in SNE (Hinton and Roweis, 2002), t-SNE inherits it and the paper's experimental demonstration of its effectiveness across diverse datasets elevates it from a SNE implementation detail to a **general principle for probabilistic dimensionality reduction**: neighborhood definitions should adapt to local data density, and the adaptation should be controlled by an interpretable parameter (effective number of neighbors) rather than a scale-dependent one (bandwidth in data units).
+
+Before this approach, most nonlinear dimensionality reduction methods defined locality through either a fixed radius `$\epsilon$` (points within distance `$\epsilon$` are neighbors) or a fixed integer `$k$` (the `$k$` nearest points are neighbors). Both have failure modes. A fixed `$\epsilon$` fails when data density varies: in dense regions, `$\epsilon$` may include hundreds of neighbors (losing local resolution), while in sparse regions, the same `$\epsilon$` may include no neighbors at all (creating disconnected components). A fixed `$k$` adapts to density in terms of *count* but treats the `$k$`-th neighbor's distance as a hard cutoff — the 51st neighbor contributes nothing regardless of how close it is to the 50th.
+
+The perplexity-based approach provides a **soft, density-adaptive neighborhood** that is controlled by an interpretable, scale-free parameter. The binary search over `$\sigma_i$` to achieve a target perplexity means that in dense regions, `$\sigma_i$` is automatically small (capturing fine structure), while in sparse regions, `$\sigma_i$` is automatically large (ensuring connectivity). The Gaussian kernel provides smooth weights rather than a hard cutoff, making the optimization landscape continuous. And the perplexity parameter itself — "how many effective neighbors should each point have?" — is intuitive for practitioners who may not know the appropriate bandwidth in data units but can reason about the scale of structure they want to preserve.
+
+This is an incremental refinement of the SNE formulation (the mechanism is identical), but its significance extends beyond t-SNE. It establishes a design pattern — *define locality through information-theoretic calibration rather than geometric thresholds* — that has influenced subsequent work on manifold learning, graph construction, and self-supervised representation learning. The paper's demonstration that a single perplexity value (Perp = 40) works well across datasets as diverse as MNIST digits, face images, and object rotations (Table 1) provides empirical validation that the parameter is robust and transferable.
+
+---
+
+### Innovation 3: The Separation of Global Organization from Local Refinement Through Early Exaggeration
+
+The early exaggeration trick — multiplying all `$p_{ij}$` values by 4 for the first 50 iterations — might appear to be a minor optimization hack, but it embodies a subtle conceptual insight: **the global organization of a t-SNE embedding (how clusters are arranged relative to each other) and its local structure (the internal organization within clusters) are optimized at different stages, and forcing the algorithm to focus on the largest similarities first creates the empty space needed for clusters to find good relative positions**.
+
+This insight is significant because it addresses a previously unrecognized pathology in the optimization of probabilistic embeddings. When all `$p_{ij}$` values are active from the start, the optimizer simultaneously tries to satisfy constraints at all scales — bringing similar points together, keeping dissimilar points apart, and arranging clusters globally. These objectives can conflict: two clusters that should be adjacent in the global layout may get trapped in a suboptimal arrangement because local within-cluster forces prevent them from moving through each other. Early exaggeration resolves this by temporarily amplifying the largest similarities (typically within-cluster pairs) so that clusters form as tight, cohesive units early on. These tight clusters, surrounded by empty space in the map, can then move freely relative to one another to find a good global arrangement. Once the exaggeration is removed (after iteration 50), the within-cluster structure can relax and reveal finer details.
+
+The paper frames this explicitly:
+
+> "This creates a lot of relatively empty space in the map, which makes it much easier for the clusters to move around relative to one another in order to find a good global organization."
+
+This is not a generic optimization trick (like momentum or adaptive learning rates) — it exploits the specific structure of the t-SNE objective. The KL-divergence cost function already prioritizes large `$p_{ij}$` values; early exaggeration sharpens this prioritization temporarily to resolve the global layout before attending to finer scales. The fact that the authors used exactly the same early exaggeration schedule (×4 for 50 iterations with `$T = 1000$` total) across all experiments and datasets suggests that this temporal separation of global and local optimization is robust — it is not a parameter that needs per-dataset tuning.
+
+Compared to SNE's simulated annealing, which injected noise to escape local minima, early exaggeration is a fundamentally different approach: rather than adding randomness to shake the system out of poor configurations, it **reshapes the optimization landscape itself** to make good configurations easier to find, then restores the original landscape for refinement. This is a more principled strategy because it doesn't require the practitioner to tune a noise schedule that interacts with other optimization hyperparameters.
+
+---
+
+### Innovation 4: Diffusion-Based Landmark Similarities That Integrate Over All Paths Rather Than Shortest Paths
+
+The random-walk landmark extension (Section 5) introduces a novel approach to scaling visualization methods to large datasets: rather than computing similarities between landmark points from direct pairwise distances (which ignores the information in non-landmark datapoints) or from shortest-path geodesic distances through a neighborhood graph (which is vulnerable to short-circuits), t-SNE uses **random walks that integrate over all paths** through the graph. The probability `$p_{j|i}$` that a random walk from landmark `$i$` terminates at landmark `$j$` reflects the density of paths connecting `$i$` and `$j$` through the undisplayed data.
+
+This is conceptually distinct from both Isomap's shortest-path approach and diffusion maps' diffusion-distance approach. Isomap computes a **single** path (the shortest) between each pair of points, making it vulnerable to short-circuits: one spurious edge in the neighborhood graph can create a shortcut that dramatically underestimates the true manifold distance. The random-walk approach is robust because a short-circuit contributes only one low-probability path among many — its effect is averaged out. As the paper notes:
+
+> "the random walk-based affinity measure is much less sensitive to 'short-circuits'."
+
+Diffusion maps (Lafon and Lee, 2006) also use random walks but optimize a fundamentally different objective. Diffusion maps define a "diffusion distance" and then perform classical MDS to preserve that distance in the low-dimensional space. Classical MDS minimizes squared errors in pairwise distances, which — as the paper argues for Sammon mapping and classical scaling — over-emphasizes large distances. The t-SNE landmark approach retains the KL-divergence objective with its emphasis on local structure, applying it to diffusion-based similarities rather than direct Euclidean similarities.
+
+The significance of this innovation extends beyond the specific algorithm. It demonstrates a design principle for scalable manifold learning: **when displaying a subset of data, use the full dataset to inform the similarities among the displayed points through a robust integration process rather than a brittle extremal path**. The paper's Figure 6 provides a compelling toy illustration: three equidistant landmarks A, B, and C, where many undisplayed points connect A and B but none connect A and C. A direct-similarity approach treats A–B and A–C identically; a shortest-path approach might still treat them identically if the direct distances are the shortest paths; the random-walk approach correctly assigns higher similarity to A–B because the density of paths reflects the underlying manifold structure.
+
+This is an incremental rather than fundamental contribution to the dimensionality reduction literature — random walks on graphs were already used in diffusion maps and semi-supervised learning — but it is a significant conceptual expansion of t-SNE's applicability. The standard t-SNE was limited to `$O(n^2)$` and could not scale beyond roughly 10,000 points. The landmark extension, by making it possible to use information from all 60,000 MNIST digits when displaying only 6,000, demonstrated that t-SNE's probabilistic framework could be applied to realistically large datasets. The resulting 1-nearest-neighbor classification accuracy of 5.13% on the 2D embedding versus 5.75% on the original 784-dimensional data provides quantitative evidence that the landmark procedure preserves meaningful structure.
+
+## 5. Experimental Analysis
+
+### Evaluation Methodology
+
+- **Dataset.** The paper uses five datasets spanning a variety of domains: (1) the **MNIST** dataset (60,000 grayscale 28×28 pixel handwritten digit images; a random subset of 6,000 is used for computational reasons in the main experiments, with the full 60,000 used in the random-walk landmark experiment in Section 5); (2) the **Olivetti faces** dataset (400 images of 40 individuals, 10 per individual, at 92×112 pixels, with variations in viewpoint, expression, and glasses); (3) the **COIL-20** dataset (1,440 images of 20 objects viewed from 72 equally-spaced orientations, at 32×32 pixels); (4) a **word-features** dataset; and (5) the **Netflix** dataset. Only results on the first three are presented in the main paper (Section 4.3); the latter two appear in the supplemental material due to space constraints.
+
+- **Metrics.** The primary evaluation is **qualitative visual assessment** of the 2D scatterplots produced by each method. Because all datasets come with class labels (digit identity, individual identity, object identity), the class information is used **only for coloring the map points** — not for determining their spatial coordinates. The resulting scatterplot is interpreted by examining whether points of the same class form coherent, well-separated clusters, and whether within-class structure (such as orientation variation in COIL-20 or handwriting style in MNIST) is revealed as continuous manifolds. For the random-walk MNIST experiment (Section 5), the paper additionally reports a quantitative metric: the **generalization error of a 1-nearest neighbor classifier** trained on the 2D t-SNE embedding versus on the original 784-dimensional data, using 10-fold cross-validation. The embedding-space error is 5.13% versus 5.75% in the original space, providing numerical evidence that the low-dimensional representation preserves discriminative structure.
+
+- **Baselines.** The paper compares t-SNE against **seven** non-parametric dimensionality reduction techniques. In the main paper (Section 4.3), three are shown: **(1) Sammon mapping** (Sammon, 1969), **(2) Isomap** (Tenenbaum et al., 2000), and **(3) Locally Linear Embedding (LLE)** (Roweis and Saul, 2000). In the supplemental material, four additional comparisons are provided: (4) Curvilinear Components Analysis (CCA; Demartines and Hérault, 1997), (5) Stochastic Neighbor Embedding (SNE; Hinton and Roweis, 2002), (6) Maximum Variance Unfolding (MVU; Weinberger et al., 2004), and (7) Laplacian Eigenmaps (Belkin and Niyogi, 2002). The baselines represent the state of the art in nonlinear dimensionality reduction at the time of writing, covering local-linear methods (LLE), geodesic methods (Isomap), spectral methods (Laplacian Eigenmaps, MVU), distance-preserving methods (Sammon mapping), and probabilistic methods (SNE, the direct predecessor).
+
+- **Generation budget / compute accounting.** There is no "generation budget" in the sense of sampling from a model — this is a deterministic optimization procedure. All methods receive the same **dimensionality budget**: reduce the data to exactly **two dimensions** for visualization. The computational complexity of t-SNE is reported as `$O(n^2)$` in both time and memory, where `$n$` is the number of datapoints. The random-walk landmark extension (Section 5) reduces this by selecting a subset of landmark points to display, using all `$n$` points to compute the landmark similarities, and is reported to take "only one hour of CPU time" for 6,000 landmarks from the full 60,000 MNIST digits.
+
+- **Cross-validation / statistical protocol.** **None.** The evaluation is entirely qualitative — the authors display the resulting scatterplots and the reader judges whether classes separate cleanly. There is no held-out test set, no cross-validation for hyperparameter selection, and no statistical significance testing. The one quantitative result (the 5.13% nearest-neighbor error for the random-walk t-SNE embedding) uses 10-fold cross-validation, but this serves as a supplemental demonstration of embedding quality rather than as a method for model selection or statistical comparison against baselines. The authors acknowledge the non-convexity of the cost function (Section 6.2) and note that "the quality of the optima does not vary much from run to run," but no formal run-to-run variability analysis is presented.
+
+- **Preprocessing.** All datasets are preprocessed identically: **PCA is first applied to reduce the dimensionality to 30** (Section 4.2). This step is justified as speeding up pairwise distance computation and suppressing noise without severely distorting interpoint distances. The choice of 30 is a pragmatic heuristic, not theoretically derived.
+
+- **Hyperparameter settings (Table 1).** For t-SNE: perplexity = 40. For Isomap: `$k$` = 12 nearest neighbors. For LLE: `$k$` = 12 nearest neighbors. For Sammon mapping: Newton's method for 500 iterations. For t-SNE optimization: 1,000 iterations, momentum α(t) = 0.5 for t < 250 and α(t) = 0.8 for t ≥ 250, initial learning rate η = 100 with the adaptive scheme of Jacobs (1988), early exaggeration of 4 for the first 50 iterations. For Isomap and LLE, only datapoints in the largest connected component of the neighborhood graph are visualized.
+
+---
+
+### Main Quantitative Results
+
+The results in this paper are fundamentally **visual**, not numerical. There are no tables of accuracy scores, no precision-recall curves, no statistical tests. The evidence consists of scatterplots, and the evaluation consists of the reader's judgment of whether those scatterplots reveal meaningful structure. I will describe what each figure shows in terms of class separation, manifold structure, and comparisons to baselines, anchoring claims to specific figures.
+
+---
+
+#### MNIST Handwritten Digits (Figures 2 and 3)
+
+The MNIST experiment uses 6,000 randomly selected digit images, each with 784 pixel dimensions, reduced to 30 via PCA before embedding.
+
+**t-SNE (Figure 2a).** The t-SNE map shows **near-perfect separation of the ten digit classes**. Each class (0 through 9, distinguished by color/symbol) forms a distinct, well-isolated cluster with minimal inter-class mixing. The clusters are distributed across the 2D space rather than collapsed toward the center — direct evidence that the heavy-tailed kernel successfully solved the crowding problem. The paper notes that "much of the local structure of the data (such as the orientation of the ones) is captured as well," though this is more clearly visible in the random-walk version (Figure 7). Some points are assigned to wrong clusters, but "most of these points correspond to distorted digits many of which are difficult to identify" — suggesting these are genuinely ambiguous cases rather than embedding failures.
+
+**Sammon mapping (Figure 2b).** The Sammon map produces a "ball" — a roughly circular central mass with points from all classes intermixed. Only digits 0, 1, and 7 are "somewhat separated from the other classes," forming peripheral structures, while the remaining seven classes form an undifferentiated central blob. This is a clear failure: a practitioner looking at this map would not be able to identify distinct digit clusters, and would see no evidence that the data contains ten natural classes.
+
+**Isomap (Figure 3a).** The Isomap map shows some cluster structure — certain digit classes form loosely connected regions — but there are "large overlaps between the digit classes." The clusters are not cleanly separated, and the overall organization is less interpretable than t-SNE's. The neighborhood graph construction (`$k = 12$`) may not be optimal, but this is typical of Isomap's sensitivity to parameter choice on real data.
+
+**LLE (Figure 3b).** The LLE map is even less structured. The authors describe a "curdled" appearance — points are either collapsed into dense central clumps or scattered as outliers to satisfy the covariance constraint, rather than organized by class. The digit classes are largely intermixed, and the visualization fails to reveal meaningful structure. This exemplifies LLE's weakness: the covariance constraint is satisfied by having a few widely-scattered points create large variance, while most points cluster near the center.
+
+The paper's headline claim for MNIST — that t-SNE "constructs a map in which the separation between the digit classes is almost perfect" — is visually supported by the stark contrast between Figure 2a and Figures 2b, 3a, and 3b. No quantitative metric (cluster purity, silhouette score, etc.) is reported.
+
+---
+
+#### Olivetti Faces (Figure 4)
+
+The Olivetti dataset contains 400 face images of 40 individuals (10 per individual), with variations in expression, viewpoint, and accessories (glasses). The 10,304-dimensional pixel vectors are reduced to 30 via PCA.
+
+**t-SNE (Figure 4a).** The t-SNE map clusters most individuals' 10 images together, with many individuals forming clearly separated clusters. The authors note: "Some individuals have their ten images split into two clusters, usually because a subset of the images have the head facing in a significantly different direction, or because they have a very different expression or glasses." This is described as a feature, not a bug — for these individuals, the Euclidean distance in pixel space genuinely does not group all 10 images as nearest neighbors, because a change in head orientation or expression can produce a larger pixel-space difference than the difference between two different individuals with similar poses. The embedding is truthfully reflecting the data's structure.
+
+**Sammon mapping (Figure 4b).** The Sammon map is "significantly better" than Isomap and LLE for this dataset: many images of the same individual are placed "fairly close together." However, "none of the classes are clearly separated in the Sammon map." The clusters blend into each other at their boundaries, making it difficult to delineate where one individual's images end and another's begin.
+
+**Isomap (Figure 4c).** The Isomap map provides "little insight into the class structure of the data." The points from different individuals are heavily intermixed, and there is no clear cluster organization. The neighborhood graph may not capture the manifold structure of face space at this scale.
+
+**LLE (Figure 4d).** Similar to Isomap, LLE provides "little insight." The map shows the characteristic central collapse: most points are concentrated in a dense region, with a few scattered outliers, and individual identities are not discernible.
+
+The takeaway: t-SNE is the only method that produces a map where most individuals form recognizable, mostly-separated clusters, allowing a practitioner to see how many distinct people are in the dataset and how their images relate to each other.
+
+---
+
+#### COIL-20 Object Rotations (Figure 5)
+
+The COIL-20 dataset contains 1,440 images of 20 objects, each imaged from 72 equally-spaced viewing angles (a full 360° rotation). This data lies on twenty separate 1D manifolds (circles, one per object), embedded in 1,024-dimensional pixel space. PCA reduces to 30 dimensions.
+
+**t-SNE (Figure 5a).** The t-SNE map is the most revealing. Key observations:
+
+- "For many of the 20 objects, t-SNE accurately represents the one-dimensional manifold of viewpoints as a closed loop." That is, the images of a single object, ordered by rotation angle, form a circle in the 2D map — the embedding recovers the intrinsic circular topology from the pixel data alone.
+
+- "For objects which look similar from the front and the back, t-SNE distorts the loop so that the images of front and back are mapped to nearby points." This is an example of t-SNE representing the **perceptual** manifold rather than the geometric one — if the object appears nearly identical from opposite sides, the embedding places those views nearby, deviating from a perfect circle.
+
+- For the four types of toy car (the "four aligned 'sausages' in the bottom-left of the t-SNE map"), the four rotation manifolds are "aligned by the orientation of the cars to capture the high similarity between different cars at the same orientation." This prevents t-SNE from keeping the four manifolds perfectly separate — the embedding trades off object identity against viewpoint similarity. This is a limitation, but an informative one: it tells the user that these four objects are visually similar at matched viewpoints.
+
+**Sammon mapping (Figure 5b).** The Sammon map does not cleanly separate the 20 object manifolds. The loops are not visible, and objects are intermixed.
+
+**Isomap (Figure 5c).** Isomap "only visualizes a small number of classes from the COIL-20 data set." Because the 20 objects form widely-separated submanifolds in pixel space, the neighborhood graph is disconnected — each object's images may form a separate connected component, or only a few components may be large enough to visualize. The paper explicitly notes this: "the data set comprises a large number of widely separated submanifolds that give rise to small connected components in the neighborhood graph." Isomap, which requires a connected graph, fails on multi-manifold data.
+
+**LLE (Figure 5d).** Same problem as Isomap: LLE "only visualizes a small number of classes" because the disconnected neighborhood graph prevents a unified embedding of all 20 objects.
+
+The COIL-20 results demonstrate t-SNE's ability to handle data consisting of multiple disconnected manifolds — a capability that graph-based methods like Isomap and LLE fundamentally lack because they require connected neighborhood graphs. This is a qualitative but decisive advantage.
+
+---
+
+#### Random-Walk t-SNE on Full MNIST (Figure 7, Section 5)
+
+The random-walk landmark experiment uses all 60,000 MNIST images to compute landmark similarities, displaying only 6,000 randomly-selected landmarks in the final map. The neighborhood graph uses `$k = 20$` nearest neighbors.
+
+**Visual results (Figure 7).** The resulting map shows "all classes are clearly separated" — comparable in quality to the standard t-SNE map on 6,000 digits (Figure 2a), but now informed by the full 60,000-image dataset. Additional structure emerges: "the 'continental' sevens form a small separate cluster." The inset scatterplot (colored by digit label) confirms the class separation. Moreover, "t-SNE reveals the main dimensions of variation within each class, such as the orientation of the ones, fours, sevens, and nines, or the 'loopiness' of the twos." This is the multi-scale structure that the paper claims t-SNE can capture: global class separation and local within-class continuous variation simultaneously.
+
+**Quantitative result.** The paper reports a 1-nearest-neighbor classification error of **5.13%** on the 2D t-SNE embedding, compared to **5.75%** on the original 784-dimensional pixel space (both using 10-fold cross-validation). This is a striking result: the 2D embedding is *more* informative for nearest-neighbor classification than the original high-dimensional representation, suggesting that t-SNE's probability-matching objective successfully preserves (and potentially denoises) the discriminative structure of the data. However, this is a single number without confidence intervals, and it is not compared against the other dimensionality reduction methods — we do not know whether Sammon, Isomap, or LLE embeddings would also improve nearest-neighbor accuracy, or whether the improvement is specific to t-SNE.
+
+**Computational cost.** The paper reports "only one hour of CPU time" to construct the map. Given 60,000 datapoints, 6,000 landmarks, and `$k = 20$` neighbors, this demonstrates the practical feasibility of the random-walk extension on a realistic dataset. No breakdown of time between neighborhood graph construction, random walk simulation, and gradient descent optimization is provided.
+
+---
+
+### Ablation Studies and Robustness Checks
+
+The paper does **not** contain formal ablation studies in the modern machine learning sense — there are no tables systematically removing components (no early exaggeration, no momentum, no Student-t tails, symmetric vs. asymmetric) and measuring the effect on a quantitative metric. The "ablations" are implicitly provided by the comparison to baselines:
+
+- **Student-t vs. Gaussian in low-dimensional space:** The comparison of t-SNE (Figures 2a, 4a, 5a) against SNE (in supplemental material) constitutes an implicit ablation of the heavy-tailed kernel. The paper states that SNE "constructs reasonably good visualizations" but suffers from the crowding problem that t-SNE solves. The supplemental material maps would show whether this difference is visually apparent.
+
+- **Symmetric vs. asymmetric cost function:** Section 3.1 notes that "in preliminary experiments, we observed that symmetric SNE seems to produce maps that are just as good as asymmetric SNE, and sometimes even a little better," but no systematic comparison is presented. This claim is based on unreported preliminary experiments.
+
+- **Early exaggeration:** The paper states that early exaggeration is used "in all the visualizations presented in this paper and in the supporting material," but no t-SNE map **without** early exaggeration is shown for comparison. The reader cannot assess how much early exaggeration contributes to the final map quality.
+
+- **Perplexity sensitivity:** The paper claims that "the performance of SNE is fairly robust to changes in the perplexity, and typical values are between 5 and 50," but no experiments varying perplexity are reported. A single value (Perp = 40) is used throughout.
+
+- **PCA dimensionality to 30:** No ablation varying the PCA target dimensionality (e.g., 10, 50, 100, or no PCA at all) is reported. The claim that PCA "suppresses some noise without severely distorting the interpoint distances" is not empirically validated in the paper.
+
+- **Random-walk t-SNE vs. standard t-SNE on the same subset:** The paper does not show what standard t-SNE would produce on the same 6,000 landmarks **without** using the full 60,000 digits to compute similarities. Such a comparison would isolate the benefit of the random-walk procedure. The nearest-neighbor error improvement (5.13% in the random-walk embedding vs. 5.75% in original space) is compared against the original 784-dimensional data, not against standard t-SNE on the same 6,000 points.
+
+- **Analytical vs. Monte Carlo random walks (Appendix B):** The paper notes that "in preliminary experiments, we did not find significant differences between performing the random walks explicitly and the analytical solution," but no data is shown. The Monte Carlo approach was chosen because "this is computationally less expensive" for the data size considered.
+
+- **Robustness to random initialization:** Section 6.2 acknowledges the non-convexity of the cost function and states that "the quality of the optima does not vary much from run to run." However, no multiple-run analysis (e.g., showing embeddings from 5–10 different random seeds) is presented to support this claim. The paper simply presents one map per dataset.
+
+- **Number of iterations:** The paper uses `$T = 1000$` iterations across all experiments. No experiment varying `$T$` is reported to assess whether the optimization has converged or whether more iterations would improve (or degrade) the embedding.
+
+**Negative results and limitations acknowledged by the authors (Section 6.2):**
+
+- **Curse of intrinsic dimensionality:** The authors acknowledge that t-SNE's reliance on local Euclidean distances makes it "sensitive to the curse of the intrinsic dimensionality of the data." For data with very high intrinsic dimensionality (e.g., face images estimated at ~100 dimensions by Meytlis and Sirovich, 2007), the local linearity assumption may be violated, and t-SNE "might be less successful." No experiment on such high-intrinsic-dimensionality data is reported.
+
+- **Non-convexity:** The authors explicitly state that "the cost function is not convex, as a result of which several optimization parameters need to be chosen." The constructed solutions "may be different each time t-SNE is run from an initial random configuration." This is a genuine limitation, but the authors argue that the practical consistency across runs and the quality of the visualizations outweigh the lack of theoretical convergence guarantees.
+
+- **Generalization to `$d > 3$` dimensions:** The paper only evaluates t-SNE for 2D visualization. The authors speculate that for higher-dimensional embeddings, "Student t-distributions with more than one degree of freedom are likely to be more appropriate" because the heavy tails would comprise too much probability mass in higher dimensions. This is acknowledged as an open question, not evaluated experimentally.
+
+---
+
+### Critical Assessment
+
+The paper makes a clear central claim: **t-SNE produces better visualizations than existing non-parametric dimensionality reduction techniques on real-world high-dimensional datasets.** "Better" is defined qualitatively — class separation, manifold structure, freedom from crowding artifacts — and the evidence consists of side-by-side scatterplot comparisons (Figures 2–5) where t-SNE's maps visibly separate classes that the baselines intermix.
+
+**Do the experiments demonstrate this claim?** Yes — but with important caveats about what "demonstrate" means in the absence of quantitative metrics.
+
+The MNIST results (Figures 2 and 3) are the strongest evidence. The contrast between t-SNE's nearly-perfect digit separation and the baseline failures is visually unambiguous. A reader does not need a clustering metric to see that Figure 2a reveals ten distinct digit clusters while Figures 2b, 3a, and 3b do not. The Olivetti faces (Figure 4) and COIL-20 (Figure 5) results are similarly compelling for their respective domains. The COIL-20 result additionally demonstrates a capability — handling multiple disconnected manifolds — that Isomap and LLE structurally cannot achieve.
+
+However, several weaknesses in the experimental design limit the strength of the conclusions:
+
+**1. No quantitative metrics for visualization quality.** The evaluation is entirely qualitative — the reader judges whether the maps "look good." This is defensible for a visualization paper (the goal is to produce maps that humans can interpret), but it makes objective comparison difficult. Would a clustering purity metric, a nearest-neighbor preservation rate, or a trustworthiness-continuity score (Venna and Kaski, 2001) rank t-SNE above the baselines? We do not know. The one quantitative result (5.13% vs. 5.75% nearest-neighbor error for the random-walk MNIST embedding) is suggestive but isolated — it compares against the original pixel space, not against baseline embeddings, and it appears only for the landmark variant.
+
+**2. Single hyperparameter configuration across all datasets and baselines.** The paper uses Perp = 40 for t-SNE and `$k = 12$` for Isomap and LLE across all datasets (Table 1). There is no evidence that these are fair or optimal choices for each method-dataset pair. If Isomap were allowed a different `$k$` per dataset (as is common practice), might it perform better on MNIST? If t-SNE's perplexity were tuned to 5 or 500, would the quality degrade? The paper's claim of robustness to perplexity ("typical values are between 5 and 50") is stated without evidence. The baselines may be disadvantaged by suboptimal parameter settings that a practitioner would tune.
+
+**3. The baselines are not given the same preprocessing advantages.** All methods use PCA to 30 dimensions, which benefits t-SNE (faster pairwise distances) but may harm methods that rely on the original feature space. Isomap, for example, computes geodesic distances on a neighborhood graph — if PCA to 30 removes important variance dimensions, the neighborhood graph may be less informative. The paper does not report results without PCA preprocessing to verify that the relative ranking of methods is preserved.
+
+**4. No run-to-run variability analysis.** t-SNE is non-convex and produces different embeddings from different random initializations. The paper shows one embedding per dataset and claims that "the quality of the optima does not vary much from run to run" (Section 6.2). This is an empirical claim that is not supported by data. If t-SNE sometimes produces a poor embedding (clusters intermixed, points collapsed) and sometimes a good one, the user needs to know how often to expect a good result. The paper's advice to "run the optimization several times" for SNE (Section 2) implicitly acknowledges this issue, but the same advice is not evaluated for t-SNE.
+
+**5. The random-walk landmark results have no baseline comparison.** The 5.13% nearest-neighbor error for random-walk t-SNE (Figure 7) is compared only to the original 784-dimensional data. No comparison is made to: (a) standard t-SNE on the same 6,000 landmarks without using the full 60,000 digits, (b) a random subset baseline (what if you just ran standard t-SNE on 6,000 randomly chosen digits without any landmark procedure?), or (c) the same nearest-neighbor evaluation applied to Sammon, Isomap, or LLE embeddings of the same data. The claim that the random-walk approach "makes use of the information that the undisplayed datapoints provide about the underlying manifolds" (Section 5) is conceptually compelling but not empirically isolated — we do not know how much the full-dataset information actually improves the embedding relative to simply using the landmarks alone.
+
+**6. The supplemental material contains 32 additional maps (4 datasets × [CCA, SNE, MVU, Laplacian Eigenmaps] + 2 additional datasets × all methods) that the reader of the main paper cannot evaluate.** The main paper relies on the claim that t-SNE outperforms "all seven" baselines, but only shows comparisons against three (Sammon, Isomap, LLE). The comparisons against SNE, CCA, MVU, and Laplacian Eigenmaps — which are critical for establishing t-SNE's superiority over its direct predecessor (SNE) and over the broader state of the art — are relegated to the supplemental material due to "space limitations." This is a structural weakness of the paper's presentation, not necessarily of the experiments themselves, but it means the main paper's evidence is incomplete.
+
+**7. No experiment isolates the contribution of the Student-t kernel vs. the symmetric cost function.** t-SNE modifies SNE in two ways: symmetrized joint probabilities and heavy-tailed low-dimensional distribution. The paper presents t-SNE as a package and compares it against asymmetric SNE (in the supplemental material). But it never shows what symmetric SNE with a Gaussian low-dimensional kernel (i.e., symmetric SNE without the t-distribution) would produce. Does the Student-t kernel alone solve the crowding problem, or is the symmetrization also necessary? The ablation is not performed.
+
+**8. The claim that t-SNE reveals "structure at many different scales" is illustrated but not systematically tested.** The paper shows that t-SNE maps contain both global clusters (digit classes) and local manifolds (orientation variation within a digit class). This is presented as a qualitative observation from looking at the maps. No experiment systematically varies the scale of structure in the data (e.g., hierarchical clustering with known ground-truth subclusters) and measures whether t-SNE reveals both levels while baselines reveal only one.
+
+**What experiments would strengthen the paper?**
+
+- **Quantitative evaluation on labeled data.** Computing cluster purity, normalized mutual information, or nearest-neighbor classification accuracy for **all** methods on **all** datasets would provide objective, comparable metrics. The single nearest-neighbor result for random-walk t-SNE (5.13%) demonstrates that this is feasible.
+
+- **Perplexity sensitivity analysis.** Showing t-SNE maps for Perp ∈ {5, 15, 30, 40, 50, 100} on at least one dataset (e.g., MNIST) would support the claim of robustness. Similarly, showing Isomap and LLE at multiple `$k$` values would address the concern that baselines were run with suboptimal parameters.
+
+- **Run-to-run variability.** Showing 3–5 t-SNE embeddings of the same data from different random initializations, perhaps with a quantitative metric of consistency (e.g., Procrustes-aligned variance), would address the non-convexity concern.
+
+- **Component ablation.** Comparing (a) asymmetric SNE, (b) symmetric SNE with Gaussian low-dimensional kernel, and (c) t-SNE (symmetric + Student-t) on the same dataset would isolate the contribution of each modification.
+
+- **Random-walk ablation.** Comparing standard t-SNE on 6,000 landmarks alone vs. random-walk t-SNE on 6,000 landmarks informed by all 60,000 digits would quantify the benefit of the full-dataset information. The nearest-neighbor error provides a natural metric.
+
+- **Varying the PCA target dimensionality.** Showing results with no PCA, PCA to 10, 30, 50, and 100 would test whether the preprocessing choice matters and whether it differentially affects methods.
+
+In summary, the experiments **demonstrate t-SNE's qualitative superiority convincingly for the specific datasets, parameter settings, and preprocessing pipeline shown**, and the visual evidence is striking enough to have made the paper one of the most influential in dimensionality reduction. However, the experimental design lacks the quantitative rigor, ablation structure, and baseline fairness that would be expected in a modern machine learning paper. The central claim — "t-SNE produces better visualizations" — is supported by the evidence provided, but the *magnitude* and *generality* of the improvement, and the *specific contributions* of its components, are not systematically quantified. The paper's influence rests on the compelling visual results and the conceptual elegance of its solution to the crowding problem, not on exhaustive experimental validation.
+
+## 6. Limitations and Trade-offs
+
+### The Evaluation Is Purely Qualitative With No Objective Metrics
+
+**The assumption or constraint.** The paper evaluates t-SNE entirely through visual inspection of 2D scatterplots. There is no quantitative metric — no clustering purity score, no nearest-neighbor preservation rate, no trustworthiness-continuity measure, no statistical test comparing t-SNE to baselines. The authors explicitly frame this as a feature, not a bug: class labels are "only used to select a color and/or symbol for the map points" and "the class information is not used to determine the spatial coordinates" (Section 4.2). The one quantitative result in the paper — the 5.13% 1-nearest-neighbor error for random-walk t-SNE on MNIST versus 5.75% in the original space (Section 5) — is isolated to a single variant of t-SNE on a single dataset, is not compared against any baseline embedding, and is presented as a supplemental demonstration rather than a primary evaluation.
+
+**The consequence.** A practitioner cannot answer basic deployment questions from the evidence provided. How much better is t-SNE than Isomap? Is the gap 10% or 2×? Does t-SNE sometimes produce poor embeddings, and if so, how often? The claim of superiority rests on the reader's visual judgment of a handful of scatterplots — judgment that is subject to confirmation bias (the t-SNE maps have appealing, blob-like clusters), that cannot be aggregated across datasets, and that provides no error bars. The paper's statement that "the quality of the optima does not vary much from run to run" (Section 6.2) is an empirical claim presented without data. If a practitioner runs t-SNE 10 times and gets 2 poor embeddings (clusters intermixed, structure obscured) and 8 good ones, they need to know this to plan their workflow — but the paper provides no such information. More fundamentally, without quantitative metrics, the paper cannot establish *which aspects* of t-SNE (symmetrization, Student-t tails, early exaggeration, perplexity calibration) contribute how much to the improvement over baselines.
+
+**What evidence exists in the paper.** The nearest-neighbor error result (Section 5) demonstrates that a quantitative evaluation is feasible and that t-SNE's embedding can outperform the original high-dimensional space on this metric. However, this result is not replicated for standard t-SNE, not computed for any baseline method, and not reported for other datasets. The remaining evaluation consists of 12 scatterplots in the main paper (Figures 2–5) with narrative description ("the separation between the digit classes is almost perfect," "none of the classes are clearly separated in the Sammon map"). Section 4.2 describes the experimental protocol as purely qualitative: "we show the resulting map as a scatterplot" and "the coloring thus provides a way of evaluating how well the map preserves the similarities within each class."
+
+**Mitigation status.** Not addressed. The paper does not acknowledge the absence of quantitative metrics as a limitation. The one nearest-neighbor result suggests the authors were aware that quantitative evaluation was possible, but they chose not to make it systematic. The supplemental material, which contains 32 additional maps, presumably continues the qualitative evaluation approach. A practitioner seeking objective, comparable performance numbers must compute them independently.
+
+---
+
+### The Cost Function Is Non-Convex With No Convergence Guarantees
+
+**The assumption or constraint.** t-SNE minimizes a non-convex objective (the KL divergence between P and Q) using gradient descent. The authors acknowledge this explicitly in Section 6.2:
+
+> "A major weakness of t-SNE is that the cost function is not convex, as a result of which several optimization parameters need to be chosen. The constructed solutions depend on these choices of optimization parameters and may be different each time t-SNE is run from an initial random configuration of map points."
+
+This stands in contrast to methods like classical MDS, Isomap, LLE, and diffusion maps, which have convex cost functions (or eigenvector formulations) guaranteeing a unique global optimum. t-SNE's optimization involves multiple interacting hyperparameters: learning rate (initialized at 100 with adaptive updates), momentum (0.5 for 250 iterations, 0.8 thereafter), early exaggeration (×4 for 50 iterations), and optionally early compression (an L2 penalty of unspecified magnitude and duration).
+
+**The consequence.** A practitioner running t-SNE faces several uncertainties. First, different random initializations may produce different embeddings — the paper claims the variation is small ("the quality of the optima does not vary much from run to run") but provides no evidence. If two embeddings of the same data show substantively different cluster arrangements, which one is "correct"? Both are valid local minima of the same cost function. Second, the optimization hyperparameters were chosen based on the authors' experience and fixed across all experiments, but there is no guarantee that these values are appropriate for new datasets with different sizes, dimensionalities, or structures. A practitioner applying t-SNE to a novel domain may need to tune the learning rate, momentum schedule, and early exaggeration parameters without guidance on how these choices interact. Third, there is no diagnostic for assessing whether the optimization has converged or is trapped in a poor local minimum — the paper simply runs 1,000 iterations regardless of the dataset. If a user's embedding looks poor, they cannot distinguish between "the data has no cluster structure" and "the optimization got stuck."
+
+The non-convexity also complicates reproducibility. Two researchers applying t-SNE to the same data with different random seeds may obtain different maps and draw different conclusions. The paper's approach of presenting a single embedding per dataset gives the impression of a deterministic method, which it is not.
+
+**What evidence exists in the paper.** Section 6.2 acknowledges the limitation explicitly. However, the paper provides no experimental characterization of the problem: no run-to-run variability analysis (e.g., Procrustes-aligned variance of embeddings from 10 different seeds), no comparison of optimization trajectories, no sensitivity analysis for the optimization hyperparameters. The claim of robustness ("the quality of the optima does not vary much from run to run") is unsubstantiated. The one piece of indirect evidence is that a single set of optimization parameters (T = 1000, momentum schedule, early exaggeration) was used successfully across all five datasets, which suggests the optimization is not catastrophically brittle, but does not quantify the variability.
+
+**Mitigation status.** Partial. The paper advocates a pragmatic philosophy: "A local optimum of a cost function that accurately captures what we want in a visualization is often preferable to the global optimum of a cost function that fails to capture important aspects of what we want" (Section 6.2). This is a reasonable argument — a perfect optimum of a flawed objective is worse than a good local optimum of a well-designed objective. And the paper's optimization tricks (early exaggeration, momentum scheduling, adaptive learning rates) are designed to make the optimization more reliable in practice. However, the paper does not provide the diagnostic tools, multiple-run protocols, or hyperparameter sensitivity guidelines that would allow a practitioner to apply t-SNE with confidence to new data.
+
+---
+
+### Quadratic Computational and Memory Complexity Limits Scalability to ~10,000 Points Without the Landmark Approximation
+
+**The assumption or constraint.** The standard t-SNE algorithm has O(n²) computational and memory complexity (Section 5). This arises from needing to compute, store, and repeatedly access the full n × n pairwise probability matrices P and Q. The authors state this explicitly:
+
+> "Like many other visualization techniques, t-SNE has a computational and memory complexity that is quadratic in the number of datapoints. This makes it infeasible to apply the standard version of t-SNE to data sets that contain many more than, say, 10,000 points."
+
+For context, at n = 10,000, the similarity matrix contains 100 million entries. At n = 100,000, it contains 10 billion entries — beyond the memory capacity of typical workstations at the time of writing. Modern datasets routinely contain millions of points, making standard t-SNE inapplicable without modification.
+
+**The consequence.** For any dataset exceeding ~10,000 points, the practitioner must either (a) subsample the data and visualize only a subset, losing information about the full dataset's structure, or (b) use the random-walk landmark extension (Section 5). Subsampling is straightforward but suboptimal — as the paper's Figure 6 illustrates, undisplayed points carry information about the manifold structure that direct pairwise distances between landmarks cannot capture. The landmark extension addresses this, but introduces its own complexities: choosing the number of landmarks, constructing and storing a neighborhood graph on the full dataset (which itself requires O(n log n) or O(n²) operations depending on the method), selecting the number of random walks per landmark, and verifying that the random walk procedure has converged. The paper's claim that the random-walk approach took "only one hour of CPU time" on MNIST (n = 60,000, landmarks = 6,000) is encouraging but dataset-specific — larger datasets with higher intrinsic dimensionality or more complex manifold structure would require proportionally more computation.
+
+Moreover, the quadratic complexity of standard t-SNE is not just a memory problem — it is a runtime problem during optimization. Each gradient descent iteration requires computing all pairwise low-dimensional distances (O(n²) operations), and the algorithm runs for 1,000 iterations. Even on moderately-sized datasets (n = 5,000–10,000), this may take hours on a single CPU. The paper does not report runtime for the standard t-SNE experiments, so a practitioner cannot estimate computational cost for their own dataset.
+
+**What evidence exists in the paper.** The 10,000-point threshold is stated as an approximate limit in Section 5, based on the authors' experience rather than a systematic scaling study. The landmark extension is demonstrated on exactly one dataset (MNIST, n = 60,000, landmarks = 6,000) with one configuration (k = 20 neighbors). No experiment varies the number of landmarks, the landmark selection strategy (random vs. stratified), or the number of random walks per landmark, to assess how these choices affect embedding quality or runtime. The claim that the random-walk approach can "successfully visualize large real-world data sets with limited computational demands" (Section 7) is supported by a single datum: one hour on MNIST. A practitioner with a dataset of 500,000 points cannot extrapolate from this to estimate their own runtime or memory requirements.
+
+**Mitigation status.** Partial. The landmark extension is a genuine solution that reduces the embedding computation to O(nL × n) where nL is the number of landmarks, plus the one-time cost of constructing the neighborhood graph and computing landmark similarities. The paper demonstrates its feasibility on a realistic dataset and provides both a Monte Carlo implementation ("one million random walks per second") and an analytical solution (Appendix B) for cases where landmarks are sparse. However, the lack of scaling experiments, sensitivity analyses for landmark count, and guidance for practitioner parameter selection means the extension is demonstrated rather than characterized. Future work on approximate nearest-neighbor methods, hierarchical t-SNE, or GPU-accelerated implementations (which appeared in the years following this paper's publication) would be necessary for t-SNE to scale to modern dataset sizes.
+
+---
+
+### Sensitivity to the Curse of Intrinsic Dimensionality Is Acknowledged But Not Characterized
+
+**The assumption or constraint.** t-SNE relies on Euclidean distances between nearby points to capture local structure, and uses a Gaussian kernel to convert these distances into probabilities. This implicitly assumes that the data manifold is locally approximately Euclidean — that is, in the neighborhood of each point, the manifold looks roughly flat. The authors acknowledge in Section 6.2 that this assumption breaks down when the intrinsic dimensionality is high:
+
+> "In data sets with a high intrinsic dimensionality and an underlying manifold that is highly varying, the local linearity assumption on the manifold that t-SNE implicitly makes (by employing Euclidean distances between near neighbors) may be violated. As a result, t-SNE might be less successful if it is applied on data sets with a very high intrinsic dimensionality."
+
+They cite Meytlis and Sirovich (2007), who estimated the space of face images to have approximately 100 intrinsic dimensions — far above the dimensionality of toy manifolds like the Swiss roll (2D) or the COIL-20 objects (1D per object). The paper's experiments are on datasets whose intrinsic dimensionality is not reported but is plausibly moderate: MNIST digits estimated at ~10 intrinsic dimensions (the paper notes this in a footnote: "This is approximately correct for the images of handwritten digits we use in our experiments"), Olivetti faces at unknown dimensionality (but 400 images of 40 individuals in 10,304-dimensional pixel space), and COIL-20 at 1D per object.
+
+**The consequence.** A practitioner applying t-SNE to data with high intrinsic dimensionality — such as natural image collections, video frames, genomic data, or deep neural network activations — has no guidance on whether the method will work or fail. The failure mode is not specified: perhaps clusters fail to separate, perhaps the embedding is dominated by noise, perhaps the perplexity calibration produces degenerate bandwidths. The paper provides no diagnostic for detecting when the intrinsic dimensionality is too high for t-SNE to be effective, and no characterization of the relationship between intrinsic dimensionality and embedding quality. This is not a hypothetical concern — many modern datasets of interest (e.g., ImageNet features, transformer embeddings, single-cell RNA-seq data) have intrinsic dimensionalities estimated in the tens to hundreds, well above the ~10 dimensions of MNIST where t-SNE was demonstrated to work well.
+
+Moreover, the paper's suggested mitigation — "performing t-SNE on a data representation obtained from a model that represents the highly varying data manifold efficiently in a number of nonlinear layers such as an autoencoder" (Section 6.2) — is mentioned as future work and is not evaluated. A practitioner would need to independently implement and validate an autoencoder preprocessing pipeline, adding substantial complexity and potential points of failure.
+
+**What evidence exists in the paper.** None. The limitation is acknowledged in Section 6.2 as a theoretical concern. No experiment varies the intrinsic dimensionality of the data (e.g., by adding noise dimensions, by subsampling MNIST digits to vary the effective manifold dimension, by using datasets with known intrinsic dimensionality) and measures the effect on t-SNE embedding quality. The paper does not report the intrinsic dimensionality of its evaluation datasets (other than the footnote estimate for MNIST) and does not compare t-SNE's performance across datasets as a function of intrinsic dimensionality. The claim that t-SNE "might be less successful" on high-intrinsic-dimensionality data is a hypothesis, not an empirical finding.
+
+**Mitigation status.** Not addressed experimentally. The autoencoder preprocessing suggestion is plausible given Hinton and Salakhutdinov's (2006) demonstration that deep autoencoders can learn compact representations of high-dimensional data, but the integration of autoencoder preprocessing with t-SNE is left entirely to future work. The paper's acknowledgment of the limitation (Section 6.2) is candid but does not reduce the practitioner's uncertainty about whether t-SNE is appropriate for their specific dataset.
+
+---
+
+### The Random-Walk Landmark Extension Lacks Systematic Characterization and Baseline Comparisons
+
+**The assumption or constraint.** For datasets larger than ~10,000 points, the paper proposes a landmark approach in which a subset of points is displayed, but the pairwise similarities among landmarks are computed using random walks on a neighborhood graph constructed from **all** datapoints (Section 5). The key claim is that this "makes use of the information that the undisplayed datapoints provide about the underlying manifolds" — information that would be lost if similarities were computed only from direct Euclidean distances between landmarks. The paper demonstrates this approach on exactly one configuration: MNIST with all 60,000 points, 6,000 randomly-selected landmarks, and k = 20 nearest neighbors.
+
+**The consequence.** A practitioner who needs to visualize more than ~10,000 points faces several unanswered questions. How many landmarks are sufficient? The paper uses 6,000 out of 60,000 (10%) for MNIST — would 3,000 (5%) or 1,000 (1.7%) produce comparable embeddings? How should landmarks be selected? The paper uses random selection, but stratified sampling (ensuring representation from each class) or density-based selection might be more efficient. How many random walks per landmark are needed for convergence of the pj|i estimates? The paper does not report the number of walks used or evidence of convergence. How sensitive is the embedding to the neighborhood graph parameter k? The paper states that "in preliminary experiments, we found the performance of random walk t-SNE to be very robust under changes of k" but provides no data. Most critically, **how much does the full-dataset information actually improve the embedding** compared to simply running standard t-SNE on the landmarks alone? The paper provides no such comparison, so the marginal benefit of the random-walk procedure is unknown. A practitioner might reasonably ask: is the added complexity of constructing a neighborhood graph on 60,000 points and simulating random walks worth the improvement over just subsampling?
+
+The analytical solution presented in Appendix B introduces additional concerns. The linear system LN xN = −BT requires the graph to be connected or for each connected component to contain at least one landmark point. If the full dataset's neighborhood graph has components without landmarks, the system is singular and the analytical solution fails — a failure mode not discussed in the paper.
+
+**What evidence exists in the paper.** The experiment in Section 5 (Figure 7) demonstrates that random-walk t-SNE **can** produce a good embedding on one dataset with one parameter configuration. The 5.13% nearest-neighbor error compared to 5.75% in the original space suggests the embedding preserves discriminative information. However, this experiment is not compared against: (a) standard t-SNE on the same 6,000 landmarks without full-dataset information, (b) standard t-SNE on a different random subset of 6,000 digits, (c) the same nearest-neighbor evaluation applied to Sammon, Isomap, or LLE embeddings, or (d) random-walk t-SNE with varying numbers of landmarks, random walks, or neighbor counts. The paper's Figure 6 provides a toy conceptual illustration of why full-dataset information matters (A, B, and C with intervening non-landmark points), but this is not an empirical demonstration on real data. The claim of robustness to k is based on unreported preliminary experiments.
+
+**Mitigation status.** Not addressed. The random-walk extension is presented as a proof of concept — it works on MNIST, and the authors argue it should generalize. But without ablation experiments, sensitivity analyses, or baseline comparisons, a practitioner cannot make informed decisions about whether and how to use it. The paper's concluding statement that the landmark approach "makes it possible to successfully visualize large real-world data sets with limited computational demands" (Section 7) overstates the strength of the evidence: the approach is demonstrated on one dataset with one configuration, and the "limited computational demands" are reported as a single runtime number (one hour) without decomposition into sub-steps or scaling projections.
+
+---
+
+### The Method's Behavior in More Than Three Dimensions Is Unknown and Likely Problematic
+
+**The assumption or constraint.** The paper designs and evaluates t-SNE exclusively for 2D (and by extension 3D) visualization. The heavy-tailed Student-t distribution with one degree of freedom was chosen specifically because its tail behavior compensates for the mismatch between high-dimensional and 2D volumes. The authors explicitly acknowledge in Section 6.2 that this choice does not generalize to higher-dimensional embeddings:
+
+> "The behavior of t-SNE when reducing data to two or three dimensions cannot readily be extrapolated to d > 3 dimensions because of the heavy tails of the Student-t distribution. In high-dimensional spaces, the heavy tails comprise a relatively large portion of the probability mass under the Student-t distribution, which might lead to d-dimensional data representations that do not preserve the local structure of the data as well."
+
+In other words, the very property that makes t-SNE work well in 2D — the heavy tails that give clusters room to separate — becomes a liability in higher dimensions. As the embedding dimensionality d increases, the volume of the d-dimensional space grows, and the Student-t kernel (1 + ||yi − yj||²)^(-1) assigns non-negligible probability mass to points at increasingly large distances. This means the model's notion of "similarity" becomes increasingly diffuse, potentially washing out the local structure that the KL-divergence objective is designed to preserve.
+
+**The consequence.** t-SNE is fundamentally a visualization method, not a general-purpose dimensionality reduction technique. A practitioner who needs to reduce data to, say, 10 or 50 dimensions for downstream machine learning tasks (classification, clustering, feature extraction) cannot assume that t-SNE will work well, or at all, in that regime. The paper provides no guidance on how to adapt t-SNE for d > 3 — the suggestion to use "Student t-distributions with more than one degree of freedom" is speculative (higher degrees of freedom make the tails lighter, approaching a Gaussian as the degrees of freedom go to infinity). There is no experiment evaluating t-SNE with varying degrees of freedom, at varying target dimensionalities, on any dataset. A practitioner who needs dimensionality reduction for non-visualization purposes must either guess at appropriate parameters or abandon t-SNE entirely in favor of methods with better-characterized behavior in higher dimensions (e.g., autoencoders, PCA, or diffusion maps).
+
+This limitation also means that the paper's comparisons to other dimensionality reduction techniques are somewhat apples-to-oranges. Isomap, LLE, Laplacian Eigenmaps, and diffusion maps are all defined for arbitrary target dimensionalities and can be used for both visualization and feature extraction. t-SNE, by contrast, is optimized specifically for the 2D/3D visualization case. The paper's demonstration that t-SNE produces better 2D visualizations than these methods does not imply that t-SNE is a better dimensionality reduction technique in general — only that it is better at the specific task of producing interpretable 2D scatterplots, which is the task it was designed for.
+
+**What evidence exists in the paper.** None. The limitation is acknowledged in Section 6.2 as a theoretical concern and as an avenue for future work ("In future work we plan to investigate the optimization of the number of degrees of freedom of the Student-t distribution used in t-SNE. This may be helpful for dimensionality reduction when the low-dimensional representation has many dimensions"). No experiment tests t-SNE with d = 5, 10, or 50, with different degrees of freedom, or with alternative low-dimensional kernels. The paper does not report what happens if t-SNE is used for d > 3 on any of its evaluation datasets — does performance degrade gradually or collapse catastrophically? The reader cannot know.
+
+**Mitigation status.** Not addressed experimentally. The paper identifies the issue, speculates about a solution (higher degrees of freedom), and defers investigation to future work. For a practitioner whose goal is visualization (d = 2 or 3), this limitation is irrelevant — t-SNE performs its designed task well. For a practitioner considering t-SNE for general dimensionality reduction, this is a serious gap that the paper does not close. The suggested future work on parametric t-SNE ("a parametric version of t-SNE that allows for generalization to held-out test data by using the t-SNE objective function to train a multilayer neural network," Section 7) would address a related but distinct limitation — the inability to embed new points without re-running the full optimization — rather than the fundamental question of whether t-SNE's probability-matching framework is appropriate for d > 3 at all.
+
+---
+
+### The Paper Provides No Guidance for Parameter Selection Beyond a Single Set of Values
+
+**The assumption or constraint.** t-SNE has several parameters that the user must specify: the perplexity (which controls the effective number of neighbors), the number of iterations T, the learning rate η, the momentum schedule α(t), the early exaggeration factor and duration, and optionally the early compression penalty. The paper uses a single parameter configuration for all experiments (Table 1 and Section 3.4): Perp = 40, T = 1000, η = 100 with adaptive updates, α(t) = 0.5 for t < 250 and 0.8 for t ≥ 250, early exaggeration of 4 for 50 iterations. The claim is that this configuration works across diverse datasets and that "the performance of SNE is fairly robust to changes in the perplexity, and typical values are between 5 and 50" (Section 2).
+
+**The consequence.** A practitioner applying t-SNE to a new dataset has no systematic basis for choosing parameters. The claim of robustness to perplexity is stated without evidence — no figure shows t-SNE embeddings of the same data at Perp = 5, 15, 30, 40, and 50 side by side, so the reader cannot assess what "fairly robust" means. Does the embedding change subtly (clusters stretch or compress) or dramatically (clusters merge, split, or rearrange)? Without this information, a practitioner who gets a poor embedding at Perp = 40 cannot distinguish between "the data has no cluster structure" and "this perplexity is inappropriate for this dataset's density." The paper's advice that "typical values are between 5 and 50" provides a range but no principle for choosing within it.
+
+The optimization parameters are even less characterized. The learning rate of 100, momentum schedule, and early exaggeration settings were determined through the authors' experience and fixed across experiments. If a practitioner applies these same settings to a dataset with very different characteristics — much larger n, different intrinsic dimensionality, different density — the optimization may converge too slowly, oscillate, or get trapped in poor local minima. The paper provides no diagnostic for detecting these failure modes and no protocol for adjusting parameters in response.
+
+The random-walk landmark extension introduces additional parameters: the number of landmarks, the number of nearest neighbors k for the neighborhood graph, and the number of random walks per landmark. The paper uses a single configuration (6,000 landmarks, k = 20) and states that performance is "very robust under changes of k" based on unreported preliminary experiments (Section 5). A practitioner cannot assess the cost-quality tradeoff of using fewer landmarks or the sensitivity of the embedding to the random walk simulation parameters.
+
+**What evidence exists in the paper.** Very little. The paper uses a single parameter configuration across all five datasets, which provides indirect evidence that the configuration is not catastrophically brittle — if it were, it would fail on at least some datasets. The COIL-20 results (Figure 5a) with Perp = 40 successfully reveal the 1D rotation manifolds, suggesting that Perp = 40 is not wildly inappropriate for data with very different structure (clusters in MNIST vs. loops in COIL-20). However, this is circumstantial evidence, not a systematic sensitivity analysis. The paper does not show what happens when perplexity is varied, does not report experiments where optimization parameters were tuned per dataset, and does not compare the chosen configuration to alternatives.
+
+**Mitigation status.** Not addressed. The paper treats the parameter configuration as a fixed recipe rather than a set of choices to be adapted. For a method that became one of the most widely used visualization tools in machine learning, this is a significant practical gap — the vast subsequent literature on t-SNE parameter tuning (e.g., Wattenberg et al., 2016, "How to Use t-SNE Effectively") exists precisely because the original paper provides so little guidance. The paper's acknowledgment that "several optimization parameters need to be chosen" (Section 6.2) recognizes the issue but does not address it.
+
+---
+
+### The Embedding Has No Explicit Mapping for New Points
+
+**The assumption or constraint.** t-SNE is a non-parametric method: it learns an embedding for the specific set of n points provided at training time, but provides no function f: X → Y that could embed a new, previously unseen point without re-running the full optimization. The authors acknowledge this implicitly in Section 7, where they list as future work "a parametric version of t-SNE that allows for generalization to held-out test data by using the t-SNE objective function to train a multilayer neural network that provides an explicit mapping to the low-dimensional space." The current method requires re-optimizing all map coordinates (both old and new points) if additional data arrives.
+
+**The consequence.** In any deployment where data arrives incrementally or where the visualization must be updated as new points are collected, t-SNE is **prohibitively expensive**. Each new point requires re-running the full O(n²) optimization from scratch — not just recomputing the embedding of the new point, but potentially rearranging all existing points. This makes t-SNE unsuitable for streaming data, online learning, or interactive visualization scenarios where the dataset grows over time. Even in batch settings, the inability to embed new points means that t-SNE cannot be used as a preprocessing step for a downstream model that expects a fixed-dimensional feature representation — the embedding exists only for the points seen during optimization. A practitioner who wants to use the t-SNE coordinates as features for a classifier (as the 5.13% nearest-neighbor result in Section 5 hints might be useful) cannot apply that classifier to new data without re-embedding everything.
+
+This limitation is shared by many manifold learning methods (Isomap, LLE, Laplacian Eigenmaps, diffusion maps) and is not unique to t-SNE. However, it is more consequential for t-SNE because of its O(n²) complexity — re-running Isomap on n+1 points might be feasible for moderate n, but re-running t-SNE on n+1 points with 1,000 gradient descent iterations is substantially more expensive.
+
+**What evidence exists in the paper.** None. The limitation is not discussed in the main body of the paper — it appears only as a future work item in Section 7. No experiment evaluates what happens when new points are added to an existing t-SNE embedding, whether the existing points shift substantially, or how many new points can be added before the global structure changes qualitatively. The paper does not compare t-SNE's out-of-sample performance to parametric methods (like autoencoders or parametric MDS) that provide explicit mappings.
+
+**Mitigation status.** Not addressed. The paper identifies parametric t-SNE as future work and does not develop or evaluate it. The lack of an explicit mapping is a fundamental tradeoff of the non-parametric approach: the embedding quality comes at the cost of generalization. For practitioners who need to embed new points, the paper offers no solution beyond re-running the full optimization — a computationally prohibitive suggestion for all but the smallest datasets. Parametric t-SNE variants were developed in subsequent work (van der Maaten, 2009), but they lie outside the scope of this paper.

@@ -1,0 +1,37 @@
+# DeepSeek-V4-Flash on 8x B300 — DP=4 + EP, FP4+FP8 weights, FP8 KV cache.
+# 284B total / 13B active MoE. Hybrid CSA+HCA attention with manifold-
+# constrained hyper-connections. Native 1M ctx. Verified on B300 per the
+# upstream recipe.
+#
+# Launch:
+#   vllm serve --config configs/vllm/deepseek-v4-flash.yaml
+#
+# Reasoning modes (sent via chat_template_kwargs.reasoning_effort in the
+# OpenAI client payload, NOT here): Non-think / Think High / Think Max.
+# Think Max requires max-model-len >= 393216 (set below — same as V4-Pro
+# so the two configs are directly substitutable in our regen pipeline).
+#
+# Recommended sampling: temperature=1.0, top_p=1.0.
+#
+# Note on FlashGEMM kernels: install via vLLM's tools/install_deepgemm.sh
+# before first launch on a new node:
+#   bash <(curl -fsSL https://raw.githubusercontent.com/vllm-project/vllm/main/tools/install_deepgemm.sh)
+
+model: deepseek-ai/DeepSeek-V4-Flash
+trust-remote-code: true
+data-parallel-size: 4
+enable-expert-parallel: true
+tokenizer-mode: deepseek_v4
+reasoning-parser: deepseek_v4
+tool-call-parser: deepseek_v4
+enable-auto-tool-choice: true
+max-model-len: 393216
+block-size: 256
+kv-cache-dtype: fp8
+moe-backend: deep_gemm_mega_moe
+compilation-config:
+  cudagraph_mode: FULL_AND_PIECEWISE
+  custom_ops:
+    - all
+attention-config:
+  use_fp4_indexer_cache: true

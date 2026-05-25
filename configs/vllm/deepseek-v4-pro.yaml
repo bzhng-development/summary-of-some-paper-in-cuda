@@ -1,0 +1,22 @@
+# DeepSeek-V4-Pro on 8x B300 — DP=8 + EP, FP8 KV cache.
+# ~600B-total MoE, needs all 8 GPUs in a single replica.
+#
+# Launch:
+#   vllm serve --config configs/vllm/deepseek-v4-pro.yaml
+#
+# This is the config I ran for the s1-s7 regen of all 1274 papers
+# (s1-s6 fully done, s7 partial; see local_data/regen_backup_*).
+
+model: deepseek-ai/DeepSeek-V4-Pro
+trust-remote-code: true
+api-server-count: 8
+data-parallel-size: 8
+enable-expert-parallel: true
+tokenizer-mode: deepseek_v4
+reasoning-parser: deepseek_v4
+tool-call-parser: deepseek_v4
+enable-auto-tool-choice: true
+max-model-len: 393216
+block-size: 256
+kv-cache-dtype: fp8
+moe-backend: deep_gemm_mega_moe

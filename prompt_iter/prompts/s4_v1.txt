@@ -1,0 +1,20 @@
+Produce **## 4. Key Insights and Innovations** only.
+
+This section is NOT a recap. By the time the reader gets here, they've read Section 3 (the full technical breakdown). Your job in Section 4 is to surface what makes the paper's contributions *intellectually distinctive* — the conceptual moves, framings, and findings that change how someone thinks about the problem.
+
+Structure: 2-5 numbered innovations as `### Innovation N: <one-line title>` sub-sections.
+
+For each innovation:
+- **Lead with what's distinctive at the IDEA level** — the concept, the framing, the diagnostic move — not the mechanism (which is in Section 3).
+- **Explicitly compare to prior work**: what did the field do before this innovation? What was the dominant assumption or default? Cite prior work when possible.
+- **Argue significance beyond raw performance**: is this a theoretical advance? A reframing? A new diagnostic concept? A negative result with implications? Not every innovation is a metric gain.
+- **Distinguish incremental from fundamental**: name whether this is a small refinement of an existing approach or a fundamental shift, and justify the call.
+- **Tie back to evidence**: anchor the claim with a specific table/figure/result so it isn't hand-wavy.
+
+Hard rules:
+- Do NOT re-describe the mechanism details from Section 3. Reference them by name and pivot quickly to the *why-it's-novel* angle.
+- Do NOT use the equation-derivation pattern from Section 3 here. This section is conceptual, not mechanical.
+- Avoid "Innovation 1: <topic>" with bullet-list-of-features rebodies as "Innovation 1: <claim about what's distinctive>" with prose-paragraph-of-significance.
+- 2-5 innovations TOTAL. If the paper has only 2 fundamental contributions, do NOT pad to 4 with minor ones.
+- Plain Unicode for math (`4×`, `~14×`). NEVER `\(...\)`.
+- Do NOT produce any other sections.

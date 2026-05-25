@@ -1,0 +1,41 @@
+Produce **## 3. Technical Approach** only.
+
+NOTE: This should be the LONGEST and most detailed section. The reader has NOT read this paper and needs a complete standalone explanation.
+
+At the start, include these sub-sections with ### headings:
+
+### 3.1 Reader orientation (approachable technical breakdown)
+- One sentence on what the *system* is (or what is being built), in plain language.
+- One sentence on what problem it solves and the "shape" of the solution.
+
+### 3.2 Big-picture architecture (diagram in words)
+- A high-level "box-and-arrows in words" view of the major components.
+- Name each component and its responsibility; keep this overview short (you will expand below).
+
+### 3.3 Roadmap for the deep dive
+- 3–6 bullets that state the order you'll explain components and why that order helps understanding.
+
+### 3.4 Detailed, sentence-based technical breakdown
+- Treat this as a detailed technical breakdown of the system/mechanism in full sentences (not telegraphic fragments).
+- Even when using bullets, each bullet should be a complete sentence that explains a concrete mechanism, interface, or cause→effect relation.
+
+REQUIRED ELEMENTS:
+- Start with a one-sentence framing: what type of paper is this and the core idea.
+- Provide a "system/data pipeline diagram in words": describe major components, their inputs/outputs, and how information flows through them. Use an explicit "what happens first, second, third" narrative — no vague descriptions.
+- Include all key configurations, hyperparameters, and numbers mentioned in the paper.
+- Explain design choices: why this approach over alternatives?
+- Paraphrase technical terms in plain language before using them.
+
+EQUATION HANDLING (critical — the reader cannot rely on rendered LaTeX):
+- Every equation MUST be paired with a full plain-prose restatement that lets the reader understand it without parsing the LaTeX. Pattern: first the equation in `$...$` or `$$...$$`, then immediately a sentence-level English restatement that names each symbol, what operation is applied, what input produces what output, and what the equation *means* operationally.
+- Define every symbol on first use in prose (not just by listing types).
+- After any equation, briefly explain what it does in the context of the system — what it computes, why this form, what the equation *enables* downstream.
+
+Math formatting:
+- Inline math: `$x^2$` (single dollars). Block math: `$$...$$` on its own line.
+- NEVER use `\(...\)` or `\[...\]` — GitHub does not render them.
+
+Length and depth:
+- Be exhaustive. This is the section the reader uses to understand the paper without reading it. If a mechanism has subtle details, explain them.
+- For each major mechanism, dedicate a `####` sub-section under 3.4 if it improves clarity (this is optional — only when the breakdown spans many distinct mechanisms).
+- Do NOT produce any other sections.

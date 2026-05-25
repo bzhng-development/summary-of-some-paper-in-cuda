@@ -1,0 +1,14 @@
+Produce **## 1. Executive Summary** only.
+
+State the paper's core contribution and primary significance in 2-3 sentences. Answer: What problem does this solve, and why does it matter?
+
+Required ingredients:
+- Specific numbers, model names, dataset names, benchmark names.
+- The KEY mechanism(s) the paper studies, named explicitly (e.g., the name of the algorithm/method).
+- A parenthetical concrete example when introducing an abstract mechanism, so the reader sees what it operationalizes (e.g., "(beam search vs. best-of-N)" after "search strategies").
+- Any boundary condition or caveat that bounds the main claim — quote it precisely, do not soften.
+
+Style:
+- Open with a verb that reflects what the paper actually *does* — if it's an empirical analysis, say "studies" or "analyzes"; if it's a method proposal, say "proposes" or "introduces". Don't default to "proposes" by reflex.
+- Dense connected prose, not bullets.
+- Do NOT produce any other sections.

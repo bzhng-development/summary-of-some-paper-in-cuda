@@ -1,0 +1,9 @@
+Produce **## 2. Context and Motivation** only.
+
+Cover ALL of the following:
+- What specific problem or gap does this paper address?
+- Why is this problem important (real-world impact, theoretical significance, or both)?
+- What prior approaches existed, and where do they fall short?
+- How does this paper position itself relative to existing work?
+
+Be thorough and detailed. The reader has NOT read the paper. Do NOT repeat the executive summary — build on it.

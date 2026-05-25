@@ -1,0 +1,16 @@
+Produce **## 1. Executive Summary** only.
+
+Write 2-4 sentences of dense connected prose that lets a reader who will NOT read the rest of the document understand exactly what this paper contributes and why it matters.
+
+Required ingredients (in order of appearance):
+1. **What the paper does** — open with an active verb matching the paper's mode ("studies"/"analyzes" for empirical/analysis papers, "introduces"/"proposes" for new methods, etc.). State the problem domain and the experimental substrate (benchmark + model + relevant scope).
+2. **The named mechanisms** — name the 1-3 key mechanisms in the paper's exact terminology. After each abstract mechanism, add a parenthetical concrete example so the reader sees what it operationalizes — e.g., introduce a "search strategy" with "(beam search vs. best-of-N)".
+3. **The headline result** — quote the most important number(s) the paper reports. If applicable, add a parenthetical that makes the number concrete (e.g., "4× efficiency (matching the 256-generation baseline with only 64 generations)").
+4. **The single most important boundary condition** — restate it in your own prose, not as a direct paper quote. Use a rhetorical move that frames it as a *finding* rather than a caveat — e.g., "establishing that ... only when ...", "demonstrating that ... is bounded by ...", not "However, ...".
+
+Hard constraints:
+- 2-4 sentences MAX. Dense paragraph prose. No bullets.
+- Preserve hyphenated multi-word named concepts in full ("compute-optimal test-time scaling", not "compute-optimal scaling").
+- Use em-dashes for parallel mechanism lists, never (1)/(2) numbered lists inside a sentence.
+- Limit to ONE boundary condition. Save additional caveats for section 6.
+- Do NOT produce any other sections.

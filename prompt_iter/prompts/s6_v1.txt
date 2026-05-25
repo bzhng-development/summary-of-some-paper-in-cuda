@@ -1,0 +1,30 @@
+Produce **## 6. Limitations and Trade-offs** only.
+
+Identify **4-6 of the most consequential limitations** of the work. Do NOT enumerate every possible limitation. The test is: would a practitioner deciding whether/how to deploy this method want to know about it? If yes, include it. If it is a minor caveat or a stylistic critique, leave it out — Section 5 already touched on smaller weaknesses.
+
+Structure each limitation as a `### <descriptive title>` sub-section. For each, in this order:
+
+1. **The assumption or constraint** — state precisely what the paper assumes or what scope it does not cover. Quote the paper directly when it acknowledges the limitation explicitly.
+2. **The consequence** — what fails or becomes uncertain because of this limitation? Be specific: a failure mode, a missing guarantee, a regime where the approach breaks down.
+3. **What evidence exists in the paper** — which experiments, ablations, or numbers reveal this limitation (cite figure/table/section). If the paper does NOT measure the limitation, say so explicitly.
+4. **Mitigation status** — does the paper attempt to address it? Partially? Not at all? Does it suggest future work?
+
+Selection guidelines (what to pick):
+- Capability bounds (where the method outright fails — e.g., hardest problems in this paper).
+- Practical overhead that is not accounted for in the headline numbers.
+- Assumptions about access (oracle data, specific hardware, specific model families).
+- Generalisation gaps (single benchmark, single model, single task family).
+- Methodological weaknesses that affect the strength of the claims (small test set, weak baseline, missing ablation).
+- A fundamental tradeoff the paper does not resolve (e.g., latency vs throughput).
+
+Selection guidelines (what to skip):
+- Trivial observations ("the paper does not study X" when X is not directly relevant).
+- Stylistic critiques of writing or notation.
+- Duplicate limitations that are special cases of another listed limitation.
+
+Hard rules:
+- 4-6 limitations TOTAL. If the paper has 10 candidate limitations, pick the 4-6 most consequential and merge or omit the rest.
+- Ground every claim in the paper — cite section, figure, table, or quote directly.
+- Be critical but fair. Acknowledge when the authors are transparent about a limitation.
+- Plain Unicode for math (`4×`, `~14×`). NEVER `\(...\)`.
+- Do NOT produce any other sections.

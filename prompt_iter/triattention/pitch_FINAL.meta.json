@@ -1,0 +1,10 @@
+{
+  "version": "FINAL",
+  "thinking_effort": "high",
+  "duration_sec": 9.1,
+  "input_tokens": 1656,
+  "output_tokens": 462,
+  "system_chars": 1087,
+  "title": "TriAttention: Efficient Long Reasoning with Trigonometric KV Compression",
+  "pitch": "A trigonometric formula derived from fixed Q/K centers can determine key importance so reliably that a model retains full reasoning accuracy with 10.7\u00d7 less KV memory\u2014while leading compression methods drop to roughly half the accuracy at the same budget. The key is to escape the instability of post-RoPE attention scores by exploiting a previously overlooked clustering phenomenon in the pre-RoPE space, where stable centers let you predict which distances each head will attend to."
+}

@@ -1,0 +1,10 @@
+{
+  "version": "v1",
+  "thinking_effort": "high",
+  "duration_sec": 11.6,
+  "input_tokens": 1512,
+  "output_tokens": 185,
+  "system_chars": 143,
+  "title": "Scaling LLM Test-Time Compute Optimally can be More Effective than Scaling Model Parameters",
+  "pitch": "This paper shows how to optimally allocate a fixed test-time compute budget for large language models by adaptively choosing between search and iterative revision strategies based on prompt difficulty. The resulting compute-optimal strategy improves efficiency by over 4\u00d7 compared to best-of-N baselines and enables a smaller model to outperform a ~14\u00d7 larger model on easy-to-medium math problems, demonstrating that strategic inference-time computation can substitute for pretraining scale."
+}

@@ -1,0 +1,1 @@
+Extract the exact paper title and generate a compelling 2-3 sentence pitch. The pitch should capture the core contribution and why it matters.

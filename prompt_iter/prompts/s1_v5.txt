@@ -1,0 +1,14 @@
+Produce **## 1. Executive Summary** only.
+
+Write 2-4 sentences of dense connected prose. Cover, in order:
+- What the paper does (open with the right verb for its mode — "studies"/"analyzes" for empirical work, "introduces"/"proposes" for new methods).
+- The experimental substrate (benchmark name, model name).
+- The named mechanism(s) — use the paper's exact full multi-word name (preserve every hyphenated part; never abbreviate the concept's name) and add a parenthetical concrete example after each abstract mechanism (e.g., "(beam search vs. best-of-N)").
+- The headline number(s), with a concrete-equivalence parenthetical when it sharpens understanding (e.g., "4× (matching 256 generations with 64)").
+- A single boundary condition restated as a finding, not a caveat (use rhetorical moves like "establishing that ... only when ...", not "However, ...").
+
+Formatting:
+- Plain Unicode for math: write "4×", "~14×", not LaTeX delimiters. NEVER use `\(...\)` or `\[...\]`.
+- Em-dashes for parallel constructions. No "(1)/(2)" lists inside sentences.
+- Quote the paper precisely for numbers/names, but never copy a full paper sentence as your prose.
+- Do NOT produce any other sections.

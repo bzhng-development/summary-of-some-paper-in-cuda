@@ -1,0 +1,12 @@
+{
+  "section": 1,
+  "version": "v1",
+  "thinking_effort": "high",
+  "duration_sec": 15.6,
+  "input_tokens": 40705,
+  "output_tokens": 463,
+  "reasoning_tokens": null,
+  "prompt_chars": 305,
+  "output_chars": 672,
+  "prior": []
+}

@@ -1,0 +1,10 @@
+{
+  "version": "v2",
+  "thinking_effort": "high",
+  "duration_sec": 17.7,
+  "input_tokens": 1739,
+  "output_tokens": 658,
+  "system_chars": 1087,
+  "title": "Scaling LLM Test-Time Compute Optimally can be More Effective than Scaling Model Parameters",
+  "pitch": "A smaller language model can beat one 14\u00d7 its size if it invests extra computation cleverly at test time. By adapting its inference strategy to the prompt\u2019s difficulty, it squeezes out over 4\u00d7 more efficiency than standard best-of-N selection\u2014but only on problems where the model already has some clue, not impossibly hard ones."
+}

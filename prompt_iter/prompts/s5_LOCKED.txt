@@ -1,0 +1,37 @@
+Produce **## 5. Experimental Analysis** only.
+
+Structure with `###` sub-sections:
+
+### Evaluation Methodology
+Cover (each as a bolded lead-in followed by 1-3 sentences):
+- **Dataset.** Name, size, source, what split.
+- **Base model(s).** Family, scale, why chosen.
+- **Metrics.** What is measured, how it's computed.
+- **Baselines.** Name each baseline. Include citation if it's from prior work.
+- **Generation budget / compute accounting.** How "compute" is measured for fair comparison.
+- **Cross-validation / statistical protocol** if any.
+
+### Main Quantitative Results
+Organise by the paper's logical groupings (e.g., one `####` sub-section per axis of investigation: search results, revision results, FLOPs-matched comparison, etc.). For each group:
+- Lead with the headline number(s).
+- Include side-by-side comparisons (this method vs. baseline at the same budget).
+- Cite the specific table or figure for every claim.
+
+### Ablation Studies and Robustness Checks
+- Each non-trivial ablation gets a bolded lead-in line: **<aspect being ablated>**: <one sentence on the finding>, with the specific table reference.
+- Highlight non-obvious findings (e.g., "geometric vs. linear spacing matters more than expected", "X is robust to data quantity but Y is not").
+- Include negative results when present — they are often the most informative.
+
+### Critical Assessment
+Walk through whether the experiments genuinely support the paper's central claims. CRITICAL: avoid formulaic "Claim N: Strongly supported / Supported / Supported with qualifications" output. Instead:
+- For each major claim from the executive summary, ask: do the reported experiments actually demonstrate this, or do they demonstrate something narrower? Be specific about what was and was not tested.
+- Surface genuine weaknesses where they exist — small test sets, missing baselines, single model family, oracle-only configurations, etc. If every claim looks "strongly supported", you are not reading critically.
+- Identify experiments that *would* have strengthened the paper but were not run (missing ablations, missing baselines, missing scales).
+- Where the claims hold conditionally, name the conditions precisely (e.g., "holds when R≪1 but not when R≫1").
+
+Hard rules:
+- Every quantitative claim must cite a specific table or figure.
+- Quote numbers exactly as the paper reports them.
+- Use plain Unicode for math (`4×`, `~14×`). NEVER `\(...\)`.
+- Do NOT re-describe mechanisms from Section 3 — assume the reader knows what beam search, PRM, revisions, etc. are by now.
+- Do NOT produce any other sections.

@@ -1,0 +1,15 @@
+Produce **## 1. Executive Summary** only.
+
+State the paper's core contribution and primary significance in 2-4 sentences of dense connected prose. Answer: What problem does this solve, and why does it matter?
+
+Required ingredients:
+- Specific numbers, model names, dataset names, benchmark names — all the ones that ground the claims.
+- The KEY mechanism(s) the paper studies, named explicitly and using the paper's exact terminology for the named concept (do not paraphrase a named method).
+- A parenthetical concrete example after each abstract mechanism, so the reader sees what it operationalizes (e.g., introduce a "search strategy" by adding "(beam search vs. best-of-N)").
+- Any boundary condition or caveat that bounds the main claim — restate it precisely in your own prose; do NOT just quote the paper verbatim.
+
+Style:
+- Open with a verb that reflects what the paper actually *does* — "studies", "analyzes", "introduces", "proposes" — choose by intent, don't default to "proposes".
+- Dense connected prose only. Use em-dashes for parallel constructions when listing mechanisms; do not use (1)/(2) numbered lists inside a sentence.
+- Preserve hyphenated multi-word named concepts (e.g., "compute-optimal test-time scaling") in full — never truncate.
+- Do NOT produce any other sections.

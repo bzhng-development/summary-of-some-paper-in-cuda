@@ -1,0 +1,13 @@
+Extract the exact paper title from the PDF, then write a 2-3 sentence pitch designed to make a busy reader open the full summary.
+
+The pitch is NOT a paraphrase of the executive summary. It must have a different voice and angle:
+- **Lead with the surprising or counter-intuitive finding**, not a methodology recap. (E.g., open with "A smaller model can beat a 14× larger one if it spends its inference budget right." rather than "This paper studies how to allocate compute...".)
+- **Be punchier and less academic** than the executive summary — short clauses, vivid framing, no nested mechanism descriptions.
+- **Concrete numbers in the lead** when they sharpen the hook (4×, 14×, etc.).
+- **Hint at the conditions** that bound the claim, but in passing — don't enumerate them.
+
+Hard rules:
+- 2-3 sentences MAX. No bullets.
+- DO NOT reproduce phrasings from the executive summary verbatim. If you find yourself writing "this paper studies/analyses/proposes...", rewrite.
+- Title must be the EXACT title as it appears in the PDF, not a paraphrase.
+- Plain Unicode for math (`4×`, `~14×`).

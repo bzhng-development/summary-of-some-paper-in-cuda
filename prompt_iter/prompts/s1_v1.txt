@@ -1,0 +1,5 @@
+Produce **## 1. Executive Summary** only.
+
+State the paper's core contribution and primary significance in 2-3 sentences. Answer: What problem does this solve, and why does it matter?
+
+Be precise — include specific numbers, model names, or dataset names where relevant. Do NOT produce any other sections.

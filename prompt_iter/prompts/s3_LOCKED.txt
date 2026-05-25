@@ -1,0 +1,56 @@
+Produce **## 3. Technical Approach** only.
+
+NOTE: This should be the LONGEST and most detailed section. The reader has NOT read this paper and needs a complete standalone explanation.
+
+At the start, include these sub-sections with ### headings:
+
+### 3.1 Reader orientation (approachable technical breakdown)
+- One sentence on what the *system* is (or what is being built), in plain language.
+- One sentence on what problem it solves and the "shape" of the solution.
+
+### 3.2 Big-picture architecture (diagram in words)
+- A high-level "box-and-arrows in words" view of the major components.
+- Name each component and its responsibility; keep this overview short (you will expand below).
+
+### 3.3 Roadmap for the deep dive
+- 3–6 bullets that state the order you'll explain components and why that order helps understanding.
+
+### 3.4 Detailed, sentence-based technical breakdown
+- Use `####` sub-sections under 3.4, one per major mechanism (e.g., `#### Process Reward Model (PRM) Training and Usage`).
+- Each `####` sub-section is a detailed technical breakdown in full sentences (not telegraphic fragments).
+- Even when using bullets, each bullet should be a complete sentence that explains a concrete mechanism, interface, or cause→effect relation.
+
+REQUIRED ELEMENTS:
+- Start with a one-sentence framing: what type of paper is this and the core idea.
+- Provide a "system/data pipeline diagram in words": describe major components, their inputs/outputs, and how information flows through them. Use an explicit "what happens first, second, third" narrative — no vague descriptions.
+- Include all key configurations, hyperparameters, and numbers mentioned in the paper. Quote them verbatim (e.g., "AdamW, lr=3e-5, batch size 128, dropout 0.05").
+- Explain design choices: why this approach over alternatives?
+- Paraphrase technical terms in plain language before using them.
+
+EQUATION HANDLING (critical — the reader views the markdown without rendered LaTeX, so every equation must be readable as prose):
+
+For EVERY equation in the section, in this order:
+1. **Block-set the equation** using `$$...$$` on its own line (use `$...$` only for very short inline notation).
+2. **Define every symbol in prose** immediately after, on its own line: "where `$X$` is ..., `$Y$` is ..., and `$Z$` is ...".
+3. **Restate what the equation COMPUTES in operational English** — name the inputs, the operation, the output, and what it enables downstream. This is NOT just "rewriting the equation"; it is explaining what physically/computationally happens.
+4. **Explain WHY this form** — what alternative would have been wrong, what property this form has that matters.
+
+Concrete example of the required pattern (binary cross-entropy):
+
+> $$\mathcal{L} = -\left(y \log(\hat{y}) + (1 - y) \log(1 - \hat{y})\right)$$
+>
+> where `$y \in [0, 1]$` is the soft target from Monte Carlo rollouts and `$\hat{y} \in [0, 1]$` is the model's predicted value for the step.
+>
+> **What it computes:** the standard binary cross-entropy between the model's predicted scalar and the rollout-derived soft target. The first term `$-y\log\hat{y}$` penalises under-confident predictions when the true probability is high; the second term `$-(1-y)\log(1-\hat{y})$` penalises over-confident predictions when the true probability is low. The result is a single non-negative scalar per step.
+>
+> **Why this form:** binary cross-entropy is the maximum-likelihood objective for a Bernoulli target, which is the right calibration objective because the soft labels are themselves probabilities (empirical fractions). MSE would weight errors near 0.5 the same as errors near 0 or 1, which is the wrong inductive bias for probability calibration.
+
+Every equation in section 3 must receive this four-part treatment. The reader should be able to skip the equation entirely and still understand what is being computed.
+
+Math formatting:
+- Inline math: `$x^2$` (single dollars). Block math: `$$...$$` on its own line.
+- NEVER use `\(...\)` or `\[...\]` — GitHub does not render them.
+
+Length and depth:
+- Be exhaustive. This is the section the reader uses to understand the paper without reading it.
+- Do NOT produce any other sections.

@@ -1,0 +1,21 @@
+Produce **## 2. Context and Motivation** only.
+
+Structure it as 3-4 `###` sub-sections that cover, in this order:
+
+1. **The Core Problem** — open with the central question or gap the paper addresses, ideally a single bolded one-sentence framing. Explain why this gap is significant — both conceptually (what's missing) and practically (what real-world decisions it informs). When listing practical implications, use a short bulleted list with **bold lead-in labels**.
+
+2. **What Prior Approaches Existed and Where They Fall Short** — group prior work into 3-5 categories, each as a `**Bold lead-in sentence.**` followed by an explanatory paragraph. Cite specific prior work inline `(Author et al., YEAR)`. When the paper makes an unusually strong critique of prior work, quote the paper directly.
+
+3. **(Optional) Reconciling Conflicting Prior Evidence** — if the paper resolves a contradiction in the literature, surface it. Cite both sides explicitly. State the paper's reconciliation in one bolded sentence.
+
+4. **How This Paper Positions Itself** — explain the unifying framework or stance the paper takes. Name the axes/dimensions the paper organizes work along. Then state what the paper's specific contribution is *within* that framework. Close by anchoring to the paper's scope: which model, which benchmark, what assumptions.
+
+Style and discipline:
+- Heavy inline citations `(Author et al., YEAR)` — the reader should be able to trace claims back to specific prior work.
+- Quote the paper directly when revealing surprising or contrarian findings.
+- Each sub-section should add new information — never restate Section 1.
+- Use **bold** to highlight central claims that the reader should walk away with.
+- Plain Unicode for math (`4×`, `~14×`). NEVER `\(...\)`.
+- Do NOT produce any other sections.
+
+Length target: detailed but disciplined. Aim for the level of detail that lets a reader genuinely understand the gap in the literature, but cut redundancies between sub-sections.

@@ -1,0 +1,31 @@
+Produce **## 7. Implications and Future Directions** only.
+
+Structure as `###` sub-sections:
+
+### How This Work Changes the Landscape
+- What conceptual or methodological shift does this work cause in the field?
+- Is it a paradigm shift, a reframing, a new diagnostic, or an incremental refinement? Be precise about the magnitude.
+- Reconcile any prior contradictions the work resolves.
+- Highlight which research directions become more attractive, and which become less so.
+
+### Follow-Up Research This Work Enables
+- 3-6 concrete, specific research directions, each as a `**Lead-in title.**` followed by a paragraph.
+- For each: state the specific question or gap, why this paper makes it newly tractable, and what a strong follow-up would measure.
+- Avoid generic "future work could explore X" sentences — name a concrete experiment, dataset, or comparison.
+- Include both extensions and stress-tests (negative results that would refine our understanding).
+
+### Practical Applications and Downstream Use Cases
+- 2-4 concrete deployment scenarios where this work matters today.
+- For each: a brief description of the setting and the specific benefit, grounded in numbers from the paper. Avoid hand-waving.
+
+### (Conditional) When to Prefer This Method
+ONLY include this sub-section if the paper itself proposes a clear tradeoff against named alternatives. In that case, frame it as a short bulleted decision rule with the exact conditions named.
+
+DO NOT include a formulaic "Prefer A when ... Prefer B when ... Prefer C when ..." matrix if the paper does not articulate that tradeoff explicitly. Many papers introduce a method without positioning it against alternatives, and a forced matrix becomes generic boilerplate.
+
+Hard rules:
+- Be concrete and forward-looking. Hand-wavy speculation about AGI is forbidden.
+- Each direction should be specific enough that a researcher could open a new IDE and start working on it.
+- Reference the paper's specific results when justifying an extension or application.
+- Plain Unicode for math (`4×`, `~14×`). NEVER `\(...\)`.
+- Do NOT produce any other sections.

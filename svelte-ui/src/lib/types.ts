@@ -1,0 +1,26 @@
+export type Paper = {
+	arxiv_id: string;
+	title: string;
+	score: number;
+	similar_paper?: string;
+	reason?: string;
+	upvotes?: number;
+	github?: string | null;
+	github_stars?: number | null;
+	keywords?: string[];
+	authors?: string[];
+	affiliations?: Record<string, string[]>;
+	organization?: string | null;
+	org_fullname?: string | null;
+	categories?: string[];
+	primary_category?: string | null;
+	arxiv_comment?: string | null;
+	published?: string | null;
+	journal_ref?: string | null;
+	doi?: string | null;
+	summary?: string;
+	tag_category?: string | null;
+	tag_confidence?: number | null;
+	tag_reason?: string | null;
+	_interested?: boolean;
+};

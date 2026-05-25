@@ -1,0 +1,14 @@
+{
+  "section": 2,
+  "version": "v2",
+  "thinking_effort": "high",
+  "duration_sec": 66.3,
+  "input_tokens": 41333,
+  "output_tokens": 3290,
+  "reasoning_tokens": null,
+  "prompt_chars": 1987,
+  "output_chars": 9692,
+  "prior": [
+    "s1=LOCKED"
+  ]
+}

@@ -38,6 +38,7 @@ FIELDS = [
     "authors", "affiliations", "organization", "org_fullname",
     "primary_category", "categories", "published",
     "upvotes", "github", "github_stars", "arxiv_comment",
+    "interested", "is_only_important_because_of_company",
 ]
 
 

@@ -66,7 +66,7 @@ const TopicPage = async ({ params }) => {
           {papers.map((p) => {
             const cat = cats.get(p.category);
             return (
-              <li key={p.id}>
+              <li key={p.id} data-company-only={p.companyOnly ? 'true' : 'false'}>
                 <Link
                   href={`/p/${encodeURIComponent(p.category)}/${encodeURIComponent(p.slug)}`}
                   className="group flex items-baseline gap-3 rounded-lg border border-transparent px-2 py-1.5 transition-colors hover:border-gray-new-15 hover:bg-gray-new-10"

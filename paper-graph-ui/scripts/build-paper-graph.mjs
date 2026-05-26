@@ -341,6 +341,10 @@ function main() {
       github: meta?.github ?? null,
       githubStars: meta?.github_stars ?? null,
       arxivComment: meta?.arxiv_comment ?? null,
+      // True when interested=1 was set just because the paper is from a
+      // tracked company (Qwen/DeepSeek/Moonshot/ByteDance/NVIDIA/etc.)
+      // rather than picked on merit. UI filter "merit only" hides these.
+      companyOnly: Boolean(meta?.is_only_important_because_of_company),
     });
     categoryCounts.set(category, (categoryCounts.get(category) ?? 0) + 1);
   }

@@ -12,13 +12,33 @@ const SurpriseMe = ({ papers }) => {
   const [hydrated, setHydrated] = useState(false);
   const [pool, setPool] = useState(0);
 
+  // When "Merit only" toggle is on, exclude papers we marked interested=1
+  // just because they're from a tracked company (Qwen/DeepSeek/etc.).
+  const meritOnlyKey = 'pg.merit-only.v1';
+
+  const isMeritOnly = () => {
+    try {
+      return localStorage.getItem(meritOnlyKey) === '1';
+    } catch {
+      return false;
+    }
+  };
+
+  const passesMeritFilter = (p) => !isMeritOnly() || !p.companyOnly;
+
   useEffect(() => {
     setHydrated(true);
     try {
       const raw = localStorage.getItem(KEY);
       const read = new Set(raw ? JSON.parse(raw) : []);
-      const high = papers.filter((p) => (p.score ?? 0) >= 8 && !read.has(p.id));
-      setPool(high.length > 0 ? high.length : papers.filter((p) => !read.has(p.id)).length);
+      const high = papers.filter(
+        (p) => (p.score ?? 0) >= 8 && !read.has(p.id) && passesMeritFilter(p)
+      );
+      setPool(
+        high.length > 0
+          ? high.length
+          : papers.filter((p) => !read.has(p.id) && passesMeritFilter(p)).length
+      );
     } catch {
       setPool(papers.length);
     }
@@ -30,10 +50,13 @@ const SurpriseMe = ({ papers }) => {
       const raw = localStorage.getItem(KEY);
       read = new Set(raw ? JSON.parse(raw) : []);
     } catch {}
-    let candidates = papers.filter((p) => (p.score ?? 0) >= 8 && !read.has(p.id));
+    let candidates = papers.filter(
+      (p) => (p.score ?? 0) >= 8 && !read.has(p.id) && passesMeritFilter(p)
+    );
     if (candidates.length < 5) {
-      candidates = papers.filter((p) => !read.has(p.id));
+      candidates = papers.filter((p) => !read.has(p.id) && passesMeritFilter(p));
     }
+    if (candidates.length === 0) candidates = papers.filter(passesMeritFilter);
     if (candidates.length === 0) candidates = papers;
     const pick = candidates[Math.floor(Math.random() * candidates.length)];
     router.push(`/p/${encodeURIComponent(pick.category)}/${encodeURIComponent(pick.slug)}`);

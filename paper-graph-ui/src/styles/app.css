@@ -47,3 +47,11 @@ body {
     row-gap: 0.25rem;
   }
 }
+
+/* Merit-only filter — when MeritOnlyToggle is ON, body gets `pg-merit-only`.
+   Any element with `data-company-only="true"` (paper cards/rows for papers
+   where interested=1 was set just because the paper is from a tracked
+   company rather than picked on merit) is hidden. */
+.pg-merit-only [data-company-only="true"] {
+  display: none !important;
+}

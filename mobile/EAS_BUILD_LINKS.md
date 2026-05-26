@@ -1,6 +1,14 @@
 # EAS Build Links — Paper Graph Mobile
 
-## Build #3 — 2026-05-26 02:24 (1371 papers, USE THESE)
+## Build #4 — 2026-05-26 (1320 papers, post strict re-curation, USE THESE)
+
+After T11 dropped the 51 RLVR junk picks. 29 strict picks remain plus the
+~1290 pre-existing papers. 25 categories.
+
+- **Android (APK):** https://expo.dev/accounts/vincentzhongy/projects/paper-graph-mobile/builds/7b1750d7-02af-4f27-868b-dd5ff878436b
+- **iOS Simulator (.app):** https://expo.dev/accounts/vincentzhongy/projects/paper-graph-mobile/builds/b1b2948e-275a-4021-805c-2aa88ffe95b2
+
+## Build #3 — 2026-05-26 02:24 (1371 papers)
 
 Latest. Adds the 80 curated April-May papers from the T7-T10 chain on top
 of Build #2's 1306. Also includes the T2 re-categorization (852 papers

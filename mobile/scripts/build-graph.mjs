@@ -228,6 +228,13 @@ function main() {
   // than symlink because Metro chokes on symlinks in asset paths.
   // The asset-map collected below feeds src/lib/paper-asset-map.ts so
   // useMarkdownContent can require() each .md (Metro resolves at bundle time).
+  //
+  // IMPORTANT: nuke the existing assets/papers/ tree before copying. After a
+  // T2-style re-categorization run, the source moves files between category
+  // dirs but assets/papers/ would still have the stale copies at the old
+  // paths — bloating the EAS upload by ~2x and confusing Metro with files
+  // that aren't in the asset map.
+  fs.rmSync(ASSETS_OUT, { recursive: true, force: true });
   fs.mkdirSync(ASSETS_OUT, { recursive: true });
   const assetMap = []; // [{ key, relAssetPath }]
 

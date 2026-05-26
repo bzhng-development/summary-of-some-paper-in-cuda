@@ -1,6 +1,15 @@
 # EAS Build Links — Paper Graph Mobile
 
-## Build #2 — 2026-05-26 (content-bundled, USE THESE)
+## Build #3 — 2026-05-26 02:24 (1371 papers, USE THESE)
+
+Latest. Adds the 80 curated April-May papers from the T7-T10 chain on top
+of Build #2's 1306. Also includes the T2 re-categorization (852 papers
+moved between dirs). 257 MB archive.
+
+- **Android (APK):** https://expo.dev/accounts/vincentzhongy/projects/paper-graph-mobile/builds/66b18273-f720-47a7-8cbe-ea82ac9a3832
+- **iOS Simulator (.app):** https://expo.dev/accounts/vincentzhongy/projects/paper-graph-mobile/builds/3642eef3-a071-4c0e-8a9a-d16539b11ebe
+
+## Build #2 — 2026-05-26 00:14 (content-bundled, USE THESE)
 
 These are the actual usable builds. The build-graph.mjs now rsyncs all 1297
 .md files into assets/papers/ and emits src/lib/paper-asset-map.ts so Metro

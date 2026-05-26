@@ -114,6 +114,7 @@ SCHEMA_COLUMNS: Final[tuple[str, ...]] = (
     "tag_confidence",
     "tag_reason",
     "score_source",
+    "is_only_important_because_of_company",
 )
 
 # Columns the caller is allowed to pass to ``save_paper`` as kwargs. ``id`` is
@@ -269,7 +270,8 @@ class NeonDB:
                 tag_category_v2   TEXT,
                 tag_confidence    DOUBLE PRECISION,
                 tag_reason        TEXT,
-                score_source      TEXT
+                score_source      TEXT,
+                is_only_important_because_of_company BOOLEAN NOT NULL DEFAULT FALSE
             )
         """
         with self.get_conn() as conn, conn.cursor() as cur:

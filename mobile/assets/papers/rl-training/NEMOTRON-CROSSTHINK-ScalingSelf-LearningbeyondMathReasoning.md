@@ -1,0 +1,735 @@
+# NEMOTRON-CROSSTHINK: Scaling Self-Learning beyond Math Reasoning
+
+**ArXiv:** [2504.13941](https://arxiv.org/abs/2504.13941)
+
+## 🎯 Pitch
+
+NEMOTRON-CROSSTHINK pioneers a systematic framework for training large language models with reinforcement learning across both mathematical and broad, real-world reasoning tasks. By curating diverse multi-domain datasets, applying structured templates for verifiable rewards, filtering unverifiable samples, and optimizing data blending, it achieves significant accuracy boosts—including on non-math benchmarks—while making correct answers more concise and efficient. This unlocks scalable, efficient, and generalizable self-learning in LLMs far beyond mathematical reasoning, paving the way for robust, cross-domain AI reasoning in practical applications.
+
+---
+
+## 1. Executive Summary
+
+This paper introduces **NEMOTRON-CROSSTHINK**, a framework that systematically incorporates multi-domain corpora into reinforcement learning training to improve LLM generalization beyond math reasoning. Using Qwen-2.5-7B and Qwen-2.5-32B models evaluated on seven benchmarks spanning math (MATH-500, AMC23) and general-purpose reasoning (MMLU-PRO, GPQA-DIAMOND, AGIEVAL, SUPERGPQA), the framework combines three mechanisms: structured question/answer templates to constrain the answer space for verifiable reward modeling (converting MCQs to open-ended format, using short-form answer labels), multi-domain data blending that mixes general-purpose reasoning data with math data at varying ratios (a 2:1 ratio of GPR-to-math data yielding the strongest overall gains), and difficulty-aware filtering that removes samples solvable by a smaller model to retain only challenging examples. The best-performing blend achieves substantial accuracy improvements over the base model—+12.8% on MMLU-PRO, +11.3% on GPQA-DIAMOND, +15.1% on AGIEVAL, +30.1% on MATH-500, and +27.5% on AMC23—while simultaneously reducing token usage for correct responses by 28%. The framework establishes that math-only RL training is insufficient for broad reasoning, demonstrating that general-purpose reasoning data amplifies cross-domain transfer only when combined with math data, not when deployed in isolation.
+
+## 2. Context and Motivation
+
+### The Core Problem: RL-Based Reasoning Training Has Been Trapped in Math
+
+The fundamental challenge this paper addresses is straightforward to state but far-reaching in its implications: **reinforcement learning has proven remarkably effective at improving LLM reasoning, but almost exclusively in domains where correctness is easy to verify — primarily mathematics and code.** The paper opens by acknowledging this asymmetry: "Recent advances in RL have been particularly successful in mathematical reasoning and coding, where well-defined rules and verifiable correctness enable effective reward modeling. Yet, extending these techniques to broader reasoning domains poses significant challenges."
+
+This gap matters enormously because real-world reasoning doesn't confine itself to domains with clean answer formats. A lawyer analyzing case law, a physician evaluating symptoms, a scientist interpreting experimental results, or a student answering a multiple-choice exam question all engage in complex reasoning — but none produce outputs that can be trivially verified with a regex pattern match. If RL-based self-learning remains constrained to math, it fails to serve the vast majority of reasoning tasks that humans actually perform.
+
+The paper identifies two specific bottlenecks that cause this domain restriction:
+
+1. **Limited training data for RL due to the difficulty of defining verifiable rewards.** In math, you can check whether the final answer matches the ground truth. In law, history, or social sciences, what constitutes a "correct" answer is often contextual, nuanced, and expressed in natural language. Without reliable reward signals, RL cannot distinguish good reasoning from bad.
+
+2. **Ensuring generalization across diverse tasks.** Even within math, different problem types (algebra vs. geometry, proof-based vs. computational) require different reasoning strategies. Extending to entirely different domains — economics, philosophy, medicine — introduces fundamentally different reasoning patterns, background knowledge requirements, and output formats. A model trained exclusively on math may develop reasoning habits (formal step-by-step derivations, symbolic manipulation) that don't transfer to, or even interfere with, reasoning in other domains.
+
+### Why This Problem Has Become Urgent Now
+
+The timing of this paper is not coincidental. Several developments in late 2024 and early 2025 created a landscape where the math-only limitation became the obvious next bottleneck to address:
+
+**The RL-for-reasoning revolution has been dominated by math.** DeepSeek-R1 (DeepSeek-AI, 2025), Open-Reasoner-Zero (Hu et al., 2025a), DeepScaler (Luo et al., 2025), and numerous other systems demonstrated that applying GRPO (Group Relative Policy Optimization) to base models yields dramatic improvements on mathematical reasoning benchmarks. These systems showed emergent behaviors — self-verification, backtracking, reflection — that looked strikingly like genuine reasoning. But they were trained almost exclusively on math problems with verifiable answers.
+
+**The data diversity question remained unexplored.** Several recent works (Hu et al., 2025a; Luo et al., 2025; Cui et al., 2025) began incorporating data from multiple sources into RL training, recognizing that diversity might help. However, as the paper explicitly notes, "they do not evaluate the relative importance of each source for reasoning or explore optimal data-blending strategies to maximize performance." In other words, people were throwing more data at the problem but without understanding what kinds of data matter, in what proportions, or why.
+
+**Non-math domains were systematically neglected.** "Prior research has largely focused on math reasoning," the paper states, "overlooking the role of non-math reasoning domains in RL training for generalization in out-of-distribution domains." This neglect has practical consequences. Benchmarks like MMLU-PRO (Wang et al., 2024), GPQA-DIAMOND (Rein et al., 2024), and AGIEVAL (Zhong et al., 2023) measure broad reasoning capabilities that math-only models struggle with. A model that achieves 80% on MATH-500 but 45% on MMLU-PRO is not a general reasoner — it's a math specialist.
+
+**A structural observation about reasoning diversity.** The paper makes an important cognitive argument that prior work had not articulated. Different domains require fundamentally different reasoning modes:
+
+- **Math reasoning** operates through "rule-based, structured, and symbolic approaches" (citing Dehaene, 2011). Problems are well-defined; solutions proceed through axiom application and algebraic manipulation; correctness is binary.
+
+- **General-purpose reasoning** — in law, physics, social sciences, and history — "often relies on narrative structures, contextual knowledge, and heuristic strategies." There is no single formal system governing the reasoning; answers depend on interpretation, precedent, and argumentation.
+
+- **Question format** shapes reasoning strategy independently of domain. Open-ended questions demand generation of novel responses from scratch. Multiple-choice questions (MCQs) can often be solved through option evaluation and elimination — a fundamentally different cognitive process.
+
+The implication is that **training exclusively on math problems may teach models a reasoning style that is maladaptive for other domains**, similar to how a student who only learns to solve equations may struggle with essay questions requiring interpretive reasoning. Incorporating diverse domains and formats is not merely about adding more data — it's about exposing the model to varied cognitive strategies.
+
+### Where Existing Approaches Fall Short
+
+The paper identifies several specific limitations in prior work that NEMOTRON-CROSSTHINK is designed to address:
+
+**Math-centric RL systems ignore non-math generalizability.** Open-Reasoner-Zero (Hu et al., 2025a) achieves strong math accuracy using a combination of math datasets but provides no mechanism for extending to general-purpose reasoning. The paper's own experiments (Table 3) show that ORZ-7B achieves 81.4% on MATH-500 but only 48.9% on MMLU-PRO and 29.3% on GPQA-DIAMOND — a gap of over 30 percentage points between math and non-math performance. This is the signature of domain over-specialization.
+
+**Data blending efforts lack systematic analysis.** Recent works by Hu et al. (2025a), Luo et al. (2025), Zeng et al. (2025a), and Wen et al. (2025) have mixed data from multiple sources in RL training. But the paper argues these efforts are characterized by two critical gaps:
+
+- They "primarily focus on math due to the ease of designing verifiable rewards." Even when non-math data is included, it tends to be math-adjacent (e.g., science problems with numeric answers) rather than genuinely diverse.
+
+- They do not analyze "the relative importance of each source" or "explore optimal data-blending strategies to maximize performance." The field lacked controlled experiments that isolate the effect of data source, question type, and blend ratio on downstream reasoning.
+
+The paper cites Yeo et al. (2025), which reports strong MMLU-PRO scores by blending multi-domain data, but notes that "the majority of it is math-focused, leaving unclear the contribution of non-math data." This is a sharp critique: even the work that comes closest to multi-domain training cannot attribute its gains to specific data components.
+
+**Answer space diversity is an underexplored obstacle to verifiable rewards.** The paper identifies a subtle but critical problem: non-math domains produce answers that are difficult to verify with simple rules. When an MCQ-format dataset (like MMLU) provides four options, the model can be trained to output option labels. But what about open-ended questions? What about domains where answers are natural language phrases rather than numbers or single tokens?
+
+Prior works "overlooked these variations in the answer space for consistent reward design." The consequence is that RL training on non-math data either fails entirely (reward signals are too noisy) or requires complex, unreliable reward mechanisms like LLM-as-a-Judge, which "may suffer from pitfalls of reward hacking... and further diverge the model more from the correct reasoning processes" (as noted in Appendix I, citing DeepSeek-AI, 2025; Weng, 2024; Wen et al., 2024).
+
+**The contribution of difficulty filtering for non-math data is unexplored.** Recent work has shown that training on harder questions improves downstream accuracy (Hu et al., 2025a; Luo et al., 2025; Cui et al., 2025; Zeng et al., 2025a; Fatemi et al., 2025). But these approaches "rely on datasets with pre-defined difficulty scores" — math competitions naturally come with difficulty tiers, but general-purpose reasoning datasets typically don't. The paper identifies this as an open problem: how can we estimate question difficulty for domains without explicit difficulty labels?
+
+**Isolated data sources fail to generalize.** The paper's own diagnostic experiment (Table 2) reveals the limitations of single-source training with striking clarity:
+
+- Training on MMLU [Train] alone *degrades* performance on math benchmarks (MATH-500 drops from 48.3% to 22.0%; AMC23 drops from 40.0% to 5.0%), confirming that raw MCQ data without reasoning structure can catastrophically interfere with existing math capabilities.
+
+- Training on NEMOTRON-CROSSTHINK-MATH (synthetic math data) achieves 77.2% on MATH-500 but plummets to 28.1% on MMLU-PRO and 18.7% on GPQA-DIAMOND — the mirror image of the MCQ-only problem.
+
+- NuminaMath achieves the highest single-source average (53.06%), showing that high-quality math data benefits from some structure that generalizes, but still underperforms on pure language reasoning tasks.
+
+These results establish that **no single data source is sufficient** — the generalization failures are systematic, not incidental.
+
+### How This Paper Positions Itself
+
+NEMOTRON-CROSSTHINK positions itself as the **first systematic framework for incorporating multi-domain, multi-format data into RL training with verifiable rewards for non-deterministic tasks.** This is a specific and significant claim. The paper is not merely doing multi-domain RL (others have done that, though less systematically) — it is:
+
+1. **Defining a taxonomy of data properties that matter for RL generalization.** Rather than treating "more data" as the solution, the paper identifies three orthogonal axes along which blends should be varied: data source (GPR vs. math), question type (MCQ vs. open-ended), and data usefulness (informed by single-source performance).
+
+2. **Introducing structured templates as a mechanism for making diverse domains verifiably rewardable.** This is the crucial enabling technology. By converting MCQs to open-ended questions (removing options to force genuine reasoning) and constraining the answer format (short labels rather than descriptive text), the paper makes rule-based reward modeling feasible for domains that previously required unreliable LLM judges or were simply excluded from RL training.
+
+3. **Demonstrating that the optimal data blend is not "all math" or "all GPR" but a specific mixture where math and GPR complement each other.** The paper's central empirical finding — that a 2:1 ratio of GPR to math data outperforms both math-only and GPR-only blends — is not an obvious result. It shows that math data provides reasoning structure that amplifies GPR learning, while GPR data provides domain breadth that prevents math over-specialization. Neither works as well alone.
+
+4. **Proposing a model-driven difficulty estimation technique for domains without explicit difficulty labels.** By filtering out questions that a smaller base model can answer correctly in zero-shot, the paper creates a hardness signal without requiring human annotation or pre-existing difficulty metadata. This is a practical contribution that enables the "train on harder data" insight to transfer beyond math.
+
+The paper explicitly contrasts itself with Su et al. (2025) and Ma et al. (2025), which attempted multi-domain RL using model-based verifiers (LLM-as-a-Judge) to handle answer space diversity. NEMOTRON-CROSSTHINK takes the opposite approach: instead of making the reward function more complex and flexible, it makes the data more constrained and uniform. This is a philosophical choice grounded in the recognition that rule-based rewards are "simple, scalable and robust" while model-based rewards introduce reward hacking risks and computational overhead.
+
+This positioning is reinforced by the paper's decision to apply RL directly to the base model (Qwen-2.5-7B and Qwen-2.5-32B) rather than to supervised fine-tuned (SFT) checkpoints, a choice defended in Appendix H. The authors cite conflicting evidence on whether SFT helps or hurts RL (Chu et al., 2025 find SFT reduces entropy needed for exploration; Chen et al., 2025 find RL on instruction-tuned models can hurt performance). By working with base models, the paper isolates the effect of its data curation and blending strategies from the confounding influence of SFT.
+
+### The Stakes: What Success Would Mean
+
+If NEMOTRON-CROSSTHINK succeeds in its aims, it establishes a template for how to construct RL training data for any reasoning domain — not just math. The framework's components (data curation from diverse sources, template-based answer space control, blend ratio optimization, difficulty filtering) are designed to be domain-agnostic. A successful demonstration on seven diverse benchmarks (MATH-500, AMC23, MMLU, MMLU-PRO, GPQA-DIAMOND, AGIEVAL, SUPERGPQA) would provide evidence that the approach generalizes.
+
+The practical implications extend beyond benchmark scores. The paper's finding that multi-domain training produces more token-efficient responses (28% fewer tokens for correct answers) suggests that diverse training data teaches models to calibrate their reasoning depth to task requirements — producing concise answers when appropriate and detailed derivations when necessary. This efficiency gain matters for deployment cost and latency, not just accuracy.
+
+Furthermore, by releasing 287.4K high-quality multi-domain curated data on HuggingFace, the paper aims to lower the barrier for the research community to replicate and extend its findings. The data includes both synthetic QA pairs (generated from CommonCrawl documents via the pipeline described in Section 3) and curated open-source datasets, spanning STEM, humanities, law, and social sciences — a deliberate attempt to provide the community with the diverse training material that the paper argues has been missing.
+
+## 3. Technical Approach
+
+### 3.1 Reader Orientation
+
+This paper presents a **data curation and training framework** — not a new model architecture or RL algorithm — that systematically constructs multi-domain training datasets and feeds them into standard Group Relative Policy Optimization (GRPO) to produce LLMs that reason well across both math and general-purpose domains. The system solves the problem that RL-based reasoning training has been trapped in math because only math offers clean, verifiable reward signals; NEMOTRON-CROSSTHINK escapes this trap by applying structured templates that constrain the answer space of non-math domains so they become verifiable with simple rule-based rewards, then blending these diverse data sources at carefully-chosen ratios to achieve cross-domain generalization without sacrificing math performance.
+
+### 3.2 Big-Picture Architecture (Diagram in Words)
+
+The system has five major stages that transform raw web text and open-source QA datasets into RL training data, then train a base LLM via GRPO:
+
+1. **Data Curation** — collects QA pairs from two families of sources: synthetic data generated from CommonCrawl web documents (NEMOTRON-CROSSTHINK-QA for general-purpose reasoning, NEMOTRON-CROSSTHINK-MATH for mathematical reasoning) and existing open-source QA datasets (MMLU, Natural Reasoning, NuminaMath, MATH). This produces a raw pool `$\mathcal{D} = \mathcal{D}_{syn} \cup \mathcal{D}_{os}$` spanning STEM, humanities, law, social sciences, and mathematics.
+
+2. **Template Application** — converts raw QA pairs into controlled formats by applying two types of structured templates: `$\mathcal{T}_{MCQ}$` wraps questions with multiple-choice options, while `$\mathcal{T}_{Open}$` strips options to create open-ended questions. This constrains the diversity of the answer space so that rule-based reward functions can reliably check correctness. The output is `$\mathcal{D}_{gpr} = \mathcal{D}_{mcq} \cup \mathcal{D}_{open}$` where both formats coexist in the training pool.
+
+3. **Data Filtering and Formatting** (`$\mathcal{H}$`) — removes samples that cannot be evaluated with rule-based rewards: MCQ questions where the correct answer isn't among the provided options are discarded; open-ended questions where the ground-truth answer exceeds 10 words are discarded (too ambiguous for exact-match verification); math problems with missing answers are discarded. The filtered set `$\mathcal{D}' = \mathcal{H}(\mathcal{D})$` is guaranteed to be verifiable.
+
+4. **Data Blending** — constructs specific mixtures of the filtered data according to three design axes: data source (ratio of GPR to math data), question type (ratio of MCQ to open-ended), and data usefulness (weights derived from single-source benchmark performance). Six distinct blends are created, with the primary blend `$\mathcal{B}_{gpr\uparrow}$` using a 2:1 ratio of GPR to math data. Each blend is a weighted sampling distribution over the filtered QA pairs.
+
+5. **Self-Learning with RL (GRPO)** — samples batches from the chosen blend, generates multiple candidate answers per question using the current policy `$\pi_\theta$`, scores each candidate with a rule-based reward function (`$\mathcal{R} = \mathcal{R}_{acc} \land \mathcal{R}_{format}$`), computes group-relative advantages, and updates the policy via GRPO. This loop iterates for 650 steps using fixed hyperparameters (learning rate `$1 \times 10^{-6}$`, KL coefficient 0.001, 128 unique prompts per step, 8 rollouts per prompt).
+
+The information flow is: raw text/datasets → QA pair generation → template-wrapped QA pairs → filtered verifiable QA pairs → blend-weighted sampling → GRPO training with rule-based rewards → updated policy `$\pi_\theta$`.
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First**, the data curation pipeline — how synthetic QA pairs are generated from CommonCrawl, what open-source datasets are incorporated, and why this particular combination of sources was chosen. This establishes the raw material the framework works with.
+
+- **Second**, the template mechanism — how MCQ and open-ended templates are applied, the conversion process, and why controlling answer-space diversity is the key enabler for verifiable rewards in non-math domains. This is the framework's primary technical innovation for escaping the math-only limitation.
+
+- **Third**, the filtering and formatting rules — the specific criteria for discarding unverifiable samples, including the 10-word threshold for open-ended answers and the option-validation check for MCQs. These rules make the difference between noisy, unusable rewards and clean, reliable signals.
+
+- **Fourth**, the data blending strategies — the three orthogonal axes (source, question type, usefulness), the six specific blends constructed, their weight distributions, and the rationale behind the 2:1 GPR-to-math ratio that proved optimal. This explains how the framework navigates the trade-off between domain breadth and depth.
+
+- **Fifth**, the GRPO training procedure and reward design — the mathematical objective, the group-relative advantage computation, the combined accuracy-plus-format reward function, and the training hyperparameters. This covers how the curated data actually drives policy improvement.
+
+- **Sixth**, the difficulty filtering extension — the model-driven technique for estimating question hardness without explicit difficulty labels, and how it amplifies the gains from data blending when scaling to larger models.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily a **data engineering and empirical analysis paper** whose core idea is that the diversity, format, and blending ratio of RL training data — not just its volume or domain — determine whether self-learning generalizes beyond math. The technical contribution is a reusable pipeline for transforming unstructured, multi-domain QA data into verifiable training material suitable for rule-based RL.
+
+---
+
+#### Data Curation: Building the Raw Multi-Domain QA Pool
+
+The curation stage assembles a raw pool of 588,645 question-answer pairs spanning general-purpose reasoning (GPR) and mathematical reasoning (MR) from both synthetic generation and existing open-source datasets. The training data `$\mathcal{D}$` is defined as the union of two families:
+
+$$\mathcal{D} = \mathcal{D}_{syn} \cup \mathcal{D}_{os}$$
+
+where `$\mathcal{D}_{syn}$` represents synthetically generated QA pairs (from CommonCrawl documents) and `$\mathcal{D}_{os}$` represents open-source QA datasets. Each family further subdivides into GPR and math components:
+
+$$\mathcal{D}_{syn} = \mathcal{D}_{syn\_gpr} \cup \mathcal{D}_{syn\_mr}$$
+
+$$\mathcal{D}_{os} = \mathcal{D}_{os\_gpr} \cup \mathcal{D}_{os\_mr}$$
+
+**What this decomposition captures:** The training data is organized by two orthogonal dimensions — provenance (synthetic vs. curated) and domain (general-purpose vs. mathematical). This four-quadrant structure ensures that no single source or domain dominates the raw pool, and it provides the degrees of freedom needed to construct blends with controlled GPR-to-math ratios.
+
+**Why four quadrants rather than a flat list:** If the data were a single undifferentiated pool, blending experiments could not disentangle the effects of domain (GPR vs. math) from the effects of data quality (synthetic vs. human-curated). The quadrant structure allows the paper to later construct blends like `$\mathcal{B}_{gpr\uparrow}$` that sample heavily from the GPR quadrants while maintaining some math presence, and to analyze whether synthetic data generalizes differently than curated data.
+
+The specific datasets assigned to each quadrant (Table 1) are:
+
+- **`$\mathcal{D}_{os\_gpr}$` (open-source GPR):** MMLU [Train] (99,842 MCQ samples spanning STEM, economics, social sciences, and more) and Natural Reasoning (100,000 open-ended samples from Yuan et al., 2025). MMLU provides broad domain coverage in a structured MCQ format; Natural Reasoning provides challenging open-ended questions that require deeper reasoning without option-based shortcuts.
+
+- **`$\mathcal{D}_{syn\_gpr}$` (synthetic GPR):** NEMOTRON-CROSSTHINK-QA (192,930 MCQ samples generated from CommonCrawl via the pipeline described in Section 3.1). This is the largest single component in the pool, designed to provide diverse, textbook-style questions across topics that may be underrepresented in existing benchmarks.
+
+- **`$\mathcal{D}_{os\_mr}$` (open-source math):** NuminaMath (87,350 open-ended samples from Beeching et al., 2024) and MATH (8,523 open-ended samples from Hendrycks et al., 2021b). NuminaMath is the primary math contributor by volume; MATH provides high-quality competition-level problems that serve as a strong reasoning signal despite the smaller count.
+
+- **`$\mathcal{D}_{syn\_mr}$` (synthetic math):** NEMOTRON-CROSSTHINK-MATH (100,000 open-ended samples, generated from CommonCrawl using persona- and skill-conditioned prompts). This provides additional math diversity beyond what curated competition datasets offer, including problems grounded in real-world persona scenarios.
+
+The resulting total of 588,645 samples breaks down as approximately 67% GPR (MMLU + NEMOTRON-CROSSTHINK-QA + Natural Reasoning = 392,772 samples) and 33% math (NuminaMath + NEMOTRON-CROSSTHINK-MATH + MATH = 195,873 samples). This natural distribution already skews toward GPR, which is important because the optimal blend will further amplify GPR presence (the 2:1 ratio in `$\mathcal{B}_{gpr\uparrow}$`).
+
+---
+
+#### Synthetic Data Generation: The NEMOTRON-CROSSTHINK-QA and NEMOTRON-CROSSTHINK-MATH Pipelines
+
+The synthetic data generation pipelines are two distinct processes that share a common starting point — CommonCrawl web documents — but diverge in their target domain and generation methodology.
+
+##### NEMOTRON-CROSSTHINK-QA Generation (Approach 1: SDG from Scratch)
+
+This pipeline generates multiple-choice questions across diverse academic topics using a multi-stage process with multiple LLMs:
+
+**Stage 1: Topic, Subtopic, and Difficulty Definition.** The pipeline begins by defining a "broad set of topics, such as physics, biology, chemistry, and others." For each topic, Nemotron-4-340B-Instruct generates a list of popular subtopics. Multiple difficulty levels are also defined to "ensure diversity and scale of the data." This hierarchical topic-subtopic-difficulty taxonomy provides the conditioning signal for subsequent question generation, ensuring that the synthetic data covers a structured knowledge space rather than a random scatter of questions.
+
+**Stage 2: Few-Shot Example Generation.** The pipeline generates "few-shot examples that demonstrate various levels of difficulty" using Nemotron-4-340B-Instruct. These examples serve two purposes: they calibrate the question generator to produce appropriately difficult questions, and they provide format guidance so downstream models understand what a well-formed MCQ looks like.
+
+**Stage 3: Question Generation.** The Qwen2.5 models (the paper does not specify which size, but the context suggests Qwen2.5-72B-Instruct) are prompted with the few-shot examples plus the specified topic, subtopic, and difficulty to generate an MCQ question. Each generated question is "evaluated to ensure it follows the required format" — a quality-control step that discards malformed outputs before they enter the training pool.
+
+**Stage 4: Augmentation.** Following the OpenMathInstruct pipeline (Toshniwal et al., 2024), generated questions are augmented by prompting Qwen2.5 models to "create a question similar to or inspired by the original." This is a paraphrasing step: for each original question, the model produces a variant that tests the same concept but with different wording, different specific numbers or entities, or a restructured question format. Augmentation multiplies the effective dataset size without requiring additional topic definitions or human input.
+
+**Stage 5: Benchmark Decontamination.** The pipeline performs decontamination against the test sets of "popular MCQ benchmarks such as GPQA, MMLU, and MMLU-PRO, following the approach suggested by Yang et al. (2023)." This means that any generated question whose n-gram overlap or semantic similarity with a test-set question exceeds a threshold is removed from the training pool. Without this step, improvements on MMLU-PRO or GPQA-DIAMOND could be attributed to memorization rather than genuine reasoning improvement.
+
+**Stage 6: Solution Generation.** For the generated questions (which have no ground-truth answers), the pipeline prompts DeepSeek-R1 to "generate multiple reasoning traces per question." Majority voting over these solutions determines the most likely correct answer, which becomes the ground-truth label for RL training. This is a form of self-consistency-based pseudo-labeling: the assumption is that if a strong reasoning model produces the same answer across multiple independent samples, that answer is probably correct.
+
+##### NEMOTRON-CROSSTHINK-QA Generation (Approach 2: SDG from Book)
+
+This second approach extracts knowledge from textbooks to generate questions grounded in curated educational content:
+
+**Text Extraction.** The pipeline uses Qwen2.5-VL-72B-Instruct (a vision-language model) to extract text from textbooks — specifically OpenStax (open-source college textbooks) and "An Introduction to Formal Logic." The extracted text is "manually checked for transcription accuracy," which is notable because it introduces a small human-in-the-loop quality gate unusual in fully synthetic pipelines.
+
+**Question Synthesis.** Mixtral-8x22B-Instruct-v0.1 and Qwen2.5-72B-Instruct are prompted to "synthesize multiple-choice questions based on sections and key terms extracted from these textbooks." The prompt instructs the models to generate "questions with four distinct and plausible options, along with the correct answer and a justification for it." The justification requirement is significant — it means each training sample includes not just a question and answer, but a reasoning trace that explains why the answer is correct. These justifications can serve as demonstration material during training, even if they're not directly used for reward computation.
+
+**Quality Verification.** Each generated question is "evaluated using another model to ensure that every example is self-contained and accurate." This cross-model verification step acts as a filter: questions that are ambiguous, factually incorrect, or reliant on external context not provided in the question text are discarded. The paper does not specify which model performs this verification, but the intent is clear — the pipeline trades generation cost for quality assurance.
+
+##### NEMOTRON-CROSSTHINK-MATH Generation
+
+The math synthesis pipeline adopts an approach "similar to Ge et al. (2024)" but incorporates two innovations designed to increase problem diversity:
+
+**Persona Generation.** The pipeline uses web documents from CommonCrawl and Qwen2.5-72B-Instruct to generate personas — realistic character descriptions representing people who might encounter math problems in their daily lives or professions. The prompt template (Figure 4) asks: "Who is likely to read the text?" given a web document excerpt, and constrains the output to be a "realistic and detailed" persona of at most two sentences without specific names. This grounds math problems in concrete scenarios (e.g., "a civil engineer calculating load distributions" rather than abstract "solve for x").
+
+**Persona Expansion.** A second prompt template (Figure 5) expands each persona by asking "Who is in close relationship with the given persona?" This generates related personas, creating clusters of interconnected characters. The purpose is to increase diversity: related personas enable the generation of math problems that involve multiple perspectives or collaborative scenarios.
+
+**Math Skill Conditioning.** The pipeline incorporates "math skills introduced in Didolkar et al. (2024)" — a taxonomy of mathematical competencies — and conditions Qwen2.5-72B-Instruct on both the expanded persona and a specific skill to generate a problem. The prompt template (Figure 6) asks: "Create a math problem related to the following persona and require understanding of the following skills," with constraints that the problem should be "challenging," require "advanced mathematical skills," and include "no more than 2 sub-problems."
+
+**Solution Generation.** Qwen2.5-72B-Math-Instruct generates the solutions. The paper does not describe majority voting or verification for math solutions, likely because math problems have objective answers whose correctness can be verified programmatically (by executing symbolic evaluation or checking against a computed answer).
+
+**Why this persona-and-skill approach rather than generic math generation.** Standard math synthesis (e.g., prompting a model to "generate a hard algebra problem") tends to produce variations on familiar templates. By conditioning on both a concrete persona and a specific math skill, the pipeline forces the model to generate problems that are genuinely novel — a civil engineer's optimization problem will differ structurally from a physicist's differential equation problem even if both involve calculus. The persona also provides natural language context that may help the model learn to ground abstract math in real-world scenarios, a skill relevant to general-purpose reasoning benchmarks like AGIEVAL.
+
+---
+
+#### Template Application: Controlling Answer-Space Diversity
+
+The template mechanism is the paper's key technical enabler for extending RL beyond math. General-purpose reasoning benchmarks present a fundamental obstacle to rule-based reward modeling: answers come in diverse, unpredictable formats. A history question might be answered with a date, a name, a paragraph, or a multiple-choice option. A law question might require selecting the correct legal principle from four options. A physics question might require a numeric answer with units.
+
+Without constraints on this diversity, rule-based reward functions fail because they cannot reliably determine whether a model's natural-language output matches the ground truth. Exact string matching fails on semantically equivalent but syntactically different answers ("The Treaty of Versailles" vs. "Treaty of Versailles" vs. "the Versailles Treaty"). Regular expression matching requires per-domain engineering and still misses edge cases.
+
+The template mechanism solves this by **imposing a structured format on the training data before RL training begins**, rather than attempting to build a more sophisticated reward function that can handle unconstrained outputs. The paper applies two templates:
+
+$$\mathcal{D}_{mcq} = \mathcal{T}_{MCQ}(\mathcal{D}_{gpr})$$
+
+$$\mathcal{D}_{open} = \mathcal{T}_{Open}(\mathcal{D}_{gpr})$$
+
+**The MCQ template `$\mathcal{T}_{MCQ}$`:** Presents the question with multiple-choice options and expects the model to output the option label (e.g., "A", "B", "C", or "D"). The ground-truth answer is constrained to a single character or option identifier, making verification trivial: `$\mathcal{R}_{acc}(p, a) = 1$` if and only if the model's output option matches the ground-truth option exactly.
+
+This template is applied primarily to datasets that naturally come with options — MMLU [Train] and NEMOTRON-CROSSTHINK-QA. For these datasets, the MCQ template preserves the original format and simply enforces that the model's answer is extractable as an option label.
+
+**The open-ended template `$\mathcal{T}_{Open}$`:** Strips the multiple-choice options from MCQ-style questions, converting them into open-ended questions. The model must generate the answer directly rather than selecting from a menu. The ground-truth answer remains the same factual content (e.g., "Treaty of Versailles") but the model cannot rely on option elimination — it must produce the answer from its own knowledge.
+
+This template is applied both to naturally open-ended datasets (Natural Reasoning, which already lacks options) and to converted MCQ datasets (MMLU with options removed). For the latter, the conversion process is mechanical: the options list is deleted from the prompt, and the ground-truth answer becomes the textual content of the correct option rather than its label.
+
+**The critical filtering rule for converted questions:** "Some MCQ questions are incomplete without options (e.g., 'Which of the following ways we can file taxes?'). We discard them to avoid confusion during answer generation." This is an important quality-control check. If a question's phrasing relies on the options to complete its meaning (e.g., "Which of the following..."), removing the options makes the question unanswerable. The pipeline detects and removes such questions to prevent the model from being trained on ill-posed problems.
+
+**The final GPR training pool** combines both formats:
+
+$$\mathcal{D}_{gpr} = \mathcal{D}_{mcq} \cup \mathcal{D}_{open}$$
+
+This means the model sees questions in both MCQ and open-ended formats during RL training. The paper's later experiments (Table 4) investigate whether this mixed-format training is optimal or whether a unified open-ended format works better — finding that the open-ended format outperforms mixed formats by 1.21% on average.
+
+**Why templates rather than a better reward function.** The alternative approach — keeping diverse answer formats and building a flexible reward function (e.g., LLM-as-a-Judge) — introduces several problems that the template approach avoids. LLM-as-a-Judge is computationally expensive (requires running a second large model for every reward computation), introduces its own biases and errors (the judge model may disagree with human judgment), and creates opportunities for reward hacking (the policy may learn to produce answers that fool the judge rather than answers that are genuinely correct). The paper's position, stated explicitly, is that "NEMOTRON-CROSSTHINK offers simple, scalable and robust reward estimation without any external reward model" — the simplicity of exact string matching is a feature, not a limitation, provided the data is formatted to make string matching sufficient.
+
+---
+
+#### Data Filtering and Formatting: Making Rewards Reliable
+
+The filtering function `$\mathcal{H}$` removes samples that would produce unreliable or impossible-to-verify reward signals. The paper defines specific criteria for each data category:
+
+$$\mathcal{D}' = \mathcal{H}(\mathcal{D}) = \{(q, a^*, \{a_1, \ldots, a_n\}) \in \mathcal{D} : \text{condition holds}\}$$
+
+**For MCQ data (`$\mathcal{D}_{mcq}$`):** The filter checks "whether the correct answer appears within the question text itself." Formally, given a question-answer pair `$(q, a^*)$` with answer choices `$\{a_1, a_2, \ldots, a_n\}$`, the sample is discarded if:
+
+$$a^* \notin \{a_1, a_2, \ldots, a_n\}$$
+
+**What this condition means operationally:** The ground-truth answer label must correspond to one of the provided options. If the dataset has a corrupted label (e.g., the answer key says "C" but the options only go up to "B"), or if the answer content doesn't match any option text, the sample is removed. This prevents the RL training from receiving impossible-to-satisfy reward signals where the model could never produce a "correct" answer because the labeled answer isn't among the choices.
+
+**For open-ended data (`$\mathcal{D}_{open}$`):** The filter discards "samples that are challenging to evaluate with a rule-based reward function." The specific criterion is:
+
+$$|w(a^*)| \leq 10$$
+
+where `$|w(a^*)|$` represents the number of words in the ground-truth answer `$a^*$`.
+
+**What this 10-word threshold accomplishes:** It restricts the open-ended training data to questions with short, factual answers — names, dates, numbers, brief phrases — that can be reliably verified with exact string matching. A question whose answer is "Paris" or "42" or "Treaty of Versailles" passes the filter. A question whose answer is a paragraph of explanation or interpretation fails the filter and is excluded from training.
+
+**Why 10 words specifically:** The paper does not provide an explicit justification for the threshold value, but the logic is inferable. Short answers have low surface-form variability — there are only so many ways to write "Paris" or "42," so exact matching works. Answers longer than 10 words tend to be explanatory (e.g., "The Treaty of Versailles was signed in 1919 and imposed reparations on Germany"), and there are many semantically equivalent ways to phrase an explanation, making exact matching too brittle. The threshold is a pragmatic trade-off: include enough open-ended data to provide diversity while excluding samples that would generate noisy rewards.
+
+**For math data (`$\mathcal{D}_{mr}$`):** The filter removes "entries that lack an associated answer, ensuring that all retained questions q have a valid response a*." Formally, samples are discarded where:
+
+$$a^* = \emptyset$$
+
+This is a basic integrity check — math problems without answers cannot provide any reward signal and would only contaminate training with unlearnable examples.
+
+**The combined effect of filtering.** After applying `$\mathcal{H}$`, the training data `$\mathcal{D}'$` is guaranteed to have the property that every sample's correctness can be evaluated by exact string matching (for MCQ option labels or short open-ended answers) or by mathematical equality checking (for math answers). This guarantee is what makes the subsequent RL training feasible with a simple rule-based reward function.
+
+**What is lost through filtering.** The 10-word threshold for open-ended answers systematically excludes questions that require extended reasoning to produce long-form answers. This means the training data is biased toward factoid-style questions (who, what, when, where) rather than explanation-style questions (why, how, explain). The paper acknowledges this limitation implicitly by noting that future work could incorporate "more flexible, semantics-aware reward functions" — the filtering is a practical compromise, not a claim that all useful reasoning data fits within 10 words.
+
+---
+
+#### Data Blending: Constructing the Six Training Mixtures
+
+The paper constructs six distinct blends to isolate the effects of different data properties on downstream reasoning. Each blend is a probability distribution over the filtered training pool `$\mathcal{D}'$`, defined by its sampling weights for each constituent dataset.
+
+The blends are organized along three axes, summarized in Table 10:
+
+**Axis 1: Data Source.** This axis varies the ratio of general-purpose reasoning data to mathematical reasoning data:
+
+- **`$\mathcal{B}_{nd}$` (Natural Distribution):** Samples data in proportion to each dataset's original size — no reweighting. The MMLU portion is 0.1696, NEMOTRON-CROSSTHINK-QA is 0.3277, Natural Reasoning is 0.1699, NuminaMath is 0.1484, NEMOTRON-CROSSTHINK-MATH is 0.1699, and MATH is 0.0145 (Table 11). This serves as a baseline for diversity without deliberate balancing.
+
+- **`$\mathcal{B}_{mr\uparrow}$` (More Math):** Uses a 2:1 ratio of math data to GPR data. The math datasets (NuminaMath, NEMOTRON-CROSSTHINK-MATH, MATH) collectively receive approximately 66% of the sampling weight; GPR datasets receive 33%. This tests whether emphasizing math amplifies reasoning benefits or creates over-specialization.
+
+- **`$\mathcal{B}_{gpr\uparrow}$` (More GPR):** Uses a 2:1 ratio of GPR data to math data — the inverse of `$\mathcal{B}_{mr\uparrow}$`. GPR datasets receive approximately 66% of the weight; math datasets receive 33%. This is the blend that achieves the highest overall average accuracy (58.12% in Table 3), making it the paper's primary result.
+
+**Axis 2: Question Type.** This axis varies the ratio of MCQ to open-ended questions within the GPR component:
+
+- **`$\mathcal{B}_{mcq\uparrow}$` (More MCQ):** Uses a 2:1 ratio of MCQ-formatted data to open-ended data. The MCQ-weighted datasets (MMLU and NEMOTRON-CROSSTHINK-QA) receive higher sampling probability; open-ended datasets (Natural Reasoning) receive lower probability.
+
+- **`$\mathcal{B}_{open\uparrow}$` (More Open-Ended):** Uses a 2:1 ratio of open-ended data to MCQ data — the inverse of `$\mathcal{B}_{mcq\uparrow}$`. Open-ended datasets receive higher weight.
+
+**Axis 3: Data Usefulness.** This axis weights datasets based on their empirical performance when used alone:
+
+- **`$\mathcal{B}_{score}$`:** Assigns weights to each dataset based on their average benchmark performance in the single-source experiments (Table 2). Datasets that produced higher average accuracy when trained in isolation receive higher weight; less effective datasets receive lower weight. The specific weight values are shown in Table 11: NuminaMath receives 0.2020 (highest because it achieved the best single-source average of 53.06%), while NEMOTRON-CROSSTHINK-QA receives 0.1731 and MMLU receives 0.1296 (penalized for its poor math performance).
+
+**Two additional reference blends** isolate individual domains:
+
+- **`$\mathcal{B}_{only\_mr}$`:** Contains only math data (NuminaMath, NEMOTRON-CROSSTHINK-MATH, MATH), with no GPR data at all. This tests how well math-only RL training generalizes.
+
+- **`$\mathcal{B}_{only\_gpr}$`:** Contains only GPR data (MMLU, NEMOTRON-CROSSTHINK-QA, Natural Reasoning), with no math data. This tests the counterfactual: can GPR data alone drive reasoning improvements?
+
+The exact weight distributions for all blends are tabulated in Table 11, which provides the sampling probability for each of the six constituent datasets under each blend. For example, under `$\mathcal{B}_{gpr\uparrow}$`, MMLU receives 0.1678, NEMOTRON-CROSSTHINK-QA receives 0.3242, Natural Reasoning receives 0.1680, NuminaMath receives 0.1516, NEMOTRON-CROSSTHINK-MATH receives 0.1736, and MATH receives 0.0148. The sum of weights within each blend equals 1.0.
+
+**Why this blend taxonomy rather than a single "best" mixture.** The three-axis design enables the paper to make causal claims about what drives performance. If `$\mathcal{B}_{gpr\uparrow}$` outperforms `$\mathcal{B}_{only\_mr}$`, the improvement can be attributed to the inclusion of GPR data (since that is the only difference). If `$\mathcal{B}_{open\uparrow}$` outperforms `$\mathcal{B}_{mcq\uparrow}$`, the improvement can be attributed to question format (since domain composition is held constant). If `$\mathcal{B}_{score}$` underperforms `$\mathcal{B}_{gpr\uparrow}$`, the natural conclusion is that simple average-based weighting fails to capture domain interactions — GPR and math data complement each other in ways not visible from single-source performance.
+
+---
+
+#### Self-Learning with GRPO: The RL Training Procedure
+
+The paper applies Group Relative Policy Optimization (GRPO) directly to a pretrained base model `$\mathcal{M}$` using the chosen blend `$\mathcal{B}$` as the training distribution. GRPO is selected over Proximal Policy Optimization (PPO) because it "does not use a separate critic model and instead estimates the baseline from group scores, improving efficiency and reducing memory."
+
+**The GRPO objective.** For each question `$q$` sampled from the blend, the algorithm samples a group of `$G = 8$` outputs `$\{o_1, o_2, \ldots, o_G\}$` from the current policy `$\pi_{\theta_{old}}$` and optimizes the policy model `$\pi_\theta$` by maximizing:
+
+$$J_{GRPO}(\theta) = \mathbb{E}\left[q \sim P(\mathcal{B}), \{o_i\}_{i=1}^G \sim \pi_{\theta_{old}}(O|q)\right] \times \frac{1}{G} \sum_{i=1}^G \frac{1}{|o_i|} \sum_{t=1}^{|o_i|} \left[ \min\left( x_{i,t} \hat{A}_{i,t}, \text{clip}(x_{i,t}, 1-\epsilon, 1+\epsilon) \hat{A}_{i,t} \right) - \beta D_{KL}(\pi_\theta \| \pi_{ref}) \right]$$
+
+where `$x_{i,t} = \frac{\pi_\theta(o_{i,t} | q, o_{i,<t})}{\pi_{\theta_{old}}(o_{i,t} | q, o_{i,<t})}$` is the importance sampling ratio (the probability of token `$o_{i,t}$` under the new policy divided by its probability under the old policy), `$\hat{A}_{i,t}$` is the group-relative advantage (computed below), `$\epsilon$` is the clipping parameter (set to 0.2, standard for PPO-family algorithms), and `$\beta$` is the KL penalty coefficient (set to 0.001).
+
+**What the objective computes:** For each of the 8 outputs generated from the same question, GRPO computes a per-token ratio `$x_{i,t}$` that measures how much more likely the new policy is to produce that token compared to the old policy. If the output received a positive advantage (better than the group average), the objective encourages increasing `$x_{i,t}$` — but only up to the clipping bound `$1+\epsilon$`, preventing destructively large policy updates. If the output received a negative advantage, the objective encourages decreasing `$x_{i,t}$` down to `$1-\epsilon$`. The KL penalty term `$-\beta D_{KL}$` prevents the new policy from diverging too far from a reference policy `$\pi_{ref}$` (the initial pretrained model), which stabilizes training by ensuring the model doesn't forget its base capabilities while learning to optimize for rewards.
+
+**Why GRPO's group-relative formulation matters for reasoning.** In standard PPO, the advantage estimates how much better an action is than the expected value (estimated by a critic network). In GRPO, the advantage is computed relative to the other outputs in the same group — a form of within-question comparison. This is particularly useful for reasoning tasks because the absolute reward scale varies dramatically across questions (a hard math problem might yield mostly zeros, an easy MCQ might yield mostly ones), and the group-relative normalization automatically accounts for this difficulty variation without needing a learned value function.
+
+**The group-relative advantage `$\hat{A}_{i,t}$`:**
+
+$$\hat{A}_{i,t} = \frac{r_i - \text{mean}(\{r_1, r_2, \ldots, r_G\})}{\text{std}(\{r_1, r_2, \ldots, r_G\})}$$
+
+where `$r_i = \mathcal{R}(o_i, a^*)$` is the total reward for the `$i$`-th output, computed as the logical AND of the accuracy reward and the format reward.
+
+**What this standardization accomplishes:** For each group of 8 outputs to the same question, the mean reward is subtracted and the result is divided by the standard deviation. An output whose reward equals the group mean gets advantage zero (the policy isn't pushed either way). An output whose reward is one standard deviation above the mean gets advantage +1 (the policy is encouraged to produce more outputs like this). An output one standard deviation below the mean gets advantage -1 (discouraged). This normalization is what allows GRPO to work without a critic: the group itself provides the baseline.
+
+**The reward function `$\mathcal{R}$`:** The total reward is the logical conjunction of two binary components:
+
+$$\mathcal{R} = \mathcal{R}_{acc} \land \mathcal{R}_{format}$$
+
+This means the output receives a reward of 1 only if **both** the answer is correct **and** the format is valid. If either condition fails, the reward is 0. This is a strict AND gate: there is no partial credit for correct content in a wrong format or correct formatting with a wrong answer.
+
+**The accuracy reward `$\mathcal{R}_{acc}$`:** Evaluates whether the model's predicted answer `$p$` matches the ground truth `$a$`:
+
+$$\mathcal{R}_{acc}(p, a) = \begin{cases} 1, & \text{if equal}(p, a) \\ 0, & \text{otherwise} \end{cases}$$
+
+The `$\text{equal}$` function is exact string matching. For MCQ questions, `$p$` is expected to be a single character (the option label) and `$a$` is the ground-truth option label. For open-ended questions, `$p$` is the extracted answer text (up to 10 words, per the filtering criterion) and `$a$` is the ground-truth short answer. For math questions, `$p$` is the final boxed answer and `$a$` is the ground-truth mathematical expression.
+
+**The format reward `$\mathcal{R}_{format}$`:** Ensures the response is structured according to predefined tags:
+
+$$\mathcal{R}_{format}(a) = \begin{cases} 1, & \text{if } F(a) \\ 0, & \text{otherwise} \end{cases}$$
+
+where `$F(a)$` returns `True` if the output contains the required structural elements: a `thinking` section (where reasoning traces reside) delimited by appropriate tags, and a final answer presented inside `\boxed{}` notation — following the convention established by DeepSeek-R1 (DeepSeek-AI, 2025). The format reward serves as a regularization mechanism: it forces the model to structure its outputs in a parseable way, which enables reliable answer extraction for evaluation and also encourages the model to separate reasoning (which may be verbose and exploratory) from the final answer (which must be concise and matchable).
+
+**Why a hard AND rather than a weighted sum.** If the reward were a weighted sum (e.g., 0.7 × accuracy + 0.3 × format), the model could achieve non-trivial reward by producing correctly formatted but incorrect answers, or correct answers in unparseable formats. The AND gate makes the incentive binary and unambiguous: both conditions are necessary. This eliminates reward hacking pathways where the model learns to game the format reward while producing wrong answers, or produces correct answers that can't be reliably extracted at evaluation time.
+
+**Training hyperparameters (Section 4):**
+
+- **Base models:** Qwen2.5-7B and Qwen2.5-32B (Team, 2024a), chosen because they "demonstrate strong generalization capabilities across various reasoning tasks."
+- **Learning rate:** Constant `$1 \times 10^{-6}$` (no scheduling or decay).
+- **Batch size and PPO mini-batch size:** 128.
+- **Maximum context length:** 5000 tokens. This constrains the combined length of the prompt plus the generated response, preventing the model from producing extremely long reasoning traces that would exceed memory limits.
+- **Rollouts per unique prompt:** 8 (`$G = 8$`), with temperature and top-p both set to 1.0 (maximum diversity — the model samples from its full distribution without truncation).
+- **KL coefficient:** 0.001 (`$\beta$` in the GRPO objective).
+- **Training duration:** 650 steps (the paper states "scaling RL training for longer steps and dataset are computationally expensive which constrained us to deploy all runs for a fixed number of steps"). For the smaller individual-dataset experiments (Table 2), training runs for 250 steps.
+- **Hardware:** 4 nodes of 8× NVIDIA H100-80GB GPUs (32 GPUs total), with each training run taking approximately 48 GPU-hours.
+
+**Why train on the base model rather than an SFT checkpoint.** The paper explicitly addresses this design choice in Appendix H. The standard DeepSeek-R1 pipeline applies SFT before RL to "stabilize" training and provide instruction-following priors. However, the authors cite conflicting evidence: Chu et al. (2025) find that SFT reduces model entropy, which is "important for effective exploration during reinforcement learning" — lower entropy means the model samples from a narrower distribution, which may limit the diversity of RL rollouts. Chen et al. (2025) find that applying RL to already instruction-tuned models can hurt performance. The paper's position is that applying RL directly to the base model isolates "the contribution of reinforcement learning itself" and avoids "confounding effects introduced by SFT." This choice is "further motivated by recent work showing that self-learning on base models can yield substantial gains in reasoning capabilities across diverse tasks" (citing Zeng et al., 2025b; Hu et al., 2025b; Wang et al., 2025).
+
+**The per-step sampling procedure:** In each training step, 128 unique prompts are sampled from the blend `$\mathcal{B}$` (according to the blend's weight distribution over datasets). For each prompt, the current policy generates 8 independent responses (rolled out with temperature = 1.0, top-p = 1.0). Each response is scored with the reward function `$\mathcal{R}$`. The group-relative advantages are computed from the 8 reward values per prompt. The policy parameters are updated via the GRPO objective. The next step samples a fresh batch of 128 prompts.
+
+---
+
+#### Difficulty Filtering: Model-Driven Hardness Estimation for Non-Math Data
+
+The final technical component is a filtering technique that selects harder training examples without requiring pre-existing difficulty labels. This addresses the gap identified in the paper: prior work on difficulty-based data selection "relies on datasets with pre-defined difficulty scores" (like math competition tiers), but general-purpose reasoning datasets rarely come with such labels.
+
+**The filtering procedure.** The technique labels questions as "difficult" based on whether they can be answered correctly by a smaller model in a zero-shot setting:
+
+1. Take a smaller model (Qwen2.5-7B) and a candidate GPR question from the training pool.
+2. Prompt the smaller model to answer the question in a zero-shot setting (no few-shot examples, no chain-of-thought).
+3. If the smaller model answers correctly, label the question as "easy" and discard it.
+4. If the smaller model answers incorrectly, label the question as "difficult" and retain it for training.
+
+The filtered blend `$\mathcal{B}_{f(gpr)\uparrow}$` is constructed by applying this filter to the GPR component of `$\mathcal{B}_{gpr\uparrow}$`, retaining only the "difficult" questions while keeping the math component unchanged.
+
+**Why this heuristic identifies harder questions.** The paper's stated intuition is that "questions easily answered by a base model are likely to be knowledge-based or shallow in reasoning depth, whereas those it fails on are likely to require deeper reasoning or broader generalization." A question that a 7B model can answer in zero-shot without any chain-of-thought probably tests straightforward knowledge retrieval (e.g., "What is the capital of France?") or simple pattern matching. A question that the same model fails likely requires multi-step reasoning, integration of multiple facts, or non-obvious inference — the kind of reasoning that RL training should target.
+
+**Why this is model-driven rather than heuristic.** The difficulty label is not based on surface features like question length, word rarity, or syntactic complexity. It is based on actual model performance, which captures a more meaningful notion of difficulty: "hard for this model family" rather than "looks hard to a human." This is important because questions that seem hard to humans (e.g., involving obscure terminology) might be trivially easy for an LLM that has memorized the relevant facts, while questions that seem simple (e.g., "If Alice is taller than Bob and Bob is taller than Carol, who is tallest?") might require reasoning that the model hasn't yet mastered.
+
+**The cost of filtering.** Filtering requires running inference on every candidate training question using the smaller model. The paper does not report this cost explicitly, but it is a one-time preprocessing step rather than a recurring training cost — the filtered dataset can be reused across multiple training runs.
+
+**Results from filtering (Table 6).** When applied to Qwen2.5-32B training:
+
+- The unfiltered `$\mathcal{B}_{gpr\uparrow}$` achieves 65.84% average accuracy.
+- The filtered `$\mathcal{B}_{f(gpr)\uparrow}$` achieves 67.99% average accuracy — a gain of 2.15 percentage points from "training on fewer but harder examples."
+- The gains are especially large on complex benchmarks: MMLU-PRO improves from 68.83% to 69.43% (+0.6), GPQA-DIAMOND from 46.70% to 49.75% (+3.05), AGIEVAL from 73.90% to 75.82% (+1.92), and AMC23 from 67.50% to 75.00% (+7.50).
+
+**Why harder data amplifies the benefits of multi-domain blending.** The paper's interpretation is that "selectively training on challenging examples can yield more robust and generalizable models, likely due to stronger gradient signals and a focus on harder-to-learn reasoning patterns." When the training data is dominated by easy questions, the model receives strong reward signals from simple knowledge retrieval, which may not require or reward the development of sophisticated reasoning strategies. By removing these easy wins, the model is forced to learn from questions where reasoning actually matters, producing gradient updates that improve general reasoning capability rather than fact-memorization.
+
+This filtering technique is particularly important for scaling: as models get larger (7B → 32B), the proportion of training questions that are "easy" for the base model increases, diluting the effective training signal. Filtering counters this dilution, ensuring that larger models still learn from challenging material rather than coasting on memorized knowledge.
+
+---
+
+#### Summary of Design Choices and Their Justifications
+
+- **Two-template approach (MCQ + open-ended) rather than single-format:** Ensures the model encounters both format-guided reasoning (where options constrain the answer space) and free-form reasoning (where the model must generate answers independently), teaching adaptability to question format — a skill tested by diverse benchmarks.
+
+- **10-word threshold for open-ended answers rather than flexible matching:** Guarantees exact-match verifiability without requiring a learned reward model. The cost (exclusion of long-form explanatory answers) is accepted as a pragmatic trade-off for reward reliability.
+
+- **2:1 GPR-to-math ratio rather than balanced or math-dominant:** Derived empirically from the single-source analysis (Table 2) showing that GPR data generalizes poorly when isolated but amplifies math-driven gains when combined. The 2:1 ratio provides enough GPR diversity for cross-domain transfer while retaining sufficient math data to maintain the structured reasoning signal that drives RL improvement.
+
+- **GRPO rather than PPO:** Avoids the need to train a separate critic model, reducing memory and computational overhead. The group-relative advantage formulation automatically normalizes for question difficulty without requiring a learned value function.
+
+- **Binary AND reward rather than weighted sum:** Eliminates reward hacking pathways where the model could optimize format at the expense of accuracy or vice versa. Both conditions are independently necessary for a non-zero reward, creating a clear optimization target.
+
+- **Base model rather than SFT checkpoint:** Isolates the effect of RL from the confounding influence of supervised fine-tuning, motivated by conflicting prior evidence on whether SFT helps or hurts RL for reasoning.
+
+- **Model-driven difficulty filtering rather than heuristic difficulty:** Uses actual model failure as the hardness signal, which captures a more meaningful notion of difficulty (hard for this model family) than surface features like question length or vocabulary complexity.
+
+## 4. Key Insights and Innovations
+
+### Innovation 1: Verifiable Rewards for Non-Math Domains Through Answer-Space Constraint Rather Than Reward-Function Complexity
+
+The paper's most fundamental conceptual move is a reversal of the standard approach to extending RL beyond math. The dominant assumption in prior work (Su et al., 2025; Ma et al., 2025) has been that non-math domains require more sophisticated reward functions — LLM-as-a-Judge, embedding-based similarity, or learned verifiers — to handle the diversity of natural-language answers. This is a natural instinct: if exact-match verification fails because answers come in too many surface forms, build a smarter verifier that can recognize semantic equivalence.
+
+NEMOTRON-CROSSTHINK rejects this entire framing and inverts it. Instead of making the reward function more flexible to accommodate diverse answers, it makes the answers less diverse to accommodate a simple reward function. The two mechanisms that implement this — the MCQ-to-open-ended template conversion and the 10-word answer-length filter — are mechanically simple (described in Section 3), but their conceptual significance is that they reframe the problem from "how do we verify arbitrary answers?" to "how do we construct training data such that answers are verifiable by exact string match?"
+
+This is a fundamentally different kind of solution. The reward-function-complexity approach faces compounding difficulties: LLM judges are expensive, introduce their own biases, create reward hacking vulnerabilities (the policy learns to satisfy the judge rather than produce correct answers), and require their own training and calibration. Each of these difficulties has been documented in prior work — the paper explicitly cites the risks of reward hacking with model-based verifiers (DeepSeek-AI, 2025; Weng, 2024; Wen et al., 2024). The template-based approach sidesteps all of them simultaneously by guaranteeing that the training data is compatible with exact-match verification before RL even begins.
+
+The significance of this inversion extends beyond the specific threshold choices (10 words, MCQ option labels). It establishes a design principle: **data formatting is a legitimate and powerful mechanism for enabling verifiable rewards, and it should be considered as an alternative to reward-function engineering.** The paper's ablations in Tables 4 and 5 substantiate this principle empirically: converting all questions to open-ended format improves average accuracy by 1.21%, and using short-form answer labels (just the option letter) improves by 1.20% over long-form labels (option letter plus description text). These are not enormous gains, but they confirm that format choices matter and that simpler answer spaces produce more reliable training signals — exactly what the principle predicts.
+
+This contribution is fundamental rather than incremental because it changes what counts as a viable approach to the problem. Before NEMOTRON-CROSSTHINK, the field implicitly assumed that multi-domain RL required solving the open-ended verification problem. After it, the field has a demonstrated alternative: constrain the training data format and use simple rewards. This doesn't solve all verification problems — the 10-word threshold explicitly excludes explanatory answers — but it provides a template (in both senses) for how to think about verifiability as a data design problem rather than a reward design problem.
+
+---
+
+### Innovation 2: The Complementarity of Math and General-Purpose Reasoning Data — Neither Works as Well Alone
+
+The paper's central empirical finding is that a 2:1 blend of general-purpose reasoning data to math data (`$\mathcal{B}_{gpr\uparrow}$`) outperforms both math-only training and GPR-only training. This result, shown in Table 3, is not merely a "more data is better" story — it reveals a specific, asymmetric complementarity between the two data types that prior work had not identified.
+
+The single-source experiments in Table 2 establish the baseline. Math datasets (NuminaMath: 53.06% average) substantially outperform GPR datasets (MMLU [Train]: 34.78% average; Natural Reasoning: 44.82%) when used in isolation. This is expected: math problems have clean reward signals and teach structured reasoning patterns that transfer to other structured tasks. What is surprising is what happens when the domains are combined. `$\mathcal{B}_{gpr\uparrow}$` (heavy on GPR data) achieves 58.12% average accuracy — higher than `$\mathcal{B}_{only\_mr}$` (57.82%, math-only) and dramatically higher than `$\mathcal{B}_{only\_gpr}$` (53.30%, GPR-only). The GPR-only blend actually *underperforms* the base model on math tasks (MATH-500 drops from 48.30% to 72.20%? No — wait, that's the GPR blend's math-500 score, which is 72.20%, higher than base but far below math-only — the point is that GPR-only trails math-only by ~4.5 points on average).
+
+The insight is that **GPR data amplifies reasoning capability only when combined with math data; math data provides a structured reasoning backbone that GPR data alone cannot establish, while GPR data provides domain breadth that prevents math-only over-specialization.** This is a specific form of complementarity, not a generic "diversity helps" effect. GPR data in isolation fails to teach the kind of systematic, step-by-step reasoning that RL rewards reinforce — its answer formats are too diverse, its reasoning paths too implicit, its reward signals too noisy. Math data provides the scaffold: it teaches the model *how to reason under RL* (structured chains of thought, verification behaviors, backtracking), and once that scaffold is in place, GPR data extends the learned reasoning patterns to new domains and formats.
+
+Evidence for this interpretation comes from the sub-category analysis in Appendix F. On MMLU-PRO, `$\mathcal{B}_{gpr\uparrow}$` outperforms `$\mathcal{B}_{only\_mr}$` by large margins in non-math categories (law: +20.58%, business: +13.26%) while remaining competitive in the math category (+7.2%). On AGIEVAL, the pattern flips slightly: `$\mathcal{B}_{only\_mr}$` has a marginal edge in math (+1.8%), but `$\mathcal{B}_{gpr\uparrow}$` dominates in law (+13.06%) and English (+9.88%). The math-only model's reasoning doesn't transfer well to language-heavy domains; the GPR-augmented model's reasoning does. But critically, the GPR-only model never achieves this transfer — it needs the math backbone.
+
+This finding has significant theoretical implications for how we think about RL training data. Prior work treated data diversity as a volume problem (add more sources, ideally diverse ones) or a difficulty problem (train on harder questions). NEMOTRON-CROSSTHINK demonstrates that it is also a **structural complementarity problem**: some data types provide the reasoning structure that enables other data types to be productively learned from. Math data plays a special role not because math is inherently more important, but because math's well-defined answer space makes it a uniquely effective medium for RL to teach systematic reasoning behaviors. Once those behaviors are established, they transfer.
+
+This is a fundamental insight rather than incremental because it changes how future work should think about data curation. Adding more diverse data is not enough; the data must include components that are *structurally amenable to RL learning* to establish the reasoning scaffold that more complex, less-structured domains can then build on.
+
+---
+
+### Innovation 3: Multi-Domain Training Produces Adaptive Response Efficiency — A New Evaluation Axis for RL Training
+
+The paper's finding that `$\mathcal{B}_{gpr\uparrow}$` reduces token usage for correct responses by 28% compared to math-only training (Figure 3 and Table 12) is more than an efficiency bonus — it reveals a new axis for evaluating RL training that prior work had not systematically measured.
+
+The standard evaluation paradigm for reasoning models focuses on accuracy: can the model solve more problems? NEMOTRON-CROSSTHINK adds a second dimension: does the model calibrate its reasoning depth to the task? The evidence in Figure 3 shows that on general-purpose reasoning tasks, `$\mathcal{B}_{gpr\uparrow}$` produces correct answers with substantially fewer tokens than `$\mathcal{B}_{only\_mr}$` or ORZ (385 mean tokens vs. 639 for `$\mathcal{B}_{only\_mr}$` and 1115 for ORZ on GPR tasks). On math tasks, all models produce longer responses (math inherently requires multi-step derivations), but `$\mathcal{B}_{gpr\uparrow}$` still uses fewer tokens than the math-specialized models (622 vs. 731 vs. 1257).
+
+The key statistic demonstrating adaptivity is in Table 12: `$\mathcal{B}_{gpr\uparrow}$` increases its average token count by 62% when moving from GPR tasks (385 tokens) to math tasks (622 tokens), while `$\mathcal{B}_{only\_mr}$` increases by only 14% (639 to 731) and ORZ by 12% (1115 to 1257). The multi-domain model has learned to **modulate its verbosity based on task type** — concise for fact-based or reasoning-light questions, expansive for derivation-heavy math problems. The math-only models, by contrast, apply a relatively uniform (and verbose) reasoning style regardless of domain.
+
+This is not merely an interesting side observation. It demonstrates that the training data distribution shapes not just *what* the model knows but *how it deploys* that knowledge — its reasoning strategy, not just its reasoning accuracy. The math-only models have learned that all problems deserve extended chain-of-thought (because that's what math problems reward), and they over-apply this strategy to GPR questions where it's unnecessary. The multi-domain model has learned that different domains have different optimal response strategies.
+
+The practical implications are significant: in deployment, the 28% token reduction translates directly to lower inference costs and latency. But the conceptual contribution is deeper: **response efficiency and adaptivity should be evaluated alongside accuracy when comparing RL training recipes.** A model that achieves the same accuracy with half the tokens is strictly better for deployment, and this dimension reveals aspects of learned behavior (strategy calibration, domain awareness) that accuracy alone obscures.
+
+The paper replicates this finding across architectures (Nemotron-H in Appendix G shows a 28.5% token reduction, confirming the effect is model-agnostic) and across decoding strategies (greedy and pass@1[8] both show the pattern). This is an incremental advance in evaluation methodology rather than a fundamental theoretical contribution, but it has practical importance for how RL-trained models should be compared.
+
+---
+
+### Innovation 4: Difficulty Filtering Without Difficulty Labels — Using Model Failure as a Hardness Proxy
+
+Prior work on difficulty-based data selection for RL (Hu et al., 2025a; Luo et al., 2025; Cui et al., 2025) demonstrated that training on harder questions improves accuracy, but relied on datasets with pre-existing difficulty annotations — typically math competition problems labeled by tier (AMC vs. AIME vs. IMO). General-purpose reasoning datasets lack such annotations, which has prevented the "train on harder data" insight from transferring to non-math domains.
+
+The paper's model-driven filtering technique — label a question as "difficult" if a smaller base model cannot answer it correctly in zero-shot — is conceptually elegant because it defines difficulty operationally rather than heuristically. A question's difficulty is not an intrinsic property of its wording or topic; it is a property of the relationship between the question and a specific model's capabilities. What is easy for Qwen2.5-7B may be hard for a 1B model; what is hard for Qwen2.5-7B may be easy for a 32B model.
+
+This operational definition has several desirable properties. First, it is **automatically calibrated to the model family** — the filtered data is specifically hard for the model architecture and training distribution being used, not hard in some abstract sense. Second, it is **cheap to compute** — it requires only zero-shot inference with a smaller model, not human annotation or complex linguistic analysis. Third, it is **domain-agnostic** — the same procedure works for math, law, history, or any domain where correctness can be evaluated. Fourth, it naturally **scales with model size**: as the base model gets larger, the filter becomes more selective (the smaller reference model stays fixed), automatically adjusting the difficulty threshold.
+
+The empirical payoff is shown in Table 6: filtering `$\mathcal{B}_{gpr\uparrow}$` to retain only "difficult" samples improves Qwen2.5-32B average accuracy by 2.15 percentage points (from 65.84% to 67.99%). The gains are concentrated on the most challenging benchmarks — GPQA-DIAMOND (+3.05), AGIEVAL (+1.92), AMC23 (+7.50) — suggesting that difficulty filtering primarily improves performance on tasks that require genuine reasoning rather than knowledge retrieval.
+
+This contribution is incremental in its mechanism (it is a data filtering heuristic, not a new algorithm or theoretical framework) but conceptually significant because it provides a **general, label-free method for identifying training examples that drive reasoning improvements** — something the field previously could only do for math. It makes the "train on harder data" insight portable to any domain where a smaller model can be used as a difficulty probe.
+
+## 5. Experimental Analysis
+
+### Evaluation Methodology
+
+- **Dataset.** The training data consists of 588,645 question-answer pairs curated from synthetic generation (CommonCrawl-derived) and open-source datasets, spanning general-purpose reasoning (GPR) and mathematical reasoning (MR). The evaluation is conducted on seven diverse benchmarks: MATH-500 (500 test questions from Hendrycks et al., 2021b), AMC23, the test set of MMLU (Hendrycks et al., 2021a), MMLU-PRO (Wang et al., 2024), AGIEVAL (Zhong et al., 2023), GPQA-DIAMOND (Rein et al., 2024), and SUPERGPQA (Team et al., 2025) — a recent benchmark covering 285 graduate-level disciplines designed to test generalization to long-tail knowledge domains.
+
+- **Base model(s).** The primary experiments use Qwen2.5-7B and Qwen2.5-32B (Team, 2024a) as the pretrained base models M, chosen because they "demonstrate strong generalization capabilities across various reasoning tasks." For architecture-generalizability experiments, Nemotron-H, an 8B hybrid Mamba-Transformer model (NVIDIA et al., 2025), is also tested (Appendix G). The comparison baseline Open-Reasoner-Zero-7B (ORZ-7B) is a math-centric RL-trained model from Hu et al. (2025a).
+
+- **Metrics.** The primary metric is accuracy (%) on each benchmark, computed as the fraction of test questions for which the model's final extracted answer matches the ground truth. For the main evaluation, accuracy is reported as the average over three independent runs using greedy decoding. For robustness verification, pass@1[8] is also reported (Table 15) using stochastic decoding with temperature=0.6, top_p=0.95, and k=8 rollouts. Average accuracy across all seven benchmarks is used as a summary statistic for comparing blends.
+
+- **Baselines.** The baseline M is the pretrained Qwen2.5-7B (or Qwen2.5-32B) without any RL training. ORZ-7B (Hu et al., 2025a) serves as a math-centric self-learning baseline — the paper evaluates it using their own setup for fair comparison. Single-source baselines in Table 2 train on each individual dataset (MMLU [Train], NEMOTRON-CROSSTHINK-QA, Natural Reasoning, NuminaMath, NEMOTRON-CROSSTHINK-MATH, MATH) independently for 250 steps. The Single Source category includes two domain-specific blends: Bonly_mr (math data only) and Bonly_gpr (GPR data only).
+
+- **Generation budget / compute accounting.** All RL training runs use identical compute budgets: 650 training steps (250 for single-source experiments), 128 unique prompts per step, 8 rollouts per prompt (G=8), maximum context length of 5000 tokens. Training is conducted on 4 nodes of 8× NVIDIA H100-80GB GPUs (32 GPUs total), with each full training run taking approximately 48 GPU-hours. The paper does not vary the RL training budget — the experimental variable is data composition, not compute scale.
+
+- **Cross-validation / statistical protocol.** The paper does not employ cross-validation for model selection; instead, it reports results from the final checkpoint after the fixed training duration (650 steps). Accuracy is averaged over three independent evaluation runs using greedy decoding to reduce sampling variance. For the pass@1[8] robustness check, 8 rollouts are generated per question with stochastic decoding parameters. Benchmark decontamination is performed during data synthesis (Section 3.1.1) to prevent test-set leakage.
+
+### Main Quantitative Results
+
+#### Single-Source Impact Analysis Identifies Which Datasets Drive Generalization
+
+The paper first establishes the isolated contribution of each data source by running RL on individual datasets for 250 steps (Table 2). **NuminaMath achieves the highest single-source average accuracy at 53.06%,** outperforming the base model M (44.75%) by 8.31 percentage points and surpassing all other individual datasets. It scores 76.2% on MATH-500 and 55.0% on AMC23 — the strongest math performance among single sources — while also generalizing reasonably to GPR tasks (52.05% on MMLU-PRO, 54.39% on AGIEVAL).
+
+**NEMOTRON-CROSSTHINK-QA demonstrates the strongest GPR generalization at 45.65% average,** improving over M by 0.90 points with notably higher MMLU-PRO (52.41% vs. 45.0%) and AGIEVAL (52.10% vs. 48.59%) scores. This suggests that synthetically generated instruction-style data generalizes well when aligned with benchmark distributions.
+
+**MMLU [Train] catastrophically degrades math performance,** dropping MATH-500 from 48.30% (base model) to 22.0% and AMC23 from 40.0% to 5.0%, while achieving the highest SUPERGPQA score (27.69%) — the best among all single sources on this long-tail knowledge benchmark. This reveals a stark trade-off: raw MCQ training data preserves broad conceptual knowledge at the cost of destroying structured reasoning capability.
+
+**NEMOTRON-CROSSTHINK-MATH achieves strong math (77.2% on MATH-500) but fails to generalize,** scoring only 28.08% on MMLU-PRO and 18.69% on GPQA-DIAMOND — the mirror image of MMLU's failure pattern. This confirms that synthetic math data, while high-quality for its domain, produces over-specialization when used in isolation.
+
+Natural Reasoning delivers a moderate 44.82% average with surprisingly strong MATH-500 (68.6%) and AMC23 (42.5%) performance despite being a language-rich dataset — indicating that reasoning-focused data can transfer to math-adjacent tasks even without explicit math content.
+
+#### Multi-Domain Blending Outperforms Domain-Specific and Naturally-Sampled Baselines
+
+The six blend evaluation results are reported in Table 3, with Qwen2.5-7B as M. **Bgpr↑ achieves the highest overall average accuracy at 58.12%,** outperforming all other blends and surpassing M by 13.36 percentage points. The individual benchmark scores are: MMLU 74.94% (+0.74 over M), MMLU-PRO 57.82% (+12.82), GPQA-DIAMOND 38.58% (+6.76), AGIEVAL 63.71% (+15.12), SUPERGPQA 29.16% (+3.80), MATH-500 77.60% (+29.30), and AMC23 65.00% (+25.00).
+
+**Bnd (natural distribution, no reweighting) achieves 55.66% average,** a 10.91-point improvement over M. The fact that simple diversity without careful rebalancing yields substantial gains suggests that exposure to varied domains is inherently beneficial. However, Bgpr↑ improves over Bnd by an additional 2.46 points, demonstrating that deliberate blending (the 2:1 GPR-to-math ratio) recovers gains beyond what random diversity provides.
+
+**Bonly_mr (math-only) achieves 57.82% average,** the second-best overall blend, with strong math performance (MATH-500: 78.60%, AMC23: 70.00%) but notably lower GPR scores than Bgpr↑ (MMLU-PRO trails by 3.56 points, AGIEVAL by 2.32 points, SUPERGPQA by 1.47 points). This quantifies the cost of domain over-specialization: Bonly_mr sacrifices 3-4 percentage points on non-math reasoning to gain 1.4 points on MATH-500 and 5.0 points on AMC23.
+
+**Bonly_gpr (GPR-only) achieves only 53.30% average,** underperforming both math-only and multi-domain blends. Critically, its math scores (MATH-500: 72.20%, AMC23: 55.00%) are substantially below Bgpr↑'s, despite Bgpr↑ containing less math data (33% vs. 100%). This is the core evidence for the complementarity claim: GPR data alone cannot drive math reasoning improvement, but GPR data combined with math data amplifies reasoning beyond what either achieves in isolation.
+
+**ORZ-7B achieves 55.20% average,** placing it below Bgpr↑ (by 2.92 points), Bonly_mr (by 2.62 points), and Bnd (by 0.46 points). ORZ's strength is concentrated in math (MATH-500: 81.40% — the highest among all compared models — and AMC23: 62.50%), but its GPR performance lags: MMLU-PRO 48.90% (8.92 points below Bgpr↑), GPQA-DIAMOND 29.30% (9.28 points below), SUPERGPQA 27.60% (1.56 points below). This demonstrates that math-centric training, even with strong math results, leaves substantial GPR performance on the table.
+
+**Bmr↑ (2:1 math-to-GPR) achieves 57.72% average,** essentially tying with Bonly_mr (57.82%) and trailing Bgpr↑ by 0.40 points. This symmetry — the 2:1 GPR blend beats the 2:1 math blend — reinforces that emphasizing GPR over math is the more effective direction for overall reasoning performance.
+
+#### Question Type Experiments: Open-Ended Format Outperforms MCQ
+
+Comparing Bopen↑ vs. Bmcq↑ (Table 3): **Bopen↑ achieves 57.49% average vs. 56.89% for Bmcq↑** — a 0.60-point advantage for the open-ended-emphasized blend. The gap is most pronounced on GPQA-DIAMOND (43.15% vs. 39.59%, a +3.56-point advantage) and MATH-500 (78.40% vs. 78.00%), while Bmcq↑ holds a marginal edge on AGIEVAL (62.54% vs. 61.28%) and SUPERGPQA (28.05% vs. 26.82%).
+
+The Question Template Study (Table 4) isolates format effects by taking the natural distribution blend (Bnd) and converting all questions to a unified open-ended format: **the open-ended variant achieves 56.87% average vs. 55.66% for the mixed-format baseline** — a +1.21-point gain. The improvement appears across both GPR tasks (GPR Avg: 51.30% vs. 50.52%) and math tasks (Math Avg: 70.80% vs. 68.50%), with SUPERGPQA showing the largest relative gain (+2.62 points, from 26.54% to 29.16%). The paper attributes this to the elimination of "reward hacking through random option selection" — with four options, random guessing yields ~25% accuracy, and the open-ended format closes this exploitation pathway, forcing the model to develop genuine reasoning.
+
+The Answer Template Study (Table 5) tests short-form vs. long-form answer labels on Bonly_gpr: **short-form answers (e.g., "A") achieve 54.50% average vs. 53.30% for long-form (e.g., "(A) Sky is blue")** — a +1.20-point gain. The improvement is concentrated in GPR benchmarks (GPR Avg: 50.95% vs. 49.18%), while math performance is essentially unchanged (Math Avg: 63.35% vs. 63.60%). This confirms that constraining the output space reduces ambiguity — with long-form answers, the model is "often penalized for minor deviations in phrasing, even when the correct option is selected," introducing noisy supervision.
+
+#### Data Usefulness Weighting Underperforms Domain-Aware Blending
+
+**Bscore achieves 56.95% average** (Table 3), placing it below Bgpr↑ (by 1.17 points), Bonly_mr (by 0.87 points), and Bmr↑ (by 0.77 points). Bscore weights datasets based on their average benchmark scores in the single-source experiments (Table 2), but this approach "assigns weights based on average scores, without accounting for task-specific strengths." The consequence is that Math and NEMOTRON-CROSSTHINK-MATH are overrepresented due to strong math performance, while "datasets like MMLU or Natural Reasoning, which excel in general reasoning, are underweighted." The underperformance of Bscore relative to the domain-aware blends (which "selectively prioritize datasets based on their utility within specific domains") demonstrates that simple performance-weighted averaging fails to capture cross-domain complementarity — the interaction effects that make GPR+math blends more effective than either alone.
+
+#### Difficulty Filtering Amplifies Gains When Scaling to Larger Models
+
+The filtering experiment (Table 6) applies the model-driven hardness filter to Bgpr↑ for Qwen2.5-32B training: **Bf(gpr)↑ achieves 67.99% average vs. 65.84% for the unfiltered Bgpr↑** — a +2.15-point gain from "training on fewer but harder examples." The unfiltered Bgpr↑ already improves substantially over the base Qwen2.5-32B (54.33% → 65.84%, +11.51 points), demonstrating that the blending benefits scale to larger models. Adding filtering provides additional gains concentrated on the most challenging benchmarks: AMC23 jumps from 67.50% to 75.00% (+7.50 points), GPQA-DIAMOND from 46.70% to 49.75% (+3.05), AGIEVAL from 73.90% to 75.82% (+1.92), and MMLU-PRO from 68.83% to 69.43% (+0.60). MMLU (83.57% vs. 83.60%) and SUPERGPQA (37.99% vs. 38.34%) show minimal improvement, consistent with the interpretation that filtering primarily benefits tasks requiring deeper reasoning rather than broad knowledge coverage.
+
+#### Token Efficiency: Multi-Domain Training Produces More Concise Reasoning
+
+The token length analysis (Figure 3 and Table 12) compares Bgpr↑, Bonly_mr, and ORZ-7B on correct responses: **Bgpr↑ uses 28% fewer tokens on average for correct answers than Bonly_mr.** On GPR tasks, Bgpr↑ produces a mean of 385 tokens for correct responses vs. 639 for Bonly_mr (39.7% reduction) and 1115 for ORZ (65.4% reduction). On math tasks, Bgpr↑ averages 622 tokens vs. 731 for Bonly_mr (14.9% reduction) and 1257 for ORZ (50.5% reduction). The dynamic range — the ratio of math-token-count to GPR-token-count — is 1.62× for Bgpr↑ vs. 1.14× for Bonly_mr and 1.12× for ORZ, demonstrating that multi-domain training teaches the model to adapt its reasoning depth to task requirements. Incorrect responses are consistently longer than correct ones across all models (Figure 7, 3.6× longer on average), corroborating observations from DeepScaler (Luo et al., 2025) that verbose reasoning does not guarantee correctness.
+
+#### Sub-Category Analysis Reveals Where Cross-Domain Transfer Occurs
+
+The fine-grained analysis in Appendix F (Figures 8, 9, 10) decomposes performance by sub-category within MMLU-PRO, AGIEVAL, and SUPERGPQA. **On MMLU-PRO, Bgpr↑ outperforms Bonly_mr in law (+20.58% relative improvement), business (+13.26%), psychology, chemistry, and economics,** while also showing a +7.2% improvement in the math sub-category — surprising given that Bonly_mr is trained on substantially more math data. The paper attributes this to MMLU-PRO's math problems being college-level and benefiting from "a combination of symbolic and heuristic reasoning — skills reinforced through exposure to diverse domains."
+
+**On AGIEVAL (Figure 9), the pattern partially flips: Bonly_mr holds a marginal edge in the math sub-category (+1.8%),** consistent with Olympiad-level math requiring domain-specific training. However, Bgpr↑ dominates law (+13.06%) and English (+9.88%), with an average +8.6% relative gain across all non-math reasoning categories. On SUPERGPQA (Figure 10), Bgpr↑ "significantly outperforms Bonly_mr across nearly all categories — especially in engineering, agronomy, economics, education, law, and philosophy," with the sole exception of the "Science" category (which includes math-heavy fields like physics, chemistry, and astronomy) where the two blends perform comparably.
+
+#### Architecture-Generalizability and Decoding Robustness
+
+The Nemotron-H experiments (Table 13, Appendix G) replicate the core finding in a different model architecture: **Bgpr↑ achieves 48.30% average vs. 46.42% for Bonly_mr** — a +1.88-point improvement in reasoning average, with gains concentrated in GPR tasks (MMLU: +1.46, MMLU-PRO: +1.08, GPQA-DIAMOND: +5.08, SUPERGPQA: +1.50) while math performance is slightly lower (MATH-500: -4.48, AMC23: -3.33) due to the reduced math data proportion. The token efficiency pattern also replicates: Bgpr↑ generates correct responses with 28.5% fewer tokens on average (Table 14), confirming that efficiency gains are architecture-agnostic.
+
+**The pass@1[8] evaluation (Table 15) confirms robustness to decoding strategy:** Bgpr↑ achieves 51.28% average vs. 49.97% for Bonly_mr under stochastic decoding (temperature=0.6, top_p=0.95, k=8). Bgpr↑ outperforms on MMLU (73.82% vs. 72.26%), MMLU-PRO (57.01% vs. 53.40%), GPQA-DIAMOND (37.86% vs. 34.54%), AGIEVAL (64.00% vs. 61.62%), and SUPERGPQA (25.14% vs. 22.35%), while Bonly_mr holds slight edges on MATH-500 (76.88% vs. 76.03%) and AIME24 (16.68% vs. 15.27%). The pass@1[8] results mirror the greedy decoding trends, confirming that the multi-domain advantage is not an artifact of a specific decoding configuration.
+
+### Ablation Studies and Robustness Checks
+
+**Question format (MCQ + Open-Ended vs. Unified Open-Ended):** Converting the natural distribution blend (Bnd) to a unified open-ended format improves average accuracy from 55.66% to 56.87% (+1.21 points, Table 4), with gains on both GPR and math tasks. The improvement is attributed to eliminating option-based guessing, which provides an approximate 25% random baseline accuracy for 4-option MCQs — the open-ended format forces genuine reasoning by removing this exploitation pathway.
+
+**Answer template (Long-form vs. Short-form labels):** Short-form answers ("A") outperform long-form answers ("(A) Sky is blue") by 1.20 points on average (54.50% vs. 53.30%, Table 5), with gains concentrated in GPR benchmarks. This confirms that reducing output-space ambiguity improves reward signal reliability — long-form answers cause the model to be "penalized for minor deviations in phrasing" under exact-match rewards.
+
+**Data usefulness weighting (Bscore vs. domain-aware blends):** Weighting datasets by their single-source average performance (Bscore: 56.95%) underperforms domain-aware blends (Bgpr↑: 58.12%, Bonly_mr: 57.82%), demonstrating that single-source performance is a poor proxy for cross-domain complementarity. The weights overrepresent math datasets (which score highly in isolation) and underrepresent GPR datasets (which generalize well only in combination with math).
+
+**Difficulty filtering (filtered vs. unfiltered Bgpr↑ at 32B scale):** The model-driven hardness filter improves average accuracy from 65.84% to 67.99% (+2.15 points, Table 6), with the largest gains on AMC23 (+7.50 points) and GPQA-DIAMOND (+3.05). This validates that selecting training examples a smaller model cannot solve zero-shot identifies samples that drive reasoning improvements for larger models.
+
+**Math-only vs. GPR-only vs. multi-domain:** Bonly_mr (57.82%) substantially outperforms Bonly_gpr (53.30%) by 4.52 points on average (Table 3), confirming that math data provides a stronger isolated reasoning signal. However, Bgpr↑ (58.12%) outperforms both, demonstrating that the optimal strategy is neither domain in isolation but a specific blend where GPR data amplifies the reasoning scaffold established by math data.
+
+**Blend ratio sensitivity (2:1 GPR:math, 2:1 math:GPR, natural distribution):** The three source-ratio blends — Bgpr↑ (2:1 GPR, 58.12%), Bmr↑ (2:1 math, 57.72%), and Bnd (natural, 55.66%) — show that GPR-emphasis outperforms math-emphasis by 0.40 points, and both deliberate blends substantially outperform natural sampling (+2.46 and +2.06 points respectively). The ordering GPR-heavy > math-heavy > uniform is consistent across most benchmarks.
+
+**Single-source training length (250 vs. 650 steps):** The single-source experiments use 250 steps rather than 650 for the blend experiments, which the paper acknowledges as a limitation in Section 9. The shorter training may underestimate the potential of individual datasets, though the paper justifies this by noting that single-source experiments already reveal clear performance patterns that inform blend construction.
+
+**Negative result — Bscore underperformance:** The attempt to automate blend construction via performance-weighted averaging fails to match domain-aware manual blends, indicating that average benchmark scores do not capture cross-domain interaction effects. This is an informative negative result: simple heuristics for data mixing are insufficient.
+
+**Negative result — GPR-only isolation failure:** Bonly_gpr trails all other non-ORZ blends and achieves only 53.30% average — just 8.55 points above the base model despite containing triple the data diversity of any single source. This is the critical demonstration that GPR data is not independently sufficient for reasoning improvement; it requires math data as a co-factor, supporting the complementarity claim.
+
+### Critical Assessment
+
+**Do the experiments demonstrate that multi-domain data blending improves generalization beyond math reasoning?**
+
+Yes, but with important scope limitations. The core comparison — Bgpr↑ vs. Bonly_mr vs. Bonly_gpr — provides clear evidence that a 2:1 GPR-to-math blend outperforms both domain-specific alternatives across seven diverse benchmarks. The improvements on non-math benchmarks are substantial: +12.82% on MMLU-PRO, +11.3% on GPQA-DIAMOND, +15.12% on AGIEVAL, and +3.8% on SUPERGPQA over the base model. However, the claim of "generalization beyond math" is demonstrated only on benchmarks that, while diverse, are still multiple-choice or short-answer QA formats — the very formats the training data was templated to target. The framework has not been tested on genuinely open-ended reasoning tasks (essay writing, multi-turn dialogue reasoning, creative problem-solving), where the template-based answer-space constraint cannot be applied. The 10-word filtering threshold for open-ended training data explicitly excludes long-form explanatory answers, meaning the model has not been trained on the kind of extended reasoning that real-world non-math tasks often require. The generalization demonstrated is within the QA paradigm — broadening from math QA to STEM QA to humanities/law/social-science QA — which is valuable but narrower than "general reasoning" might imply.
+
+**Do the experiments support the claim that math-only training is insufficient and that multi-domain data is necessary?**
+
+Partially. The experiments convincingly show that math-only training (Bonly_mr) leaves significant GPR performance on the table: Bonly_mr trails Bgpr↑ by 3.56 points on MMLU-PRO, 2.32 on AGIEVAL, and 1.47 on SUPERGPQA. However, Bonly_mr still achieves 57.82% average — within 0.30 points of Bgpr↑. The gap between math-only and the best multi-domain blend is real but modest (0.30 points), suggesting that math-only training is "insufficient" in the sense of being suboptimal rather than fundamentally incapable. The more compelling evidence for insufficiency comes from the GPR-only result (Bonly_gpr, 53.30%): this shows that GPR data *alone* cannot drive improvements, establishing the asymmetric complementarity. But the strongest interpretation — that GPR data is *necessary* for strong GPR performance — must be qualified by the observation that Bonly_mr already achieves reasonably strong GPR scores through transfer from math training. The gap between math-only and multi-domain is quantitative, not qualitative.
+
+**Does the paper demonstrate that the optimal blend ratio (2:1 GPR:math) generalizes, or is it specific to these datasets and models?**
+
+The paper does not establish generalizability of the specific 2:1 ratio. Only three source-ratio blends are tested (2:1 GPR, 2:1 math, natural distribution), and the difference between Bgpr↑ (58.12%) and Bmr↑ (57.72%) is 0.40 points — small enough that it might fall within the range of run-to-run variance, which the paper does not report. The paper would need a denser sweep of blend ratios (e.g., 1:1, 3:1, 4:1, 1:2, 1:3, 1:4) to claim the 2:1 ratio is optimal rather than simply one of two extremes that happened to perform slightly better. The ratio is also confounded with dataset composition: changing the GPR:math ratio changes not just domain balance but also which specific datasets dominate, since the GPR pool (MMLU, NEMOTRON-CROSSTHINK-QA, Natural Reasoning) and math pool (NuminaMath, NEMOTRON-CROSSTHINK-MATH, MATH) have different internal quality distributions. A cleaner experiment would hold individual dataset proportions constant while varying only the GPR:math aggregate ratio.
+
+**Are the efficiency claims (28% fewer tokens) well-supported?**
+
+Yes, with the caveat that efficiency is measured on correct responses only and does not account for the fact that the multi-domain model may produce fewer correct responses on math tasks (Bonly_mr scores 1.0 point higher on MATH-500 and 5.0 points higher on AMC23). The 28% reduction is computed as (731 - 622) / 731 for math and (639 - 385) / 639 for GPR, and the paper reports both means and distributions (Table 12, Figure 3). However, the efficiency analysis does not control for accuracy: a model that answers correctly on hard questions (which may require more tokens) is not directly comparable to one that only answers easy questions correctly. The paper partially addresses this by reporting both GPR and math token counts separately, but within each domain, difficulty-controlled comparisons are not provided. The Nemotron-H replication (Table 14) strengthens the efficiency claim by showing the same pattern in a different architecture.
+
+**Does the difficulty filtering experiment (Table 6) genuinely demonstrate that harder data causes improvement, or could the effect be due to data reduction removing noisy or mislabeled examples?**
+
+This is a genuine confound that the paper does not fully disentangle. The filtered set Bf(gpr)↑ removes "easy" questions (those solvable by Qwen2.5-7B in zero-shot), which simultaneously removes potentially noisy or ambiguous examples and increases the average difficulty of the remaining data. The 2.15-point gain could be due to either mechanism — or both. The paper's framing emphasizes difficulty ("stronger gradient signals and a focus on harder-to-learn reasoning patterns"), but the experimental design cannot rule out the alternative hypothesis that removing easy questions eliminates examples where the reward signal is uninformative (because the model already gets them right, providing no learning signal) or misleading (because the questions test memorization rather than reasoning). A controlled comparison would keep total training examples constant by replacing filtered examples with additional hard examples from other sources, but this is not done.
+
+**Is the base-model-only RL strategy (no SFT) adequately justified?**
+
+The paper provides a rationale in Appendix H, but the justification is largely post-hoc: other papers report mixed results on SFT+RL vs. RL-only. The paper does not run its own SFT+RL baseline to verify that SFT would not further improve results. Given that the standard recipe for reasoning models (DeepSeek-R1, Kimi k1.5, InternThinker) uses SFT before RL, the absence of an SFT+RL comparison is a notable gap. The Qwen2.5 base models may already have strong instruction-following capabilities (they are pretrained with instruction tuning in mind), so "base model" in this context may not be a truly untuned model. This makes it harder to interpret whether the gains come from RL alone or from RL applied to an already-capable instruction-following model.
+
+**Does the single benchmark family and model architecture limit generalizability?**
+
+Moderately. The paper tests two model sizes (7B and 32B) within the Qwen2.5 family and one additional architecture (Nemotron-H, 8B). While consistent results across these variants are encouraging, all models share the same pretraining paradigm (Qwen's training data and methodology) and the experiments use the same seven benchmarks. The paper does not test on code generation, multi-turn dialogue, or real-world deployment tasks. The benchmark selection is diverse for QA-style evaluation but does not include any benchmark that requires the extended chain-of-thought that the paper's format reward (requiring `thinking` tags and `\boxed{}` answers) is designed to encourage. This creates a mismatch between the training format and the evaluation format — the model is trained to produce long CoT but is evaluated on tasks where short answers suffice — which may inflate the measured accuracy relative to what would be observed in interactive or open-ended settings.
+
+**Missing experiments that would strengthen the paper:**
+
+- A denser sweep of GPR:math blend ratios to identify whether 2:1 is genuinely optimal or merely the best of three tested points.
+- An SFT+RL baseline to determine whether the base-model RL approach leaves performance on the table.
+- Evaluation on genuinely open-ended reasoning tasks (not constrained to short-answer or MCQ formats) to test whether the template-based training transfers.
+- Per-difficulty-bin analysis within each benchmark (analogous to the difficulty quintiles in the prior reference paper) to understand whether multi-domain blending helps uniformly or only on specific difficulty tiers.
+- An ablation where the 2:1 ratio is achieved by different internal dataset compositions to disentangle domain-balance effects from dataset-quality effects.
+- Confidence intervals or run-to-run variance estimates for the blend comparisons, given that some gaps (e.g., Bgpr↑ vs. Bmr↑ at 0.40 points) are small relative to plausible variance.
+
+**Overall assessment:** The experimental evidence strongly supports the qualitative claim that multi-domain data blending improves generalization beyond math-only training, with particularly robust evidence for the asymmetric complementarity between GPR and math data. The specific quantitative claims (2:1 optimal ratio, 28% token reduction, 2.15-point filtering gain) are supported by the reported numbers but would benefit from additional controls and denser experimental sweeps to establish robustness. The paper's core contribution — establishing that data format and blend composition are first-order design choices for RL-based reasoning training — is well-supported by the ablation structure, even if the specific optimal values may be dataset- and model-dependent.
+
+## 6. Limitations and Trade-offs
+
+### The Difficulty Estimation Cost Is the Elephant in the Room
+
+**The assumption or constraint.** The paper's difficulty filtering technique — identifying "hard" questions by checking whether a smaller model (Qwen2.5-7B) answers them correctly in zero-shot — appears computationally cheap in description. However, the paper is silent on the actual cost. Filtering the GPR component of `$\mathcal{B}_{gpr\uparrow}$` (which constitutes approximately 66% of the training pool, or roughly 260K of the 392K GPR samples) requires running full inference on every candidate question through the smaller model. This preprocessing cost is amortized across training runs (the filtered dataset can be reused), but it is not accounted for in the headline training budget of 48 GPU-hours for a 7B model or in any efficiency claim.
+
+**The consequence.** The 2.15-point accuracy gain from filtering (Table 6) is reported without the cost of obtaining the filter labels. For a practitioner deciding whether to adopt this technique, the relevant comparison is: (cost of inference on ~260K examples) vs. (benefit of a 2.15-point average accuracy improvement). The paper does not provide numbers that would enable this comparison. In the worst case, if the filtering inference is done with the same hardware and model size as training, the filtering cost could rival or exceed the training cost, making the effective cost-per-accuracy-gain substantially worse than the headline numbers suggest. Additionally, the filtering technique requires access to a smaller model from the same family with similar training data, which may not be available for all model architectures or may introduce family-specific biases into what counts as "difficult."
+
+**What evidence exists in the paper.** None. The paper does not report filtering cost in GPU-hours, number of inference calls, or wall-clock time. Section 3 (Data Synthesis) describes the filtering procedure qualitatively but provides no computational accounting. Table 6 reports the accuracy gains but not the preprocessing budget. This stands in contrast to the detailed training budget reported in Section 4 (48 GPU-hours for 650 steps). The omission is notable because the paper positions difficulty filtering as a practical technique for scaling to larger models, and practical techniques require cost-benefit analysis.
+
+**Mitigation status.** Not addressed. The paper does not acknowledge this as a limitation, suggest cheaper filtering alternatives (e.g., using a much smaller model, sampling a subset of questions), or discuss the trade-off between filtering cost and training benefit. This is an oversight given the paper's otherwise transparent reporting of training compute.
+
+---
+
+### The Framework Has Only Been Validated on QA-Format Reasoning Tasks — Not Genuinely Open-Ended Reasoning
+
+**The assumption or constraint.** The paper trains and evaluates exclusively on tasks where answers are short, verifiable, and extractable via exact string matching. The data curation pipeline explicitly enforces this: open-ended answers are filtered to 10 words or fewer (Section 2, Data Filtering), MCQ answers are single option labels, and math answers are boxed expressions. The evaluation benchmarks (MATH-500, AMC23, MMLU, MMLU-PRO, GPQA-DIAMOND, AGIEVAL, SUPERGPQA) all follow the same pattern — they are multiple-choice or short-answer QA datasets. As the paper states in Section 2, the filtering function `$\mathcal{H}$` discards any open-ended sample "challenging to evaluate with a rule-based reward function," formally retaining only samples where `$|w(a^*)| \leq 10$`.
+
+**The consequence.** The paper's central claim — that NEMOTRON-CROSSTHINK enables "scalable self-learning beyond math" — is demonstrated only within the QA paradigm. The framework provides no evidence that the learned reasoning capabilities transfer to tasks requiring extended explanation, argumentation, multi-turn dialogue, creative generation, or any format where answers exceed 10 words and cannot be verified by exact string match. This is a significant scope limitation because many real-world reasoning tasks — legal analysis, medical diagnosis explanation, scientific paper review, policy analysis, essay writing — inherently require long-form, open-ended responses. The paper's template-based approach, which constrains answer-space diversity to enable rule-based rewards, may actively work against performance on such tasks: a model trained to produce short, matchable answers may develop habits (terseness, avoidance of nuance, rigid formatting) that harm performance when detailed reasoning is required. The paper's own token efficiency analysis (Figure 3, Table 12) shows that the multi-domain model learns to produce shorter answers on GPR tasks — which is presented as a benefit, but may reflect a learned bias toward brevity that would be detrimental for explanation-heavy tasks.
+
+**What evidence exists in the paper.** The evaluation benchmark selection itself demonstrates the limitation. All seven benchmarks are QA-format, all have ground-truth answers that can be matched exactly, and none require the model to produce extended reasoning as part of the final answer (the CoT traces are in `thinking` tags and are not evaluated). The 10-word filtering threshold is acknowledged in Section 2, but the paper does not discuss what capabilities are lost by excluding long-answer questions from training, nor does it evaluate on any long-form reasoning benchmark to measure whether the loss matters. Appendix I notes that prior work using LLM-as-a-Judge verifiers "may suffer from pitfalls of reward hacking," implying that the paper's choice to avoid such verifiers is deliberate, but the trade-off — verifiability vs. answer diversity — is never quantified or discussed as a limitation.
+
+**Mitigation status.** The paper partially acknowledges this in Section 9 (Limitations), noting that the reward function "relies on exact string matching... which can be brittle for open-ended responses" and that "future work could incorporate more flexible, semantics-aware reward functions." However, this framing treats the limitation as a reward-function engineering problem rather than a fundamental constraint of the template-based approach: if answers must be verifiable by exact match, then by construction the training data must exclude all questions whose answers cannot be exactly matched. No amount of reward-function improvement resolves this — the limitation is in the data curation philosophy, not just the reward implementation. The paper does not discuss whether template-constrained training on short-answer data can transfer to long-form reasoning tasks, which would be the key empirical question for assessing the practical severity of this limitation.
+
+---
+
+### The 2:1 Blend Ratio Claim Rests on a Sparse Sweep With Unquantified Variance
+
+**The assumption or constraint.** The paper's headline finding — that a 2:1 ratio of GPR-to-math data is optimal — is based on comparing exactly three source-ratio blends: `$\mathcal{B}_{gpr\uparrow}$` (2:1 GPR:math, 58.12% average), `$\mathcal{B}_{mr\uparrow}$` (2:1 math:GPR, 57.72%), and `$\mathcal{B}_{nd}$` (natural distribution, 55.66%). The gap between the "best" and "second-best" blends is 0.40 percentage points. The paper does not report confidence intervals, run-to-run variance, or statistical significance for any blend comparison. It does not sweep intermediate ratios (e.g., 1:1, 3:1, 1:2) to determine whether 2:1 is genuinely a maximum or merely the better of two tested extremes.
+
+**The consequence.** A practitioner reading this paper cannot determine whether the 2:1 ratio is a robust finding or an artifact of the specific three points tested. A gap of 0.40 points — smaller than the 1.21-point improvement from unified open-ended formatting (Table 4) and comparable to the 1.20-point difference between short and long answer templates (Table 5) — could plausibly arise from sampling noise, especially given that the test sets contain only hundreds of questions (MATH-500: 500, MMLU-PRO: ~1200 across all categories, GPQA-DIAMOND: 198, SUPERGPQA: unknown but likely hundreds). With 7 benchmarks and average accuracy as the summary statistic, small per-benchmark fluctuations can shift the average by tenths of a point. More importantly, the blend ratio is confounded with internal dataset composition: changing the GPR:math ratio changes not just domain balance but which specific datasets (MMLU vs. NuminaMath, NEMOTRON-CROSSTHINK-QA vs. NEMOTRON-CROSSTHINK-MATH) receive more weight. The 2:1 ratio might reflect the quality of specific datasets rather than the optimal domain balance.
+
+**What evidence exists in the paper.** Table 3 reports the blend comparison results as point estimates without error bars. Table 11 provides the exact per-dataset weights for each blend, confirming the confounding: `$\mathcal{B}_{gpr\uparrow}$` gives 0.3242 weight to NEMOTRON-CROSSTHINK-QA (the largest single dataset) while `$\mathcal{B}_{mr\uparrow}$` gives 0.3370 weight to NEMOTRON-CROSSTHINK-MATH (a different synthetic dataset of potentially different quality). The accuracy difference could be driven by dataset quality rather than domain ratio. The paper acknowledges in Section 9 that "we did not perform extensive hyperparameter tuning for RL training" and used fixed schedules, but does not extend this caveat to the blend ratio selection. Section 4 notes that accuracy is "averaged over three independent runs using greedy decoding," which provides some variance reduction for individual benchmark scores but is not propagated to blend-level comparisons.
+
+**Mitigation status.** Not addressed. The paper presents the 2:1 ratio as a finding without qualification, and the abstract and conclusion cite specific benchmark improvements from `$\mathcal{B}_{gpr\uparrow}$` as evidence for the framework's effectiveness. The sparse blend sweep is a methodological limitation that weakens the strength of the optimal-ratio claim. A denser sweep (at minimum 1:1, 1:2, 2:1, 3:1, 1:3) with variance estimates would substantially strengthen the claim, but is absent. The paper's contribution — that GPR-heavy blending outperforms math-heavy blending — is supported by the direction of the comparison even if the specific 2:1 number is uncertain, but the paper does not make this nuanced distinction.
+
+---
+
+### The Math-Only Baseline Is Stronger Than the Narrative Implies, Blurring the "Necessity" Claim for Multi-Domain Data
+
+**The assumption or constraint.** The paper's narrative positions NEMOTRON-CROSSTHINK as demonstrating that "math-only training is insufficient" and that multi-domain data is necessary for broad reasoning. Statements in the abstract and introduction emphasize this: "math-only training is insufficient — blending multi-domain data in RL boosts average reasoning accuracy by 1.61% over math-only data." However, the actual performance gap between `$\mathcal{B}_{gpr\uparrow}$` (58.12%) and `$\mathcal{B}_{only\_mr}$` (57.82%) is 0.30 percentage points (Table 3) — not 1.61%. The 1.61% figure appears to refer to a different comparison or a different averaging method not clearly specified. On several individual benchmarks, Bonly_mr *outperforms* Bgpr↑: MATH-500 (78.60% vs. 77.60%, +1.00), AMC23 (70.00% vs. 65.00%, +5.00), and SUPERGPQA has them nearly tied (27.69% vs. 29.16%, a 1.47-point gap).
+
+**The consequence.** The paper's policy implication — that practitioners should include GPR data in RL training — is correct in direction (Bgpr↑ does outperform Bonly_mr on average), but the magnitude of the benefit is small enough that a practitioner with limited data curation resources might reasonably choose math-only training and accept a ~0.3-point average accuracy trade-off for substantial simplification. More importantly, the framing of "insufficiency" is misleading: math-only training produces a model (Bonly_mr, 57.82%) that is within 0.30 points of the best multi-domain blend (58.12%) and actually stronger on math benchmarks. This is not "insufficient" in the ordinary sense of the word — it is "slightly suboptimal on average." The gap that is genuinely large is between GPR-only (53.30%) and the multi-domain blends, which supports the asymmetric complementarity claim (GPR data benefits from math data but not vice versa to the same degree), but the paper's rhetoric emphasizes the insufficiency of math-only training, which the numbers do not strongly support.
+
+**What evidence exists in the paper.** Table 3 provides the direct comparison. The sub-category analysis in Appendix F (Figures 8, 9, 10) shows that Bgpr↑'s advantage is concentrated in specific non-math subcategories (law, business, psychology) while Bonly_mr is competitive or better in math and science subcategories. This granular breakdown actually supports a more nuanced interpretation — multi-domain blending helps significantly in language-heavy and humanities domains, helps modestly or not at all in quantitative domains — but the paper's abstract-level claims flatten this nuance. The discrepancy between the claimed 1.61% boost and the observed 0.30-point gap suggests a calculation difference (perhaps comparing Bgpr↑ to Bnd rather than Bonly_mr, or using a different average that excludes certain benchmarks), which the paper does not explain.
+
+**Mitigation status.** Not acknowledged. The paper does not discuss the small magnitude of the Bgpr↑ vs. Bonly_mr gap or qualify the "insufficiency" claim. The abstract's 1.61% figure cannot be straightforwardly derived from Table 3 using the reported averages, creating a transparency issue. The paper would benefit from explicitly stating which comparison yields the 1.61% figure and acknowledging that the Bgpr↑ vs. Bonly_mr gap is substantially smaller.
+
+---
+
+### The Framework Requires Both a Strong Base Model and a Smaller Probe Model — Limiting Applicability to Specific Model Families
+
+**The assumption or constraint.** NEMOTRON-CROSSTHINK applies RL directly to a pretrained base model without supervised fine-tuning, motivated by the goal of isolating RL's contribution (Appendix H). The difficulty filtering technique additionally requires a smaller model from the same family (Qwen2.5-7B as the probe for Qwen2.5-32B training) to identify hard questions. Both choices create implicit dependencies: the base model must be capable enough that RL alone (without SFT stabilization) produces meaningful improvements, and a smaller model with comparable training data and architecture must be available to serve as the difficulty probe. The paper validates these choices only on Qwen2.5 models and Nemotron-H — all NVIDIA or Alibaba-produced models with specific training recipes.
+
+**The consequence.** A practitioner using a different model family (LLaMA, Mistral, DeepSeek, Gemma) cannot assume that the findings transfer. Base-model RL may behave differently depending on the pretraining data mixture, the presence or absence of instruction-tuning during pretraining, and the model's inherent reasoning capabilities. Qwen2.5 models are known to have strong base reasoning performance (the 7B base model achieves 48.30% on MATH-500 and 74.20% on MMLU in Table 2 without any RL), which may be a prerequisite for the RL-only approach to work. Models with weaker base reasoning may require SFT before RL to establish basic instruction-following and reasoning patterns — but the paper provides no guidance on whether the blending and formatting findings would hold in an SFT+RL pipeline. Similarly, the difficulty filtering technique assumes the availability of a smaller model from the same family with similar training — but for many open-source models, only one or two sizes are available, and cross-family model comparison (using a LLaMA-7B probe for Qwen-32B training) introduces unknown biases because different model families have different knowledge bases and failure modes.
+
+**What evidence exists in the paper.** The paper tests two model families (Qwen2.5 at 7B and 32B, Nemotron-H at 8B), which is broader than many papers in this space but still limited to models with similar pretraining paradigms. The appendix H justification for base-model RL cites other papers' conflicting results on SFT+RL but does not run its own SFT+RL comparison. The difficulty filtering experiment (Table 6) uses Qwen2.5-7B as the probe for Qwen2.5-32B training, a same-family pairing. The paper does not test cross-family probing or discuss the sensitivity of filtering to the choice of probe model. The Nemotron-H experiments (Appendix G) use the same blends but do not apply difficulty filtering, so the filtering technique's generalizability to non-Qwen architectures is untested.
+
+**Mitigation status.** Partially addressed through the Nemotron-H architecture experiment (Tables 13, 14), which replicates the core blending finding in a different architecture. This provides some evidence of architectural generalizability for the blending strategy. However, the difficulty filtering technique is architecture-untested, and the base-model-RL vs. SFT+RL comparison is absent. The paper does not discuss the probe-model dependency as a limitation of the filtering approach or suggest alternatives (e.g., using a small model from a different family, using a distilled probe, using heuristic difficulty signals).
+
+---
+
+### Reward Design Brittleness Is Both a Feature and a Bug — and It Creates a Ceiling on Answer Diversity
+
+**The assumption or constraint.** The paper's reward function is a strict logical AND of binary accuracy and format rewards, with accuracy determined by exact string matching. Sections 2 and 3 present this as a deliberate design choice: simplicity and interpretability are prioritized over flexibility, and data formatting (templates, 10-word filtering, short answers) ensures compatibility with simple rewards. The paper argues that this avoids reward hacking risks associated with LLM-as-a-Judge verifiers and keeps training stable and reproducible. However, the brittleness of exact-match rewards is acknowledged in Section 9: "if the ground truth is (A) Sky is blue, and the model predicts (A) the sky is generally blue most times, the answer is semantically correct but still receives a negative reward."
+
+**The consequence.** The training signal contains systematic false negatives: semantically correct answers that differ in surface form from the ground truth receive zero reward, treating them identically to genuinely incorrect answers. This creates two related problems. First, it introduces noise into the advantage estimates — an output that is actually correct but phrased differently gets the same reward (zero) as an output that is completely wrong, making it harder for GRPO to distinguish good from bad reasoning. Second, it may actively penalize the model for developing flexible language generation capabilities: a model that learns to rephrase answers in semantically equivalent but syntactically different ways is punished, even though such flexibility is desirable for real-world deployment. The consequence is that the trained model may become overly rigid in its output format, producing canonical-form answers that match the training data's exact phrasing rather than developing genuine language understanding. The paper's observation that short-form answer templates outperform long-form ones (Table 5, +1.20 points) is consistent with this interpretation — shorter answers have fewer surface-form variants, so exact matching produces fewer false negatives.
+
+The brittleness also creates a fundamental ceiling: the framework cannot be extended to tasks where answers have inherently high surface-form diversity (essay questions, creative writing, open-ended analysis) without abandoning the exact-match reward paradigm, which is the framework's core enabling mechanism.
+
+**What evidence exists in the paper.** Section 9 explicitly acknowledges the brittleness, providing the "Sky is blue" example. Table 5 demonstrates that shorter answers work better (+1.20 points for short vs. long labels), which is indirect evidence of exact-match brittleness — longer answers provide more surface area for false-negative reward signals. The paper does not measure the false-negative rate directly (how often does the model produce semantically correct but syntactically variant answers?), nor does it analyze whether false negatives correlate with question difficulty or domain. The format reward (requiring `thinking` tags and `\boxed{}` output) partially mitigates the problem by forcing the model to produce answer text in a predictable location, but does not address surface-form variation within the answer content itself.
+
+**Mitigation status.** The paper acknowledges this as a limitation in Section 9 and suggests future work on "more flexible, semantics-aware reward functions, such as fuzzy matching, entailment scoring, embedding-based similarity metrics, or llm-as-a-Judge." However, this proposed mitigation would require abandoning the framework's central design philosophy — simplicity and verifiability through exact matching — which is what distinguishes NEMOTRON-CROSSTHINK from prior multi-domain RL approaches. The tension is unresolved: the framework's key innovation (templates + exact matching) is also its key limitation (brittleness to surface-form variation), and the paper provides no path to resolving this tension within the current approach. The 10-word filtering threshold is a partial mitigation (shorter answers have fewer variants) but also restricts the scope of trainable tasks, creating a different limitation (discussed above).
+
+## 7. Implications and Future Directions
+- Field impact
+  - Demonstrates that RL for reasoning can be scaled beyond math by engineering the data and output templates to preserve verifiability. This lowers the barrier to deploying RL on diverse tasks and suggests that “rewardable” general reasoning is feasible at scale (Figure 2; Tables 4–7).
+
+- Practical applications
+  - Enterprise and professional QA across law, economics, education, and engineering (SUPERGPQA categories; Figure 7).
+  - Test prep and tutoring across STEM and humanities (MMLU/MMLU-PRO; Tables 4–5).
+  - Cost-sensitive deployments where concise correctness matters (token-efficiency gains; Figure 3, Appendix Table 9).
+
+- Follow-up research
+  - Reward design
+    - Move beyond exact match: incorporate semantic similarity, programmatic checkers for non-math (e.g., rule templates, retrieval-backed verification), or learned reward models for open-ended reasoning.
+    - Reward shaping for process quality (not only final answer), e.g., partial credit for logical steps.
+  - Adaptive data scheduling
+    - Curriculum or bandit-style blend selection that prioritizes domains or formats with the highest marginal utility; dynamic ratio adjustment during training.
+  - Broader formats and tasks
+    - Support longer free-form answers by pairing template constraints with better evaluators.
+    - Extend to multi-turn dialogue reasoning, tool use, or multimodal inputs where verifiability is still possible (e.g., code execution, table checks).
+  - Efficiency control
+    - Integrate explicit thinking-length control (cf. L1-style methods) alongside the observed emergent token efficiency to further reduce inference cost without hurting accuracy.
+
+Block-quoted highlights
+- Overall blend performance:
+  > Table 4: `Bgpr↑` (2:1 general-purpose:math) achieves the top average accuracy (58.12), outperforming ORZ (55.20) and single-domain blends.
+
+- Template advantages:
+  > Table 5: Training with all open-ended questions improves average accuracy by +1.21% over mixed MCQ+open-ended.  
+  > Table 6: Short-form MCQ answers outperform long-form by +1.20% on average.
+
+- Difficulty filtering at scale:
+  > Table 7: On Qwen2.5-32B, filtering to “hard” examples yields 67.99 average vs 65.84 unfiltered (+2.15), and both exceed the base model (54.33).
+
+- Token efficiency:
+  > Figure 3 and Appendix Table 9: `Bgpr↑` reduces mean tokens for correct GPR answers by 39.6% vs math-only and 65.4% vs ORZ, while remaining appropriately verbose on math tasks.
+
+In sum, NEMOTRON-CROSSTHINK offers a clear and effective recipe for taking RL-based reasoning beyond math: constrain outputs so rewards are verifiable, curate and filter multi-domain data, blend it strategically, and optimize with GRPO. The result is a more accurate and more efficient reasoner across a wide range of tasks.

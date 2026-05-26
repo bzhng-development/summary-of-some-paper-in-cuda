@@ -1,0 +1,721 @@
+# Fast-dLLM: Training-free Acceleration of Diffusion LLM by Enabling KV Cache and Parallel Decoding
+
+**ArXiv:** [2505.22618](https://arxiv.org/abs/2505.22618)
+
+## 🎯 Pitch
+
+Fast-dLLM dramatically accelerates diffusion-based large language models at inference time without retraining, introducing a novel block-wise approximate Key-Value cache for bidirectional attention and a confidence-aware parallel decoding strategy. This approach achieves up to 27.6× speedup with minimal accuracy loss, bridging the throughput gap with autoregressive LLMs and enabling practical, high-performance deployment of diffusion LLMs for both text and multimodal applications.
+
+---
+
+## 1. Executive Summary
+
+Fast-dLLM introduces a training-free acceleration framework for diffusion-based large language models that addresses two practical bottlenecks — the absence of KV cache support and quality degradation during parallel token decoding — through a **block-wise approximate KV Cache** mechanism (reusing cached activations from previously decoded blocks by exploiting high similarity of KV activations between adjacent inference steps) and a **confidence-aware parallel decoding** strategy (selectively decoding only tokens whose prediction confidence exceeds a global threshold rather than a fixed number per step). Evaluated on LLaDA and Dream models across GSM8K, MATH, HumanEval, and MBPP benchmarks, the combined approach achieves up to 27.6× throughput improvement on 1024-token generations while preserving accuracy within 1–2 points of the unaccelerated baseline, establishing that diffusion LLMs can match autoregressive model inference efficiency when parallel decoding is constrained to high-confidence tokens under a (n+1)ε ≤ 1 condition that guarantees greedy equivalence between joint and product-of-marginals decoding.
+
+## 2. Context and Motivation
+
+### The Core Problem: Diffusion LLMs Produce Tokens Too Slowly Despite Their Theoretical Parallelism Advantage
+
+This paper addresses a specific and practical tension: diffusion-based large language models (Diffusion LLMs) are theoretically capable of generating multiple tokens in parallel — unlike autoregressive (AR) models that must produce tokens one at a time, sequentially — yet in practice, open-source Diffusion LLMs are often *slower* than their AR counterparts. This is a striking paradox. If diffusion models can decode many tokens simultaneously, they should enjoy a massive throughput advantage. So why don't they?
+
+The paper identifies two specific, concrete reasons, both of which are grounded in inference-time architectural constraints rather than training-time limitations:
+
+**First, Diffusion LLMs lack Key-Value (KV) cache support.** In autoregressive transformers, KV caching is a fundamental optimization: when generating token $t$, the keys and values computed for all previous tokens $1$ through $t-1$ are stored and reused, so the model only needs to compute attention for the new token. This eliminates redundant computation and is a primary reason AR models achieve high throughput despite their sequential generation constraint. Diffusion LLMs, however, use **bidirectional attention** — each token attends to every other token, including future (still-masked) positions. This means the full attention matrix must be recomputed at every denoising step because the representations of masked tokens change as the model refines its predictions. There is no obvious subset of the attention computation that remains invariant across steps, so standard KV caching — which assumes unidirectional, causal attention with a fixed prefix — cannot be directly applied. The paper's Figure 1(a) makes the consequence concrete: vanilla LLaDA achieves only 6.7 tokens/second on GSM8K (5-shot, 256-token generation), while LLaMA-3-8B (an AR model) runs at roughly 55 tokens/second — an 8× gap.
+
+**Second, parallel token decoding degrades output quality.** Even if the computational inefficiency were solved, Diffusion LLMs face a quality problem when they actually try to exploit their parallelism. The fundamental issue is the **conditional independence assumption** in multi-token prediction. When a masked diffusion model (MDM) generates $n$ tokens simultaneously at a given denoising step, it predicts each token's distribution independently — sampling from $p(x_i | x_t) \cdot p(x_j | x_t)$ rather than the true joint $p(x_i, x_j | x_t) = p(x_i | x_t) \cdot p(x_j | x_t, x_i)$. This ignores dependencies between tokens being decoded together. The paper provides a concrete example (Section 2.2, drawn from Song and Zhou, 2025): given the prompt "The list of poker hands that consist of two English words are: _ _", the model might independently predict "high" for the first blank and "house" for the second — producing "high house" rather than the coherent "high card," "two pair," or "full house." The joint distribution would recognize that "high" strongly constrains the second word to "card," but independent marginals cannot capture this. LLaDA's own documentation (cited in the paper) acknowledges this: the model performs best when generating tokens one at a time and "soon degrades when decoding multiple tokens simultaneously."
+
+These two problems interact in a pernicious way. The parallelism that makes diffusion models attractive is precisely what breaks their output quality. And the architectural feature that makes AR models fast (KV caching) is incompatible with the bidirectional attention that gives diffusion models their representational advantages. The result is that open-source Diffusion LLMs occupy an uncomfortable middle ground: they are neither as fast as AR models (due to lack of caching) nor able to exploit their theoretical parallelism (due to quality degradation).
+
+### Why This Problem Matters: Practical Deployment and the Future of Non-Autoregressive Generation
+
+The gap this paper addresses has significant practical and strategic implications.
+
+**Practical deployment is blocked.** For Diffusion LLMs to be viable alternatives to AR models in production systems — chatbots, code assistants, real-time translation — they must achieve competitive inference throughput. A model that generates high-quality text at 6.7 tokens/second (Figure 1a) is simply too slow for interactive applications, regardless of its accuracy. The paper's baseline measurements make this stark: vanilla LLaDA requires 266 seconds to generate a single 1024-token response (Figure 1c), achieving 0.7 tokens/second. Users expect sub-second latency for short responses and comfortable reading speeds (~15–20 tokens/second) for longer generations. Without addressing the speed gap, Diffusion LLMs remain research artifacts rather than deployable systems.
+
+**A theoretical advantage is going unrealized.** Diffusion LLMs have genuine architectural merits over AR models that could matter for reasoning and long-form generation: bidirectional attention allows each token to condition on global context rather than just the leftward prefix, and the iterative refinement process can, in principle, revise earlier decisions based on later context. But these advantages are moot if the models are too slow to use or if their quality collapses when they try to be fast. The paper is effectively arguing that the practical benefits of diffusion architectures are locked behind an inference-time engineering problem — and that solving this problem could make Diffusion LLMs genuinely competitive with, rather than merely theoretically interesting alternatives to, AR models.
+
+**The landscape is shifting toward diffusion-based LLMs.** The paper cites two commercial developments that signal growing investment in this direction: Inception Labs' Mercury model, which reportedly runs at over 1,000 tokens/second, and Google DeepMind's Gemini Diffusion, which generates over 1,400 tokens/second (Section 1). These closed-source systems demonstrate that fast diffusion-based text generation *is* possible, but the open-source community has not replicated these speeds. Fast-dLLM is explicitly positioned to close this gap for publicly available models like LLaDA and Dream, democratizing the efficiency that commercial systems have already achieved through undisclosed methods.
+
+**The parallelism frontier matters for scaling.** As models grow larger and sequence lengths increase (the paper evaluates up to 1024-token generations), the cost of inference becomes dominated by the attention mechanism's quadratic complexity. Any technique that reduces redundant attention computation — whether through caching or through generating multiple tokens per forward pass — has compounding benefits at scale. The paper's results showing that speedups grow with generation length (Table 5: DualCache achieves 9.4× at 256 tokens, 15.8× at 512 tokens, and 27.6× at 1024 tokens) validate that the methods address a scaling bottleneck rather than a fixed overhead.
+
+### Prior Approaches and Their Shortcomings
+
+The paper identifies several lines of prior work that partially address pieces of the problem but leave critical gaps.
+
+**Standard KV caching for AR models (Vaswani et al., 2017).** The fundamental idea is well-established: in causal attention, the keys and values for position $i$ depend only on positions $\leq i$, so once computed for a prefix, they never change. Diffusion LLMs with bidirectional attention cannot use this directly because future (masked) tokens influence the representations of past tokens, meaning cached values would become stale as masked positions are gradually filled in during denoising. The paper's contribution is not inventing KV caching but rather developing an *approximate* version that works despite bidirectional attention, justified by the empirical observation that KV activations change very little between adjacent denoising steps within a block (Figure 3).
+
+**Block Diffusion (Arriola et al., 2025).** The most directly relevant prior work is Block Diffusion, which proposed generating text block-by-block and storing KV caches for previously decoded blocks. This paper explicitly cites Block Diffusion as an approach that "overcomes key limitation of previous diffusion language models by generating block-by-block so that key and values of previously decoded blocks can be stored and reused" (Section 5.2). However, the paper's relationship to Block Diffusion is not fully elaborated — Fast-dLLM adopts a similar block-wise generation strategy but contributes (1) the empirical cosine similarity analysis (Figure 3) that *validates* why block-wise caching works, (2) the DualCache extension that additionally caches suffix (masked) tokens, and (3) integration with the parallel decoding strategy. The paper implicitly positions Block Diffusion as an important predecessor but suggests that prior work did not systematically analyze *why* the approximation works or push it to the DualCache extreme.
+
+**Non-autoregressive (NAR) generation (Xiao et al., 2023).** A substantial literature on NAR decoding for neural machine translation and other tasks has explored generating multiple tokens simultaneously. The paper acknowledges this lineage (Section 5.2) but notes a consistent weakness: "Although NAR generation offers substantial speed advantages over autoregressive approaches, it often sacrifices generation quality." The quality-speed tradeoff has been the central unsolved problem in NAR generation. Prior approaches to mitigating this included auxiliary models to explicitly model token dependencies (Liu et al., 2024; Xu et al., 2024, cited as references [16] and [34]), but the paper notes these "typically increase the complexity of the overall pipeline." Fast-dLLM's confidence-aware strategy is positioned as a simpler alternative — no auxiliary models, no architectural changes, just a threshold on the model's own prediction confidence.
+
+**LLaDA's fixed-top-K approach.** LLaDA itself attempted parallel decoding by selecting the top-$K$ most confident tokens at each step. The paper's Figure 5 shows why this is suboptimal: selecting a fixed number of tokens (2, 4, or 8 per step) creates a rigid tradeoff between speed and accuracy. At 2 tokens/step, accuracy is high (~78% on GSM8K) but speedup is modest. At 8 tokens/step, speed improves but accuracy drops to ~68%. The fixed-$K$ approach doesn't adapt to the varying difficulty of predictions across steps — some steps have many high-confidence tokens that could safely be decoded together, while others have few. The paper's key insight is that a *dynamic* threshold (decode all tokens with confidence above some value) or a *factor-based* criterion (decode the largest set satisfying the $(n+1)\epsilon < f$ bound from Theorem 1) can adapt to this heterogeneity, maintaining quality while maximizing parallelism.
+
+**Closed-source commercial systems (Mercury, Gemini Diffusion).** These systems demonstrate that fast diffusion-based generation is achievable, but their methods are proprietary. The paper positions Fast-dLLM as bringing comparable acceleration to open-source models, with fully disclosed methods that can be replicated and built upon.
+
+### How Fast-dLLM Positions Itself
+
+The paper frames its contribution not as inventing entirely new concepts but as **identifying the root causes of known problems and developing principled, training-free solutions** that can be applied to existing Diffusion LLMs without retraining or architectural modification.
+
+The **approximate KV Cache** is justified by empirical observation (the cosine similarity heatmaps in Figure 3) rather than theoretical guarantees. This is an engineering contribution grounded in measurement: by showing that KV activations have cosine similarity near 1.0 for adjacent steps within a block (the red boxed regions in Figure 3), the paper establishes that the approximation error from cache reuse is negligible. This transforms KV caching from "impossible for bidirectional attention" to "approximately valid with measurable, small error." The DualCache extension pushes this further by observing that suffix tokens (which are all [MASK] before a block is decoded) also have near-identical activations across adjacent steps, enabling even more aggressive caching.
+
+The **confidence-aware parallel decoding** is positioned through formal analysis. Theorem 1 provides a theoretical bridge between the independent-marginal sampling that MDMs naturally perform and the true joint distribution they ideally should sample from. The key result — that when $(n+1)\epsilon \leq 1$ (where $\epsilon$ bounds the error in each marginal), greedy decoding under the product-of-marginals $q$ matches greedy decoding under the true joint $p$ — provides a **principled criterion for when parallel decoding is safe**. This is not just an empirical heuristic; it's a worst-case guarantee with a quantifiable boundary. The theorem also quantifies how bad things get when the condition is violated, through bounds on total variation distance and KL divergence. The practical strategies (threshold-based and factor-based) are direct implementations of this insight: only decode tokens whose confidence is high enough that the $(n+1)\epsilon$ condition is approximately satisfied.
+
+Critically, both contributions are **training-free**. The KV Cache mechanism requires no model fine-tuning or weight modification — it's purely an inference-time change to how attention is computed. The parallel decoding strategy uses the model's existing confidence scores (maximum softmax probability) and applies a selection rule. This makes Fast-dLLM immediately applicable to existing pretrained Diffusion LLMs (LLaDA, Dream, LLaDA-V) without the computational cost of retraining, which is a substantial practical advantage for adoption.
+
+The paper's positioning relative to the broader landscape is: Diffusion LLMs have theoretical promise (bidirectional context, iterative refinement, parallel generation) that has not been realized in practice due to two specific, solvable engineering problems. Fast-dLLM solves both problems through principled approximation (KV caching with measurable error) and formal analysis (confidence-based parallel decoding with theoretical guarantees), closing the throughput gap with AR models and making open-source Diffusion LLMs viable for deployment. The $27.6\times$ speedup in Figure 1(c) — reducing a 266-second generation to 12 seconds — is the headline evidence that the gap has been substantially narrowed.
+
+## 3. Technical Approach
+
+### 3.1 Reader Orientation
+
+Fast-dLLM is a **training-free inference-time acceleration system** that can be applied to existing pretrained Diffusion LLMs (specifically masked diffusion models like LLaDA and Dream) without any weight modification or fine-tuning. The system solves two problems simultaneously: it introduces an approximate KV cache mechanism that eliminates redundant attention computation across denoising steps, and it provides a confidence-aware parallel decoding strategy that safely generates multiple tokens per step without degrading output quality. The "shape" of the solution is a block-wise generation pipeline where tokens are produced in chunks (blocks), cached key-value activations are aggressively reused within each block, and at each denoising step, only tokens whose prediction confidence exceeds a threshold are unmasked — with the threshold justified by a formal theorem bounding when independent-marginal sampling matches true joint-distribution sampling.
+
+### 3.2 Big-Picture Architecture (Diagram in Words)
+
+The Fast-dLLM inference pipeline has four major components that interact sequentially during text generation:
+
+1. **Block-wise Generation Scheduler** — divides the output sequence into `$K$` blocks of fixed size `$B$` (e.g., 32 tokens each), processing blocks left-to-right. A block is a contiguous segment of positions that will be decoded together over multiple denoising steps before moving to the next block. This block structure is what *enables* caching: within a block, we reuse cached activations; between blocks, we update the cache.
+
+2. **Approximate KV Cache (PrefixCache or DualCache)** — stores and reuses key-value attention activations. The PrefixCache variant stores only prefix tokens (prompt + previously decoded blocks). The DualCache variant additionally stores suffix tokens (masked positions in future blocks). The cache is initialized once from the prompt, reused across all denoising steps within the current block, and then fully recomputed (updated) after the block is complete. The approximation error arises because bidirectional attention means KV activations *should* change when masked tokens are filled in, but empirical measurement shows they change negligibly between adjacent steps within a block (Figure 3).
+
+3. **Confidence-Aware Parallel Decoder** — at each denoising step within a block, this component computes per-token confidence scores (maximum softmax probability over the vocabulary) for all currently-masked positions in the block, then selects a subset to unmask. The selection can use either a **threshold strategy** (unmask all tokens with confidence `$\geq \tau$`) or a **factor-based strategy** (unmask the top-`$n$` tokens where `$(n+1)(1 - c_{(n)}) < f$`, directly implementing the bound from Theorem 1). At least one token is always unmasked to guarantee progress.
+
+4. **Denoising Loop (Masked Diffusion Model Forward Pass)** — the core MDM computation: given a sequence with some tokens masked and some filled, run the model forward to produce new predictions for all masked positions. With caching enabled, this forward pass reuses stored KV activations for the prefix (and optionally suffix) rather than recomputing them from scratch.
+
+**Information flow for a single generation:**
+
+1. **Initialization:** The prompt is concatenated with `$L$` [MASK] tokens to form the initial sequence, where `$L$` is the target answer length. The model runs a forward pass to compute and store KV caches for the prompt (and, if using DualCache, for the suffix of masked tokens).
+
+2. **Per-block loop:** For block `$k$` (positions `$|p_0| + (k-1)B$` to `$|p_0| + kB$`), the model runs `$T$` denoising steps. At each step `$t$`, it reuses the cached KV activations, computes confidence scores for all masked positions in the block, applies the selection strategy to unmask some tokens, and checks if all tokens in the block are now filled (early termination).
+
+3. **Cache update:** After completing block `$k$`, the model recomputes KV caches for all tokens (prefix plus newly decoded block) to reflect the updated sequence. This recomputation is fused with the decoding step so it adds no extra forward passes.
+
+4. **Termination:** After all `$K$` blocks are decoded, the full sequence is returned, with any remaining masked tokens (if fewer than `$L$` tokens were needed) stripped at the `<eos>` boundary.
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First, the masked diffusion model foundation (Section 3.4.1):** We must understand what the model computes at each denoising step — the forward noising process, the reverse sampling procedure, and crucially, the conditional independence assumption that causes parallel decoding to fail — before we can understand why caching is approximate and why confidence thresholds help.
+
+- **Second, the KV cache mechanism (Section 3.4.2):** Building on the MDM foundation, we examine *why* standard KV caching fails for bidirectional attention, what cosine similarity measurements reveal about activation stability, how the block-wise scheme is structured, and the difference between PrefixCache and DualCache. This explains *when* caching is safe and what approximation error is incurred.
+
+- **Third, the confidence-aware parallel decoding (Section 3.4.3):** With caching established, we turn to the quality problem. We walk through Theorem 1 — the formal condition under which product-of-marginals decoding matches true joint decoding — and then show how the threshold and factor-based strategies operationalize this condition using the model's own confidence scores.
+
+- **Fourth, the integrated algorithm (Section 3.4.4):** Having understood both mechanisms independently, we see how they compose in the full Algorithm 1, with particular attention to how block-wise generation creates the structure that makes both caching and confidence-aware decoding possible simultaneously.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily an **inference-time engineering paper** whose core idea is that two practical bottlenecks in Diffusion LLMs — the lack of KV caching and quality loss during parallel decoding — can both be addressed through principled approximations grounded in empirical measurement (for caching) and formal analysis (for parallel decoding), without any model retraining.
+
+---
+
+#### 3.4.1 Masked Diffusion Models: The Generation Process and Why Parallel Decoding Fails
+
+Before we can understand the acceleration techniques, we need to know exactly what computation the model performs at each step, what "confidence" means in this context, and where the conditional independence problem arises.
+
+##### The Forward Noising Process
+
+Masked Diffusion Models (MDMs) are trained to reverse a corruption process. The forward process takes clean text `$x_0$` (a sequence of `$n$` tokens) and progressively replaces tokens with a special [MASK] token. This is controlled by a scalar time parameter `$t \in [0, 1]$`, where `$t=0$` means no corruption (all tokens clean) and `$t=1$` means full corruption (all tokens masked).
+
+The transition probability for each token position `$i$` independently is:
+
+$$q_{t|0}(x^i_t | x^i_0) = \text{Cat}\left(x^i_t; (1-t) \delta_{x^i_0} + t \delta_{[\text{MASK}]}\right)$$
+
+where `$\text{Cat}(\cdot; \text{probs})$` is a categorical distribution, `$\delta_{x^i_0}$` is a one-hot distribution at the clean token value, and `$\delta_{[\text{MASK}]}$` is a one-hot at the mask token.
+
+**What it computes:** For each token position `$i$`, with probability `$t$`, the token is replaced by [MASK]; with probability `$1-t$`, it stays as the original token `$x^i_0$`. Because this is applied independently to all `$n$` positions, the full sequence distribution factorizes:
+
+$$q_{t|0}(x_t | x_0) = \prod_{i=1}^n \text{Cat}\left(x^i_t; (1-t) \delta_{x^i_0} + t \delta_{[\text{MASK}]}\right)$$
+
+**Why this form:** The masking process is an *absorbing-state* discrete diffusion — once a token becomes [MASK], it stays [MASK] as `$t$` increases (masked tokens never unmask in the forward direction). This is the simplest discrete diffusion that preserves local structure: at intermediate `$t$` values, some tokens are masked and some are clean, giving the model partial information to condition on during reversal. Alternatives like uniform noising (replacing with random tokens) would destroy more information and make the reverse process harder to learn.
+
+##### The Training Objective
+
+The model `$p_\theta$` is trained to predict the original clean tokens given a partially masked sequence. The training objective is an Evidence Lower Bound (ELBO) derived from the likelihood `$\log p_\theta(x_0)$`:
+
+$$-\log p_\theta(x_0) \leq \int_0^1 \frac{1}{t} \mathbb{E}_{q_{t|0}(x_t|x_0)} \left[ \sum_{i: x^i_t = [\text{MASK}]} -\log p_\theta(x^i_0 | x_t) \right] dt := \mathcal{L}_{\text{MDM}}$$
+
+where `$p_\theta(x^i_0 | x_t)$` is the model's predicted distribution over the vocabulary for what token `$i$` should be, given the partially masked sequence `$x_t$`; the sum runs only over positions that are currently masked; and the integral over `$t$` averages over all masking levels.
+
+**What it computes:** For each masking level `$t$`, mask the clean sequence at rate `$t$`, feed the masked sequence to the model, compute the cross-entropy loss only on the masked positions (the clean positions are trivially predictable), and weight the loss by `$1/t$`. The `$1/t$` weighting gives more importance to early denoising steps (when few tokens are masked and each prediction is harder) than late steps (when most tokens are already revealed). The integral over `$t$` from 0 to 1 is approximated by sampling a random `$t$` per training example.
+
+**Why this form:** The ELBO for absorbing-state diffusion simplifies dramatically compared to general discrete diffusion models (D3PM, CTMC). The `$1/t$` weighting emerges from the derivative of the log-likelihood bound and has been shown by MDLM and RADD to be the correct importance weighting for this noise process. The key practical consequence is that training reduces to standard masked language modeling (like BERT) but with continuous noise levels rather than a fixed masking rate — the model learns to denoise from any level of corruption.
+
+##### The Reverse Generation Process (with $\tau$-leaping)
+
+During inference, we start from pure noise (`$t=1$`, all tokens masked) and iteratively denoise to `$t=0$` (all tokens clean). The exact reverse process would unmask one token at a time, which is impractically slow. Instead, MDMs use a `$\tau$`-leaping approximation that allows multiple tokens to be unmasked in a single step, jumping from noise level `$t$` to an earlier level `$s < t$`.
+
+The approximate reverse transition for each position `$i$` is:
+
+$$q_{s|t}(x^i_s | x_t) = \begin{cases} 1, & x^i_t \neq [\text{MASK}], x^i_s = x^i_t \\ \frac{s}{t}, & x^i_t = [\text{MASK}], x^i_s = [\text{MASK}] \\ \frac{t-s}{t} q_{0|t}(x^i_s | x_t), & x^i_t = [\text{MASK}], x^i_s \neq [\text{MASK}] \end{cases}$$
+
+where `$q_{0|t}(x^i_s | x_t)$` is the model's prediction for what token should fill position `$i$` given the current partially masked sequence `$x_t$`.
+
+**What it computes:** For each position `$i$`, three cases:
+1. If the token is already clean (not [MASK]), it stays clean — the model never re-masks tokens.
+2. If the token is currently [MASK], with probability `$s/t$` it remains [MASK] — this is the "do nothing" case.
+3. If the token is currently [MASK], with probability `$(t-s)/t$` it gets filled with a token sampled from the model's prediction distribution `$q_{0|t}(\cdot | x_t)$`.
+
+For conditional generation (producing a response to a prompt `$p$`), the model's prediction `$q_{0|t}(x^i_s | x_t, p)$` additionally conditions on the prompt tokens, which are never masked during generation.
+
+**Why this form:** The `$\tau$`-leaping approximation converts a sequential single-token process into a parallel multi-token process. The ratio `$(t-s)/t$` determines how many tokens to unmask: if `$s$` is close to `$t$` (small jump), few tokens change; if `$s$` is close to 0 (large jump), many tokens are filled. The noise schedule — the sequence of `$t$` values from 1 down to 0 — controls the speed-quality tradeoff: fewer steps (larger jumps) are faster but risk the conditional independence problem.
+
+##### The Conditional Independence Problem (The "Curse of Parallel Decoding")
+
+Here is the central difficulty. When the model unmasks two positions `$i$` and `$j$` simultaneously, it samples them independently:
+
+$$x^i_s \sim q_{0|t}(\cdot | x_t), \quad x^j_s \sim q_{0|t}(\cdot | x_t)$$
+
+This means the joint sampling distribution is the product of marginals:
+
+$$q(x^i_s, x^j_s | x_t) = q_{0|t}(x^i_s | x_t) \cdot q_{0|t}(x^j_s | x_t)$$
+
+But the true joint distribution — what we would get if we decoded sequentially, conditioning `$j$` on the already-decoded `$i$` — is:
+
+$$p(x^i_s, x^j_s | x_t) = q_{0|t}(x^i_s | x_t) \cdot q_{0|t}(x^j_s | x_t, x^i_s)$$
+
+The difference is the term `$q_{0|t}(x^j_s | x_t, x^i_s)$` versus `$q_{0|t}(x^j_s | x_t)$` — whether position `$j$`'s prediction conditions on what was sampled at position `$i$`. The independent-marginal approach ignores this dependency, which can produce incoherent token combinations. The paper's poker hand example illustrates the failure: "high" and "house" individually have high marginal probability, but their combination is nonsensical because the true conditional `$q_{0|t}(\text{house} | x_t, \text{high})$` is near zero (you say "high card," not "high house").
+
+**Why this matters for Fast-dLLM:** The entire confidence-aware parallel decoding strategy is designed to mitigate exactly this problem. When the model is *very confident* about a token (marginal probability near 1), the conditional distribution `$q_{0|t}(x^j_s | x_t, x^i_s)$` is close to the marginal `$q_{0|t}(x^j_s | x_t)$` — conditioning on a nearly-certain event doesn't change the distribution much. Theorem 1 makes this intuition precise with rigorous bounds.
+
+---
+
+#### 3.4.2 Approximate Key-Value Cache for Bidirectional Diffusion Models
+
+##### Why Standard KV Caching Fails
+
+In autoregressive transformers with causal attention, the key and value vectors for position `$i$` are computed as:
+
+$$K_i = W_K h_i, \quad V_i = W_V h_i$$
+
+where `$h_i$` is the hidden state at position `$i$`. Because of the causal mask, `$h_i$` depends *only* on positions `$1$` through `$i$`. When generating token `$i+1$`, nothing about positions `$1$` through `$i$` changes — they are fixed clean tokens. Therefore, `$K_{1:i}$` and `$V_{1:i}$` are invariant across generation steps and can be safely stored and reused.
+
+In Diffusion LLMs with bidirectional attention, this invariant does not hold. At denoising step `$t$`, position `$i$` attends to *all* other positions, including future positions that are currently [MASK]. At the next step `$t - \Delta t$`, some of those masked positions may have been filled in, changing `$h_i$` and therefore changing `$K_i$` and `$V_i$`. A cached `$K_i$` from step `$t$` becomes stale at step `$t - \Delta t$` — it was computed with different context. Standard exact KV caching is therefore impossible.
+
+##### The Empirical Justification: Cosine Similarity of KV Activations
+
+The paper's key enabling observation is empirical: although KV activations *should* change between steps, in practice they change *very little* between adjacent steps within a block. Figure 3 provides the quantitative evidence.
+
+For the **prompt block** (Figure 3a), the authors compute the cosine similarity between the key-value activations of prompt tokens at inference step `$i$` and step `$j$`, averaged over all prompt tokens. The resulting heatmap shows:
+- **Near the diagonal** (adjacent steps, `$i \approx j$`): cosine similarity is very high, in the range of 0.96–1.00, as indicated by the red boxed region. This means the prompt's KV representations barely change from one denoising step to the next.
+- **Far from the diagonal** (distant steps, `$|i - j|$` large): cosine similarity drops substantially, to 0.84–0.88. Over many steps, the KV activations do drift as context changes.
+
+For the **last block** (Figure 3b), representing suffix tokens (which are all [MASK] before their block is decoded), the same pattern holds: near-diagonal similarity is high (0.96–1.00), and far-from-diagonal similarity is lower.
+
+**What this means operationally:** Within a single block's decoding process (which spans a modest number of denoising steps), we can reuse cached KV activations from one step to the next with negligible error. The cache is "refreshed" at block boundaries — after completing a block, we recompute all KV activations with the newly filled tokens in place, keeping the approximation error bounded to the within-block range where the cosine similarity measurements show it is small.
+
+**Why this matters:** This observation transforms KV caching from "theoretically impossible" to "practically feasible with bounded error." It is not a proof that caching works — it is an empirical measurement that establishes *how much* error is introduced by caching at a given temporal distance, and that this error is small enough within a block to not harm generation quality (as validated by the accuracy results in Tables 1 and 2, which show cached versions within 1–2 points of the uncached baseline).
+
+##### Block-Wise Generation Scheme
+
+To exploit the local similarity of KV activations, Fast-dLLM organizes generation into blocks. The procedure is:
+
+1. **Partition the output sequence** into `$K$` blocks of size `$B$` (e.g., 32 tokens per block). The total output length `$L = K \times B$`. Hyperparameter `$B$` is explored in the range 4–256 (Figure 4), with `$B=32$` selected as the best accuracy-throughput tradeoff.
+
+2. **Process blocks left-to-right.** Block 0 is decoded first, then block 1, and so on. Within each block, the model runs `$T$` denoising steps (the number of steps is the same for each block and is controlled by the noise schedule).
+
+3. **Within a block, reuse caches.** After computing KV activations once (at the start of the block's decoding, or fused with the first decoding step), those cached values are reused for all subsequent denoising steps in the same block. The attention computation for masked positions still attends to the cached prefix keys and values.
+
+4. **After a block, update caches.** Once all tokens in block `$k$` are decoded (either because `$T$` steps elapsed or because all tokens were filled early), the model recomputes KV activations for the entire sequence up through block `$k$`. This update is fused with the last decoding step of the block, so it requires no additional forward passes — the only overhead relative to uncached decoding is the cache storage and lookup.
+
+**Why block-wise rather than step-wise:** If we cached at every denoising step (updating the cache after each individual step), the update cost would dominate — we would essentially be doing the full recomputation that caching is meant to avoid. By only updating at block boundaries, we amortize the cache recomputation cost over `$T$` steps. The block size `$B$` controls this tradeoff: smaller blocks mean more frequent updates (higher overhead, lower approximation error), while larger blocks mean fewer updates (lower overhead, higher approximation error as the cache becomes increasingly stale within the block).
+
+Figure 4 empirically validates this tradeoff: as block size increases from 4 to 256, throughput improves from roughly 6 tokens/second to 22 tokens/second, but accuracy on GSM8K (5-shot) drops noticeably for very large blocks. The paper selects block size 32 (3.3× speedup over no-cache, accuracy roughly matched to baseline) as the operating point.
+
+##### PrefixCache
+
+The simpler variant of the KV cache only stores prefix tokens — the prompt plus all previously decoded blocks. When decoding block `$k$`:
+
+- **Cached:** Keys and values for positions 0 through `$|p_0| + (k-1)B - 1$` (everything before the current block).
+- **Recomputed each step:** Keys, values, and queries for positions `$|p_0| + (k-1)B$` through `$|p_0| + kB - 1$` (the current block) and all suffix positions (future blocks, which are all [MASK]).
+- **Attention pattern:** Prefix tokens are attended to using cached KV; current-block tokens attend to the full sequence (prefix via cache, current block via fresh computation, suffix via fresh computation).
+
+The approximation error comes from the fact that the cached prefix KV was computed at step `$T$` of the *previous* block's decoding (or at initialization for the prompt), but it is being used at step `$t$` of the *current* block's decoding. The prefix representations have shifted slightly because they now attend to some filled tokens in the previous block that were previously [MASK]. However, the cosine similarity heatmap (Figure 3a) shows that this shift is small — the red boxed region, corresponding to step distances on the order of `$T$` (the block decoding steps), shows similarity still near 1.0.
+
+##### DualCache
+
+The DualCache extends PrefixCache by additionally caching the suffix tokens — positions in *future* blocks that are currently all [MASK]. The key observation (Figure 3b) is that suffix token KV activations are also highly similar across adjacent steps, because the suffix tokens are all [MASK] and their representations are dominated by the [MASK] embedding with only minor influence from the already-filled prefix tokens.
+
+With DualCache:
+- **Cached:** Both prefix KV (prompt + completed blocks) and suffix KV (future blocks of [MASK] tokens).
+- **Recomputed each step:** Only the current block's keys, values, and queries.
+- **Speedup mechanism:** Since both prefix and suffix attention are served from cache, the only fresh computation per denoising step is for the `$B$` tokens in the current block — a massive reduction from the full `$|p_0| + L$` tokens.
+
+Table 4 and Table 5 show DualCache achieves higher throughput than PrefixCache, particularly for long generation lengths. For LLaDA 8-shot with generation length 1024, DualCache reaches 19.3 tokens/second (27.6× speedup) versus PrefixCache's 13.0 tokens/second (18.6× speedup) — a 48% throughput improvement from additionally caching suffix tokens. Accuracy drops slightly (76.0% for DualCache vs. 75.7% for PrefixCache in the 8-shot, gen len 1024 setting), consistent with the larger approximation error from the suffix cache.
+
+**Why DualCache works for suffix tokens:** Before a block is decoded, all suffix positions are [MASK]. Their hidden states are computed from the [MASK] embedding plus attention over the prefix and other suffix tokens. Since suffix tokens attend to the same prefix and other [MASK] tokens regardless of denoising step (as long as we're not decoding the suffix yet), their representations are stable. The only thing that changes suffix representations is the gradual filling of the current block, which affects suffix tokens only through the attention mechanism — but the cosine similarity measurements (Figure 3b) show this effect is small within a block's decoding window.
+
+##### Cache Overhead and Fused Updates
+
+A critical implementation detail: cache updates are **fused with decoding steps**, not performed separately. When the model completes block `$k$`, the final forward pass that produces predictions for the last denoising step *also* computes the fresh KV caches for all tokens up through block `$k$`. This means the paper's statement "compared to not using caching, there is no additional computational overhead" (Section 3.2) refers to the fact that the KV recomputation would have happened anyway as part of the forward pass — caching just means we *store* those results rather than discarding them and recomputing them later.
+
+The actual computational savings come from subsequent steps within the same block: after the cache is initialized (or updated at the block boundary), step `$t+1$` through step `$T$` can skip the KV computation for the cached positions entirely, only computing fresh KV for the `$B$` positions in the current block.
+
+---
+
+#### 3.4.3 Confidence-Aware Parallel Decoding
+
+##### The Core Idea
+
+At each denoising step, the model produces a probability distribution over the vocabulary for every masked token. Rather than unmasking *all* masked tokens simultaneously (which would maximize parallelism but suffer from the conditional independence problem) or unmasking exactly one token (which avoids the problem but is slow), Fast-dLLM unmasking a *subset* of masked tokens — specifically, those whose prediction confidence is high enough that the conditional independence approximation is safe.
+
+The confidence of a masked token at position `$i$` is defined as:
+
+$$c_i = \max_{v \in \mathcal{V}} p_\theta(x^i = v | x_t)$$
+
+i.e., the maximum probability assigned to any single vocabulary token. If the model assigns probability 0.97 to "card" and spreads the remaining 0.03 across other tokens, confidence is 0.97. If the model is uncertain (e.g., 0.3 for "card", 0.3 for "hand", 0.4 for "flush"), confidence is 0.4.
+
+**Why maximum probability rather than entropy or other uncertainty measures:** Maximum probability has a direct connection to the theoretical bounds in Theorem 1. The theorem's condition involves `$\epsilon$`, which is the probability of *error* — i.e., `$1 - c_i$`. Using max probability gives a natural `$\epsilon_i = 1 - c_i$`, directly plugging into the theorem's guarantees. Entropy would provide a measure of uncertainty that doesn't directly translate to the `$\epsilon$` bound framework.
+
+##### Theorem 1: Formal Justification
+
+The paper proves a formal result that characterizes when independent-marginal (product of marginals) decoding is equivalent to true joint-distribution decoding. The setup:
+
+- Let `$X = (X_{i_1}, \ldots, X_{i_n})$` be the vector of `$n$` tokens to predict at positions `$i_1, \ldots, i_n$`.
+- Let `$p(X | E)$` be the model's true joint conditional distribution over these `$n$` tokens given evidence `$E$` (prompt + previously decoded tokens).
+- Let `$p_j(X_{i_j} | E)$` be the marginal distribution for position `$i_j$`.
+- Let `$q(X | E) = \prod_{j=1}^n p_j(X_{i_j} | E)$` be the product-of-marginals distribution that parallel decoding actually samples from.
+- Suppose there exists a candidate sequence `$x^* = (x_{i_1}, \ldots, x_{i_n})$` such that for each position `$j$`, the model's marginal confidence in `$x_{i_j}$` exceeds `$1 - \epsilon$`: `$p_j(X_{i_j} = x_{i_j} | E) > 1 - \epsilon$` for some `$\epsilon > 0$`.
+
+**Part 1: Greedy Equivalence Condition.** If `$(n + 1)\epsilon \leq 1$` (equivalently, `$\epsilon \leq \frac{1}{n+1}$`), then:
+
+$$\arg\max_z p(z | E) = \arg\max_z q(z | E) = x^*$$
+
+**What this means:** Greedy decoding under the product-of-marginals `$q$` (which is what parallel decoding does) produces exactly the same most probable sequence as greedy decoding under the true joint `$p$` (which is what sequential decoding would do). In other words, if each individual token prediction is confident enough, decoding them all in parallel with independent marginals doesn't change the argmax compared to the true joint.
+
+The bound is **tight**: if `$\epsilon > \frac{1}{n+1}$`, the paper constructs a counterexample (in the proof) where `$\arg\max_z p(z | E) \neq x^*$` even though the marginal condition holds, meaning parallel greedy decoding would make a different choice than sequential greedy decoding.
+
+**Why `$\frac{1}{n+1}$`:** The proof uses the Bonferroni inequality: `$p(x^* | E) \geq 1 - \sum_{j=1}^n \epsilon_j > 1 - n\epsilon$`. For any other sequence `$z \neq x^*$`, `$p(z | E) < \epsilon$`. The condition `$1 - n\epsilon \geq \epsilon$` ensures `$p(x^* | E) > p(z | E)$` for all `$z \neq x^*$`, making `$x^*$` the unique argmax. This simplifies to `$(n+1)\epsilon \leq 1$`. The counterexample for tightness allocates `$\frac{1}{n+1} + \text{small}$` probability to each of the `$n$` sequences that differ from `$x^*$` in exactly one position, making their individual probabilities exceed `$p(x^* | E)$` when the bound is violated.
+
+**Part 2: Distance Bounds.** Even when the greedy equivalence may not hold exactly, the theorem bounds how far `$q$` can be from `$p$`:
+
+- **Total Variation Distance:** `$D_{TV}(p, q) < \frac{3n-1}{2} \epsilon$`
+- **Forward KL Divergence:** `$D_{KL}(p \| q) < (n-1)(H_b(\epsilon) + \epsilon \ln(|\mathcal{V}| - 1))$`
+
+where `$H_b(\epsilon) = -\epsilon \ln \epsilon - (1-\epsilon) \ln(1-\epsilon)$` is the binary entropy function, and `$|\mathcal{V}|$` is the vocabulary size.
+
+**What these bounds mean:** The total variation bound says the probability mass that `$p$` and `$q$` disagree on is at most `$\frac{3n-1}{2}\epsilon$`. The KL bound says the information loss from using `$q$` instead of `$p$` grows linearly with `$n$` (the number of tokens decoded in parallel) and with the per-token error `$\epsilon$`. Both bounds confirm the intuition: smaller `$\epsilon$` (higher confidence) and smaller `$n$` (fewer tokens decoded in parallel) make the approximation better.
+
+**Why these specific distance measures:** Total variation is the standard measure for bounding the difference in any event probability between two distributions — it captures the worst-case probability that sampling from `$q$` produces a different outcome than sampling from `$p$`. KL divergence captures the information-theoretic cost: how many extra bits are needed to encode samples from `$p$` if we assume they come from `$q$`.
+
+##### From Theorem to Practice: Threshold Strategy
+
+The threshold strategy directly applies the intuition from Theorem 1. At each denoising step:
+
+1. **Compute confidences:** For every masked position `$i$` in the current block, compute `$c_i = \max_v p_\theta(x^i = v | x_t)$`.
+
+2. **Select by threshold:** Unmask all positions where `$c_i \geq \tau$`, where `$\tau \in [0.5, 1.0]$` is a hyperparameter (selected as 0.9 in the main experiments).
+
+3. **Progress guarantee:** If no position's confidence exceeds `$\tau$`, unmask the single position with the highest confidence. This prevents infinite loops and ensures the block eventually finishes.
+
+**Why a fixed threshold rather than dynamically computing the `$(n+1)\epsilon$` bound:** The threshold strategy trades off theoretical precision for simplicity. A fixed `$\tau = 0.9$` means `$\epsilon \leq 0.1$` per token. With `$n$` tokens satisfying this, the `$(n+1)\epsilon \leq (n+1) \times 0.1$` condition may or may not hold depending on `$n$`. At `$\tau = 0.9$`, if the model decodes 9 tokens in parallel (a typical number from Figure 5a), we have `$(9+1) \times 0.1 = 1$`, right at the boundary of the theorem's guarantee. The threshold `$\tau$` effectively controls `$\epsilon$` indirectly.
+
+Figure 5 shows the empirical behavior: at `$\tau = 0.7$`, the model decodes ~7 tokens/step on average with NFE ~9 but accuracy drops to ~68%; at `$\tau = 0.9$`, it decodes ~3.25 tokens/step with NFE ~20 but accuracy recovers to ~78% (near the 1-token/step baseline). The paper selects `$\tau = 0.9$` as the operating point where accuracy matches the baseline while still providing substantial parallelism.
+
+##### From Theorem to Practice: Factor Strategy
+
+The factor strategy more directly operationalizes the `$(n+1)\epsilon < f$` condition from Theorem 1. At each step:
+
+1. **Sort confidences:** Sort the confidences `$c_i$` of all masked positions in descending order: `$c_{(1)} \geq c_{(2)} \geq \ldots \geq c_{(m)}$`.
+
+2. **Find largest safe set:** Find the largest `$n$` such that `$(n+1)(1 - c_{(n)}) < f$`, where `$f$` is a hyperparameter (the "decoding factor").
+
+3. **Unmask top-`$n$`:** Unmask the `$n$` most confident positions. If no `$n$` satisfies the condition (i.e., even `$n=1$` fails), unmask only `$c_{(1)}$`.
+
+**What the condition `$(n+1)(1 - c_{(n)}) < f$` means:** The term `$1 - c_{(n)}$` is `$\epsilon$` — the error probability of the `$n$`-th most confident token. The condition checks whether `$(n+1)\epsilon$` is below the factor `$f$`. At `$f = 1$`, this is exactly the theorem's bound `$(n+1)\epsilon \leq 1$`. At `$f < 1$`, it's a stricter condition — requiring higher confidence or fewer tokens. At `$f > 1$`, it's looser — allowing more parallelism at the cost of potentially violating the theoretical guarantee.
+
+**Why factor-based over threshold-based:** The factor strategy adapts to the *distribution* of confidences at each step. If the model is very confident about many tokens (e.g., `$c_{(1)} = 0.99$`, `$c_{(2)} = 0.98$`, ...), the factor strategy can decode many in parallel because `$(n+1)(1 - c_{(n)})$` stays small even for relatively large `$n$`. If confidences drop sharply after the top few tokens, the factor strategy automatically limits parallelism to stay within the safe bound. A fixed threshold doesn't consider how many tokens satisfy it — it might decode too many when marginal confidences are borderline, or too few when they're uniformly high.
+
+Table 11 compares threshold and factor strategies: factor achieves 1.4–1.5× higher throughput with only 1–3% accuracy reduction. For GSM8K (5-shot, 256 tokens), factor reaches 78.5 tokens/sec at 77.5% accuracy vs. threshold's 54.4 tokens/sec at 78.5% accuracy.
+
+Figure 8 shows the factor sweep: as `$f$` increases from 0.7 to 1.9, the average tokens per step grows from ~3.8 to ~5.7, inference steps decrease from ~120 to ~80, and accuracy drops from ~78% to ~72%. The selected `$f$` value (marked in red) achieves the best accuracy-throughput tradeoff.
+
+##### Why This Approach Is "Training-Free"
+
+Both strategies use only the model's existing output probabilities — the `$\max_v p_\theta(x^i = v | x_t)$` value that is computed as a byproduct of the forward pass. No auxiliary confidence estimator is trained, no architectural modifications are needed, and no additional forward passes are required. The entire mechanism is:
+
+```python
+confidences = logits.softmax(dim=-1).max(dim=-1).values  # already computed
+mask = (confidences >= threshold) & is_masked
+tokens_to_decode = mask.nonzero()
+```
+
+This makes Fast-dLLM immediately applicable to any existing MDM checkpoint without retraining, fine-tuning, or even modifying the model weights — it is purely an inference-time change to the sampling loop.
+
+---
+
+#### 3.4.4 The Integrated Algorithm
+
+Algorithm 1 in the paper describes how KV caching and confidence-aware parallel decoding compose in the full Fast-dLLM pipeline. The key design decisions in the integration:
+
+##### Block Size and Denoising Steps per Block
+
+The block size `$B$` (hyperparameter, selected as 32) determines how many tokens are in each block. The number of denoising steps per block `$T$` is determined by the model's noise schedule — it's the number of `$\tau$`-leaping steps needed to go from all-masked to all-decoded within the block. With confidence-aware parallel decoding, blocks often finish early (before `$T$` steps) because high-confidence tokens are unmasked aggressively, accelerating the per-block decoding further.
+
+**Why 32:** Figure 4 shows this is the inflection point where throughput gains from larger blocks begin to plateau while accuracy remains stable. Smaller blocks (4–16) have higher accuracy but lower throughput due to frequent cache updates. Larger blocks (64–256) have higher throughput but begin to show accuracy degradation from increased cache staleness.
+
+##### Cache Initialization (Fused with First Decoding Step)
+
+The algorithm initializes the KV cache at the very beginning:
+
+```
+x = [prompt; [MASK], ..., [MASK]]
+Initialize KV Cache (single or dual) for x (fuse with decoding)
+```
+
+This means the first forward pass both decodes the first block and computes/stores the KV caches for the prompt (and suffix, if DualCache). There is no separate "prefill" phase with additional computational cost — the cache initialization is amortized into the first decoding step.
+
+##### Per-Block Loop Structure
+
+For each block `$k$`:
+
+1. **Determine block boundaries:** `$s = |p_0| + (k-1)B$` (start), `$e = |p_0| + kB$` (end).
+
+2. **Denoising loop:** For `$t = 1$` to `$T$`:
+   - **Cache reuse:** Run the model forward using cached KV for all positions outside `$[s, e)$` (prefix + suffix). Only compute fresh attention for the current block's positions.
+   - **Confidence scoring:** For each masked position `$i \in [s, e)$`, compute `$c_i = \max_v p_\theta(x^i = v | \cdot)$`.
+   - **Selection:** Apply threshold or factor strategy to select which positions to unmask.
+   - **Unmasking:** Set the selected positions to their argmax tokens.
+   - **Early termination:** If all positions in `$[s, e)$` are now unmasked, break out of the denoising loop.
+
+3. **Cache update:** After completing the block (either via early termination or exhausting `$T$` steps), recompute KV caches for the prefix (all positions up through `$e-1$`). If DualCache, also recompute suffix caches. This update is fused with the last decoding step.
+
+**Why this order:** The cache update happens *after* the block is fully decoded, not after each step. This means that during the block's decoding, the cached KV representations from the *previous* block's final state are reused. The cosine similarity measurements (Figure 3) show that KV activations change little enough over the `$T$` steps of a block that this reuse is safe. The update at the block boundary resets the cache to the true current state before starting the next block, preventing approximation error from accumulating across blocks.
+
+##### DualCache for Suffix Tokens
+
+With DualCache enabled, the suffix positions (blocks `$k+1$` through `$K$`, all currently [MASK]) are also cached. During block `$k$`'s decoding, the suffix KV cache — computed at the previous block's completion — is reused. The justification is Figure 3b: suffix token KV activations are even more stable than prefix activations because suffix tokens are all [MASK] and haven't changed.
+
+##### Interaction Between Caching and Parallel Decoding
+
+The two mechanisms are synergistic but independent. Caching reduces the per-step computational cost regardless of how many tokens are decoded per step. Parallel decoding reduces the number of steps needed regardless of whether caching is used. Their combination means:
+- **Fewer steps** (from parallel decoding) × **cheaper steps** (from caching) = multiplicative speedup.
+
+The per-step cost savings from caching depend on the total sequence length: with PrefixCache, the per-step attention cost is proportional to the number of *uncached* positions (current block + suffix), which for long sequences with large suffix is still substantial. With DualCache, the per-step cost is proportional only to the block size `$B$`, making the cost nearly independent of total sequence length — hence the dramatic speedups from DualCache at gen length 1024 (27.6× vs. 18.6× for PrefixCache alone, Table 4).
+
+##### Hyperparameter Summary
+
+From the paper's experimental sections:
+
+| Hyperparameter | Role | Range Explored | Selected Value |
+|---|---|---|---|
+| Cache block size `$B$` | Number of tokens per block | 4, 8, 16, 32, 64, 128, 256 | 32 |
+| Confidence threshold `$\tau$` | Min confidence to unmask (threshold strategy) | 0.5–1.0 | 0.9 |
+| Decoding factor `$f$` | Bound for $(n+1)\epsilon < f$ (factor strategy) | 0.7–1.9 | ~1.0 (from figure) |
+| Denoising steps `$T$` | Steps per block | Determined by noise schedule | Model-dependent |
+| Number of blocks `$K$` | `$\lceil L / B \rceil$` | Derived | Derived |
+| Cache mode | PrefixCache vs. DualCache | Binary choice | DualCache for max speed |
+| Strategy | Threshold vs. factor | Binary choice | Factor for best tradeoff |
+
+The paper's claim of being "training-free" means none of these hyperparameters require model retraining — they are purely inference-time configuration choices that can be swept independently per deployment scenario.
+
+## 4. Key Insights and Innovations
+
+### Innovation 1: Empirical Justification Turns an "Impossible" Optimization Into an "Approximately Safe" One — KV Caching for Bidirectional Attention
+
+The conventional wisdom is clear and theoretically correct: KV caching requires causal attention, because keys and values must be invariant across generation steps. Bidirectional attention — where every token attends to every other token, including future ones — means that when a masked token gets filled in, it changes the attention context for *all* tokens, not just those to its right. Therefore, any cached KV activation computed before that fill-in becomes stale. The field treated KV caching as structurally incompatible with Diffusion LLMs, and prior work (like LLaDA's original implementation) simply accepted that the full attention matrix must be recomputed at every denoising step.
+
+Fast-dLLM's conceptual move is to reframe the question from "is KV caching theoretically exact?" to "is KV caching approximately safe, and under what conditions?" This is not just a pragmatic dodge — it's a diagnostic advance. The cosine similarity heatmaps in Figure 3 are *measurements* of how much error caching introduces at different temporal distances, not a proof that it works. The paper does not claim KV activations are invariant; it *measures* how much they change (cosine similarity drops from near 1.0 to ~0.84 over many steps) and then designs the block-wise scheme to keep the temporal distance small enough that the similarity stays in the red-boxed region (>0.96).
+
+What makes this distinctive is that it converts a binary design constraint (KV caching is impossible for bidirectional transformers) into a **continuous engineering tradeoff** (block size determines how much approximation error you accept in exchange for speedup, and this error is empirically quantifiable). Figure 4 makes this tradeoff operational: you can see the throughput-accuracy curve as a function of block size and choose your operating point. Block Diffusion (Arriola et al., 2025) proposed block-wise generation but did not provide the empirical validation of *why* it works or push it to the DualCache extreme — Fast-dLLM's Figure 3 heatmaps are the evidence that turns "this might work" into "this works because activations change negligibly between adjacent steps."
+
+The DualCache extension deepens this insight by applying the same measurement logic to suffix tokens. Observing that suffix KV activations are also stable (Figure 3b) and then caching them is a natural extension, but it's non-obvious a priori — suffix tokens are nominally "future" positions with bidirectional attention, so one might expect their representations to be sensitive to the current block's decoding. The empirical finding that they aren't (because all suffix tokens are [MASK] and their representations are dominated by the mask embedding plus stable prefix attention) unlocks additional speedup without additional model modification.
+
+**Significance beyond raw performance:** This reframing from "impossible" to "approximately safe" is likely to influence how future work on efficient diffusion model inference approaches the caching problem. Rather than seeking architectural changes to make caching exact (e.g., switching to causal attention, which would sacrifice bidirectional context), researchers can follow the Fast-dLLM template: measure activation stability, design a scheme that bounds temporal distance, and empirically validate that the resulting approximation error doesn't hurt output quality at the chosen operating point.
+
+**Tie to evidence:** Figure 3 provides the foundational measurement; Figure 4 shows the block-size tradeoff is real and tunable; Tables 1 and 2 show that cached variants match uncached accuracy within 1–2 points across four benchmarks, confirming the approximation is safe at the selected block size.
+
+---
+
+### Innovation 2: A Formal Criterion for When Parallel Decoding Is Safe — Theorem 1 as a Conceptual Bridge
+
+The paper's second conceptual contribution is to provide what the field lacked: a **quantitative condition under which the conditional independence assumption of parallel decoding is harmless**. Prior to Fast-dLLM, the relationship between independent-marginal sampling and true joint-distribution sampling in MDMs was understood qualitatively: parallel decoding ignores token dependencies, so it degrades quality, and the degradation gets worse as more tokens are decoded simultaneously. LLaDA's approach — select the top-K most confident tokens per step — was a heuristic that acknowledged confidence matters but didn't specify *how much* confidence is enough or how the number of tokens and confidence level interact.
+
+Theorem 1 provides a formal answer. The condition (n+1)ε ≤ 1 (where ε is an upper bound on 1 minus confidence) is a worst-case guarantee: if every token among the n being decoded has confidence > 1−ε, and (n+1)ε ≤ 1 holds, then greedy decoding under the product of marginals produces exactly the same argmax as greedy decoding under the true joint distribution. The tightness proof — that ε > 1/(n+1) admits counterexamples where the argmaxes differ — means this bound is not conservative; it's the exact threshold where guarantees break down in the worst case.
+
+What makes this distinctive as an idea is that it **unifies two previously separate design choices** — how many tokens to decode per step and what confidence threshold to use — into a single constraint. A fixed-top-K strategy (like LLaDA's) decouples these: it chooses n first, then decodes the n most confident tokens regardless of whether those confidences are high enough for the joint to be well-approximated. A fixed-threshold strategy chooses ε first, then decodes however many tokens satisfy it, which might be zero (requiring a progress guarantee). The factor-based strategy — find the largest n satisfying (n+1)(1−c₍ₙ₎) < f — directly operationalizes the theorem's bound, making the tradeoff between parallelism (n) and safety (ε) explicit and adaptive per step.
+
+**Comparison to prior work:** The field's prior approaches to parallel decoding quality fall into two categories. One category accepts quality degradation as inevitable and tries to recover it through auxiliary mechanisms — energy-based models to rerank candidates (Xu et al., 2024), or copula-based methods to explicitly model joint distributions (Liu et al., 2024). These add complexity (auxiliary models, additional training). The other category uses simple heuristics (fixed-top-K, fixed temperature) that work in some regimes but fail unpredictably in others. Theorem 1 carves a third path: **the model's own confidence scores already contain the information needed to decide when parallel decoding is safe**, and the safety condition has a clean mathematical form that doesn't require auxiliary models or additional training.
+
+The distance bounds (total variation, KL divergence) provide additional conceptual value by quantifying how *fast* the approximation degrades as ε increases or n grows. The KL bound D_KL(p‖q) < (n−1)(H_b(ε) + ε ln(|V|−1)) shows the information loss grows linearly with n — decoding twice as many tokens in parallel roughly doubles the approximation cost. This gives practitioners a way to reason about the speed-quality tradeoff quantitatively rather than through trial and error.
+
+**Significance beyond raw performance:** Theorem 1 provides a conceptual vocabulary for discussing parallel decoding safety that the field previously lacked. Rather than saying "parallel decoding sometimes hurts quality," one can now say "the approximation error is bounded by (3n−1)ε/2 in total variation, and greedy equivalence holds when (n+1)ε ≤ 1." This enables principled design of adaptive strategies (like the factor method) and provides a target for future work: build models whose confidence estimates are better calibrated so that the ε values are accurate, or develop decoding strategies that explicitly bound the (n+1)ε product rather than using fixed thresholds.
+
+**Tie to evidence:** Figure 5 shows the threshold strategy empirically tracks the theory: higher thresholds (lower ε, fewer tokens per step) preserve accuracy; lower thresholds (higher ε, more tokens per step) increase speed but degrade quality. Figure 8 shows the factor strategy produces a continuous accuracy-throughput curve parameterized by f, with the selected operating point achieving near-baseline accuracy. Table 11 confirms that the factor strategy achieves higher throughput than the threshold strategy, consistent with its adaptive selection of n per step.
+
+---
+
+### Innovation 3: Demonstration That Diffusion LLMs Can Match AR Model Throughput Without Architectural Changes
+
+The paper makes an important architectural point that is easy to overlook: **neither of Fast-dLLM's techniques modifies the model architecture or requires retraining**. The KV Cache is a purely inference-time change to how attention activations are stored and reused. The confidence-aware parallel decoding uses the model's existing output probabilities. This is not just an engineering convenience — it's a statement about what the models are already capable of if inference is implemented properly.
+
+The significance of this finding is best appreciated against the backdrop of two competing narratives about Diffusion LLMs. The pessimistic narrative says: these models are structurally slow because of bidirectional attention; they need KV caching but can't have it; they can decode in parallel but quality collapses when they try; therefore, they will always lag behind AR models in practical throughput. The optimistic-but-expensive narrative says: we need better architectures (maybe hybrid causal-bidirectional attention), or auxiliary models for dependency modeling, or specialized hardware kernels. Fast-dLLM's position is a third option: **the models, as currently architected and trained, are already capable of much higher throughput — the bottleneck is in the inference pipeline, not the model design**.
+
+This is a fundamentally different diagnosis of the problem. If the issue were that Diffusion LLMs need causal attention for caching, the fix would require retraining with a modified architecture. If the issue were that confidence scores aren't reliable enough for safe parallel decoding, the fix would require training a confidence estimator. By showing that neither is necessary — that existing bidirectional models have stable enough KV activations for approximate caching and reliable enough confidence scores for thresholded parallel decoding — the paper reframes the throughput gap as an **inference engineering gap**, not a modeling gap.
+
+**Why this matters for the broader diffusion LLM research agenda:** If the open-source community had accepted the pessimistic narrative, research effort would shift toward fundamentally new architectures or toward accepting slower inference as inevitable. Fast-dLLM's results argue instead that effort should go into better inference infrastructure — better caching strategies, better confidence calibration, better noise schedules optimized for parallel decoding. The paper's 27.6× speedup on LLaDA (Figure 1c) demonstrates how much latent efficiency is recoverable from the same model weights through inference-time changes alone.
+
+**Comparison to commercial systems:** Mercury and Gemini Diffusion achieve high throughput through undisclosed methods. Fast-dLLM demonstrates comparable acceleration with fully open methods, making the efficiency gains reproducible and auditable. This is conceptually significant because it establishes that the throughput gap between open and closed diffusion LLMs is not due to model quality differences — it's due to inference implementation, and the open-source community now has a recipe for closing it.
+
+**Caveat:** The paper's own throughput analysis (Appendix C.5, Figure 9) acknowledges a persistent limitation: at large batch sizes, LLaDA with PrefixCache still lags behind LLaMA (an AR model), because diffusion models remain compute-bound rather than memory-bound at scale. This is an inherent architectural difference that caching cannot fully close — it only narrows the gap. The innovation is not "Diffusion LLMs are now faster than AR models" but rather "the throughput gap is much smaller than previously thought, and in some regimes (small batch sizes, long sequences), Diffusion LLMs are competitive."
+
+**Tie to evidence:** Figure 1(a) shows that Fast-dLLM roughly matches LLaMA-3-8B's throughput at a single batch size while preserving accuracy. Figure 1(c) shows the end-to-end generation time dropping from 266 seconds to 12 seconds on a 1024-token generation. Tables 1 and 2 show these speedups generalize across two model families (LLaDA and Dream) and four benchmarks with minimal accuracy loss.
+
+## 5. Experimental Analysis
+
+### Evaluation Methodology
+
+- **Dataset.** The paper evaluates on four widely-used benchmarks: GSM8K (grade-school math word problems, 5-shot prompting), MATH (competition mathematics, 4-shot prompting), HumanEval (code generation, 0-shot), and MBPP (code generation, 3-shot). These span math reasoning and program synthesis tasks with different generation length requirements. For multimodal evaluation, the paper additionally uses MathVista and MathVerse, which require solving math problems grounded in complex visual scenes (Table 3).
+
+- **Base model(s).** Two families of open-source masked diffusion models are used: **LLaDA**[21] (including its instruction-tuned variant LLaDA-Instruct and the enhanced LLaDA-1.5[44]) at approximately 7B parameters, and **Dream**[36] (Dream-Base, also ~7B parameters). A multimodal variant **LLaDA-V**[38] is evaluated separately on vision-language tasks. The choice of these models is deliberate: they are representative open-source Diffusion LLMs whose inference speed "often lags behind autoregressive models" (Section 1), making them appropriate testbeds for demonstrating acceleration. LLaMA-3-8B and Qwen2.5-7B appear as autoregressive reference points in Figure 1(a) for throughput comparison.
+
+- **Metrics.** The primary metrics are **accuracy** (exact match or equivalent task-specific scoring, varying by benchmark — e.g., GSM8K uses final answer matching, HumanEval uses pass@1 on test cases) and **decoding throughput** measured in tokens per second. Throughput is "calculated over the full sequence until the end-of-sequence (`<eos>`) token is reached" and "reflects true end-to-end decoding speed" (Section 4.1). For the confidence-aware parallel decoding analysis, additional metrics include **number of inference steps** (NFE — number of function evaluations, i.e., forward passes) and **average number of tokens decoded per step**. Speedup is reported multiplicatively relative to the vanilla (uncached, non-parallel) baseline of the same model, noted in blue/orange in result tables.
+
+- **Baselines.** The paper compares against several configurations:
+  - **Vanilla LLaDA / Dream:** The unaccelerated baseline using standard MDM generation with full attention recomputation at every step and sequential (1 token per step) decoding. This is the "1×" reference in all speedup calculations.
+  - **Fixed token-per-step parallel decoding:** The approach implicitly attributed to LLaDA's original implementation, where exactly 2, 4, or 8 most-confident tokens are decoded per step (Figure 5, dashed lines). This represents the naive parallel decoding strategy prior work used.
+  - **Half Steps:** For LLaDA-V, a baseline that halves the number of denoising steps (Table 3), representing a simpler acceleration approach that doesn't use caching or confidence thresholds.
+  - **LLaMA-3-8B and Qwen2.5-7B:** Autoregressive models included only in Figure 1(a) as throughput reference points, not as accuracy baselines since they are different model families trained on different data.
+
+  Ablation baselines within the paper's own method space include: +Cache alone (PrefixCache without parallel decoding), +Parallel alone (confidence-aware decoding without KV cache), and the four combinations tested in Tables 1 and 2.
+
+- **Generation budget / compute accounting.** The "generation budget" in Diffusion LLMs is not measured in discrete tokens generated (as in autoregressive models) but in **number of denoising steps** (NFE) and **sequence length**. The paper evaluates at two maximum generation lengths (256 and 512 tokens) across most benchmarks, with additional 1024-token experiments for analyzing long-generation scaling (Tables 4 and 5). Throughput is the unifying metric for efficiency comparisons, as it naturally accounts for both the number of forward passes and the per-pass computational cost. For fair comparison, all methods use the same base model, same noise schedule, and same hardware (single NVIDIA A100 80GB GPU, batch size 1 unless otherwise noted). The cost of cache initialization is "fused with decoding" and adds no separate forward passes (Section 3.2).
+
+- **Cross-validation / statistical protocol.** The paper does not employ cross-validation or statistical significance testing. All results are reported as single-run evaluations on the standard test sets of each benchmark using the `lm-eval` library for consistency (Section 4.1). The confidence interval analysis in Figure 7 (Appendix C.4) provides some indication of variance in token counts across decoding steps but not for end-to-end accuracy metrics. Hyperparameter selection (block size, confidence threshold) is done through grid search on the same benchmarks, meaning the selected values may be tuned to these specific datasets.
+
+### Main Quantitative Results
+
+#### Overall Performance: Combined Caching and Parallel Decoding
+
+The headline result appears in Figure 1 and is broken down in Tables 1 and 2: **Fast-dLLM (KV Cache + Parallel Decoding combined) achieves 5.3× to 8.1× throughput improvement over vanilla LLaDA on GSM8K while maintaining accuracy within ~1 point of the baseline.** Figure 1(a) visualizes this on the throughput-accuracy plane: vanilla LLaDA sits at ~79.3% accuracy and 6.7 tokens/second; LLaDA+KVCache+Parallel reaches ~78.5% accuracy at 54.4 tokens/second (8.1× speedup). Dream+KVCache+Parallel achieves ~74.8% at 48.2 tokens/second versus Dream's baseline of ~75.0% at 9.1 tokens/second (5.3× speedup).
+
+The combined speedup is multiplicative, not additive. Figure 1(b) decomposes this: on LLaDA, Cache alone provides 3.2× speedup (6.7 → 21.2 tokens/sec), Parallel alone provides 2.5× (6.7 → 16.5 tokens/sec), and the combination provides 8.1× (6.7 → 54.4 tokens/sec). The combined gain (8.1×) exceeds the product of individual gains (3.2 × 2.5 = 8.0) only slightly, confirming the mechanisms are largely independent — caching reduces per-step cost while parallel decoding reduces the number of steps, and their benefits compound.
+
+The speedups **grow with generation length**. Table 5 reports that for LLaDA 8-shot with DualCache, throughput increases from 4.9 tokens/sec (no cache, gen len 256) to 46.3 tokens/sec (DualCache, gen len 256, 9.4× speedup), to 36.4 tokens/sec at gen len 512 (15.8×), to 19.3 tokens/sec at gen len 1024 (27.6×). The absolute throughput drops with longer generations (because more tokens must be generated), but the *speedup factor* relative to the uncached baseline at the same generation length increases substantially — longer sequences provide more opportunities for cache reuse, and the fixed overhead of cache initialization is amortized over more tokens.
+
+For the **LLaDA-V multimodal model** on MathVista and MathVerse (Table 3), Fast-dLLM achieves 9.9× and 8.5× speedup respectively with minimal accuracy loss. On MathVista, accuracy drops from 59.2% (Full Steps) to 56.6% (Fast-dLLM) while throughput jumps from 2.84 to 28.2 tokens/sec. On MathVerse, accuracy actually increases slightly from 28.5% to 28.6%, demonstrating that the approximation error from caching and parallel decoding can be negligible even for complex vision-language tasks.
+
+**Critically, accuracy preservation is near-perfect across most configurations.** Table 1 (LLaDA-Instruct, GSM8K gen len 256): baseline 79.3% → Fast-dLLM 78.5% (−0.8). Table 1 (LLaDA-Instruct, MATH gen len 256): baseline 33.5% → Fast-dLLM 33.2% (−0.3). Table 2 (Dream-Base, MBPP gen len 512): baseline 55.6% → Fast-dLLM 55.2% (−0.4). The largest accuracy drops are on MBPP with LLaDA (29.4% → 28.2%, −1.2) and MATH with Dream (38.4% → 37.6%, −0.8), both well within typical benchmark variance. Some configurations even show accuracy *improvements*: HumanEval with LLaDA gen len 256 improves from 41.5% to 43.3% (+1.8), and Dream-Base HumanEval gen len 256 improves from 49.4% to 54.3% (+4.9). The authors don't explain these improvements in detail, but they may reflect that more aggressive decoding (fewer steps with parallel token generation) can sometimes escape local optima in the denoising trajectory that sequential decoding gets stuck in.
+
+#### KV Cache Alone: PrefixCache vs. DualCache
+
+Tables 4 and 5 provide the most informative comparison of the caching variants under controlled conditions.
+
+**DualCache consistently outperforms PrefixCache in throughput** while maintaining comparable or slightly lower accuracy. Table 4: for LLaDA 8-shot gen len 1024, PrefixCache achieves 13.0 tokens/sec (18.6× speedup) at 75.7% accuracy, while DualCache achieves 19.3 tokens/sec (27.6× speedup) at 76.0% accuracy — DualCache is 48% faster and *more accurate* in this configuration. Table 5 shows the same pattern across generation lengths: for 8-shot gen len 512, DualCache reaches 36.4 tokens/sec (15.8×) vs. PrefixCache's 32.0 tokens/sec (13.9×).
+
+The accuracy gap between DualCache and PrefixCache is not monotonic and typically small. In Table 4 (5-shot, gen len 1024), DualCache scores 74.7% vs. PrefixCache's 75.2% (−0.5). In Table 4 (8-shot, gen len 1024), DualCache scores 76.0% vs. PrefixCache's 75.7% (+0.3). The differences are within 0.5 percentage points, indicating that the additional approximation error from suffix caching is essentially harmless at the selected block size.
+
+**The benefit of caching increases with both prefill length and generation length.** Table 4: increasing prefill from 5-shot to 8-shot raises DualCache speedup from 19.6× to 27.6× at gen len 1024. Table 5: for 8-shot, DualCache speedup grows from 9.4× (gen len 256) to 15.8× (gen len 512) to 27.6× (gen len 1024). This is consistent with the caching mechanism: longer prefixes (more few-shot examples) mean more tokens whose KV activations can be reused, and longer generations mean the cache is reused across more blocks, amortizing the initialization and update overhead.
+
+#### Confidence-Aware Parallel Decoding: Threshold vs. Fixed-K Strategies
+
+Figure 5 provides the central comparison of parallel decoding strategies on GSM8K (5-shot). The threshold strategy (red line) is evaluated at τ values from 0.5 to 1.0, with the number above each point indicating the average tokens decoded per step.
+
+**Dynamic thresholding consistently outperforms fixed-K decoding.** At comparable tokens-per-step (the red point at τ=0.9 decoding ~3.25 tokens/step), the threshold strategy achieves ~78% accuracy while the fixed-2 baseline achieves ~75% and fixed-4 baseline achieves ~68%. At comparable accuracy (~75%), the threshold strategy decodes ~6 tokens/step (τ≈0.7) while the fixed-2 baseline decodes exactly 2 tokens/step — the threshold approach provides ~3× more parallelism for the same quality. Figure 5(c) visualizes this on the accuracy-vs-tokens-per-step plane: the threshold curve lies above both the fixed-K points and the non-parallel baseline at most operating points, indicating better accuracy-efficiency tradeoffs.
+
+**The threshold controls a smooth speed-accuracy tradeoff.** At τ=0.5 (most aggressive), ~7 tokens are decoded per step with ~68% accuracy and ~9 inference steps. At τ=1.0 (most conservative, equivalent to sequential decoding), 1 token per step with ~78.5% accuracy and ~265 steps. Between these extremes, the tradeoff is monotonic: higher thresholds increase accuracy and step count while reducing tokens per step. The paper's selected τ=0.9 balances at ~3.25 tokens/step, ~78% accuracy, and ~20 steps — nearly matching the sequential baseline's accuracy with ~13× fewer steps.
+
+#### Factor Strategy: Adaptive Parallelism with Theoretical Grounding
+
+Figure 8 and Table 11 compare the factor-based strategy (using the (n+1)(1−c₍ₙ₎) < f criterion from Theorem 1) against threshold-based and fixed-K approaches on GSM8K (5-shot).
+
+**Factor decoding achieves 1.4–1.5× higher throughput than threshold decoding with only 1–3% accuracy reduction.** Table 11 quantifies this: on GSM8K gen len 256, threshold achieves 78.5% accuracy at 54.4 tokens/sec (8.1× speedup), while factor achieves 77.5% accuracy at 78.5 tokens/sec (11.7× speedup). On MATH gen len 256, threshold achieves 33.2% accuracy at 51.7 tokens/sec, factor achieves 32.0% accuracy at 78.3 tokens/sec. The accuracy cost is 1.0–1.2 percentage points on GSM8K and 1.2 points on MATH — small relative to the 40–50% throughput improvement.
+
+**The factor f controls a smooth tradeoff analogous to the threshold τ.** Figure 8(a): as f increases from 0.7 to 1.9, average tokens per step grows from ~3.8 to ~5.7 (numbers annotated above points), and accuracy declines from ~78% to ~72%. Figure 8(b): inference steps decrease correspondingly from ~120 to ~80. Figure 8(c): the accuracy-vs-tokens-per-step curve for the factor strategy is comparable to but slightly below the threshold strategy's curve from Figure 5(c), consistent with the higher throughput and slightly lower accuracy observed in Table 11.
+
+**The factor strategy naturally adapts parallelism to per-step confidence distributions.** This is its key advantage over fixed thresholding: when many tokens have very high confidence (e.g., c=0.99), (n+1)(1−c) stays small even for large n, allowing aggressive parallelism. When confidences drop sharply after the top few tokens, the factor condition automatically limits n to keep the error bound small. This adaptivity explains why factor decoding achieves higher throughput than threshold decoding: it doesn't arbitrarily prevent decoding a token with confidence just below the threshold when the cumulative bound is still small, nor does it blindly decode a token with confidence just above the threshold when n is already large and the bound is approaching violation.
+
+#### Long-Generation Scaling
+
+Table 5 demonstrates that **speedups improve dramatically with generation length**, particularly for DualCache. LLaDA 8-shot:
+- Gen len 256: DualCache 46.3 tokens/sec (9.4× speedup), accuracy 76.9% vs. baseline 77.6% (−0.7)
+- Gen len 512: DualCache 36.4 tokens/sec (15.8× speedup), accuracy 75.4% vs. baseline 78.9% (−3.5)
+- Gen len 1024: DualCache 19.3 tokens/sec (27.6× speedup), accuracy 76.0% vs. baseline 77.3% (−1.3)
+
+The accuracy drop at gen len 512 (3.5 percentage points) is notably larger than at 256 or 1024, and the paper doesn't explain this non-monotonicity. It may be an artifact of the specific hyperparameter settings (block size 32, threshold 0.9) being less optimal for intermediate generation lengths, or genuine variance from the single-run evaluation.
+
+Figure 1(c) illustrates the end-to-end impact on a single generation: vanilla LLaDA takes 266 seconds to generate a 1024-token response at 0.7 tokens/sec (8-shot GSM8K). Fast-dLLM with parallel decoding alone reduces this to 26 seconds (9.3 tokens/sec, 13.3× speedup). Adding PrefixCache further reduces to 20 seconds (13.0 tokens/sec, 18.6×). Adding DualCache achieves 12 seconds (19.3 tokens/sec, 27.6× speedup). These are wall-clock times on a single A100, making the practical deployment benefit tangible.
+
+#### LLaDA-1.5: Enhanced Model Retains Speedup Benefits
+
+Table 12 compares Fast-dLLM applied to LLaDA-Instruct versus LLaDA-1.5, the enhanced variant with "variance-reduced preference optimization" [44]. LLaDA-1.5 with Fast-dLLM achieves strictly higher accuracy than LLaDA-Instruct with Fast-dLLM across GSM8K settings: 80.7% vs. 78.5% at gen len 256, and 80.4% vs. 77.2% at gen len 512. Throughput is comparable or slightly higher: 59.4 vs. 54.1 tokens/sec at gen len 256, and 33.0 vs. 35.3 tokens/sec at gen len 512. On MATH, accuracy is comparable (32.6% vs. 33.2% at gen len 256; 35.1% vs. 36.0% at gen len 512). The important finding is that **the speedup techniques transfer without modification to a model variant trained with a different optimization procedure**, supporting the claim that Fast-dLLM is broadly applicable to masked diffusion architectures.
+
+### Ablation Studies and Robustness Checks
+
+**Cache block size (Figure 4):** Evaluated on LLaDA with PrefixCache on GSM8K (5-shot, gen len 256). Block sizes 4, 8, 16, 32, 64, 128, 256 are tested. Smaller blocks (4–8) maintain accuracy near the no-cache baseline (~78–80%) but achieve modest throughput (6–10 tokens/sec, ~1–1.5× speedup). Larger blocks (128–256) achieve higher throughput (up to ~22 tokens/sec, ~3.3× speedup) but accuracy degrades 3–5 points. Block size 32 is selected as the optimal point (~21 tokens/sec, accuracy ~79.5%, roughly matching baseline). The throughput curve is roughly logarithmic — large gains from 4→16, diminishing returns from 64→256 — while the accuracy curve is flat until block size 64 then drops. This confirms the design intuition: within-block cache staleness is tolerable up to ~32 tokens, beyond which the approximation error meaningfully impacts generation quality.
+
+**Confidence threshold sweep (Figure 5):** Already discussed in detail above as a main result. The key ablation takeaway: τ=0.9 is selected as the operating point where accuracy matches the non-parallel baseline while still providing 3.25× tokens per step (reducing NFE from ~265 to ~20). The smooth monotonic tradeoff validates that the threshold is a reliable knob for the speed-accuracy balance.
+
+**Factor value sweep (Figure 8):** Parallel to the threshold sweep. Factor values 0.7, 1.0, 1.3, 1.6, 1.9 are tested. Higher factors increase tokens per step (3.8 → 5.7) and decrease inference steps (120 → 80). Accuracy declines from ~78% to ~72% as f increases. The selected operating point (f ≈ 1.0 from the paper's description) achieves ~77.5% accuracy and ~78 tokens/sec (Table 11), representing a deliberate choice to accept ~1 point accuracy reduction for 1.4× higher throughput compared to threshold decoding.
+
+**Threshold vs. Factor strategy comparison (Table 11):** This is a head-to-head ablation across GSM8K and MATH at two generation lengths. Factor decoding consistently achieves 1.4–1.5× higher throughput with 0.5–1.2% lower accuracy. The throughput advantage is larger at longer generation lengths (1.4× at gen len 256, 1.33× at gen len 512 for GSM8K), suggesting that factor-based adaptive parallelism is particularly beneficial when more tokens need to be generated.
+
+**PrefixCache vs. DualCache (Tables 4, 5):** Already discussed as a main result. DualCache provides 30–50% additional throughput over PrefixCache with negligible accuracy difference. Table 5 shows this advantage grows with generation length: at gen len 256, DualCache (46.3 tokens/sec) is actually slightly slower than PrefixCache (49.2 tokens/sec) — an anomaly the paper doesn't explain, possibly related to caching overhead for suffix tokens when the sequence is relatively short. At gen len 512, DualCache is 14% faster (36.4 vs. 32.0). At gen len 1024, DualCache is 48% faster (19.3 vs. 13.0). This pattern suggests DualCache's overhead (storing and managing suffix KV) is only worthwhile when the suffix constitutes a large fraction of the total sequence.
+
+**Prefill length (5-shot vs. 8-shot) impact (Table 4):** Increasing the number of few-shot examples from 5 to 8 increases speedups for both caching variants. PrefixCache speedup at gen len 1024: 13.1× (5-shot) vs. 18.6× (8-shot). DualCache: 19.6× (5-shot) vs. 27.6× (8-shot). The additional prompt tokens increase the absolute amount of computation saved by caching, since more prefix KV activations are reused rather than recomputed. Accuracy between 5-shot and 8-shot is not directly comparable (different prompts), but the trends within each shot setting are consistent.
+
+**LLaDA-V block length sensitivity (Table 9) and refresh interval (Table 10):** The multimodal variant shows high sensitivity to block size — accuracy on MathVista drops from 59.7% at block length 96 to 51.2% at block length 4 (a 8.5-point drop). This is substantially more sensitivity than the text-only models showed (Figure 4), suggesting that vision-conditioned representations drift more with context changes. The paper adapts by keeping block length at 96 and using a refresh-based strategy (Table 10): updating the cache every r steps rather than per-block. As refresh interval increases from 2 to 32, throughput grows from 15.9 to 28.2 tokens/sec while accuracy drops from 59.2% to 56.6%. The paper selects refresh interval 32, accepting 2.6 accuracy points of degradation for 1.8× throughput gain relative to interval 2.
+
+**Case studies (Appendix B, Tables 6–8):** Qualitative examples show that cache variants (Original, PrefixCache, DualCache), block sizes (8, 16, 32), and threshold values (0.7, 0.8, 0.9) all produce factually correct, well-structured responses to a simple arithmetic prompt. NFE varies (9 at τ=0.7, 12 at τ=0.8, 20 at τ=0.9) but answer quality is constant, supporting the claim that the threshold mainly controls efficiency, not correctness, for straightforward problems. The LLaDA-V case study (Figure 6) shows Fast-dLLM producing a description of comparable fidelity to the baseline in 6.8 seconds vs. 63.0 seconds (9.3× speedup), with the Fast-dLLM output notably including additional visual details (e.g., "gray shingles on its roof").
+
+**Throughput scaling with batch size (Appendix C.5, Figure 9):** This is an important robustness check for deployment scenarios. PrefixCache provides consistent throughput improvement over vanilla LLaDA across batch sizes 1–32 and generation lengths 16–64. At batch size 1, gen len 64: PrefixCache achieves ~80 tokens/sec vs. LLaDA's ~20 tokens/sec (4×). At batch size 32, gen len 16: PrefixCache achieves ~211 tokens/sec vs. LLaDA's ~43 tokens/sec (4.9×). However, **LLaMA (AR model) overtakes PrefixCache at larger batch sizes**: LLaMA throughput scales nearly linearly with batch size (reaching ~550 tokens/sec at batch 32, gen len 16), while PrefixCache plateaus after batch 8. This reflects the compute-bound nature of diffusion models — their per-step computation doesn't benefit from batching as much as memory-bound AR models do at small batch, and they remain compute-bound rather than transitioning to memory-bound as batch size increases. The paper acknowledges this limitation: "as batch sizes grow, PrefixCache struggles to match LLaMA, which transitions from memory-bound to compute-bound performance" (Section C.5).
+
+**Parallel token count dynamics (Appendix C.4, Figure 7):** Tracking the average number of tokens decoded in parallel at each step reveals a characteristic pattern: parallelism increases during early-to-middle steps (peaking around steps 30–60), then declines toward the end. The peak average is ~6 tokens per step with a 95% confidence interval spanning roughly 3 to 10. The decline at late steps is expected: as most tokens are already decoded, the remaining masked positions are few, and the model may be less confident about these final tokens. The widening confidence interval in later steps reflects variable sequence lengths across samples. This pattern validates that the factor strategy naturally increases parallelism when the model is confident (middle of denoising) and becomes conservative at boundaries.
+
+**Negative result: LLaDA-V sensitivity to block size (Table 9):** The dramatic accuracy drop (59.7% → 50.7%) when reducing block size from 96 to 8 on MathVista is an important negative finding. It indicates that the block-wise caching approximation is not universally safe — for multimodal models with vision conditioning, the KV activations may drift more substantially within blocks, making small-block caching harmful. The paper's workaround (fixed block length 96 with refresh-based updates, Table 10) recovers speedup but still incurs accuracy loss (59.2% → 56.6%), suggesting the approximation is fundamentally costlier for vision-language tasks.
+
+### Critical Assessment
+
+**Claim 1: "Up to 27.6× throughput improvement with minimal accuracy loss."**
+
+This claim is genuinely supported by the experimental data but requires careful qualification about what "minimal" means and under what conditions the 27.6× figure applies.
+
+The 27.6× figure specifically refers to LLaDA 8-shot, generation length 1024, using DualCache + parallel decoding, compared to the vanilla LLaDA baseline at the same settings (Table 4, Tables 1c). It is an end-to-end wall-clock measurement on a single A100 GPU. The corresponding accuracy change is from 77.3% (vanilla) to 76.0% (Fast-dLLM) — a 1.3 percentage point drop. This qualifies as "minimal" by most standards for a 27.6× speedup.
+
+However, the 27.6× figure is cherry-picked from the most favorable configuration — the longest generation length, the highest prefill length, and the DualCache variant. At shorter generation lengths, speedups are substantially smaller: 8.1× at gen len 256 (Table 1), 11.0× at gen len 512 (Table 1) for LLaDA; 5.3× at gen len 256, 5.6× at gen len 512 for Dream (Table 2). The paper does not report a central tendency (e.g., geometric mean speedup across all configurations), instead highlighting the maximum. A reader should understand the 27.6× as an upper bound achieved in the most cache-friendly regime, not a typical speedup.
+
+The "minimal accuracy loss" claim holds across most configurations, with typical drops of 0–2 percentage points (Tables 1 and 2). However, there are outliers: LLaDA on MBPP gen len 512 drops from 14.8% to 13.8% (a full point, but 14.8% is already very low accuracy); Dream on MATH gen len 256 drops from 38.4% to 37.6% (−0.8). The accuracy measurements are single-run, with no confidence intervals reported, so it's impossible to distinguish systematic degradation from benchmark variance.
+
+**Claim 2: "Block-wise approximate KV Cache enables cache reuse with negligible performance drop."**
+
+Strongly supported for the text-only models at the selected block size of 32. Figure 3 provides direct evidence of high KV activation similarity (>0.96) between adjacent steps within a block. Figure 4 shows accuracy is flat from block sizes 4–32 and only drops at 64+. Tables 1 and 2 consistently show +Cache variants within 1–2 points of vanilla baselines.
+
+The claim weakens for the multimodal LLaDA-V, where block size sensitivity is much higher (Table 9) and the refresh-based workaround still incurs a 2.6-point accuracy drop (Table 10). The paper's explanation — that LLaDA-V has "strong sensitivity to block size" — correctly identifies the limitation but doesn't provide a mechanistic reason. This suggests the KV activation similarity property (Figure 3) may not hold to the same degree for vision-conditioned models, and the paper does not report cosine similarity heatmaps for LLaDA-V to verify this.
+
+An experiment that would strengthen this claim: measuring the actual attention output differences (not just KV cosine similarity) between cached and uncached forward passes, quantifying the approximation error in logit space rather than relying on end-to-end accuracy. This would provide a more direct validation that the caching error is negligible, especially for the DualCache suffix approximation.
+
+**Claim 3: "Confidence-aware parallel decoding mitigates dependency violations and maintains generation quality."**
+
+Supported with both theoretical and empirical evidence, with important caveats about what the experiments actually demonstrate.
+
+Theorem 1 provides a worst-case condition — (n+1)ε ≤ 1 — for greedy equivalence. The paper then operationalizes this through threshold and factor strategies and shows they outperform fixed-K baselines (Figures 5 and 8). This is genuine empirical validation of the theoretical insight: adaptive, confidence-gated decoding preserves quality better than fixed-K decoding at comparable parallelism.
+
+However, the experiments don't directly test Theorem 1's specific predictions. The paper never measures whether the (n+1)ε ≤ 1 condition actually holds during generation, nor whether violations correlate with specific errors. The factor strategy uses (n+1)(1−c₍ₙ₎) < f as a heuristic selection criterion, but the paper doesn't report how often the condition is satisfied vs. violated for the selected factor value, or whether accuracy degradation at higher f values corresponds to specific violations of the theorem's condition. The theory provides a clean framework, but the experimental validation is at the level of end-to-end accuracy comparisons rather than mechanistic verification.
+
+The "poker hands" example (Section 2.2) is compelling for motivating the problem, but the paper provides no empirical evidence that confidence-aware decoding actually prevents such dependency violations in practice. A targeted experiment — e.g., measuring coherence of multi-word phrases (collocations, named entities, idiomatic expressions) under different decoding strategies — would directly test whether the mechanism is working as claimed, rather than relying on aggregate benchmark accuracy which conflates many failure modes.
+
+**Claim 4: "State-of-the-art acceleration results on multiple open-source Diffusion LLMs and benchmarks."**
+
+The claim of breadth across models and benchmarks is well-supported: results span LLaDA, Dream, LLaDA-1.5, and LLaDA-V across GSM8K, MATH, HumanEval, MBPP, MathVista, and MathVerse. This is a genuine strength — the techniques are not tuned to a single model or task.
+
+However, the claim of "state-of-the-art" is harder to evaluate because the paper's baselines are its own ablations (vanilla LLaDA, fixed-K decoding, Half Steps) rather than comparisons against other published acceleration methods for Diffusion LLMs. The paper cites Block Diffusion [1] as prior work but doesn't implement or compare against it. There's no comparison against Mercury or Gemini Diffusion (which are closed-source and unavailable, making this understandable but still a limitation). The paper demonstrates that Fast-dLLM substantially accelerates open-source Diffusion LLMs, but whether it represents *state-of-the-art* relative to other published methods is not established through head-to-head comparison.
+
+**Missing experiments and potential weaknesses:**
+
+- **No comparison against Block Diffusion.** This is the most directly relevant prior work, also using block-wise generation with KV caching for diffusion models. The paper cites it but provides no empirical comparison, making it impossible to assess whether Fast-dLLM's specific contributions (cosine similarity validation, DualCache, confidence-aware decoding) improve over the Block Diffusion baseline.
+
+- **Single GPU, single batch size for most experiments.** The main results (Tables 1 and 2) use batch size 1. Appendix C.5 provides batch size scaling results but only for PrefixCache vs. LLaDA/LLaMA, not for the combined Fast-dLLM with parallel decoding. Production deployments typically use larger batch sizes, where Figure 9 shows the throughput advantage over AR models diminishes. The practical deployment benefit may be smaller in batched settings.
+
+- **No statistical significance or variance reporting.** All accuracy numbers are single-run on standard test sets. Given test set sizes (GSM8K: 1319 test examples; MATH: 5000; HumanEval: 164; MBPP: ~500), variance could be non-trivial, especially for the smaller benchmarks. The 1–2 point accuracy differences between Fast-dLLM and baselines may or may not be statistically significant.
+
+- **Hyperparameter tuning is benchmark-specific.** The paper selects block size 32 and threshold 0.9 based on GSM8K performance (Figures 4 and 5) and then uses these values across all benchmarks. Table 12 shows that LLaDA-1.5 at gen len 512 achieves only 33.0 tokens/sec with Fast-dLLM vs. 35.3 for LLaDA — suggesting the same hyperparameters may be suboptimal for different model variants. A per-benchmark or per-model hyperparameter sweep would be more rigorous, though the paper's claim of general applicability is strengthened by using fixed hyperparameters.
+
+- **Limited sequence length diversity.** The paper evaluates at 256, 512, and 1024 tokens. Real-world generation tasks span a much wider range — short responses (10–50 tokens) for chatbots, very long responses (2000+ tokens) for document generation. The caching benefits are demonstrated to grow with length, but the parallel decoding benefits may diminish for very short sequences (fewer opportunities for multi-token decoding). The paper doesn't evaluate this lower bound.
+
+- **The $14\times$ larger model comparison from the executive summary.** Wait — the executive summary doesn't mention this. Let me carefully check: the executive summary does *not* reference a 14× larger model comparison. That was from the reference example paper. The Fast-dLLM executive summary compares against AR models (LLaMA-3-8B, Qwen2.5-7B) in Figure 1(a) for throughput context only, not as an accuracy-matched FLOPs comparison. Fast-dLLM's contribution is squarely about inference-time acceleration of existing Diffusion LLMs, not about the pretraining-vs-inference tradeoff. I should not import claims from the example paper.
+
+**What the experiments do and don't demonstrate:**
+
+The experiments convincingly demonstrate that Fast-dLLM reduces the wall-clock generation time of open-source Diffusion LLMs by 5–27× depending on configuration, while largely preserving benchmark accuracy. This is a genuine practical contribution: the same model weights, producing approximately the same quality outputs, in a fraction of the time.
+
+What the experiments do *not* demonstrate is that Diffusion LLMs with Fast-dLLM are competitive with AR models in all deployment-relevant metrics. Figure 9 shows that AR models retain an advantage in batched throughput. The paper doesn't evaluate latency percentiles (P50, P95, P99), which matter for interactive applications. The paper doesn't evaluate memory consumption of the DualCache (storing KV caches for both prefix and suffix tokens could be memory-intensive for long sequences). The paper doesn't evaluate whether the approximate nature of KV caching introduces subtle distribution shifts that manifest as qualitative degradation not captured by benchmark metrics (coherence, factual consistency, stylistic consistency across long generations).
+
+The most important caveat is that **the evaluated models start from a low absolute throughput** — vanilla LLaDA achieves 6.7 tokens/sec at gen len 256 and 0.7 tokens/sec at gen len 1024. A 27.6× speedup brings this to 19.3 tokens/sec, which is good but not transformative compared to AR models running at 50+ tokens/sec. Fast-dLLM makes Diffusion LLMs *viable* but does not make them *faster* than AR models in absolute terms. The paper's claim to "close the performance gap with autoregressive models" (Section 1) should be understood as narrowing a very wide gap, not eliminating it — Figure 1(a) shows Fast-dLLM roughly matching but not exceeding AR throughput at batch size 1.
+
+## 6. Limitations and Trade-offs
+
+### Limitation 1: The Difficulty Estimation Cost Is Unaccounted For in Reported Speedups
+
+**The assumption or constraint.** The cosine similarity measurements that justify the approximate KV Cache (Figure 3) and the block size hyperparameter selection (Figure 4) are based on offline profiling of KV activation stability. However, the paper provides no mechanism for *predicting in advance* what block size or cache strategy is safe for a given model on a given task. The block size of 32 and threshold of 0.9 are selected through grid search on GSM8K performance, and then applied uniformly across all benchmarks and models. The paper acknowledges this implicitly by providing the block size sweep (Figure 4) and threshold sweep (Figure 5) as guidance, but does not provide a method for selecting these hyperparameters without access to benchmark ground truth.
+
+**The consequence.** A practitioner deploying Fast-dLLM on a new Diffusion LLM or a new task domain has no principled way to choose block size, threshold, or factor value without running their own expensive hyperparameter sweep — which requires ground-truth labels to evaluate accuracy. The paper's guidance (block size 32, threshold 0.9) may transfer, but the LLaDA-V results (Table 9) demonstrate that optimal settings are model- and task-dependent: the multimodal model requires block size 96 (not 32) and still loses accuracy. For text-only tasks, Figure 4 shows that block size choice between 32 and 64 changes throughput by ~30%, so an uninformed choice can leave substantial efficiency on the table. The "training-free" nature of Fast-dLLM means it requires no model retraining, but it still requires labeled evaluation data for hyperparameter tuning — a different kind of cost that is not accounted for in the headline speedup numbers.
+
+**What evidence exists in the paper.** Figure 4 shows the accuracy-throughput tradeoff as a function of block size on GSM8K (5-shot), with accuracy flat until block 64 then dropping — but this curve is specific to LLaDA on this benchmark. Table 9 shows LLaDA-V on MathVista has dramatically different sensitivity (8.5-point accuracy drop from block length 96 to 4, versus the text-only model which barely moves from 4 to 32 in Figure 4). The paper does not provide cosine similarity heatmaps (Figure 3 equivalent) for LLaDA-V, Dream, or any model besides LLaDA-Instruct, so a practitioner cannot assess whether the KV activation stability property generalizes.
+
+**Mitigation status.** The paper does not address this limitation. There is no proposed method for zero-shot hyperparameter selection, no model-based predictor of safe block size from model architecture or scale, and no measurement of how transferable the selected hyperparameters are across models and tasks. The authors do not flag this as a limitation in Section 6. The practical implication is that deploying Fast-dLLM in a new setting requires either (a) running a labeled-data hyperparameter sweep, which may be expensive or impossible in domains without clean correctness signals, or (b) trusting the paper's selected values, which may be suboptimal or harmful for different architectures or modalities.
+
+---
+
+### Limitation 2: No Guarantee Against Subtle Distribution Shift or Qualitative Degradation
+
+**The assumption or constraint.** The paper evaluates quality exclusively through benchmark accuracy — exact match on GSM8K and MATH, pass@1 on HumanEval, and equivalent task-specific metrics on MBPP, MathVista, and MathVerse. These metrics measure whether the final answer is correct. They do not measure coherence, factual consistency, stylistic consistency, logical soundness of intermediate reasoning, or faithfulness to the prompt beyond the final answer. The approximate KV Cache introduces a *systematic distribution shift* in the model's internal representations — the cached KV activations are not exact, and this error propagates through the attention mechanism. Similarly, the confidence-aware parallel decoding samples from a product-of-marginals distribution $q$ that differs from the true joint $p$ by at most $\frac{3n-1}{2}\epsilon$ in total variation (Theorem 1, Part 2) — a bound that may be small but is nonzero.
+
+**The consequence.** Even when benchmark accuracy is preserved, Fast-dLLM could be producing generations that are *qualitatively different* from the baseline in ways that accuracy metrics don't capture. For example: a math solution might reach the correct final answer through a flawed reasoning chain that happens to produce the right number; a code generation might pass test cases but include an off-by-one error on edge cases not covered by the test suite; a long-form generation might drift in style or factual consistency over the course of the output due to accumulating approximation error. The paper's own case studies (Appendix B, Tables 6–8) show qualitatively identical outputs for a simple one-sentence arithmetic prompt, but this is the easiest possible case — a single reasoning step with a trivial answer. The paper provides no qualitative analysis of longer, more complex generations where approximation errors could compound.
+
+**What evidence exists in the paper.** Tables 1 and 2 show accuracy within 1–2 points of baseline across most configurations, and the case studies in Appendix B show near-identical outputs for a simple prompt. However, none of this rules out qualitative degradation. The paper does not: evaluate generations using LLM-as-judge (e.g., GPT-4 scoring coherence or helpfulness), conduct human evaluation studies, measure perplexity of generated text under the base model, or evaluate diversity or repetition metrics (e.g., distinct n-grams, self-BLEU). The LLaDA-V case study (Figure 6) is a single anecdotal example that demonstrates Fast-dLLM can produce comparable outputs faster, but one success does not establish systematic qualitative preservation.
+
+**Mitigation status.** The paper does not acknowledge this as a limitation and conducts no qualitative evaluation beyond the brief case studies in Appendix B. Theorem 1 provides a bound on distributional divergence ($D_{TV}(p, q) < \frac{3n-1}{2}\epsilon$) that quantifies *how much* the parallel decoding distribution can differ from the true joint, but the paper never measures whether the bound is tight in practice or whether the quality impact is perceptible to humans. The block-wise cache introduces additional unquantified approximation error not covered by Theorem 1. A practitioner deploying Fast-dLLM in a safety-critical setting (e.g., medical or legal text generation) has no evidence that the generation quality beyond final-answer correctness is preserved.
+
+---
+
+### Limitation 3: Verification Throughput Advantage Over AR Models Diminishes or Reverses at Production Batch Sizes
+
+**The assumption or constraint.** The paper's headline throughput comparisons (Figure 1(a), Tables 1–2, and the 27.6× speedup claim) are measured at batch size 1 on a single NVIDIA A100 GPU. This reflects a single-stream interactive generation scenario — one user, one query, one response at a time. However, many production deployments (batch inference pipelines, API serving) run at higher batch sizes to maximize hardware utilization and throughput.
+
+**The consequence.** At batch size 1, the paper shows that Fast-dLLM roughly matches LLaMA-3-8B's throughput (Figure 1(a), LLaDA+KVCache+Parallel at ~54 tokens/sec vs. LLaMA at ~55 tokens/sec). But as batch size increases, this parity breaks. The paper's own Appendix C.5 (Figure 9) reveals the problem: PrefixCache throughput plateaus after batch size 8, while LLaMA throughput scales nearly linearly from ~100 tokens/sec at batch 1 to ~550 tokens/sec at batch 32 (at gen len 16). The absolute gap at batch 32, gen len 16 is ~550 (LLaMA) vs. ~211 (PrefixCache) — a 2.6× throughput disadvantage. This is fundamental: "this limitation is inherent to diffusion-based LLMs, which are compute-bound by nature," as the paper states. Diffusion models must run multiple forward passes per token (multiple denoising steps), while AR models run one forward pass per token. Batching helps amortize memory access costs (which AR models benefit from when transitioning from memory-bound to compute-bound), but diffusion models are already compute-bound and gain less from batching.
+
+**What evidence exists in the paper.** Figure 9 in Appendix C.5 provides the direct evidence. The experiment sweeps batch sizes 1 to 32 and generation lengths 16, 32, and 64 for PrefixCache, LLaDA (no cache), and LLaMA. LLaMA's throughput scaling with batch size is steep and approximately linear; PrefixCache shows modest gains through batch 8 and then plateaus. The paper explicitly notes: "As the batch size increases, LLaMA shifts from being memory-bound to compute-bound, allowing it to achieve high absolute throughput at larger batch settings. ... as batch sizes grow, PrefixCache struggles to match LLaMA." This is presented as a general challenge for diffusion-based LLMs, not a flaw specific to Fast-dLLM, but it nevertheless bounds the practical advantage.
+
+**Mitigation status.** The paper acknowledges this limitation in Appendix C.5 with admirable transparency, but it is not mentioned in the main text (Sections 1–6). The main paper's claims (e.g., "closing the performance gap with autoregressive models" in Section 1) are qualified only by the batch-size-1 results. A practitioner reading only the main text would not know that the AR performance gap reopens at production batch sizes. The paper does not propose solutions — it frames this as an inherent architectural limitation of diffusion models, not something Fast-dLLM can fix. The implication is that Fast-dLLM makes Diffusion LLMs competitive for interactive single-stream use cases (chatbots, code assistants) but not for high-throughput batch processing (data labeling, synthetic data generation at scale).
+
+---
+
+### Limitation 4: Single-Model-Family Evaluation with No Evidence of Generalization to Other Diffusion Architectures or Scales
+
+**The assumption or constraint.** All experiments are conducted on two model families — LLaDA (and variants LLaDA-Instruct, LLaDA-1.5) and Dream — both of which are masked diffusion models at the ~7B parameter scale using bidirectional attention. The paper claims these models are "representative" and that Fast-dLLM provides "a practical and broadly applicable framework for accelerating masked diffusion-based language models" (Section 4.2). However, the specific mechanisms Fast-dLLM relies on — the stability of KV activations across denoising steps (Figure 3), the calibration of confidence scores for thresholding (Figures 5 and 8), and the empirical safety of the block-wise approximation (Figure 4) — may depend on architectural details, training procedures, model scale, or noise schedule design.
+
+**The consequence.** We do not know whether Fast-dLLM would work on:
+- **Different model scales** (e.g., 1B or 70B parameter diffusion models). Larger models may have different KV activation stability characteristics — their representations might change more (or less) between denoising steps. The computational savings from caching also scale differently: for a 70B model, the attention cost dominates more severely, making caching potentially more impactful, but the KV cache memory footprint also grows.
+- **Different diffusion formulations** (e.g., continuous-time discrete diffusion like SEDD, uniform noising instead of absorbing-state masking, or flow-matching approaches). The paper's cosine similarity measurements (Figure 3) are specific to the LLaDA masked diffusion training recipe. Different noise processes produce different denoising dynamics, which could affect KV activation stability and the safe block size.
+- **Different attention architectures.** LLaDA and Dream use standard bidirectional attention. If a diffusion model used sparse attention, sliding window attention, or hybrid causal-bidirectional patterns, the caching strategy would need to be redesigned — there would be no empirical evidence that Fast-dLLM's specific approach transfers.
+- **Models trained with different data or objectives.** The confidence calibration that underlies Theorem 1's practical applicability — the relationship between max softmax probability and actual correctness — is known to vary across models, training data distributions, and decoding temperatures. LLaDA's confidence estimates may be better or worse calibrated than other models, affecting the safe threshold and factor values.
+
+**What evidence exists in the paper.** The paper demonstrates transfer between two model families (LLaDA and Dream), which provides some evidence of generalizability within the masked diffusion paradigm. The LLaDA-1.5 results (Table 12) show that Fast-dLLM also works on an enhanced variant trained with a different optimization procedure. However, LLaDA and Dream are architecturally similar masked diffusion models of comparable scale (7B parameters). The paper evaluates no other model scale, no other diffusion paradigm, and no model from a different research group. The LLaDA-V results (Table 3) extend to multimodal generation but still share the same base architecture. The paper does not cite or compare against diffusion LLMs that use fundamentally different approaches (e.g., SEDD, D3PM-based models, or diffusion models with hybrid architectures).
+
+**Mitigation status.** The paper does not claim to have tested on other architectures or scales and does not discuss this as a limitation. The stated contribution is to accelerate *masked diffusion models*, and the evaluation covers the primary open-source instantiations of that class. A practitioner using a diffusion LLM from a different family — or training their own — would need to replicate the cosine similarity analysis (Figure 3) and block size sweep (Figure 4) to verify the approach transfers. The paper provides the methodology for doing so but no evidence that the transfer is automatic.
+
+---
+
+### Limitation 5: The Fundamental Speed-Quality Tension in Parallel Decoding Is Mitigated, Not Resolved
+
+**The assumption or constraint.** Theorem 1 establishes a condition — $(n+1)\epsilon \leq 1$ — under which greedy equivalence holds between the product-of-marginals and the true joint. But this is a *sufficient condition for greedy decoding*, not a guarantee that parallel decoding with sampling (which MDMs actually use, since the $\tau$-leaping reverse process samples from $q_{0|t}$ rather than taking the argmax) is harmless. More fundamentally, the theorem reveals an inherent tension: to decode $n$ tokens safely, you need $\epsilon \leq 1/(n+1)$, meaning per-token confidence must be at least $1 - 1/(n+1)$. For $n=3$, confidence must exceed 75%. For $n=9$, confidence must exceed 90%. For $n=99$, confidence must exceed 99%. This imposes a hard ceiling on achievable parallelism for any given confidence level — and confidence levels are bounded by the model's calibration quality.
+
+**The consequence.** The speedup from parallel decoding is fundamentally limited by how confident the model is in its predictions. On tasks or tokens where the model is uncertain (e.g., ambiguous word choices, creative generation, rare vocabulary), threshold-based or factor-based decoding will be forced to decode few tokens per step — potentially as few as 1, reverting to sequential decoding. The paper's reported average of ~3.25 tokens per step at $\tau=0.9$ (Figure 5) and ~4.4–5.7 tokens per step for factor decoding (Figure 8) represent *average* parallelism — but this average masks step-level variation. Figure 7 (Appendix C.4) shows the average parallel token count peaks around 6 tokens per step in mid-decoding but has wide confidence intervals (~3 to 10), and declines toward the end. This means some steps achieve high parallelism while others achieve almost none. The total speedup from parallel decoding is bounded by the harmonic mean of per-step token counts, weighted by the computational cost of each step.
+
+**What evidence exists in the paper.** Figure 5(b) quantifies this: at $\tau=0.9$, the model requires ~20 inference steps to generate a 256-token sequence, versus ~265 steps for sequential decoding — a 13.25× reduction in step count. But the per-step token count is only 3.25, meaning the throughput improvement from parallel decoding alone (without caching) is 2.5× (Figure 1b: LLaDA+Parallel achieves 16.5 tokens/sec vs. 6.7 baseline). The step count reduction (13.25×) is not fully realized as throughput improvement (2.5×) because each parallel step is computationally more expensive than a single-token step (the model must compute predictions for all masked positions, even if only a subset will be decoded). Figure 8 shows that increasing the factor $f$ to decode more tokens per step eventually hurts accuracy — at $f=1.9$, accuracy drops to ~72% (vs. ~78% baseline), indicating that the model is being forced to decode tokens for which the confidence condition is violated.
+
+**Mitigation status.** The paper develops both threshold and factor strategies to push parallelism as far as confidence allows, and the factor strategy in particular dynamically adapts $n$ to stay within the safe bound. But the paper does not propose methods to *improve* the model's confidence calibration — e.g., temperature scaling, confidence estimation training, or ensemble-based confidence measures. These would shift the fundamental tradeoff (higher confidence at the same accuracy allows more parallelism), but they are outside the scope of a "training-free" method. The paper also doesn't explore whether different noise schedules (finer-grained $\tau$-leaping steps) could increase per-step confidence by making the denoising increments smaller, trading more steps for more parallelism per step. The fundamental bound — $n \lesssim 1/\epsilon$ — cannot be circumvented; it can only be operated at more efficiently.
+
+---
+
+### Limitation 6: Memory Overhead of DualCache Is Not Quantified, Limiting Deployment Planning
+
+**The assumption or constraint.** DualCache stores key-value activations for both the prefix (prompt + completed blocks) and the suffix (future blocks of [MASK] tokens). For a generation of length $L$ with prompt length $P$, this means caching approximately $P + L$ tokens' worth of KV activations across all transformer layers. The memory cost scales with $(P + L) \times \text{num\_layers} \times \text{num\_heads} \times \text{head\_dim} \times 2$ (for keys and values) $\times$ precision (e.g., 2 bytes for FP16). For large $L$ (the paper evaluates up to $L=1024$) and models with many layers and heads (LLaDA-7B likely has 32 layers and 32 heads with dimension 128, yielding roughly $1024 \times 32 \times 32 \times 128 \times 2 \times 2 \approx 536$ MB for the KV cache alone, in addition to model weights and activations).
+
+**The consequence.** The DualCache variant, which provides the largest speedups (27.6× at gen len 1024), may be memory-prohibitive on GPUs with limited VRAM. The paper evaluates on an A100 80GB, which has ample memory for 7B models. But for deployment on smaller GPUs (e.g., A10 24GB, L40S 48GB, or consumer GPUs like RTX 4090 24GB), or for serving multiple concurrent requests, the KV cache memory footprint could be the binding constraint — limiting batch size, maximum generation length, or forcing a fallback to the slower PrefixCache (which only caches the prefix). Additionally, the suffix KV cache must be updated at block boundaries (recomputed from scratch), meaning the memory is allocated and rewritten frequently, which could create memory fragmentation or allocation overhead not captured in throughput measurements.
+
+**What evidence exists in the paper.** The paper provides no measurements of GPU memory consumption for any configuration — not for PrefixCache, not for DualCache, not for the baseline without caching. The throughput measurements (tokens/sec) do not report peak memory usage, memory bandwidth utilization, or cache memory footprint. The paper evaluates only on an A100 80GB (specified in Section 4.1 and Appendix C.5), and does not test on GPUs with less memory. The throughput comparison with LLaMA (Figure 9) at different batch sizes hints at memory constraints (LLaMA scales better with batch size, consistent with being memory-bound at small batch and transitioning to compute-bound), but without memory measurements, this is speculative.
+
+**Mitigation status.** The paper does not discuss memory overhead, does not report memory measurements, and does not mention this as a design consideration or limitation. A practitioner planning to deploy Fast-dLLM on hardware with less than 80GB of VRAM — or serving multiple concurrent requests — has no guidance on whether DualCache will fit in memory, whether PrefixCache is a safer choice, or what memory-throughput tradeoffs to expect. The paper also does not discuss potential optimizations like KV cache quantization (storing in INT8 or FP8), which are standard in AR model serving stacks but are not evaluated for Fast-dLLM's approximate cache.
+
+## 7. Implications and Future Directions
+- How this changes the landscape
+  - Demonstrates that diffusion LLMs can be inference-competitive with AR models when equipped with approximate KV caching and principled parallel decoding, without retraining (Figure 1; Tables 1–2).
+  - Provides a theoretical lens (Theorem 1) to decide when parallel decoding is safe, likely influencing decoding strategies beyond diffusion models.
+
+- Follow-up research enabled or suggested
+  - Adaptive scheduling: Learn block partitioning, threshold/factor, and refresh intervals online to maximize speed under accuracy constraints.
+  - Dependency-aware parallel decoding: Combine confidence thresholds with lightweight structures (e.g., constrained decoding graphs or small dependency predictors) to safely expand parallelism in dependent spans.
+  - Better cache approximations: Explore low-rank or learned cache updates within a block to further reduce refresh costs while keeping accuracy (building on KV similarity patterns in Figure 3).
+  - Training-time alignment: Fine-tune diffusion LLMs to increase per-token confidence calibration in high-dependency regions, directly boosting safe parallelism under the theorem’s regime.
+
+- Practical applications
+  - Latency-critical assistants in math and coding domains (GSM8K, MATH, HumanEval, MBPP) that prefer diffusion-style global reasoning but need fast responses.
+  - Multimodal reasoning systems (e.g., LLaDA-V on MathVista/MathVerse) where high-throughput VLM decoding is valuable for interactive use.
+  - Edge or cost-sensitive deployments: The training-free nature simplifies adoption—swap the decoding engine to Fast-dLLM to obtain large speedups.
+
+> Representative headline results:
+> - “Up to 27.6× end-to-end speedup” with long prefill and 1024-token generation while keeping accuracy within ≈1–2 points (Figure 1c; Tables 4–5).
+> - At 256 tokens on GSM8K (LLaDA), throughput rises from 6.7 to 54.4 tok/s (8.1×) with accuracy 79.3% → 78.5% (Table 1).
+> - Multimodal LLaDA-V on MathVista: 2.84 tok/s → 28.2 tok/s (9.9×) with accuracy 59.2% → 56.6% (Table 3).
+
+Overall, Fast-dLLM offers a clear, mechanism-based path to accelerate diffusion LLMs: cache what barely changes, and parallelize only when confidence is high enough to be theoretically safe.

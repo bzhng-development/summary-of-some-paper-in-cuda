@@ -1,0 +1,729 @@
+# Efficiently Scaling LLM Reasoning with Certaindex
+
+**ArXiv:** [2412.20993](https://arxiv.org/abs/2412.20993)
+
+## 🎯 Pitch
+
+This paper introduces Certaindex, an algorithm-agnostic, lightweight metric that detects when a large language model's (LLM) reasoning has stabilized, allowing early inference termination before unnecessary tokens are generated. By integrating Certaindex into the Dynasor serving system, the authors achieve up to 50% compute savings and more than triple online throughput without accuracy loss—addressing the growing inefficiencies and costs of LLM reasoning at production scale. This innovation makes LLM reasoning dramatically more efficient and paves the way for scalable, cost-effective real-world deployments.
+
+---
+
+## 1. Executive Summary
+
+This paper introduces **Certaindex**, an algorithm-agnostic metric that quantifies the evolving stability of intermediate answers during LLM reasoning, enabling dynamic early termination to reclaim wasted computation. Evaluated across Chain-of-Thought reasoning models (DeepSeek-R1, DeepSeek-distilled Qwen2.5 at 7B–32B) and structured reasoning algorithms (Self-Consistency, MCTS, REBASE) on benchmarks including MATH-500, AIME24, AMC23, GSM8K, and LiveCodeBench, Certaindex detects when an LLM has "settled" on an answer—operationalized through Probe-In-The-Middle (periodically extracting intermediate answers during CoT) and semantic entropy (measuring answer distribution convergence across parallel reasoning paths)—to trigger early exit without accuracy loss. Integrated into **Dynasor**, a reasoning-aware serving system, Certaindex-driven scheduling achieves up to 50% compute savings in batch inference and 3.3× higher throughput in online serving, establishing that test-time reasoning inefficiency can be substantially mitigated through lightweight certainty monitoring that exploits the model's own convergence signals rather than requiring model modification.
+
+## 2. Context and Motivation
+
+### The Core Problem: LLM Reasoning Is Systematically Token-Inefficient
+
+The central problem this paper addresses is straightforward to state but has far-reaching implications: **current LLM reasoning algorithms routinely generate far more tokens than necessary to reach their final answer, burning compute with no accuracy benefit.** This is not a marginal inefficiency—the paper presents quantitative evidence that reasoning models can consume 3× or more tokens than they actually need (Figure 2), and that in side-by-side comparisons, a reasoning model requires up to 4.5× more tokens than a traditional instruction-tuned model to achieve the same accuracy (Figure 1).
+
+This inefficiency is not an accident. It stems from a **structural mismatch** between how reasoning algorithms operate and how they *could* operate if they could detect when they've done enough work. Reasoning algorithms—whether external (Self-Consistency, MCTS, REBASE) or internalized (Chain-of-Thought models like DeepSeek-R1, Qwen-QWQ)—are designed to improve accuracy by allocating more test-time compute. The standard paradigm is: generate more reasoning steps, sample more solution paths, or explore more branches of a search tree, and aggregate the results. Critically, these algorithms lack any built-in mechanism to detect when further computation has stopped helping—when the answer has stabilized and additional tokens are merely wasting resources.
+
+The paper's central observation, which motivates the entire technical contribution, is that **LLMs exhibit measurable answer stabilization during reasoning**: intermediate answers, when probed periodically, tend to converge to a consistent value long before the model stops generating tokens. Figure 3 provides a concrete, annotated example using DeepSeek-distilled Qwen2.5-7B on a simple arithmetic problem. The model reaches the correct answer after approximately 300 tokens but continues reasoning for substantially longer, cycling through "completeness checks," "double-checking," "reassessment," "re-verification," and "confidence building"—all of which burn tokens without changing the answer. The paper terms this phenomenon **"self-doubt"** and demonstrates that it is not an isolated quirk but a systematic pattern observed across models, datasets, and reasoning tasks.
+
+### Why This Matters: Practical and Conceptual Significance
+
+The token inefficiency problem has concrete economic and environmental consequences that make it a first-order concern for LLM deployment:
+
+**Cost amplification.** LLM inference is typically priced per token (both input and output). A reasoning model that generates 3× the necessary tokens triples the cost of every query, regardless of whether those extra tokens improved the answer. For large-scale production deployments—think of an AI tutoring system answering millions of math questions per day, or a code generation assistant used by thousands of developers—a 3× token multiplier translates directly to a 3× infrastructure cost. The promise of test-time scaling (more compute = better answers) is economically sustainable only if the compute is allocated efficiently. The current reality is that a large fraction of that compute is pure waste.
+
+**Throughput constraints.** In online serving scenarios with latency requirements (e.g., interactive tutoring, real-time code assistants), the wasted tokens directly consume generation time. A request that generates 3× the necessary tokens takes 3× longer to complete, reducing the number of concurrent requests a system can handle within SLO (service-level objective) deadlines. The paper's online serving experiments (§4.2) quantify this concretely: Dynasor sustains 1.6–3.3× more requests at the same SLO attainment compared to existing systems (SGLang, Parrot), and can tighten latency SLOs by 1.3–4.7× at the same request rate. These gains come almost entirely from eliminating unnecessary token generation—the scheduler reclaims computational resources that were previously wasted on over-reasoning.
+
+**Environmental and energy costs.** The computational waste translates to energy consumption and carbon emissions. At deployment scale, reducing token generation by 50% (the paper's reported upper bound) halves the energy footprint of reasoning workloads. This is significant as reasoning models—which are among the most compute-intensive LLM applications—become more widely deployed.
+
+**A barrier to test-time scaling adoption.** The research community has invested heavily in test-time scaling algorithms (OpenAI-o3, DeepSeek-R1, Gemini 2.5 Pro all rely on extended reasoning), showing consistent accuracy improvements from additional compute. However, if that additional compute comes with massive inefficiency, the practical adoption of these methods will be limited by cost and latency concerns. Making test-time scaling *efficient* is thus a prerequisite for making it *viable* beyond research demonstrations. The paper addresses this head-on.
+
+**Conceptual significance: the missing feedback loop.** At a more abstract level, the paper identifies a missing architectural component in the reasoning ecosystem: a **feedback signal that connects reasoning progress to compute allocation.** Traditional LLM serving systems (SGLang, vLLM, TensorRT-LLM) treat each request as an independent unit with a fixed token budget. Reasoning algorithms operate within that budget, generating tokens until the budget is exhausted, then aggregating results. There is no mechanism for the reasoning process to signal "I'm done" and reclaim unused budget. This is a system-design gap, not just an algorithmic one, and it spans the entire stack from the reasoning algorithm down to the GPU scheduler.
+
+The paper's contribution—Certaindex as a lightweight, algorithm-agnostic certainty metric—fills this gap. It provides that feedback signal, enabling a virtuous cycle where compute is allocated proportionally to need: easy problems exit early, hard problems receive their full budget, and unsolvable problems are terminated rather than burning resources on hopeless reasoning.
+
+### Where Prior Approaches Fall Short
+
+The paper situates itself against several categories of prior and concurrent work, each of which addresses token efficiency but leaves a gap that Certaindex fills.
+
+#### Test-Time Scaling Algorithms Without Efficiency Mechanisms
+
+The dominant paradigm for improving LLM reasoning accuracy is test-time scaling—allocating more inference compute through various algorithmic structures. The paper references this body of work explicitly:
+
+- **Self-Consistency (SC)** [Wang et al., 2022]: generates $N$ independent reasoning paths and selects the majority answer. Increasing $N$ improves accuracy but linearly increases token consumption, with no mechanism to stop sampling when the majority is already clear.
+- **Monte Carlo Tree Search (MCTS)** [Feng et al., 2023; Hao et al., 2023]: iteratively builds and explores a solution tree, scoring nodes with a reward model. More iterations improve exploration but the algorithm runs for a fixed number of iterations regardless of whether the best paths have converged.
+- **REBASE** [Wu et al., 2024]: generates intermediate steps, scores them with a reward model, and branches from high-scoring steps. Again, the branching factor and depth are fixed hyperparameters with no adaptivity to per-query convergence.
+- **Chain-of-Thought models** [DeepSeek-R1, OpenAI-o1, Qwen-QWQ]: internalize extended reasoning chains during training. These models generate until a maximum token limit or until they produce an end-of-sequence token, but the paper demonstrates (Figure 2, Figure 3) that they routinely continue reasoning long after reaching a correct answer.
+
+All of these algorithms share a fundamental design pattern: **they allocate compute uniformly per query or per step, with fixed budgets determined by hyperparameters (number of branches, number of iterations, maximum token length).** They lack any mechanism to detect diminishing returns in accuracy and terminate early. The paper's key claim is not that these algorithms are wrong—they demonstrably improve accuracy—but that they are **remediably inefficient** because they ignore the convergence signal that the model itself is emitting.
+
+#### Model Modification Approaches to Efficiency
+
+A parallel line of work has attempted to address token inefficiency by modifying the model itself, either through fine-tuning or architectural changes:
+
+- **Fine-tuning for conciseness** [Chen et al., 2024; Hou et al., 2025; Munkhbat et al., 2025; Luo et al., 2025; Ma et al., 2025]: approaches like O1-Pruner, ThinkPrune, TokenSkip, and CoT-Valve fine-tune reasoning models to produce shorter reasoning chains. While effective, these methods require retraining the model—a computationally expensive process that must be repeated for each model variant and may trade off accuracy against conciseness.
+- **Model merging and architectural changes** [Kimi Team, 2025]: techniques like those used in Kimi K1.5 merge models or modify architectures to improve reasoning efficiency, again requiring model-level intervention.
+
+The paper explicitly positions itself as an alternative to these model-modification approaches (Section 5, Related Work):
+
+> "while these methods enhance the accuracy-computation trade-off, their reliance on model modifications or additional external components often complicates production deployment. Distinctly, our approach employs a lightweight proxy variable, enabling a non-invasive and efficient scheduling layer that seamlessly integrates with existing infrastructure."
+
+The key distinction is **non-invasiveness**: Certaindex is computed from the model's existing outputs (probed intermediate answers, answer distribution across reasoning paths, or reward model scores) without requiring any change to model weights, training data, or inference kernels. The implementation in Dynasor adds only ~500 lines of code to the serving system (SGLang), with no modification to the model or the reasoning algorithm's core logic. This makes it deployable with any existing model or reasoning pipeline, a significant practical advantage over fine-tuning-based approaches.
+
+#### Existing Confidence Estimation Methods (Partial Solutions)
+
+The concept of estimating a model's confidence or uncertainty is not new. The paper acknowledges prior work in several categories:
+
+- **Verbalized confidence** [Kadavath et al., 2022]: LLMs can be prompted to express their confidence in natural language. However, this is unreliable for fine-grained, real-time scheduling decisions—it requires explicit prompting, adds tokens, and may not be calibrated.
+- **Log-probability based uncertainty** [Malinin and Gales, 2020]: using the model's output token probabilities to estimate confidence. This is a natural signal but captures only token-level uncertainty, not the semantic-level convergence of the reasoning process. The paper's ablation study (§4.3, Figure 10) directly compares log-probability entropy with Certaindex's semantic entropy and finds a substantially stronger correlation with remaining compute needs (Pearson 0.69 vs. 0.40).
+- **Hidden state analysis** [Slobodkin et al., 2023; Duan et al., 2024; Ahdritz et al., 2024]: probing the model's internal representations to detect uncertainty. These methods require access to model internals and typically involve additional classifier training, making them invasive and model-specific.
+- **Semantic uncertainty** [Kuhn et al., 2023; Farquhar et al., 2024]: using semantic entropy to detect hallucinations and uncertainty in open-ended generation. This is the closest precursor to Certaindex for multi-path algorithms, but prior work applied it primarily to hallucination detection, not to dynamic compute allocation in reasoning. The paper adapts and extends this idea for the specific purpose of scheduling.
+
+The gap these prior confidence methods leave is that **none were designed as a practical, low-overhead signal for real-time compute allocation in LLM serving systems.** They are either too invasive (requiring model internals), too expensive (requiring additional generation), or not correlated strongly enough with the specific question of "will more compute change the answer?" Certaindex fills this gap by providing a normalized, algorithm-agnostic metric that is computed from information already available during reasoning (probed answers for CoT, answer distributions for parallel methods, reward scores for MCTS/REBASE) and is designed explicitly for integration into a serving scheduler.
+
+#### LLM Serving Systems: Missing Reasoning Awareness
+
+The paper situates Dynasor within the landscape of LLM serving systems, which have seen rapid advancement in recent years:
+
+- **Batching and memory optimizations** [Yu et al., 2022; Kwon et al., 2023; Holmes et al., 2024]: systems like Orca, vLLM (with PagedAttention), and DeepSpeed-FastGen optimize throughput through continuous batching and efficient KV-cache memory management. These optimizations treat all requests uniformly and have no awareness of reasoning progress.
+- **Disaggregated serving** [Zhong et al., 2024; Patel et al., 2024]: DistServe and Splitwise separate prefill and decode phases onto different hardware, improving goodput. Again, these are architecture-level optimizations that are agnostic to whether a request is reasoning efficiently or wastefully.
+- **Multi-request workflow systems** [Lin et al., 2024; Zheng et al., 2024]: ParrotServe and SGLang introduce program abstractions that allow multiple related requests (e.g., multiple reasoning paths) to share computation through prefix caching and dependency specification. This captures the structure of reasoning programs but does not adapt to reasoning progress—all paths in a Self-Consistency program are treated equally, regardless of whether the answer has already converged.
+- **Length prediction for scheduling** [Fu et al., 2024]: some systems use predicted output length to prioritize short requests, but length alone is a weak proxy for reasoning convergence (as the ablation in Figure 10 shows: length has a Pearson correlation of only 0.40 with remaining compute needs, versus 0.68 for Certaindex).
+
+The critical gap across all these systems is the **absence of a reasoning-aware scheduling layer** that can look inside a reasoning program, assess whether it has converged, and dynamically reallocate its remaining budget. Traditional schedulers make decisions at the granularity of individual requests with fixed budgets. Dynasor operates at the granularity of reasoning programs, using Certaindex to make fine-grained decisions about which programs to terminate early, which to continue, and how to gang-schedule related requests to minimize latency.
+
+#### Question Difficulty Estimation Approaches
+
+Concurrent work on token-budget-aware reasoning [Han et al., 2024] and adaptive inference-time compute [Manvi et al., 2024] attempts to predict how many tokens a query will need before reasoning begins, based on the question text or initial model outputs. While this shares the goal of efficient allocation, it differs from Certaindex in a fundamental way: **difficulty estimation predicts need before reasoning; Certaindex detects convergence during reasoning.** The paper's approach has the advantage of being reactive to the actual reasoning trajectory—it doesn't need to guess in advance how hard the problem is; it observes when the model has settled and acts accordingly. This is not to say difficulty estimation is wrong, but rather that it addresses a complementary part of the efficiency problem. In principle, the two approaches could be combined: estimate difficulty to set an initial budget, then use Certaindex to exit early if convergence happens faster than expected.
+
+### How This Paper Positions Itself
+
+The paper positions its core contribution—Certaindex—as a **unifying abstraction** that makes the implicit convergence behavior of reasoning algorithms explicit and actionable. The key insight is articulated in Section 2:
+
+> "LLMs often signal when they've 'settled' on an answer during reasoning... By monitoring these signals, we can decide if we can terminate LLM reasoning early, saving computational resources without token waste."
+
+This is not just a claim about Chain-of-Thought, though CoT receives extensive case-study treatment. The paper explicitly argues that **answer stabilization is a cross-algorithm phenomenon** (§3.1):
+
+> "Beyond just CoT, a wide spectrum of LLM reasoning algorithms also exhibit (or can be equipped with) measures that reflect their progress towards a stable answer."
+
+For CoT reasoning, the signal is the consistency of probed intermediate answers over a sliding window (the Probe-In-The-Middle technique). For Self-Consistency, MCTS, and REBASE, the signal is the semantic entropy across multiple reasoning paths—lower entropy means the paths are converging to the same answer. For algorithms with reward models, the signal is the aggregated reward score. In every case, the common thread is: **higher certainty metric → solution is more stable → additional compute is less likely to change the result.**
+
+This framing positions the paper not as proposing a new reasoning algorithm, but as **adding a missing component to the reasoning infrastructure**: a lightweight feedback loop that connects the model's internal state (as reflected in its outputs) to the allocation of external computational resources. The contribution is located at the intersection of ML (understanding what signals indicate convergence), systems (building a scheduler that can act on those signals in real-time), and theory (providing formal guarantees that early termination based on observed stability preserves accuracy within ϵ).
+
+The paper also draws an implicit parallel to the broader theme of inference-time compute optimization exemplified by Snell et al. (2024), which studied compute-optimal test-time scaling strategies. Where that work focused on *selecting which strategy to use* (best-of-N vs. beam search vs. revisions) based on difficulty, this paper focuses on *deciding when enough is enough* within whatever strategy is being used. The two directions are complementary: one allocates the type of compute, the other allocates the quantity.
+
+## 3. Technical Approach
+
+This is primarily a **systems paper with a theoretical grounding** whose core idea is that LLM reasoning processes emit measurable signals of answer stabilization—signals that can be captured, quantified as a normalized certainty metric, and used as a feedback mechanism for dynamic compute allocation, enabling early termination of reasoning without accuracy loss.
+
+### 3.1 Reader Orientation
+
+**What the system is:** Certaindex is a lightweight, algorithm-agnostic metric that quantifies how much an LLM's intermediate answers have "settled" during reasoning, and Dynasor is a reasoning-aware serving system that uses Certaindex as a scheduling signal to dynamically allocate token budgets and gang-schedule related requests. Together, they form a feedback loop that connects the model's internal reasoning progress to the external allocation of computational resources.
+
+**What problem it solves and the shape of the solution:** The problem is that reasoning algorithms (CoT, SC, MCTS, REBASE) generate far more tokens than necessary because they lack any mechanism to detect when further computation has stopped improving the answer. The solution is a three-layer architecture: (1) a **probing mechanism** that extracts intermediate answers during reasoning without disrupting the decoding process, (2) a **certainty metric** that quantifies answer stability from those probes, and (3) a **scheduler** that uses the certainty metric to terminate reasoning early when the answer has converged, while gang-scheduling related requests to minimize latency. The solution is non-invasive—it requires no model modification, no retraining, and adds only ~500 lines of code to the serving system.
+
+### 3.2 Big-Picture Architecture (Diagram in Words)
+
+The system has four major components operating across two interconnected layers:
+
+1. **Probe-In-The-Middle (CoT-specific probing layer):** For Chain-of-Thought reasoning, this component periodically inserts a standardized prompt mid-generation (e.g., every 64 tokens) that forces the model to output its current best answer. The probe tokens and their responses are discarded before resuming normal decoding, so the reasoning chain continues undisturbed. The output is a sequence of timestamped intermediate answers.
+
+2. **Certaindex Calculator (algorithm-specific certainty metric):** This component takes the reasoning algorithm's current state—probed answers for CoT, answer distributions for parallel methods (SC, MCTS, REBASE), or reward scores for reward-guided methods—and computes a normalized certainty score in $[0, 1]$. High Certaindex means the answer is stable and further computation is unlikely to change it. The specific mathematical instantiation varies by algorithm archetype but the interface is uniform.
+
+3. **Intra-Program Scheduler (application runtime):** This component uses Certaindex values to make resource allocation decisions per reasoning program. It implements a threshold-based policy: at a fixed detection step, if Certaindex exceeds a calibrated threshold, the program is terminated early and resources are reclaimed. Programs that don't meet the threshold continue until their maximum budget. The scheduler also supports more sophisticated Pareto-frontier allocation policies.
+
+4. **Inter-Program Scheduler (system runtime):** This component operates at the GPU serving level, implementing gang scheduling (grouping requests from the same reasoning program to minimize stragglers) and approximate Shortest-Job-First scheduling (prioritizing programs with shorter estimated completion times to reduce head-of-line blocking). It manages KV-cache prefix sharing across related requests and handles starvation prevention through priority escalation.
+
+**Information flow:** A reasoning query arrives → the reasoning program begins execution (generating CoT tokens, sampling parallel paths, or building a search tree) → at predetermined intervals, the Certaindex calculator measures answer stability from the current state → the intra-program scheduler compares Certaindex against its policy → if the threshold is met, the program is terminated and resources are freed; otherwise, more resources are allocated and reasoning continues → the inter-program scheduler batches and prioritizes requests from active programs to maximize throughput and meet SLO deadlines.
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First, Probe-In-The-Middle** (the data collection mechanism for CoT): how intermediate answers are extracted without disrupting decoding, why periodic probing works, and how answer consistency is measured via sliding windows with post-generation validation against linguistic uncertainty markers.
+- **Second, Certaindex for multi-path reasoning algorithms** (SC, MCTS, REBASE): how semantic entropy over answer clusters quantifies convergence across parallel reasoning paths, and how reward model scores serve as alternative certainty signals for reward-guided methods.
+- **Third, the theoretical foundation for CoT early exit** (why observed stability justifies termination): the formal model of reasoning chain convergence to a stationary distribution, the definition of mixture distributions for testing, the concentration bounds that guarantee empirical stability reflects true convergence, and the assumptions required for the proof.
+- **Fourth, the intra-program scheduler** (application runtime): how threshold-based and Pareto-frontier allocation policies work, how thresholds are calibrated via a profiler-guided tuning process, and the trade-off between allocation granularity and scheduling overhead.
+- **Fifth, the inter-program scheduler** (system runtime): gang scheduling mechanics, approximate SJF with starvation prevention, prefix cache management, and the program context manager that supports dynamic generation patterns.
+- **Sixth, system implementation details**: the SGLang integration, code footprint (~500 lines for the core runtime, ~1.5k lines total), and how each reasoning algorithm is adapted to the Program abstraction.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+#### Probe-In-The-Middle: Extracting Intermediate Answers Without Disrupting CoT
+
+The fundamental challenge in monitoring CoT reasoning is that the model's final answer only appears at the very end of a long generation—by default, there is no visibility into what answer the model "currently believes" mid-reasoning. Probe-In-The-Middle solves this by **periodically forcing the model to commit to an answer, then discarding the probe and resuming normal generation.**
+
+**Mechanics of probing.** The reasoning chain is split into $m$ steps, $Y_1, Y_2, \ldots, Y_m$, where each $Y_k$ corresponds to a fixed token interval (e.g., 64 tokens). At each step $k$, the system samples $Y_k$ from the model's current distribution:
+
+$$Y_k \sim P_k(Y_k \mid x, Y_1, \ldots, Y_{k-1})$$
+
+where $x$ is the input prompt and $Y_1, \ldots, Y_{k-1}$ are the reasoning tokens generated so far.
+
+**What it computes:** this is standard autoregressive sampling from the LLM—the model generates the next chunk of reasoning tokens conditioned on all previous context.
+
+**Why this form:** the reasoning chain is generated as one continuous sequence, but the probing mechanism treats it as a sequence of fixed-length chunks. This allows the system to pause at regular intervals, insert a probe, and then resume from where it left off. The chunking is an artificial intervention—the model itself has no awareness of the chunk boundaries.
+
+To extract an intermediate answer at step $k$, the system **appends** the following prompt to the generated prefix (without the model having generated it organically):
+
+> "Oh, I suddenly got the answer to the whole problem. Final Answer: \boxed{"
+
+The model then generates a completion starting from this appended prompt, producing its current best guess for the answer. The exact phrasing is not critical—the paper notes that "the exact phrasing of the extraction prompt is not critical. What matters is that it effectively guides the model to produce an answer immediately." The key design choice is that the probe creates a **forced answer commitment**: the model is told it has "suddenly got the answer" and must produce it, bypassing its natural tendency to continue reasoning.
+
+**Critical implementation detail:** All probe tokens (the appended prompt) and the probe response are **discarded** before resuming the original decoding path. The model's KV-cache is rolled back to the state before the probe was inserted, so the probe does not contaminate the subsequent reasoning. This makes probing **non-invasive**—it is a read-only operation on the model's current state, not a modification of the reasoning trajectory.
+
+This lightweight mechanism enables the systematic study in Figure 2 (Section 2), comparing the number of tokens actually spent (left panel) against the number of tokens needed to reach the correct answer (right panel). On AMC23, the median tokens spent is 2.7K, but the correct answer is typically available by a median of 830 tokens—a ~3.2× overuse factor.
+
+**Post-generation validation against linguistic uncertainty markers.** Not all probed answers are equally trustworthy. The paper observes that certain linguistic patterns—specifically hesitation markers like "wait" or "hmm"—indicate that the model has not genuinely converged, even if the probed answer happens to match previous answers. Section 2.1 states:
+
+> "we found that some linguistics markers like 'wait' or 'hmm' also indicates uncertainty. If we find these uncertainty indicators in the probed answers... we will mark this answer as unconfident and omit this responses from the consistency test."
+
+This validation mechanism works **synergistically** with answer consistency assessment. A "wait" in a probed answer signals that the model is in the middle of self-correction—it may produce an answer that matches previous probes but is actively being reconsidered. By filtering out such responses, the consistency check becomes a more robust signal of genuine convergence rather than superficial pattern matching.
+
+#### Certaindex: A Unified Certainty Metric Across Reasoning Algorithm Archetypes
+
+The paper defines Certaindex as a **unified, algorithm-agnostic confidence metric** that quantifies reasoning progress. The core intuition (Section 3.1) is:
+
+> "High certaindex indicates close proximity to a solution or that additional computation is unlikely to improve the outcome."
+
+**Two archetypes, two mathematical instantiations.** The paper partitions reasoning algorithms into two broad categories with distinct certainty formulations:
+
+**Archetype 1: Algorithms with multiple reasoning paths** (Self-Consistency, MCTS, REBASE). These algorithms generate $n$ distinct reasoning trajectories, each terminating in a candidate answer. The answers are clustered into $m$ groups $C_1, C_2, \ldots, C_m$ based on their content, where $|C_i|$ is the number of paths that produced answer $C_i$. The certainty signal is **semantic entropy**—how concentrated or dispersed the answer distribution is across the paths.
+
+The semantic entropy $H$ is computed as:
+
+$$H = -\sum_{i=1}^{m} \frac{|C_i|}{n} \log \frac{|C_i|}{n}$$
+
+where $n$ is the total number of reasoning paths, $m$ is the number of distinct answer groups, and $|C_i|$ is the count of paths in the $i$-th answer group.
+
+**What it computes:** $H$ is the standard Shannon entropy of the empirical answer distribution. If all $n$ paths produce the same answer ($m = 1$, $|C_1| = n$), the first and only term is $-\frac{n}{n} \log \frac{n}{n} = -1 \cdot 0 = 0$, so $H = 0$—maximum certainty. If all $n$ paths produce different answers ($m = n$, $|C_i| = 1$ for all $i$), then $H = -\sum_{i=1}^{n} \frac{1}{n} \log \frac{1}{n} = \log n$—maximum uncertainty. The maximum possible entropy is $\max(H) = \log n$, achieved exactly when every path gives a unique answer.
+
+**Why this form:** semantic entropy operates on the **semantic content** of answers, not on surface-form tokens. Two reasoning paths might use entirely different wording but reach the same conclusion; semantic entropy captures this equivalence through the clustering step. Token-level entropy would be substantially higher (since different phrasings are common) and would overestimate uncertainty. The clustering step is what makes the metric a measure of answer convergence rather than linguistic diversity.
+
+Certaindex normalizes $H$ to $[0, 1]$ by inverting and scaling:
+
+$$\tilde{H} = \frac{\log n - H}{\log n} \in [0, 1]$$
+
+where $\log n$ is the maximum possible entropy.
+
+**What it computes:** $\tilde{H} = 1$ when all paths agree ($H = 0$); $\tilde{H} = 0$ when all paths disagree ($H = \log n$); intermediate values reflect partial agreement. The normalization removes dependence on $n$, making $\tilde{H}$ comparable across programs with different numbers of paths.
+
+**Why this form (inversion):** the raw entropy $H$ is a measure of **uncertainty**—high $H$ means disagreement. For scheduling, the natural signal is **certainty**—a high value should trigger early exit. The inversion $(\log n - H) / \log n$ converts the uncertainty measure into a confidence measure, aligning the signal's semantics with the scheduler's decision logic: high Certaindex → high confidence → stop.
+
+**Answer clustering for different task types.** The clustering step is task-dependent:
+
+- **Closed-form tasks** (arithmetic, multiple-choice): answers are extracted by string matching and grouped by exact equality. This is computationally trivial.
+- **Open-ended tasks** (code generation, flexible math expressions, natural language answers): exact matching is too strict—two programs that compute the same result using different variable names or formatting would be misclassified as different answers. The paper uses a small embedding model (e.g., 100M parameters, Sentence-BERT [Reimers, 2019]) to compute pairwise semantic similarities between outputs and then clusters based on semantic proximity. The paper notes this "remains computationally insignificant compared to LLM prefill and decode operations."
+
+This two-tier clustering design is pragmatic: exact matching is free when it works; semantic embedding is cheap when exact matching fails. The overhead is bounded and negligible relative to the cost of generating the reasoning paths in the first place.
+
+**Archetype 2: Algorithms with a reward model** (MCTS, REBASE). For algorithms that already compute a reward score per reasoning path, Certaindex **repurposes** the reward signal as a certainty measure. The paper states (Section 3.1):
+
+> "we simply use the reward model's normalized output $R \in [0, 1]$ as a measure of certainty. This approach builds on prior research demonstrating that reward signals can effectively guide resource allocation in program execution."
+
+The aggregation method varies:
+- **MCTS:** the average reward across all explored paths.
+- **REBASE:** the maximum reward across paths (the best-found solution).
+
+A higher aggregated reward indicates stronger certainty that the explored paths are valid and likely correct. These reward scores are "obtained during normal execution and therefore incur no extra overhead during LLM inference."
+
+**Why repurpose rewards:** this is an instance of "don't pay for what you already have." Reward-guided algorithms already compute scores; computing a separate certainty metric from answer distributions would be redundant. The reward score directly measures the algorithm's own assessment of path quality, which correlates with convergence—when the algorithm has found a high-reward path and exploration is yielding diminishing returns, the aggregated reward is high.
+
+**Composing multiple Certaindex signals.** The paper supports combining multiple signals by applying individual thresholds to each metric (Appendix B.1). For MCTS on GSM8K, the system uses two metrics: the reward score $R$ and the entropy-based measurement $\tilde{H}$. A program is considered sufficiently certain only if **both** metrics exceed their respective thresholds ($R_\tau$ and $\tilde{H}_\tau$). This is a logical AND—the scheduler requires consensus across independent certainty signals before terminating.
+
+**Correlation with remaining compute needs (empirical validation).** Section 3.2 validates that Certaindex is not just a theoretical construct but a **predictive signal** for how much additional computation is needed. The paper computes Pearson correlation coefficients between Certaindex values at a fixed detection step and the ground-truth number of additional steps required to reach a correct answer (for solvable queries). Across 12 (model, algorithm, task) combinations (Figure 12 in Appendix B), correlations range from 0.17 to 0.75, with a mean of 0.52. The paper interprets this as consistently positive correlation—higher Certaindex reliably predicts fewer remaining steps.
+
+The ablation in Figure 10 (§4.3) compares Certaindex's entropy measure $\tilde{H}$ against alternative signals for the (SC, GSM8K, Llama3.1-8B-Instruct) setting:
+
+| Signal | Pearson Correlation | Kendall's Tau |
+|---|---|---|
+| Mean output length | 0.40 | 0.35 |
+| Mean normalized log probability | 0.40 | 0.34 |
+| Certaindex entropy ($\tilde{H}$) | **0.68** | **0.61** |
+| Linear combination of all three | 0.69 | 0.59 |
+
+Certaindex substantially outperforms both length-based and log-probability-based signals, and a linear combination provides essentially no benefit over Certaindex alone—confirming that Certaindex is a **simple yet sufficient** proxy.
+
+**Threshold allocation demonstration.** Figure 5 (Section 3.2) visualizes the correlation for four (algorithm, LLM) combinations. Each plot shows Certaindex on the y-axis against oracle steps-to-solution on the x-axis, with the detection step marked by a red vertical line. The orange horizontal line shows a threshold: queries above the line (high certainty) terminate early; queries below continue. The key observation is that **essentially no solvable queries fall in the upper-right region**—high Certaindex paired with large remaining compute needs is extremely rare. This means a well-chosen threshold can early-terminate queries with high certainty without accidentally cutting off queries that still need more work.
+
+#### Theoretical Foundation: Why Observed Stability Guarantees Accuracy Preservation for CoT
+
+Section 3.4 provides a formal justification for why the Probe-In-The-Middle early exit strategy can terminate reasoning without accuracy degradation. The proof is sketched in the main text with full rigor in Appendix E. The theoretical model makes explicit what is assumed, what is measured, and what is guaranteed.
+
+**Core assumption: eventual convergence to a stationary distribution.** The model's next-token distributions $P_t(Y_{t+1} \mid x, Y_{1..t})$ are assumed to eventually converge to a stationary distribution $P^*(Y \mid x)$ as reasoning progresses. Formally:
+
+> "Once $P_t = P^*$, further computational steps are redundant."
+
+The stopping criterion is: at time $t$, if the equality $P_t = P_{t+1} = \ldots = P_T = P^*$ holds for all future $T$, then generating more tokens changes nothing about the answer distribution—any subsequent generation samples from the same stationary distribution and is therefore uninformative.
+
+**Assumption 1** formalizes when convergence can be inferred from finite observations:
+
+> "If equality $P_t(Y_{t+1} \mid x, Y_1, \ldots, Y_t) = P_{t+i}(Y_{t+i+1} \mid x, Y_1, \ldots, Y_{t+i})$ holds for any $1 \leq i \leq k^*$, then $P_t = P_T = P^*$ holds for any $T > t$."
+
+In plain language: if the distribution remains identical for $k^*$ consecutive steps, it has converged and will never change again. The paper assumes $k^* = O(M)$, where $M$ is the number of distinct output groups, making $k^*$ a problem-dependent constant related to the complexity of the answer space.
+
+**The empirical challenge: we cannot observe $P_t$ directly.** The true distribution $P_t$ is a probability distribution over output tokens conditioned on the entire history—it is not directly observable from a single generation. What we observe are **samples** from this distribution: the specific tokens the model generates. The probing mechanism produces empirical estimates of the answer distribution by extracting the answer from each probe and counting frequencies.
+
+To bridge the gap between observable samples and unobservable distributions, the paper introduces **mixture distributions** (Definition 1):
+
+$$\bar{P}^{i+k}_i = \frac{1}{k} \sum_{j=1}^{k} P_{i+j}$$
+
+where $\bar{P}^{i+k}_i$ is the average of the true distributions $P_{i+1}, P_{i+2}, \ldots, P_{i+k}$.
+
+**What it computes:** $\bar{P}^{i+k}_i$ is the distribution obtained by first uniformly sampling a step index $j \in \{1, \ldots, k\}$ and then sampling from the corresponding $P_{i+j}$. It is a **smoothed** version of the individual distributions—averaging over $k$ steps reduces variance and makes convergence testing more robust.
+
+**Why mixture distributions:** testing whether individual $P_t$ distributions are identical is statistically harder than testing whether mixtures are identical. The key insight (Lemma 2) is that if mixtures of size $k$ and $k-1$ are identical across different window positions, then the individual distributions are necessarily identical. Formally:
+
+**Lemma 2 (paraphrased):** If $TV(\bar{P}^{i+k}_i, \bar{P}^{i+j+k}_{i+j}) = 0$ for all $1 \leq j \leq k$, and $TV(\bar{P}^{i+k-1}_i, \bar{P}^{i+j+k-1}_{i+j}) = 0$ for all $1 \leq j \leq k-1$, then $P_{i+1} = P_{i+2} = \ldots = P_{i+2k-1}$ are all identical.
+
+The proof (Appendix E) works by expanding the TV distance definitions and showing that equality of mixtures forces equality of individual components through a system of linear equations. Intuitively: if averaging $P_{i+1}$ through $P_{i+k}$ gives the same distribution as averaging $P_{i+j+1}$ through $P_{i+j+k}$ for all shifts $j$, the only way this can hold is if all individual $P$'s are identical.
+
+**From empirical estimates to true distributions: concentration bounds.** The empirical estimates $\hat{P}$ are computed from the probed answers. Lemma 1 (stated in the sketch, proven in Appendix E) provides a concentration bound:
+
+> **Lemma 1 (paraphrased):** If $k = e^{\Omega\left(\frac{M + \log(1/\delta)}{\epsilon^2}\right)}$, then $TV(\bar{P}^{l+t}_l, \hat{P}^{l+t}_l) \leq \epsilon/3$ for all $l = i+1, \ldots, i+k$ and $t = k-1, k$, with probability $1 - \delta$.
+
+**What it guarantees:** with $k$ probes (exponentially many in the number of answer groups $M$ and the inverse square of the desired accuracy $\epsilon$), the empirical mixture distribution $\hat{P}$ is $\epsilon/3$-close in total variation distance to the true mixture distribution $\bar{P}$. This is a standard application of the Azuma-Hoeffding inequality for martingale difference sequences and a union bound over the power set of answer groups.
+
+**The stopping criterion and the ϵ-accuracy guarantee.** The empirical stopping criterion (Definition 2) checks whether:
+
+$$TV(\hat{P}^{i+k}_i, \hat{P}^{i+j+k}_{i+j}) \leq \epsilon/3, \quad \forall 1 \leq j \leq k$$
+$$TV(\hat{P}^{i+k-1}_i, \hat{P}^{i+j+k-1}_{i+j}) \leq \epsilon/3, \quad \forall 1 \leq j \leq k-1$$
+
+If this holds, and $k$ is sufficiently large per Lemma 1, then by triangle inequality:
+
+$$TV(\bar{P}^{i+k}_i, \bar{P}^{i+j+k}_{i+j}) \leq TV(\bar{P}^{i+k}_i, \hat{P}^{i+k}_i) + TV(\hat{P}^{i+k}_i, \hat{P}^{i+j+k}_{i+j}) + TV(\hat{P}^{i+j+k}_{i+j}, \bar{P}^{i+j+k}_{i+j}) \leq \epsilon/3 + \epsilon/3 + \epsilon/3 = \epsilon$$
+
+The true mixture distributions are $\epsilon$-close. Lemma 2 then implies the individual distributions are $\epsilon$-close to each other, and by Assumption 1, they have converged to within $\epsilon$ of the stationary distribution $P^*$. Early termination therefore preserves accuracy up to tolerance $\epsilon$.
+
+**Why this theory matters practically:** the proof establishes that the empirical heuristic—"check if answers are consistent over a sliding window"—has rigorous foundations. It is not an ad-hoc trick; it is a statistically principled procedure with formal convergence guarantees. The required window size $k$ grows exponentially in the number of answer groups $M$, which for closed-form tasks (where answers come from a finite, usually small set) is modest. The theory also explains why the sliding window approach works: the mixture distribution formulation naturally handles the variance in individual probes by averaging over multiple steps.
+
+#### The Intra-Program Scheduler: Threshold-Based and Pareto-Frontier Allocation Policies
+
+The intra-program scheduler operates at the level of an individual reasoning program, making decisions about whether to continue allocating resources or terminate early. Section 3.2 introduces two allocation policies, and Appendix D.2.1 describes the scheduler's operational lifecycle.
+
+**Scheduler lifecycle (three phases).**
+
+1. **Initialization:** when a new reasoning program arrives, the scheduler assigns it a predefined maximum resource cap (e.g., maximum number of branches for SC, maximum iterations for MCTS, maximum tokens for CoT) and allocates resources for its first execution step. The scheduler also establishes a resource scheduling policy based on profiler-guided calibration.
+
+2. **Resource allocation (iterative):** the scheduler continuously monitors each program's Certaindex as it runs. At each decision point (a specific reasoning step, called "Detect @knob"), the program computes its current Certaindex value and requests additional resources from the scheduler. The scheduler applies its allocation policy: if Certaindex meets the termination criteria, resources are denied and the program is signaled to aggregate results and exit; otherwise, resources are granted and the program continues to the next step.
+
+3. **Termination:** when Certaindex exceeds the threshold (or the maximum resource cap is reached), the scheduler denies further resources. The program receives a termination signal, aggregates results from all reasoning paths generated so far (e.g., majority voting for SC, best-node selection for MCTS), and returns the final answer.
+
+**Threshold-based allocation (the primary policy).** This is the simplest and most practical policy, used in all main experiments (§4). The scheduler sets a fixed Certaindex threshold for each (algorithm, dataset) combination, and a fixed detection step (e.g., step 5 for SC, step 3 for MCTS). At the detection step, the program computes Certaindex; if it exceeds the threshold, the program terminates immediately; otherwise, it runs to the maximum resource cap.
+
+The hyperparameters are summarized in Table 3 (Appendix F):
+
+| Algorithm | Dataset | $\tilde{H}_\tau$ | $R_\tau$ | Detect @knob |
+|---|---|---|---|---|
+| SC | MATH | 0.7 | — | 5 |
+| SC | GSM8K | 0.7 | — | 5 |
+| SC | LiveCodeBench | 0.4 | — | 5 |
+| MCTS | GSM8K | 0.99 | 0.4 | 3 |
+| MCTS | ASDiv | — | 0.4 | 3 |
+| REBASE | GSM8K | 0.85 | 0.99 | 16 |
+| REBASE | MATH | 0.75 | — | 16 |
+
+**Why fixed thresholds:** the threshold is chosen once per (algorithm, dataset, model) combination via profiler-guided calibration (described below) and then used uniformly across all queries. This is a deliberate simplification—the paper acknowledges that more sophisticated policies exist (Pareto-frontier) but demonstrates that threshold-based allocation already captures the majority of achievable gains while being trivial to implement and introducing minimal scheduling overhead.
+
+**Pareto-frontier allocation (advanced policy).** Instead of a binary stop/continue decision at a single checkpoint, this policy assigns a **dynamically tailored budget** to each query based on its Certaindex value. The relationship is established empirically:
+
+> "Rather than simply 'fitting a curve', we establish an empirically-derived relationship that maps different certaindex values to an estimated optimal remaining token budget for that level of certainty. This mapping (conceptually represented by the green curve in Figure 12) reflects a trade-off: for higher certaindex values, the optimal additional budget is small, while for lower certaindex values, more computation might be warranted."
+
+The green curves in Figure 12 represent this mapping. Practically, the maximum additional tokens for a query are continuously adjusted or capped based on its current Certaindex—a query with Certaindex 0.9 might get 5 more reasoning steps, while one with 0.3 might get 20 more. The paper evaluates several variants of this approach in Appendix G.4:
+
+| Allocation Method | SC/MATH Token Savings | MCTS/ASDiv Token Savings |
+|---|---|---|
+| Static Threshold (baseline) | 11.0% | 13.0% |
+| + Initial Step Curve Fitting | 11.9% | 13.6% |
+| + 5-Step Threshold | 12.7% | 13.3% |
+| + Single-Step Threshold | 12.7% | 13.6% |
+| + Dynamic Curve Fitting | 14.4% | 15.8% |
+
+The more frequent the Certaindex collection and the more adaptive the allocation, the higher the savings—but the paper notes a practical trade-off: "frequent certaindex collection may disrupt the concurrent execution of reasoning programs." In SC, running 20 samples concurrently allows full parallelism; splitting into sequential batches of 5 to check Certaindex at intermediate points increases latency (289s → 366s mean latency for 500 programs in the paper's benchmark). For latency-sensitive deployments, the paper prioritizes the simple static threshold, reserving the fine-grained policies for cost-sensitive batch workloads where latency is secondary.
+
+**Profiler-guided policy calibration (Appendix D.2.2).** The threshold values are not hand-tuned—they are calibrated through an optional profiling pass. The process works as follows:
+
+1. Users submit a batch of programs with labeled data—verified answers to questions (e.g., math problem solutions with known ground truth), response rankings, or reward model scores.
+2. The profiler collects runtime metrics: Certaindex values at each detection step and token usage per program.
+3. For threshold-based allocation: the profiler determines optimal resource caps across different Certaindex ranges while maintaining accuracy requirements. Specifically, the threshold is calibrated so that terminating programs above the threshold does not hurt accuracy on any calibration data point.
+4. The calibration can be periodically re-executed to adapt to data distribution shifts.
+
+This makes the system **self-tuning** in deployment—the operator doesn't need to manually guess thresholds. The paper notes this is important because "program characteristics may shift due to algorithmic changes or data distribution shifts."
+
+#### The Inter-Program Scheduler: Gang Scheduling, SJF, and Prefix Cache Management
+
+The inter-program scheduler operates at the GPU serving level, managing how requests from multiple concurrent reasoning programs are batched and prioritized. It has three key mechanisms (Section 3.3, Appendix D.3).
+
+**Gang scheduling.** Reasoning programs typically generate multiple related requests—a Self-Consistency program with $N$ branches generates $N$ independent LLM calls that share the same prompt. Gang scheduling groups these requests together to minimize stragglers and reduce overall completion time. The intuition (Figure 16, Appendix D.3.1) is simple: if two programs each have two requests, and one program's requests take 4ms each while the other's take 5ms each, scheduling one program completely before starting the other (gang scheduling) yields average latency of 6.5ms, versus 9ms for interleaved scheduling.
+
+The mechanism operates by prioritizing requests from the same program within the batch scheduler. When the scheduler has capacity in a batch, it preferentially includes requests that belong to programs already partially in the batch, maximizing KV-cache reuse (since all branches share the prompt prefix) and ensuring that all branches of a program complete at roughly the same time (no long-tail stragglers delaying program completion).
+
+Gang scheduling alone "provides substantial performance benefits, making it a viable standalone option" even without the SJF component.
+
+**Approximate Shortest-Job-First (SJF).** To mitigate head-of-line blocking—where long-running programs delay shorter ones—the scheduler implements an approximate SJF policy. A program's total execution time depends on (1) total compute requirements (controlled by Certaindex through the intra-program scheduler) and (2) token length per reasoning step. While exact LLM generation lengths cannot be known in advance, the paper leverages **program locality**: token length per iteration can be estimated using historical averages from previous iterations of the same program. This estimation, combined with the Certaindex-determined compute requirements, predicts total execution time, enabling the scheduler to prioritize shorter programs.
+
+**Starvation prevention.** Combining SJF with gang scheduling risks starving long programs if short programs continuously arrive and get prioritized. The paper implements a **priority escalation mechanism** (Appendix D.3.1):
+
+> "programs that have been waiting too long receive elevated priority, effectively preventing starvation."
+
+The fairness metric used is **finish-time fairness**, adapted to LLM serving:
+
+$$\phi = T_{\text{shared}} / \#\text{output tokens}$$
+
+where $T_{\text{shared}}$ is the program's completion time in the shared system. This normalizes by output length, so programs aren't penalized for being naturally longer. The paper validates in Appendix G.3 (Figure 20) that the combination of Certaindex-based allocation, gang scheduling, and SJF does not degrade fairness relative to even resource allocation—in fact, Certaindex-aware allocation consistently improves finish-time fairness at high percentiles due to resource cutting by the intra-program scheduler.
+
+**Prefix cache manager.** Reasoning programs share substantial computation: all branches in SC share the prompt; dependent reasoning chains in REBASE share common prefixes; reward model calls in MCTS share the prompt. Dynasor's prefix cache manager automatically identifies and reuses these shared prefixes, reducing redundant prefill computation. When memory is constrained, the KV-cache of programs with no active requests is assigned lower priority and evicted first.
+
+**Program context manager.** This is a thin wrapper that tracks registered programs and their runtime characteristics, providing cache eviction hints based on program behavior. Unlike the static program DAGs used in SGLang and ParrotServe (which assume a fixed, known-ahead-of-time request graph), this component supports **dynamic generation patterns** required by algorithms like MCTS and REBASE, where the structure of the search tree depends on intermediate results and cannot be predetermined.
+
+#### System Implementation: SGLang Integration and Code Footprint
+
+Dynasor is implemented on top of SGLang (version 0.3.3 post1) with a clean modular architecture (Appendix D.4):
+
+- **Intra-program scheduler:** implemented as a Python library on the client side (about 1,000 lines of Python).
+- **Inter-program scheduler:** integrated into the server-side scheduler (about 500 lines of code change to SGLang's core system runtime).
+- **Reasoning program adaptations:** 40–150 lines per algorithm to define Certaindex logic and integrate with the Program interface.
+- **Total codebase:** approximately 1.5k lines of Python.
+
+The paper emphasizes modularity: "the core system runtime only comprises around ~500 lines of code change, and the changes are modular and non-invasive, making it a very clean implementation into the core serving system logic." No changes are required to model weights, reasoning algorithms, or the core execution backend (CUDA kernels, attention implementations). The scheduler operates as a thin layer around the standard decoding loop, intercepting resource allocation decisions at specific checkpoints.
+
+**The Reasoning Program abstraction** (Appendix D.1) provides the interface that algorithm developers must implement. A reasoning program maintains three runtime properties:
+- **certaindex:** the certainty measure of reasoning progress.
+- **knob:** the intrinsic scaling factor (e.g., branches for SC, iterations for MCTS).
+- **state:** intermediate variables and results from previous steps.
+
+Developers implement two functions:
+1. **update_certaindex():** computes and updates Certaindex at a particular inference step.
+2. **execute():** runs the reasoning algorithm for one step.
+
+Figure 15c (Appendix D.1) shows a concrete SC example: update_certaindex() computes entropy across branches; execute() expands generation; after each iteration, the program aggregates results and updates Certaindex; this iterates until resources are depleted or Certaindex triggers exit.
+
+**Adapting each reasoning algorithm** to the Program abstraction requires 40–150 lines of code, compared to up to 4,000 lines for the original algorithm implementations. This minimal adaptation overhead is a key design goal—the paper aims for practical deployability, not just algorithmic novelty.
+
+## 4. Key Insights and Innovations
+
+### Innovation 1: Answer Stabilization as a First-Class Reasoning Signal—Not a Side Effect
+
+The paper's most fundamental contribution is not the Certaindex metric itself, but the identification and operationalization of **answer stabilization** as a universal, measurable, and actionable phenomenon in LLM reasoning. Before this work, the field treated the internal dynamics of reasoning algorithms as a black box: you put in a question, you set a budget (number of paths, number of iterations, maximum tokens), and you get out an answer. Whether the model "knew" the answer at step 300 versus step 3,000 was not considered actionable information—it was merely an intermediate state on the way to the budget-limited output.
+
+This paper makes a diagnostic move that shifts the conceptual frame: **what the model thinks mid-reasoning is not just an intermediate artifact; it is a signal that can and should govern how much compute is allocated.** The key evidence is Figure 2, which shows that for DeepSeek-R1 on AMC23, the model typically reaches a correct answer by a median of 830 tokens but continues generating for a median of 2.7K tokens—a 3.2× overuse factor. The paper terms this phenomenon "self-doubt" (Figure 3 captures it qualitatively: completeness checks, re-verification, confidence building, reassessment—all after the correct answer has already been reached). This is not a model-specific quirk; it is a systematic behavior observed across DeepSeek-R1, DeepSeek-distilled Qwen2.5 at 7B–32B, and across AIME24, AMC23, and MATH-500.
+
+What makes this a conceptual contribution rather than merely an efficiency observation is the **claim that answer stabilization is algorithm-agnostic.** The paper demonstrates convergence signals across four qualitatively different reasoning paradigms: Chain-of-Thought (sequential internalized reasoning), Self-Consistency (parallel independent sampling with majority voting), MCTS (tree search with reward-guided exploration), and REBASE (iterative branching from scored intermediate steps). In each case, the internal state of the reasoning process—whether probed intermediate answers, answer distributions across paths, or reward model scores—tends to stabilize before the budget is exhausted. The unification is in Section 3.1:
+
+> "a wide spectrum of LLM reasoning algorithms also exhibit (or can be equipped with) measures that reflect their progress towards a stable answer."
+
+Prior work treated these algorithms as mechanistically unrelated: CoT was about chain length, SC was about sample count, MCTS was about search depth. The paper's framing reveals that **they share a common information-theoretic structure**: all of them produce a distribution over answers that evolves with compute; all of them exhibit diminishing returns in that evolution; and all of them can be monitored for convergence. This is a conceptual unification that the field did not previously have.
+
+The significance goes beyond the immediate empirical gains (50% token savings, 3.3× throughput). It establishes that **reasoning efficiency is a monitoring and scheduling problem**, not primarily a model architecture or training problem. The model already knows when it's done—the problem is that existing serving infrastructure doesn't ask. This reframing opens a design space that prior work, focused on modifying models to be more concise (O1-Pruner, ThinkPrune, TokenSkip, CoT-Valve) or designing better search algorithms, did not address.
+
+### Innovation 2: Certaindex as a Narrow Interface Between Reasoning State and Scheduling Policy
+
+Prior work on LLM confidence estimation (Kadavath et al., 2022; Kuhn et al., 2023; Farquhar et al., 2024; Malinin and Gales, 2020) and LLM serving systems (SGLang, ParrotServe, DistServe) existed in separate worlds. Confidence estimation was primarily an academic exercise—compute semantic entropy, detect hallucinations, measure calibration—without a clear operational role in the serving stack. Serving systems optimized at the request level—batching, KV-cache management, PD disaggregation—without any visibility into whether a request's reasoning had converged. The two communities did not connect because there was no shared abstraction at the right level: confidence metrics were too granular and model-specific for a scheduler to consume; scheduling decisions were too coarse for confidence signals to influence.
+
+The paper's **second major innovation** is defining Certaindex as exactly this missing abstraction: a **narrow interface** between the reasoning algorithm's internal state and the scheduler's resource allocation decisions. The key design properties are:
+
+1. **Algorithm-agnostic:** Certaindex has two instantiations—semantic entropy for multi-path algorithms and aggregated reward scores for reward-guided algorithms—but exposes a single normalized value in [0, 1] to the scheduler regardless of how it's computed. The scheduler doesn't need to know whether the program is running SC, MCTS, or REBASE; it only needs the scalar certainty score.
+
+2. **Lightweight and non-invasive:** Certaindex is computed from information the reasoning algorithm already produces. For multi-path methods, it's answer distribution entropy—answers are already being generated and can be clustered with cheap string matching or small embedding models. For reward-guided methods, it's aggregated reward—the reward model is already running. No additional LLM inference, no model internals access, no classifier training. The paper's ablation (Figure 10) shows that Certaindex's entropy measure achieves a Pearson correlation of 0.68 with remaining compute needs, far exceeding what alternative signals (log-probability entropy: 0.40; output length: 0.40) provide.
+
+3. **Scheduler-compatible timing:** Certaindex is sampled at predetermined decision points ("Detect @knob" steps, e.g., step 5 for SC, step 3 for MCTS, configured per algorithm-dataset combination in Table 3). This creates a natural handshake: the reasoning program proposes a budget request, the scheduler checks Certaindex against its policy, and the decision is binary—continue or terminate. There is no continuous negotiation, no complex state machine, no re-planning.
+
+This is significant beyond the paper's specific implementation because it defines a **contract** that future reasoning algorithms and serving systems can adopt independently. A new reasoning algorithm designer only needs to implement update_certaindex() and execute() (the Program interface, Appendix D.1, ~40-150 lines of code per algorithm). A new serving system only needs to consume a scalar certainty signal and implement threshold-based allocation. The two can evolve independently. This is the same architectural pattern that made narrow interfaces powerful in other domains (e.g., POSIX between applications and operating systems, HTTP between clients and servers): define a minimal abstraction that captures the essential information, and let both sides optimize independently around it.
+
+The paper explicitly contrasts this with prior attempts at reasoning efficiency, which required model-level intervention (fine-tuning, architecture changes, special training data). Fine-tuning approaches like O1-Pruner or ThinkPrune couple the efficiency mechanism to specific model versions; Certaindex decouples it. The implementation cost—~500 lines of core system code, 40-150 lines per algorithm adaptation—is a fraction of the cost of retraining a model. This **non-invasiveness** is arguably the property that makes the approach practically deployable at scale, and it represents a design philosophy that prior work in reasoning efficiency had not systematically pursued.
+
+### Innovation 3: Rigorous Theoretical Justification for Observation-Based Early Exit in CoT
+
+The paper's third contribution is a formal proof (Section 3.4, Appendix E) that the empirical heuristic of "stop when answers are consistent" has rigorous statistical foundations. This is not a tangential theoretical exercise—it addresses a genuine concern that an empirical scheduler reviewer or practitioner would have: **"how do you know the model won't change its answer if you let it run longer?"** The proof shows that under mild assumptions (eventual convergence to a stationary distribution, per Assumption 1), and with a sufficient number of probing steps, observed consistency of empirical answer distributions implies that the true underlying distribution has converged to within ϵ of the stationary distribution, and that early termination therefore preserves accuracy up to that tolerance.
+
+The theoretical architecture is clever in two respects. First, it sidesteps the difficulty of testing whether individual next-token distributions have converged (which would require observing $P_t$, an unobservable distribution) by instead operating on **mixture distributions** (Definition 1)—averages of distributions over consecutive steps. Lemma 2 shows that equality of mixtures of sizes $k$ and $k-1$ across shifts forces equality of the individual distributions. This is a non-trivial combinatorial argument: it converts a problem about unobservable pointwise distributions into a problem about observable aggregate statistics. Second, Lemma 1 applies a martingale concentration bound (Azuma-Hoeffding) to show that empirical estimates $\hat{P}$ are close to true mixtures $\bar{P}$ with high probability, provided the number of probes $k$ scales exponentially in the number of answer groups $M$ and the inverse square of the accuracy tolerance $\epsilon$. The practical import—that $k$ needs to be only moderately large when $M$ is small (as it is for most closed-form reasoning tasks)—explains why the empirical method works in practice.
+
+This theoretical contribution distinguishes the paper from prior work on early exiting in LLMs (which has been largely empirical and heuristic) and from work on confidence estimation (which has been largely descriptive rather than prescriptive). It provides a **verifiable stopping condition** with formal accuracy guarantees, which is rare in the LLM inference optimization literature. The paper acknowledges that the proof sketch in the main text is not fully rigorous (the complete proof is in Appendix E), and that Assumption 1 (that a finite window of identical distributions implies convergence) is an assumption rather than a theorem—but it is a reasonable and explicitly stated assumption, and the theoretical framework makes clear exactly what is being assumed and what is being proved.
+
+The proof also implicitly validates the sliding window design choice for CoT Certaindex (Section 2.1): consistency is measured over a window of width $w$, not just one step, precisely because the mixture distribution formulation requires multiple samples to distinguish true convergence from coincidental agreement. The window size $w$ maps onto the $k$ in the theory, and the paper's choice to use $w$ consecutive matching answers (parameterized as $N$ in the experiments) is theoretically motivated rather than ad-hoc.
+
+### Innovation 4: The Two-Tier Certaindex Architecture—Separating Detection Mechanism from Allocation Policy—as a Deployment Principle
+
+The paper makes a deliberate architectural choice that might appear minor but is conceptually significant: Certaindex is measured at **fixed detection steps** (Detect @knob), not continuously, and the allocation policy (threshold vs. Pareto-frontier vs. curve fitting) is **decoupled** from the certainty computation. This separation is evaluated explicitly in Appendix G.4, which compares static threshold allocation (11% token savings on SC/MATH) against more frequent and more adaptive variants (up to 14.4% savings with dynamic curve fitting at every step). The key finding is not that the more sophisticated policies don't help—they do, marginally—but that the **static threshold already captures the majority of the achievable gain** (11% vs. 14.4% on SC/MATH, 13% vs. 15.8% on MCTS/ASDiv) while avoiding the scheduling overhead of more frequent Certaindex collection.
+
+The conceptual insight is that **detection frequency is a first-order scheduling parameter with latency implications, and the optimal setting depends on the deployment context.** For batch inference where latency is secondary, fine-grained allocation (every step, dynamic curve fitting) extracts maximum savings. For online serving where latency is critical, the static threshold at a coarser interval preserves most of the gain while keeping reasoning programs parallelizable. The paper quantifies this: switching from fully parallel execution (all SC branches run concurrently) to sequential batching (to check Certaindex at intermediate steps) increases mean latency from 289s to 366s for 500 programs. This is a concrete, empirically measured trade-off that guides real deployment decisions.
+
+This insight contrasts with the implicit assumption in much of the test-time compute optimization literature that "more adaptive and fine-grained is always better." The paper shows that there is a **diminishing returns curve for detection granularity**, and that the optimal operating point depends on the latency-throughput trade-off the deployer cares about. This is a systems contribution—it's about how to operationalize a theoretical efficiency gain in the presence of real scheduling constraints—but it has conceptual implications: it suggests that the design space for reasoning-aware scheduling has an inherent tension between measurement overhead and allocation precision, and that future work should explicitly consider this tension rather than assuming continuous monitoring is feasible or desirable.
+
+## 5. Experimental Analysis
+
+### Evaluation Methodology
+
+**Datasets.** The paper evaluates on mathematical reasoning and code generation benchmarks: MATH-500 (the 500-question test split from Hendrycks et al., 2021, used by Lightman et al., 2022), AIME24 and AMC23 (competition math datasets from Qwen2.5's evaluation suite), GSM8K (Cobbe et al., 2021, grade-school math word problems), ASDiv (Miao et al., 2021, diverse math word problems), LiveCodeBench (Jain et al., 2024, contamination-free code generation), and the MATH-OAI subset of MATH used in prior reward-model work (Lightman et al., 2023). Dataset sizes vary by experiment: MATH-500 has 500 test problems; GSM8K evaluations use 1000 samples in batch settings; LiveCodeBench uses 400 samples; ASDiv uses 300 samples; AIME24 and AMC23 use their standard competition sets.
+
+**Base models.** The paper spans multiple model families and scales to demonstrate generality: for CoT reasoning, DeepSeek-R1 and DeepSeek-distilled Qwen2.5 variants at 7B, 14B, and 32B; for structured reasoning algorithms, Llama3.1 8B Instruct (Self-Consistency on GSM8K, MATH, LiveCodeBench), Llama2 7B fine-tuned variants (MCTS on GSM8K and ASDiv with a Skywork 7B reward model), Llemma 7B and 34B (REBASE on MATH and GSM8K with Llemma 34B as the reward model). The choice spans independently developed model families (Meta's Llama, DeepSeek's R1 series, Qwen's reasoning models, specialized math models) and scales from 7B to 32B parameters.
+
+**Metrics.** The primary metric for batch inference is **tokens-to-accuracy**: the total number of generated tokens required to achieve specific accuracy levels across all reasoning queries. This captures the cost-quality trade-off directly relevant to token-based pricing. For CoT specifically, accuracy is measured as the percentage of correct final answers on the respective benchmark. For online serving, the primary metric is **P90 deadline attainment** (SLO attainment): the percentage of programs that complete within their assigned deadline, measured at the 90th percentile. Deadlines are difficulty-aware: each query is assigned a deadline as the product of an SLO scale, a difficulty factor (1 for always-correct, 3 for always-incorrect, 2 for variable, estimated through extensive trial runs of >100 attempts per algorithm-dataset combination), and a base deadline (Table 2: 240s for SC/MATH, 60s for MCTS/ASDiv, 300s for REBASE/GSM8K). Throughput is measured in tokens per second and programs per second. Finish-time fairness in Appendix G.3 is measured as latency divided by number of output tokens.
+
+**Baselines.** The paper compares against multiple baselines organized by workload type. For CoT batch inference, the baseline is **uniform token allocation**—the standard approach of allocating a fixed maximum token budget per query without early termination. For structured reasoning algorithms in batch settings, the paper compares against two policies implemented in a modified SGLang intra-program scheduler: (1) **baseline-even**, which allocates resources uniformly across all reasoning programs (all SC programs get the same number of branches, all MCTS programs get the same number of iterations, all REBASE programs get the same width, as specified by the resource cap in Table 1); and (2) **baseline-length**, which uses Detect@knob—the cumulative tokens generated at a specific step (same detection step as Certaindex, Table 3)—as the program's progress signal for early termination decisions. For online serving, the paper compares Dynasor against two production-grade systems: **SGLang** (Zheng et al., 2024), which includes longest-prefix matching for request batching and prefix caching for KV-cache reuse, tuned for stable performance with 70% memory utilization; and **Parrot** (Lin et al., 2024), which uses gang scheduling (App-FIFO) to prioritize requests within the same program, implemented on top of SGLang for fair comparison.
+
+**Generation budget / compute accounting.** In batch CoT experiments, the budget is measured in generated tokens per query, with a maximum budget of 16K tokens. The paper sweeps various probing intervals (T = 32, 64, 128, 256, 320 tokens) and consistency requirements (N, the number of required consecutive consistent answers). For structured reasoning algorithms, the budget is measured by the algorithm's intrinsic scaling knob: number of branches for SC, number of search iterations for MCTS, and branching width for REBASE (specific caps in Table 1: SC caps range 5–30, MCTS ranges 3–20, REBASE ranges 16–128). Token measurements account for all tokens generated across all reasoning paths, including probe tokens (for CoT) and reward model calls (for MCTS/REBASE). For fair comparison between Certaindex methods and baselines, all methods operate under the same maximum resource cap per query—the difference is whether the method terminates early before reaching the cap.
+
+**Cross-validation / statistical protocol.** No formal cross-validation or held-out protocol is reported for the main experiments. The primary calibration mechanism is the **profiler-guided policy calibration** (Appendix D.2.2), where a batch of programs with labeled data (verified answers or reward scores) is used to determine optimal Certaindex thresholds for each (algorithm, dataset) combination. These thresholds (reported in Table 3) are then applied uniformly across all queries in the evaluation. The calibration is described as meeting accuracy requirements on the calibration data ("not hurt accuracy in all calibration data points"), but no details are provided on the size of the calibration set, whether it is separate from the evaluation set, or how thresholds are validated. For online experiments, mean performance and standard deviation of 10 runs are reported for batch token-to-accuracy curves (Figure 7), but statistical testing is minimal. The fairness analysis in Appendix G.3 uses CDF curves (Figure 20) without significance testing. The paper does not report confidence intervals, standard errors, or hypothesis tests for its main claims about token savings or throughput improvements.
+
+### Main Quantitative Results
+
+#### CoT Batch Inference: Token Savings Across Model Scales and Datasets
+
+Figure 6 presents the core CoT results across three model scales (7B, 14B, 32B DeepSeek-distilled Qwen2.5) and three datasets (AIME24, AMC23, MATH500). Each subplot shows the tokens-to-accuracy trade-off for the baseline (uniform allocation, single curve) versus Dynasor with various probing intervals (T = 32, 64, 128, 256, 320 tokens, each forming a separate curve). The headline result: **Dynasor reduces token usage by 11–29% while maintaining the same accuracy as the baseline, with the largest savings on MATH500 (29% reduction) and the smallest on AIME24 with the 7B model (11% reduction).**
+
+Breaking down by model scale and dataset from Figure 6:
+- **AIME24:** 7B achieves ~45% accuracy with 11% fewer tokens; 14B achieves ~60% accuracy with 17% fewer tokens; 32B achieves ~68% accuracy with 15% fewer tokens.
+- **AMC23:** 7B achieves ~85% accuracy with 20% fewer tokens; 14B achieves ~93% accuracy with 24% fewer tokens; 32B achieves ~92% accuracy with 25% fewer tokens.
+- **MATH500:** 7B achieves ~82% accuracy with 29% fewer tokens; 14B achieves ~88% accuracy with 18% fewer tokens; 32B achieves ~92% accuracy with 19% fewer tokens.
+
+The paper further reports that for the top 10% of problems where Certaindex achieves the highest token reduction, savings reach 34% on AIME and 53% on MATH500, and for the top 1% of problems, savings reach 53% on AIME and 81% on MATH500. This indicates that token savings are **highly skewed**—a subset of problems (those where the model converges quickly and then engages in extensive self-doubt) account for a disproportionate share of the waste, and Certaindex captures these effectively.
+
+The DeepSeek-R1 results (Appendix G.1, Figure 17) extend this pattern to a much larger model: 12% token savings on AIME (from ~7000 tokens baseline) and 24% on AMC (from ~4000 tokens baseline), with the same accuracy maintained.
+
+**What drives the savings.** The paper attributes the gains to the Probe-In-The-Middle mechanism identifying answer convergence mid-reasoning and triggering early exit. The post-generation validation for linguistic uncertainty markers ("wait", "hmm") filters out false convergence signals where the model produces a consistent answer but is still actively reconsidering. The primary waste addressed is the "self-doubt" phenomenon (Figure 3), where the model reaches a correct answer early but continues re-verifying, checking completeness, and building confidence for hundreds or thousands of additional tokens.
+
+A notable pattern: **savings are generally larger on simpler datasets** (MATH500: 18–29% savings; AMC23: 20–25% savings) than on harder datasets (AIME24: 11–17% savings). This aligns with the intuition that harder problems require more genuine reasoning and have less self-doubt waste relative to productive computation. However, the 32B model on AMC23 achieves 25% savings while the 7B model on MATH500 achieves 29%, suggesting dataset difficulty is a stronger predictor of savings than model scale.
+
+#### Structured Reasoning Algorithms: Batch Token Savings Across SC, MCTS, and REBASE
+
+Figure 7 reports token-to-accuracy curves for batch processing across six (algorithm, dataset) combinations, comparing Dynasor against baseline-even and baseline-length. The headline result: **Certaindex reduces token usage by 9–52% across all workloads without accuracy loss, with over 47% savings on SC-GSM8K and over 50% on REBASE-MATH.**
+
+Specific savings from Figure 7 (all measurements with error bars from 10 runs, mean performance reported):
+- **SC LiveCodeBench:** from ~2.5M tokens baseline-even to ~1.6M tokens with Dynasor at ~35% accuracy—approximately 36% savings.
+- **SC GSM8K:** from ~5.0M tokens baseline-even to ~2.6M tokens with Dynasor at ~91% accuracy—approximately **47% savings**.
+- **MCTS ASDiv:** from ~3.5M tokens baseline-even to ~2.5M tokens with Dynasor at ~73% accuracy—approximately 29% savings.
+- **MCTS GSM8K:** from ~8.0M tokens baseline-even to ~5.0M tokens with Dynasor at ~70% accuracy—approximately 38% savings.
+- **REBASE MATH:** from ~2.5M tokens baseline-even to ~1.2M tokens with Dynasor at ~48% accuracy—approximately **52% savings**.
+- **REBASE GSM8K:** from ~8.0M tokens baseline-even to ~3.5M tokens with Dynasor at ~87.5% accuracy—approximately **56% savings** (estimated from the rightmost panel).
+
+An important secondary finding from Figure 7: **baseline-length consistently underperforms Certaindex—often substantially.** In the SC-LiveCodeBench panel, baseline-length shows similar or slightly worse token consumption than baseline-even at low accuracy levels, and achieves lower peak accuracy. In MCTS-ASDiv, baseline-length curves are visibly to the right of Certaindex curves, meaning more tokens consumed for equivalent accuracy. The paper notes this explicitly:
+
+> "baseline-length leads to accuracy degradation even with less aggressive compute pruning, highlighting the effectiveness of certaindex-based resource allocation."
+
+This is a critical comparative result because baseline-length uses the most obvious alternative signal (total tokens generated so far, which correlates with problem difficulty) for early termination decisions. Certaindex's substantial advantage over baseline-length (visible across all six panels in Figure 7) validates the claim that answer convergence is a more informative signal than raw token consumption for deciding when to stop.
+
+**The mechanism of savings.** The paper attributes these gains to the intra-program scheduling algorithm: "accurately identifies high-certaindex programs and terminates them early without accuracy loss. This early termination strategy significantly reduces resource consumption by eliminating unnecessary sampling compared with baseline-even." In the SC case, this means that once a sufficient majority of branches agree on an answer (low semantic entropy), the scheduler stops generating additional branches, saving the tokens those branches would have consumed. In the MCTS case, once the reward model scores indicate convergence (high average reward across explored paths), the scheduler stops running additional search iterations. In the REBASE case, once the branching produces consistent high-reward solutions, the scheduler stops generating additional branches.
+
+#### Online Serving: Throughput and SLO Improvements
+
+Figure 8 evaluates Dynasor against SGLang and Parrot on three online workloads: SC-MATH, MCTS-ASDiv, and REBASE-GSM8K. Each row in Figure 8 examines a different performance dimension.
+
+**Row (a): Program arrival rate vs. SLO attainment.** As the arrival rate of reasoning programs increases, Dynasor maintains high SLO attainment (close to 100%) at rates where baselines degrade substantially:
+- **SC-MATH:** Dynasor sustains ~100% P90 attainment at 8 programs/s; SGLang degrades to ~50% at the same rate; Parrot degrades similarly. Dynasor achieves **3.3× the sustainable rate** at equivalent attainment compared to SGLang (the paper reports 1.6–3.3× across all workloads).
+- **MCTS-ASDiv:** Dynasor sustains ~100% attainment at 12 programs/s; SGLang degrades below 80% at 6 programs/s.
+- **REBASE-GSM8K:** Dynasor sustains ~100% attainment at 1.6 programs/s; SGLang degrades at ~1.0 programs/s.
+
+**Row (b): SLO scale vs. SLO attainment.** At a fixed request rate, Dynasor allows substantially tighter SLO deadlines while maintaining high attainment:
+- **SC-MATH:** At ~50% attainment threshold, Dynasor supports an SLO scale of ~0.8 while SGLang requires ~1.5 and Parrot requires ~1.8—approximately **1.9× tighter than SGLang and 2.3× tighter than Parrot.** The paper reports 1.3–4.7× tighter SLOs across workloads.
+- **MCTS-ASDiv:** Similar pattern, with Dynasor maintaining 100% attainment at an SLO scale of ~0.75 while baselines require scales of ~1.0–1.25.
+- **REBASE-GSM8K:** Dynasor maintains 100% attainment at SLO scale ~2.5 while baselines require ~5.0–7.5.
+
+**Row (c): Accuracy vs. SLO attainment.** At the same SLO attainment level, Dynasor achieves **0.7–2% higher accuracy** than SGLang and Parrot across all three workloads. The paper attributes this to Certaindex-based resource redistribution: "Dynasor's ability to redistribute compute between simple and hard queries, enabling it to solve more queries while maintaining SLOs that baselines could only match with significantly more compute." In other words, by cutting resources from converged queries, Dynasor frees up compute that can be allocated to queries that genuinely need more reasoning, improving overall accuracy without violating SLOs.
+
+The paper notes that **throughput (tokens per second) is equal across all systems** in these experiments because "under the given request rates, all workloads saturate the GPU memory and making the system memory bound. This also validates the introduced scheduler has no overhead." This is an important validity check: Dynasor's gains come from smarter allocation (terminating waste, gang scheduling), not from somehow making the GPU process tokens faster.
+
+#### CoT on DeepSeek-R1: Scaling to Large Models
+
+Appendix G.1 (Figure 17) extends the CoT results to DeepSeek-R1 on AIME and AMC. The findings are consistent with the distilled models: 12% token savings on AIME (from ~8,000 tokens baseline to ~7,000 tokens with Dynasor at ~72% accuracy) and 24% token savings on AMC (from ~4,700 tokens baseline to ~3,500 tokens with Dynasor at ~95% accuracy). The paper notes this "aligns with our findings from smaller distill models, demonstrating consistent efficiency gains." The savings pattern (larger savings on the easier AMC dataset than the harder AIME dataset) is also consistent with the distilled model results.
+
+#### Scheduling Component Ablation: Contributions of Gang Scheduling, Certaindex, and SJF
+
+Appendix G.2 isolates the contribution of each scheduling component for SC on GSM8K and MATH. For GSM8K (Figure 18), measured by mean latency at a fixed request rate of 16 programs/s:
+- **LPM (SGLang) baseline:** 410s mean latency.
+- **+ Gang scheduling (uniform allocation):** 306s mean latency—a **25% reduction** from grouping requests within programs.
+- **Certaindex-aware allocation + LPM:** 165s mean latency—a **60% reduction** from the baseline, with Certaindex dominating the improvement.
+- **Certaindex + Gang + SJF:** 134s—the full system achieves a **67% reduction** from baseline.
+
+For MATH (Figure 19), measured by maximum sustainable rate at fixed P90 SLO attainment:
+- **LPM baseline + uniform allocation:** 1.0× rate.
+- **+ Gang scheduling:** 1.1× rate.
+- **Certaindex-aware allocation + LPM:** 1.2× rate—Certaindex provides a 20% improvement through token savings (~10% tokens saved on MATH).
+- **+ SJF:** 1.9× rate—SJF provides the largest gain on MATH by prioritizing shorter jobs and reducing head-of-line blocking.
+- **Full system (Certaindex + Gang + SJF):** 1.9× rate.
+
+The key insight from this ablation is that **the dominant component depends on workload characteristics.** For GSM8K, where Certaindex saves ~47% of tokens (Figure 7), the intra-program early termination dominates. For MATH, where Certaindex saves only ~10% of tokens, SJF's inter-program prioritization becomes the primary contributor to throughput gains. This validates the two-level architecture: intra-program optimization through Certaindex and gang scheduling, and inter-program optimization through SJF, with the relative importance of each shifting based on the token savings achievable by Certaindex.
+
+### Ablation Studies and Robustness Checks
+
+**Certaindex threshold selection:** Figure 9 compares different threshold values for SC on GSM8K (entropy thresholds of 0.5, 0.75, 1.0, 1.5, 2.0 against baseline-even) and for MCTS on ASDiv (reward score thresholds of 0.05, 0.1, 0.4, 0.7 against baseline-even). For SC-GSM8K, the threshold of 0.5 achieves the best token-to-accuracy trade-off: higher thresholds (0.75–2.0) become progressively more aggressive (earlier termination) and degrade accuracy, with the 2.0 threshold showing visibly lower accuracy than baseline-even at similar token budgets. For MCTS-ASDiv, the threshold of 0.4 is optimal: lower thresholds (0.05, 0.1) degrade accuracy because they terminate too aggressively; higher thresholds (0.7) increase token consumption without proportional accuracy gains (the curve shifts rightward without moving upward). This sensitivity analysis validates that threshold selection is non-trivial—the window between "too conservative" and "too aggressive" is narrow—and justifies the profiler-guided calibration approach.
+
+**Certaindex compared to alternative signals for resource estimation:** Figure 10 (also in §4.3 and Appendix B.3) compares Certaindex's entropy measure H against three alternatives: mean output length, mean normalized log probability, and a linear combination of all three. Using the (SC, GSM8K, Llama3.1-8B-Instruct) setting, Certaindex achieves a Pearson correlation of 0.68 with ground-truth compute requirements (the number of additional steps needed to solve a problem), substantially exceeding length (0.40) and log probability (0.40). The linear combination achieves 0.69, effectively identical to Certaindex alone, confirming that Certaindex captures essentially all available information about remaining compute needs. Kendall's Tau shows the same pattern: Certaindex achieves 0.61 vs. 0.35 for length and 0.34 for log probability. The paper's end-to-end token-to-accuracy evaluations in Appendix G (details not fully specified) "compare different signals for resource allocation, confirming certaindex's superior performance."
+
+**Combined signal thresholds (MCTS, GSM8K):** Table 3 shows that MCTS on GSM8K uses two combined Certaindex signals: semantic entropy threshold $\tilde{H}_\tau = 0.99$ AND reward score threshold $R_\tau = 0.4$. This is notably more conservative than the single-signal thresholds used for other algorithms (SC uses only entropy; MCTS-ASDiv uses only reward score). The paper does not ablate the individual vs. combined signal configuration for MCTS-GSM8K, so the marginal contribution of each signal cannot be determined from the reported results. The extremely high entropy threshold (0.99) effectively requires near-perfect consensus across paths before triggering early exit, suggesting the combined signal configuration is designed to be conservative on this particular (algorithm, dataset) combination.
+
+**Detection step (Detect @knob) characterization:** Appendix C (Figure 14) visualizes how Certaindex values and their correlation with remaining steps evolve across different detection points (steps 5, 10, 15, 20, 25, 30) for SC on GSM8K. As detection steps increase from 5 to 30, the paper reports a "30% increase in early-stopped problems," indicating that later detection points capture more converged programs. However, "this improved accuracy trades off against potential compute savings, as later detection points leave less opportunity for early termination." The Pearson correlation remains above 0.5 for solvable problems at all detection points, confirming that Certaindex is a reliable predictor regardless of measurement timing. This analysis implicitly validates the design choice of using a fixed, calibrated detection step rather than adaptively choosing when to measure—the signal is robust to timing, so a single well-chosen step suffices.
+
+**Fine-grained vs. static threshold allocation:** Appendix G.4 (Table 4) compares five allocation methods for SC-MATH and MCTS-ASDiv, measuring token savings while maintaining accuracy:
+- Static Threshold (the paper's primary policy): 11.0% savings on SC-MATH, 13.0% on MCTS-ASDiv.
+- Initial Step Curve Fitting (skyline curve from detection step): 11.9% and 13.6%, marginal improvement.
+- 5-Step Threshold (check Certaindex every 5 steps): 12.7% and 13.3%.
+- Single-Step Threshold (check every step): 12.7% and 13.6%.
+- Dynamic Curve Fitting (continuous budget adjustment): 14.4% and 15.8%.
+
+The diminishing returns from more frequent monitoring (static threshold at one step: 11.0% → single-step threshold: 12.7% → dynamic curve fitting: 14.4%) illustrate the trade-off between detection granularity and savings. The paper's decision to use static thresholding in main experiments is explicitly justified by latency considerations: switching from concurrent execution of all SC branches to sequential batching (required for intermediate Certaindex checks) increases mean latency from 289s to 366s for 500 programs, making the marginal ~3.4% additional token savings from dynamic curve fitting unattractive for latency-sensitive online serving.
+
+**Scheduling component contributions and fairness:** Appendix G.2 (Figures 18, 19, discussed above) and G.3 (Figure 20) provide additional system-level ablations. The fairness analysis (Figure 20) shows that Certaindex-based allocation and gang scheduling both improve finish-time fairness compared to non-Certaindex, non-gang alternatives (SGLang, Parrot). Adding SJF further improves fairness at the upper 50% fraction of jobs compared to without SJF, and at the upper 35% fraction compared to LPM. The paper's claim that "in all case, SJF shows the fairness metric no worse than even resource allocation" is supported by the CDF curves, which show the Certaindex-based methods consistently to the left (better fairness) of the baseline methods.
+
+**CoT ablation on DeepSeek-R1 vs. distilled models:** The consistency of results across model scales (distilled 7B, 14B, 32B in Figure 6; DeepSeek-R1 in Figure 17) serves as an implicit robustness check for the Probe-In-The-Middle technique. The technique works across independently trained model families (Qwen-distilled and DeepSeek-R1) and across scales from 7B to presumably 671B+ (DeepSeek-R1), suggesting the "self-doubt" phenomenon and the effectiveness of probing are not artifacts of a particular model architecture or training procedure.
+
+**Negative results: Probe ablation not performed.** The paper does not ablate the Probe-In-The-Middle prompt phrasing. The claim that "the exact phrasing of the extraction prompt is not critical" (§2.1) is asserted without experimental evidence. A reader evaluating whether to adopt this technique in a different domain would need to know whether probe phrasing affects the accuracy or timing of extracted answers, but this is not tested.
+
+**Negative results: Answer clustering sensitivity not tested.** For open-ended tasks (LiveCodeBench, flexible math expressions), the paper uses a small embedding model for answer clustering. The sensitivity of Certaindex to the clustering threshold or embedding model choice is not evaluated. For closed-form tasks, the exact string matching approach is robust but its failure modes (e.g., equivalent answers with different formatting classified as different groups) are not analyzed.
+
+### Critical Assessment
+
+The paper makes three central claims: (1) LLM reasoning algorithms exhibit systematic token overuse due to self-doubt and answer stabilization; (2) Certaindex, as a lightweight certainty metric, can detect this stabilization and trigger early termination without accuracy loss, achieving substantial token savings across diverse reasoning algorithms; (3) integrating Certaindex into a serving system (Dynasor) yields practical throughput and latency improvements in both batch and online settings. The experiments collectively provide substantial evidence for all three claims, but each has qualifications that matter for generalization.
+
+**Claim 1: Systematic token overuse.** The evidence is strong but narrow in scope. Figure 2 demonstrates 3.2× token overuse for DeepSeek-R1 on AMC23 and AIME24; Figure 1 shows 4.5× more tokens for a reasoning model vs. an instruct model at the same accuracy on MATH-500; Figure 3 provides one qualitative example of the self-doubt pattern. These are compelling demonstrations, but all are on **mathematical reasoning benchmarks** with models from the DeepSeek/Qwen family. The paper does not demonstrate token overuse on non-math tasks (code generation, logical reasoning, scientific QA, multi-step planning) or on models from other families (e.g., OpenAI's o1/o3, Anthropic's Claude, Google's Gemini). The self-doubt phenomenon might be specific to the training procedures used by DeepSeek and Qwen, which explicitly incentivize extended reasoning chains during reinforcement learning. A model trained with different reward shaping (e.g., explicit penalties for token length, or a stopping criterion in the RL objective) might not exhibit the same degree of overuse. The claim of "systematic token overuse in concurrent reasoning models" is supported for the specific models tested but the breadth of the claim ("concurrent reasoning models" as a category) overstates the evidential scope.
+
+**Claim 2: Certaindex achieves savings without accuracy loss.** The batch experiments (Figure 6 for CoT, Figure 7 for structured algorithms) show consistent token savings across configurations. However, the accuracy-preservation claim requires careful interpretation. In Figure 6, the Certaindex curves are shown at specific probing intervals (T = 32, 64, 128, 256, 320), each producing a different point on the tokens-accuracy curve. The paper claims savings by comparing a Certaindex point to a baseline point at the same accuracy. But the Certaindex curves are not guaranteed to achieve **exactly** the baseline accuracy—they achieve points near the baseline curve, and the paper reports the savings at "the same accuracy" by interpolating or selecting the closest point. The paper does not specify how this matching is done (nearest-neighbor matching? Interpolation? Which direction?). This matters because a 1–2% accuracy difference at the same token budget could change the interpretation of whether savings are "without accuracy loss." The error bars in Figure 7 provide some statistical context for the structured algorithms, and the 10-run averaging suggests the savings are reliable, but the matching procedure should be explicit.
+
+More fundamentally, the calibration of Certaindex thresholds is described as meeting accuracy requirements "on all calibration data points" (§D.2.2), but no details are provided on the calibration set size or its relationship to the evaluation set. If the calibration set is the same as or overlapping with the evaluation set, the reported savings may be inflated by overfitting the threshold to the specific problems in the evaluation. If the calibration set is a separate subset (which the paper does not state), this concern is mitigated but the absence of explicit cross-validation makes it difficult to assess. The profiler-guided calibration is a practical design choice, but the lack of a held-out calibration protocol weakens the generalizability claim.
+
+The accuracy-loss claim also depends on whether the Certaindex signal is causally related to answer quality, not just correlated with it. The paper's theoretical analysis (Section 3.4) provides a formal guarantee for CoT that observed stability implies convergence to the stationary distribution—but this guarantee assumes the model eventually converges (Assumption 1), requires a sufficient number of probes $k$ that scales exponentially in the number of answer groups, and only guarantees $\epsilon$-accuracy preservation. The empirical experiments do not verify whether these theoretical conditions are met in practice—$k$ is chosen heuristically (the probing interval and consistency window $N$), not by computing the required $k$ from Lemma 1. This means the theory provides conceptual support but not a practical recipe for parameter selection.
+
+**Claim 3: Dynasor yields practical throughput/latency gains.** The online serving experiments (Figure 8) are the paper's most practically impactful results, and they are strong at face value: 1.6–3.3× sustainable request rates, 1.3–4.7× tighter SLOs, 0.7–2% higher accuracy at the same SLO attainment. However, several design choices make these results an upper bound on practical gains:
+
+- **The deadline formulation uses oracle difficulty estimation.** Deadlines are computed as product of SLO scale, difficulty factor, and base deadline, where difficulty factors are determined through "extensive trial runs (>100) for each algorithm-dataset combination" (Appendix F.3). This is an oracle that requires knowing which problems are always solvable, always unsolvable, or variable—information not available in real deployment. A practical system would need to estimate difficulty online (which the paper does not do) or use uniform deadlines (which would change the results). The reported SLO attainment improvements might be partly attributable to the difficulty-aware deadline formulation rather than to Certaindex itself.
+
+- **Baselines are given fixed resource caps** (SC: 20 branches, MCTS: 15 iterations, REBASE: 128 width) while Dynasor adapts resources. The baselines represent "what current systems do" (uniform allocation), which is a valid comparison. However, one could imagine a baseline that also adapts resources—e.g., using baseline-length (which the batch experiments show underperforms Certaindex but still provides some adaptivity) or using a simple early-stopping rule based on majority confidence. The online experiments compare against SGLang and Parrot with fixed caps, not against any adaptive baseline. This means the reported improvements conflate the benefit of **any** adaptivity with the specific benefit of **Certaindex-based** adaptivity.
+
+- **All online experiments use the same (algorithm, dataset, model) combinations as the batch experiments**, with the thresholds calibrated on the same datasets. There is no evaluation of how thresholds calibrated on one dataset transfer to another, or how they degrade under distribution shift. The paper suggests periodic recalibration (§D.2.2) but provides no evidence on how sensitive performance is to threshold drift.
+
+**Missing experiments that would strengthen the paper:**
+
+1. **Cross-domain generalization.** All results are on math reasoning and (in one case) code generation. It is unclear whether answer stabilization manifests similarly in other reasoning domains—legal reasoning, medical diagnosis, multi-hop QA, strategic planning. The Probe-In-The-Middle technique assumes the model can be forced to output a meaningful intermediate answer, which may not hold for tasks where the "answer" is a complex structured output that cannot be boxed.
+
+2. **Ablation of probe phrasing.** The paper claims probe phrasing is not critical but provides no evidence. A comparison of 2–3 different probe phrasings (different degrees of forcing, different answer formats) would validate this claim and guide practitioners.
+
+3. **Sensitivity to answer clustering.** For open-ended tasks, the embedding-based clustering threshold and model choice are hyperparameters that could significantly affect Certaindex values. An ablation varying the clustering threshold or comparing clustering methods (e.g., exact match vs. embedding similarity vs. LLM-as-judge) would quantify this sensitivity.
+
+4. **Comparison against difficulty-estimation-based allocation.** The paper references concurrent work on token-budget-aware reasoning (Han et al., 2024) and adaptive inference-time compute (Manvi et al., 2024) that estimate difficulty before reasoning. A head-to-head comparison between pre-reasoning difficulty estimation and mid-reasoning Certaindex monitoring would clarify whether the two approaches are complementary or whether one dominates.
+
+5. **Latency-accuracy trade-off for longer reasoning horizons.** The CoT experiments use a 16K token budget. Modern reasoning models (o1, o3, DeepSeek-R1) can generate orders of magnitude more tokens on hard problems. The paper does not evaluate whether the Probe-In-The-Middle technique remains effective at very long horizons (e.g., 100K+ tokens), where the relationship between intermediate answer stability and final answer correctness might change.
+
+6. **Calibration set independence.** An explicit statement of whether the calibration data (used for threshold selection in the profiler) is held out from the evaluation data would be the single most clarifying addition to the experimental setup. Without this, readers cannot assess whether the reported thresholds are tuned to the test set.
+
+**Overall assessment.** The paper provides convincing evidence for the existence and exploitability of answer stabilization signals in LLM reasoning, and Certaindex is a well-designed abstraction for capturing those signals. The empirical gains are substantial and consistent across the tested configurations. The primary limitations are the narrow domain scope (math reasoning), the gap between oracle-informed and practical deployment (difficulty estimation for deadlines, calibration set independence), and the absence of comparisons against other adaptive allocation strategies. These are not fatal flaws—the paper explicitly positions Certaindex as a systems contribution that enables a new class of scheduling optimizations, and the evidence that it works well in the tested settings is strong. But the paper's claims of general applicability to "LLM reasoning" writ large, and of deployment-ready SLO improvements, should be understood as demonstrated for math reasoning with DeepSeek/Qwen/Llama/Llemma models and likely to require recalibration and validation for new domains, models, and deployment contexts.
+
+## 6. Limitations and Trade-offs
+
+### The Single-Domain Evaluation: All Results Are on Math Reasoning
+
+**The assumption or constraint.** The paper's entire empirical validation—every dataset, every model, every algorithm configuration—is confined to mathematical reasoning. The benchmarks used are MATH-500, AIME24, AMC23, GSM8K, ASDiv, and REBASE-MATH (a subset of MATH), all of which involve problems with clean, extractable, verifiable answers (numeric values, boxed expressions, or multiple-choice selections). The one non-math dataset, LiveCodeBench, is code generation—a domain that shares with math the property that answers are unambiguous and verifiable through execution. The paper does not evaluate on legal reasoning, medical diagnosis, multi-hop question answering, strategic planning, creative writing, dialogue, or any open-ended generation task where "correctness" is ambiguous or multi-dimensional.
+
+**The consequence.** Two properties make math benchmarks uniquely favorable for Certaindex, and both may fail in other domains:
+
+First, the **answer extraction and clustering step assumes ground-truth verifiability.** For closed-form math tasks, the paper clusters answers by exact string matching—two reasoning paths either produce the same boxed expression or they don't. For open-ended math and code, it falls back to embedding-based semantic similarity. Both methods rely on the fact that the task has a well-defined answer space where correctness is binary and answers cluster naturally around correct and incorrect solutions. In domains like legal analysis or medical diagnosis, the "answer" may be a multi-paragraph justification where no two reasonable responses are string-identical and where semantic similarity conflates correct-but-differently-expressed answers with plausible-but-incorrect ones. The paper provides no evidence on whether semantic entropy computed over LLM-generated answer clusters remains a reliable certainty signal when the answer space is continuous, subjective, or lacks a clear notion of "the same answer."
+
+Second, **the Probe-In-The-Middle technique requires the model to produce a meaningful intermediate answer on demand.** In math, inserting "Oh, I suddenly got the answer to the whole problem. Final Answer: \boxed{" forces the model to commit to a current best guess, which is typically a well-formed expression. For a legal reasoning task, asking the model to suddenly output "the answer" mid-analysis forces it to compress an in-progress argument into an oversimplified conclusion—the probed answer might not reflect the model's actual intermediate state in any informative way, undermining the entire consistency-based certainty signal. The paper acknowledges this implicitly by noting that "the exact phrasing of the extraction prompt is not critical" but does not test whether the technique works for taskswhere there is no natural boxed-answer format.
+
+**What evidence exists in the paper.** The limitation is evident from the dataset list (Section 4, Tables 1–3): every evaluated configuration involves math or code with explicit ground-truth answers. There is no ablation or discussion of performance on non-math tasks. The paper's Related Work (Section 5) mentions that prior uncertainty estimation work (Kuhn et al., 2023; Farquhar et al., 2024) was developed for open-ended generation, but the paper adapts it exclusively for structured answer spaces and does not test the open-ended case.
+
+**Mitigation status.** The paper does not address this limitation. It makes no claims about applicability beyond math and code, but the framing throughout ("LLM reasoning," "reasoning algorithms," "real-world LLM serving") implies generality that the experiments do not support. A reader deploying Certaindex for a non-math reasoning workload would have zero experimental guidance on whether the technique transfers.
+
+---
+
+### The Calibration Cost and Oracle Dependency Are Not Accounted for in the Headline Savings
+
+**The assumption or constraint.** The paper's reported token savings (up to 50% in batch, up to 3.3× throughput in online serving) are computed **after** Certaindex thresholds have been calibrated and **after** (in the online case) oracle difficulty estimates are used to set per-query deadlines. These are not runtime costs—they are offline or one-time costs—but they represent a dependency on labeled data and extensive profiling that a new deployment would need to replicate. The paper explicitly describes the calibration process (Appendix D.2.2):
+
+> "Users submit a batch of programs with labeled data—such as verified answers to questions (e.g., math problem solutions), response rankings, or reward model scores. The profiler collects runtime metrics, including certaindex and token usage, to determine optimal resource allocation across different certaindex ranges while maintaining accuracy requirements."
+
+For the online serving experiments, deadlines are difficulty-aware: each query's deadline is computed by multiplying an SLO scale by a difficulty factor (1 for always-correct queries, 3 for always-incorrect, 2 for variable), where these difficulty factors are determined through "extensive trial runs (> 100) for each algorithm-dataset combination" (Appendix F.3). This is explicitly oracle information—you need to know in advance which queries are always solvable, which are always unsolvable, and which are variable to set these deadlines.
+
+**The consequence.** The headline numbers (50% token savings, 3.3× throughput) bundle together the benefit of Certaindex-based early termination with the benefit of oracle difficulty-informed deadline allocation. A practitioner deploying Dynasor on a new dataset or task would face two hidden costs:
+
+1. **Calibration cost:** the profiler requires a batch of labeled programs (verified answers or reward scores) to tune the Certaindex threshold. The size of this batch is not specified, but it must be large enough to cover the distribution of Certaindex values across difficulty levels. For a new domain where labeled data is scarce, this calibration cost could be substantial—potentially exceeding the savings from early termination for small-scale deployments.
+
+2. **Deadline oracle cost (online serving only):** the >100 trial runs per query to estimate difficulty factors represent an enormous computational investment that is not amortized in any reported metric. If the online serving experiments (Figure 8) were repeated with uniform deadlines (as a real deployment would require without an oracle), the SLO attainment curves would shift—likely compressing the gap between Dynasor and baselines, since some of Dynasor's advantage comes from knowing which queries need more time and allocating accordingly.
+
+The paper's ablation on predicted vs. oracle difficulty (§G.3 fairness analysis) does not address this—it evaluates fairness across scheduling policies, not the sensitivity of headline results to deadline formulation.
+
+**What evidence exists in the paper.** The calibration process is described in Appendix D.2.2, and the difficulty-aware deadline formulation is described in Appendix F.3. The paper's acknowledgment is brief (Section 3.2 notes the exploration-exploitation trade-off for difficulty estimation, but this refers to the CoT probing cost, not the calibration/deadline costs). The profiler calibration is described as occurring "periodically" in production, but the cost of this recalibration (how many labeled examples are needed, how sensitive thresholds are to distribution shift) is never quantified.
+
+**Mitigation status.** The paper partially acknowledges the calibration dependency by describing the profiler as a component of Dynasor (Appendix D.2.2), but it does not account for calibration cost in any reported metric, does not measure how thresholds transfer across datasets or degrade under distribution shift, and does not provide guidance on calibration set size. The difficulty-aware deadline formulation is not flagged as a limitation anywhere in the paper—it is presented as part of the experimental setup without discussion of its practicality. A reader would need to discover this by carefully reading Appendix F.3 and recognizing the >100 trial runs requirement.
+
+---
+
+### The Adaptive Baseline Gap: No Comparison Against Other Adaptive Allocation Strategies
+
+**The assumption or constraint.** The paper's core claim is that Certaindex enables efficient dynamic compute allocation. To test this claim, the experiments compare Dynasor against **non-adaptive** baselines: baseline-even (uniform resource allocation) and baseline-length (a simple token-count heuristic). In the online serving experiments, both SGLang and Parrot are run with fixed resource caps (SC: 20 branches, MCTS: 15 iterations, REBASE: 128 width)—they make no attempt to adapt compute per query. The paper never compares Certaindex against another principled adaptive allocation strategy, such as:
+
+- **Difficulty-estimation-based allocation:** Han et al. (2024) propose estimating token budgets from question text before reasoning begins. While cited in Related Work, this approach is never implemented as a baseline.
+- **Majority-vote early stopping:** For Self-Consistency, a natural baseline is to stop generating paths once a clear majority (e.g., >70% of paths generated so far) agrees on an answer, without needing semantic entropy normalization.
+- **Reward-thresholding without entropy:** For MCTS and REBASE, a natural baseline is to stop when the reward model score exceeds a calibrated threshold, without combining it with semantic entropy (the paper does this for MCTS-ASDiv but not for MCTS-GSM8K, where both signals are used).
+
+**The consequence.** The absence of adaptive baselines means the experimental results conflate two separate effects: (1) the benefit of **any** adaptivity versus uniform allocation, and (2) the **specific** benefit of Certaindex over other plausible adaptive signals. The paper demonstrates that adaptivity via Certaindex substantially outperforms non-adaptivity, which is a valid contribution—but the implicit claim that Certaindex is the **best** or **uniquely effective** adaptive signal is not tested. A practitioner choosing between Certaindex and a simpler adaptive heuristic (e.g., "stop SC when the top answer has 80% of the vote") has no evidence from this paper about which performs better.
+
+The baseline-length results in the batch experiments (Figure 7) provide one data point: Certaindex outperforms a token-count-based adaptive signal. But token count is a particularly weak signal for reasoning convergence (as the paper itself shows in Figure 10: Pearson correlation of 0.40 with remaining compute needs vs. 0.68 for Certaindex). A stronger adaptive baseline—one based on answer convergence directly, not on token consumption—would be more informative. The paper does not provide such a baseline.
+
+**What evidence exists in the paper.** The comparison of Certaindex against alternative signals (Figure 10) is purely correlational: it measures how well each signal predicts remaining compute needs, but it does not implement an end-to-end adaptive scheduling policy using those alternative signals and compare token savings or throughput against Certaindex. The paper states that "end-to-end token-to-accuracy evaluations in Appendix G compare different signals for resource allocation, confirming certaindex's superior performance," but Appendix G does not contain this experiment—the appendix sections (G.1 on DeepSeek-R1, G.2 on scheduling components, G.3 on fairness, G.4 on fine-grained allocation) evaluate variants of Certaindex-based scheduling, not alternative-signal-based scheduling. This appears to be a reference error or an overstatement of what the appendix contains.
+
+**Mitigation status.** The paper does not acknowledge this as a limitation. The framing presents Certaindex as a novel contribution and compares it against non-adaptive baselines, which is standard practice for a systems paper introducing a new mechanism. But for a practitioner evaluating whether to adopt Certaindex versus a simpler adaptive heuristic, the paper provides insufficient evidence to make that determination.
+
+---
+
+### The Difficulty-Aware Deadline Formulation Is Circular in Practical Deployments
+
+**The assumption or constraint.** In the online serving experiments (Section 4.2, Figure 8), each query is assigned a deadline proportional to its difficulty, where difficulty is a per-query factor (1, 2, or 3) determined by "extensive trial runs (>100) for each algorithm-dataset combination" (Appendix F.3). This requires knowing, in advance, whether a query is always solvable (factor 1), always unsolvable (factor 3), or variable (factor 2). This information is not available in a real deployment—if you knew which queries were unsolvable, you wouldn't run them at all.
+
+**The consequence.** The SLO attainment curves in Figure 8 reward systems that allocate more time to hard queries and less to easy ones. Dynasor benefits from this because Certaindex is used to terminate easy queries early, freeing resources for hard queries—a mechanism that aligns naturally with difficulty-aware deadlines. But the deadlines themselves encode ground-truth difficulty that Dynasor does not compute. If the same experiments were run with **uniform deadlines** (all queries get the same time budget), the advantage of early termination would shift: easy queries that exit early would simply finish faster (improving average latency but not SLO attainment if SLOs are already loose), while hard queries that Dynasor allocates freed resources to might still miss their deadlines because the deadlines don't account for their intrinsic difficulty. The result is that the gap between Dynasor and baselines in Figure 8 is partly an artifact of the deadline formulation, not purely a consequence of Certaindex-based scheduling.
+
+Concretely, consider the REBASE-GSM8K results in Figure 8(b): at an SLO scale of 2.5, Dynasor maintains 100% attainment while SGLang and Parrot drop to near zero. But if the SLO scale is uniform across queries (not multiplied by a per-query difficulty factor), the baselines might perform better because they don't face artificially tight deadlines on hard queries. The paper provides no way to disentangle the contribution of Certaindex from the contribution of oracle-informed deadlines.
+
+**What evidence exists in the paper.** The difficulty-aware deadline formulation is described in Appendix F.3 but is never flagged as a limitation or an oracle dependency. The paper does not report results with uniform deadlines, does not ablate the difficulty factor's contribution to the SLO attainment gap, and does not discuss how a real deployment would set deadlines without an oracle. The throughput results (Figure 8a, 8c) are similarly affected, since they use the same difficulty-aware formulation.
+
+**Mitigation status.** The paper does not address this limitation. The difficulty factors are described as part of the experimental setup without qualification. A footnote in Appendix F.3 notes that "deadlines are difficulty-aware, determined using a simple policy: oracle difficulty for each query is estimated through extensive trial runs," but this is presented as a description of methodology, not as a limitation that qualifies the reported SLO improvements. A reader evaluating Dynasor for production deployment would need to recognize this independently and adjust expectations accordingly.
+
+---
+
+### The Probe-In-The-Middle Technique Has Unquantified Sensitivity to Prompt Phrasing and Probing Frequency
+
+**The assumption or constraint.** The entire CoT early-exit mechanism depends on Probe-In-The-Middle—periodically inserting a prompt to force the model to output its current answer. The paper asserts without evidence that "the exact phrasing of the extraction prompt is not critical. What matters is that it effectively guides the model to produce an answer immediately." It also does not ablate the probing interval beyond the specific values tested (32, 64, 128, 256, 320 tokens) or the sliding window width for consistency assessment (the parameter $N$, the number of required consecutive consistent answers). The theoretical analysis (Section 3.4, Lemma 1) suggests that the required number of probes $k$ scales exponentially in the number of answer groups $M$ and the inverse square of the accuracy tolerance $\epsilon$, but the paper does not verify whether its chosen parameters satisfy this bound in practice.
+
+**The consequence.** Two failure modes are possible without ablation evidence:
+
+1. **Prompt phrasing sensitivity.** If the probe prompt is too forceful ("I suddenly got the answer"), it might cause the model to output a low-confidence guess that doesn't reflect its true intermediate state, producing premature convergence signals. If it's too weak, it might fail to extract an answer at all. Without testing alternative phrasings, a practitioner cannot know whether the 11–29% token savings reported for CoT rely on a carefully tuned prompt that might not transfer to a different model, task, or domain.
+
+2. **Probing interval sensitivity.** Probing too frequently (e.g., every 32 tokens) adds overhead (the probe tokens plus the discarding and KV-cache rollback) and may disrupt the reasoning flow by repeatedly interrupting the model. Probing too infrequently may miss the convergence point, delaying early exit and reducing savings. The paper sweeps several intervals (Figure 6) but does not analyze whether the optimal interval depends on model scale, task difficulty, or reasoning length. The 7B model on AIME24 shows the smallest savings (11%) and the flattest improvement curve across probing intervals—is this because the model converges slowly, or because the probing intervals tested are suboptimal for that configuration?
+
+3. **Sliding window width sensitivity.** The parameter $N$—the number of consecutive consistent probed answers required to trigger early exit—directly controls the trade-off between false early exits (stopping too soon, degrading accuracy) and delayed exits (stopping too late, reducing savings). The paper does not report $N$ values, does not ablate across different $N$, and does not discuss how $N$ interacts with the probing interval. A practitioner tuning Dynasor for a new model or dataset has no guidance on how to set this parameter beyond "use the profiler"—which requires labeled data, as discussed in the second limitation.
+
+**What evidence exists in the paper.** The claim about prompt phrasing not being critical is asserted in Section 2.1 without supporting experiments. The probing interval is swept in Figure 6 (the different "Ours" curves for T = 32, 64, 128, 256, 320), but the paper does not discuss which intervals work best for which configurations, whether there is a universal optimum, or how the choice interacts with model scale or task difficulty. The sliding window width $N$ is not reported or ablated anywhere in the paper or appendix.
+
+**Mitigation status.** The paper does not address any of these sensitivities. The theoretical analysis provides a lower bound on the number of probes needed (Lemma 1), but this bound is asymptotic and involves unspecified constants; the paper does not check whether its chosen parameters satisfy it or use it to guide parameter selection. The profiler-guided calibration (Appendix D.2.2) is described as selecting thresholds, not probing parameters—so even with calibration, a deployer would need to choose probing intervals and consistency windows heuristically.
+
+---
+
+### The Latency-Throughput Trade-off of Fine-Grained Certaindex Monitoring Is Incompletely Resolved
+
+**The assumption or constraint.** The paper's primary evaluation (Section 4) uses a static threshold policy: Certaindex is measured at a single fixed detection step (e.g., step 5 for SC, step 3 for MCTS), and the decision to terminate or continue is binary. This design choice is explicitly motivated by latency considerations. When the paper tests more frequent Certaindex collection (every step, every 5 steps) in Appendix G.4, it reports that these schemes require sequential batching of reasoning paths rather than parallel execution, increasing mean latency from 289s to 366s for 500 SC programs. The paper concludes:
+
+> "Given these practical constraints, we opt to implement the simple static threshold in our end-to-end experiments, prioritizing system performance over marginal token savings."
+
+The marginal token savings from more fine-grained monitoring are 3.4% additional over the static threshold (from 11.0% to 14.4% on SC-MATH; from 13.0% to 15.8% on MCTS-ASDiv, per Table 4).
+
+**The consequence.** This creates an unresolved trade-off that the paper acknowledges but does not fully characterize:
+
+**The trade-off is workload-dependent.** On GSM8K, where Certaindex saves ~47% of tokens even with static thresholding, the marginal 3–4% from fine-grained monitoring might not justify a ~27% latency increase (289s → 366s). On MATH, where static thresholding saves only ~10% of tokens, the marginal improvement might be more attractive relative to the same latency penalty. The paper does not analyze whether the latency penalty itself depends on workload characteristics (e.g., whether it scales with the number of reasoning paths, the branching factor, or the token length per path).
+
+**The trade-off is hardware-dependent.** The latency penalty from sequential batching depends on GPU parallelism: on a GPU with more memory bandwidth and compute units, the relative cost of serializing reasoning path execution might differ from the A100 (80GB) GPUs used in the experiments. A practitioner with different hardware (H100, L40S, multi-GPU deployments) cannot estimate the latency penalty from the paper's single-hardware results.
+
+**The trade-off might be avoidable.** The paper frames the choice as parallel execution (no intermediate Certaindex checks) versus sequential batching (enabling intermediate checks). But there may be intermediate designs: for example, collecting Certaindex from a subset of reasoning paths (not all) in parallel, or using an asynchronous monitoring thread that checks Certaindex without blocking path generation. The paper does not explore the design space between "static threshold at one step" and "check every step sequentially."
+
+**What evidence exists in the paper.** The latency comparison (289s vs. 366s) is reported in Appendix G.4 without further analysis. The token savings for different allocation methods are in Table 4. There is no ablation varying the number of reasoning paths, the GPU type, or the batching strategy for intermediate Certaindex collection.
+
+**Mitigation status.** The paper partially addresses this by making the static threshold the primary policy and by quantifying the latency penalty of the alternative. It frames the choice as a deployment-specific trade-off: "in applications which prioritize cost over latency, such allocation strategies remain effective and are implemented in Dynasor." This is a reasonable engineering position, but the incomplete characterization of the trade-off means a practitioner cannot make an informed decision without running their own benchmarks—which defeats some of the purpose of a published evaluation. The paper would be stronger if it characterized how the latency penalty scales with key parameters (number of paths, path length, GPU memory bandwidth) rather than reporting a single number for one configuration.
+
+## 7. Implications and Future Directions
+- How this changes the field
+  - Shifts the focus from “generate more reasoning tokens” to “measure and stop when stable.” Certaindex provides a unifying, low-cost signal for adaptive test-time compute across algorithms.
+  - Establishes “reasoning-aware scheduling” as a practical systems layer: small code changes, large efficiency gains (§3.3; §4.2).
+- Follow-up research enabled
+  - Learning-to-allocate: train models or controllers that directly predict Certaindex or optimal budgets, potentially replacing threshold tuning.
+  - Better signals: leverage hidden states or verifier feedback to refine Certaindex for open-ended tasks while preserving low overhead (§3.1; Related Work §5).
+  - Multi-tenant security and fairness: formalize defenses against certainty leakage and attack resilience; broader fairness metrics beyond finish-time fairness (§6; §D.3.1).
+  - Integration with serving optimizations: combine with prefill/decoding disaggregation, memory paging, and speculative decoding for compounded gains (§6; Related Work).
+- Practical applications
+  - Cloud LLM platforms: reduce cost per query and improve SLO attainment; allocate saved compute to harder queries (Fig. 8c).
+  - On-device or edge inference: aggressive early-exit to fit power/latency budgets.
+  - Large-scale workflows (code generation, math tutoring): dynamic budgets per problem difficulty; early culling of unpromising paths (Appendix B.2).
+
+> “In batch inference, [Certaindex/Dynasor] saves up to 50% compute to reach the same overall accuracy; and in online serving, it sustains up to 3.3× more queries or achieves 4.7× tighter latency SLOs at the same attainment rates.” (Abstract; §4, Fig. 6–8)
+
+Overall, this paper delivers a clear, deployable recipe—instrument reasoning to detect stabilization, quantify it with a normalized metric, and drive scheduling decisions. The result is a practical path to scale LLM reasoning efficiently without sacrificing accuracy.

@@ -1,0 +1,658 @@
+# Sharing is Caring: Efficient LM Post-Training with Collective RL Experience Sharing
+
+**ArXiv:** [2509.08721](https://arxiv.org/abs/2509.08721)
+
+## 🎯 Pitch
+
+This paper presents SAPO, a decentralized and asynchronous reinforcement learning algorithm that enables independent language model nodes to efficiently post-train by sharing textual experiences (rollouts) rather than synchronizing weights or relying on centralized infrastructure. By allowing heterogeneous nodes—regardless of hardware or model architecture—to collaboratively propagate successful strategies through shared rollouts, SAPO nearly doubles cumulative reward in complex reasoning tasks compared to standard RL approaches. This innovation matters because it democratizes large language model training, slashes infrastructure costs, and accelerates collective learning, making powerful post-training accessible across diverse and unreliable compute environments.
+
+---
+
+## 1. Executive Summary
+
+This paper introduces **Swarm sAmpling Policy Optimization (SAPO)**, a fully decentralized and asynchronous RL post-training algorithm where heterogeneous compute nodes independently train their own policy models while sharing decoded rollouts (plain-text completions with verifiable rewards) across the network, enabling "Aha moments" to propagate and bootstrap collective learning without synchronization overhead. In controlled experiments with eight Qwen2.5 0.5B parameter models trained on ReasoningGYM's procedurally generated reasoning tasks using GRPO, the optimal configuration—4 local rollouts balanced with 4 externally sampled rollouts—achieves a 94% cumulative reward improvement over the no-sharing baseline (1093.31 vs. 561.79 total accumulated reward). A large-scale open-source demo with thousands of community-contributed nodes further demonstrates that swarm-trained models significantly outperform isolated counterparts after roughly 175 rounds, establishing that collective experience sharing accelerates learning most effectively when models can actively absorb diverse rollouts—an effect that is pronounced for mid-capacity models but diminishes when either the model is already strong or the reliance on external samples becomes excessive enough to destabilize training through learning-and-forgetting oscillations.
+
+## 2. Context and Motivation
+
+### The Core Problem: Scaling RL Post-Training Hits a Wall of Centralization
+
+The paper addresses a fundamental tension in the current landscape of reinforcement learning for language model post-training. Since DeepSeek-R1-Zero (DeepSeek-AI et al., 2025) demonstrated that pure RL—without supervised fine-tuning—can induce complex reasoning capabilities in LMs, the field has raced to scale these methods. But scaling RL for LMs is not simply a matter of throwing more GPUs at the problem. It imposes specific architectural demands that create genuine bottlenecks:
+
+> "effectively utilizing RL for LMs requires significant parallelization to scale-up inference, which introduces non-trivial technical challenges (e.g. latency, memory, and reliability) alongside ever-growing financial costs" (Section 1)
+
+The root of the problem lies in how current distributed RL systems operate. When you want to train a language model with RL at scale, you typically need to run many copies of the policy model to generate rollouts (inference), then aggregate those rollouts to compute gradients, then synchronize the updated weights back to all copies. This cycle presupposes a tightly coupled cluster:
+
+> "Recent efforts to scale RL for LMs have largely focused on distributed systems that orchestrate large GPU clusters that need to keep policy weights synchronized during training (Mistral-AI et al., 2025; Wu et al., 2025; Fu et al., 2025). Although effective, these approaches are expensive, introduce communication bottlenecks, and often require carefully engineered infrastructure to remain stable and efficient." (Section 1)
+
+This is the gap the paper identifies: **there is no algorithm that allows decentralized, heterogeneous, and loosely connected nodes to collaboratively improve language models through RL without requiring weight synchronization, homogeneous hardware, or low-latency communication.**
+
+### Why This Problem Matters: Democratizing Access and Changing the Economics
+
+The significance of this gap extends well beyond a systems engineering inconvenience. It has direct implications for who can participate in advancing AI capabilities and at what cost.
+
+**Decentralized training can fundamentally alter the economics of model improvement.** Current approaches to RL post-training, exemplified by large-scale systems like LlamaRL (Wu et al., 2025) or AREAL (Fu et al., 2025), require access to homogeneous, high-bandwidth GPU clusters. These are expensive to rent and even more expensive to build and maintain. If, instead, training could be distributed across heterogeneous, consumer-grade hardware—MacBooks, gaming GPUs, cloud instances of varying capability—without requiring them to synchronize weights, the barrier to entry drops dramatically. A concrete manifestation of this vision is Gensyn's RLSwarm platform (Gensyn, 2025), which the paper cites as an example of "thousands of heterogeneous SLMs running locally on consumer grade hardware (e.g., MacBooks) [that] interact and train collectively" (Section 1).
+
+**It enables a new form of collaborative intelligence.** Beyond cost, decentralization opens possibilities that are structurally impossible in a centralized setup. When nodes train independently but share experiences (rollouts), the system naturally behaves like a multi-agent setup where diverse models explore different parts of the solution space and share their discoveries. The paper makes this explicit:
+
+> "the system behaves like a multi-agent setup, where diverse models and abundant data enhance exploration and improve generalization" (Section 1)
+
+This is not merely a nice-to-have property. It means that discoveries made by one node—what the paper evocatively calls "Aha moments"—can propagate through the network, amplifying the effective sample efficiency of the entire swarm. A node running on modest hardware can benefit from insights generated on faster hardware, without either needing to run the same model or synchronize weights.
+
+**The problem skew matters for practical deployment.** The paper focuses on small language models (SLMs, defined as models with fewer than 10B parameters) because these are the models that actually run on local or edge devices—the natural deployment environment for a decentralized network (Section 1). Improving the RL post-training of SLMs through collective experience sharing directly targets the regime where centralized cluster-based training is least accessible and most financially prohibitive.
+
+### Where Prior Approaches Fall Short
+
+To understand the gap SAPO fills, we need to examine the landscape of prior work along two axes: RL fine-tuning methods for language models, and multi-agent approaches to collaborative improvement.
+
+#### RL Fine-Tuning Approaches: All Roads Lead to a Single Policy
+
+The dominant paradigms for RL-based LM fine-tuning are RL from human feedback (RLHF, Ziegler et al., 2020; Ouyang et al., 2022) and RL with verifiable rewards (RLVR, Gao et al., 2024; Lambert et al., 2025; DeepSeek-AI et al., 2025). Both operate on the same fundamental architecture: a single policy generates rollouts, a reward model (trained or rule-based) scores them, and a policy-gradient algorithm—typically PPO (Schulman et al., 2017) or more recently GRPO (Shao et al., 2024) and its variants like DAPO (Yu et al., 2025) and VAPO (Yue et al., 2025)—updates the policy.
+
+When scaling these methods, the standard approach is to distribute the rollout generation phase across multiple workers. Systems like LlamaRL (Wu et al., 2025), AREAL (Fu et al., 2025), and the infrastructure behind Mistral's Magistral model (Mistral-AI et al., 2025) exemplify this pattern. But crucially, they all assume that **all workers are generating from the same policy and contributing to the same policy update**. Weight synchronization is a hard requirement. The paper's critique of these approaches centers on three concrete shortcomings:
+
+1. **Cost**: Homogeneous GPU clusters are expensive. The financial barrier excludes all but well-funded organizations from participating in large-scale RL post-training.
+
+2. **Communication bottlenecks**: Weight synchronization at scale is a non-trivial distributed systems problem. Gradient aggregation stalls become increasingly costly as the number of workers grows, and uneven worker speeds can lead to straggler effects.
+
+3. **Infrastructure fragility**: These systems "often require carefully engineered infrastructure to remain stable and efficient" (Section 1). Small configuration errors or hardware failures can cascade through the synchronized system, making robustness difficult to guarantee.
+
+**What all these approaches share, and what SAPO challenges, is the assumption that the policy must be unitary.** The paper's core structural insight is that this assumption can be relaxed without sacrificing, and potentially while improving, learning outcomes.
+
+#### Multi-Agent Methods: Too Structured for Organic Collaboration
+
+The multi-agent literature for language models has developed sophisticated methods for collaborative improvement, but the paper argues these approaches impose too much structure to serve as a decentralized, heterogeneous training framework. The paper groups multi-agent work into three categories:
+
+**Debate**: In multi-agent debate schemes (Wu et al., 2023; Du et al., 2023; Li et al., 2024; Khan et al., 2024; Liang et al., 2024), multiple LMs independently answer a query, then iteratively refine their responses through structured dialogue. The final output is selected by voting or a verifier. This produces higher-quality answers, but it requires orchestrated turn-taking among agents—a coordination overhead that doesn't map naturally to fully asynchronous, heterogeneous nodes.
+
+**Specialization (role-playing)**: Methods like MALT (Motwani et al., 2025) and CAMEL (Li et al., 2023) assign fixed, distinct roles to different agents (e.g., generator, verifier, refiner). This specialization can improve task performance but requires explicit role design and coordination protocols. Nodes cannot simply join or leave the system organically; they must be integrated into a predefined role structure.
+
+**Self-improvement through bootstrapping**: Approaches like SPIN (Chen et al., 2024) and SIRIUS (Zhao et al., 2025) train models to improve through iterative self-play, generating responses that gradually approximate higher-quality targets. These methods are powerful but typically involve a single model playing against itself or a fixed adversary—not a heterogeneous collective learning asynchronously.
+
+Some works do combine RL with multi-agent methods for LM fine-tuning. MARFT (Liao et al., 2025) uses multiple agents with RL-based parameter updates, and Ma et al. (2024) apply sequential cooperative multi-agent RL. However, these still assume structured agent interactions with specific coordination mechanisms. They do not address the regime SAPO targets: an open network where nodes come and go, use different hardware and models, and communicate only through lightweight experience sharing.
+
+**The Adversarial Dimension**: The paper also notes that adversarial techniques (Perez et al., 2022) can be layered onto debate, specialization, or self-improvement methods. SAPO's swarm implicitly provides a form of adversarial robustness through diversity—different nodes make different mistakes, and sharing rollouts exposes each model to edge cases it might not encounter on its own—but this is an emergent property rather than a designed adversarial mechanism.
+
+#### The Unexplored Gap: Decentralized RL Post-Training for LMs
+
+Synthesizing the above, the landscape before SAPO can be characterized by two missing elements:
+
+- **RL fine-tuning methods** all assume a single, synchronized policy, which demands centralized infrastructure and homogeneous hardware.
+- **Multi-agent methods** enable collaboration but through structured coordination mechanisms that don't accommodate loose, heterogeneous, asynchronous participation.
+
+The gap is clear: **no existing method enables decentralized, asynchronous, heterogeneous nodes to collaboratively improve language models through RL without requiring weight synchronization or structured agent coordination.** SAPO is explicitly designed to fill this gap.
+
+### How This Paper Positions Itself
+
+The paper positions SAPO as a **bridge** between single-agent RL fine-tuning and structured multi-agent frameworks (Section 2). The key insight is that the bridge is built on a single, simple mechanism: **sharing decoded rollouts**.
+
+> "SAPO uses reward-driven trial-and-error to improve LMs. However, unlike traditional approaches, it does not require a single policy to generate all rollouts nor synchronization among multiple policies." (Section 2)
+
+> "From a multi-agent perspective, SAPO naturally exhibits collaborative behavior with minimal additional computation. Unlike structured multi-agent frameworks, it does not aim to produce specialized nodes or orchestrated collaboration. Nonetheless, by sharing experiences, nodes indirectly benefit from each other's exploration and reasoning, yielding richer training signals." (Section 2)
+
+This positioning carries several important implications:
+
+**It is not proposing a better way to do centralized RL—it is proposing a fundamentally different organizing principle.** SAPO does not compete with systems like LlamaRL on their own terms (throughput, gradient efficiency). Rather, it defines a new operational regime where training can happen across hardware that would be unusable in a synchronized system.
+
+**It claims to capture multi-agent benefits without multi-agent complexity.** Structured multi-agent methods provide explicit coordination mechanisms that demonstrably improve outputs. SAPO argues that simply sharing experiences—letting each node see what others generated and scored—provides enough of these benefits that explicit coordination may be unnecessary for many settings. The "Aha moment" propagation is an emergent consequence of exposure to diverse successful rollouts rather than a product of engineered agent interactions.
+
+**It models a tradeoff between local exploitation and collective exploration.** Nodes that draw heavily from the swarm can benefit from others' discoveries, but if too many nodes rely on external rollouts and too few contribute fresh discoveries, the shared pool's quality degrades. This gives rise to the non-monotonic performance curve the paper observes (4 local / 4 external being optimal, with 2 local / 6 external degrading). The paper frames this not as a bug but as an inherent feature of the decentralized paradigm—one that future work can optimize through adaptive sampling strategies.
+
+**It makes minimal assumptions.** SAPO requires only that rollouts can be shared in a decoded format (plain text) and that tasks are verifiable (reward can be computed algorithmically from the answer). There is no assumption about model architecture, parameter count, optimizer state, or even that nodes are running the same learning algorithm. This agnosticism is what makes the framework practical for truly heterogeneous networks—and it's what distinguishes SAPO from prior distributed RL systems that depend on homogeneous infrastructure.
+
+In essence, the paper is not primarily arguing that SAPO _outperforms_ centralized RL at the same scale. Rather, it is arguing that SAPO _enables_ RL post-training at scales and in settings where centralized approaches are infeasible, and that in doing so, it incidentally produces efficiency gains through collective experience sharing that can rival or exceed isolated training of individual nodes.
+
+## 3. Technical Approach
+
+### 3.1 Reader Orientation (Approachable Technical Breakdown)
+
+**What the system is:** SAPO is a set of rules for how independent computers—each running its own language model and training process—can help each other learn faster by trading examples of solved problems (in plain text) across a network, without ever needing to synchronize their model weights or agree on hardware or software.
+
+**What problem it solves and the "shape" of the solution:** It solves the problem that scaling RL post-training for language models currently demands expensive, homogeneous GPU clusters with tightly synchronized weight updates. The solution is to replace weight synchronization with *experience sharing*: nodes broadcast their generated answers (rollouts) in decoded format, other nodes can re-encode and score these rollouts as if they had generated them themselves, and the resulting training signal propagates discoveries—"Aha moments"—through the network. The key insight is that this removes all synchronization bottlenecks while still allowing collective learning, turning what was a centralized engineering challenge into a decentralized, asynchronous, and heterogeneous collaboration problem.
+
+### 3.2 Big-Picture Architecture (Diagram in Words)
+
+The SAPO system has five major components operating in a repeating cycle:
+
+1. **Swarm Nodes (`$n \in [N]$`)** — Each is an independent compute node (e.g., a MacBook, a cloud instance, a gaming GPU) that holds its own policy model `$\pi_n$`, its own dataset `$\mathcal{D}_n$` of verifiable questions with ground-truth answers, and its own reward function `$\rho_n$`. Nodes do not share model weights, optimizer states, or hardware specifications.
+
+2. **Question Sampling** — At each training round, each node randomly selects a batch of questions `$\mathcal{B}_n \subseteq \mathcal{Q}_n$` from its local dataset and generates a set of candidate answers (a rollout) for each.
+
+3. **Rollout Sharing (The Broadcast)** — Each node selects a subset of its generated rollouts and broadcasts them to the network along with the corresponding questions, metadata, and ground-truth answers. Crucially, rollouts are shared in *decoded format* (plain text), not as token sequences or model internals.
+
+4. **Training Set Assembly** — Each node constructs its training batch by combining `$I_n$` samples from its own locally generated rollouts with `$J_n$` samples drawn from the pool of rollouts shared by other nodes. Nodes can filter external rollouts (e.g., discarding those with zero reward) before sampling.
+
+5. **Policy Update** — Each node uses its local reward model to score the assembled training set, then updates its own policy via any policy-gradient algorithm (GRPO in the paper's experiments). The updated policy immediately affects the node's next round of rollout generation, and the cycle repeats.
+
+Information flows: node generates rollouts → node broadcasts subset to swarm → node samples from swarm pool + own rollouts → node computes rewards → node updates policy → node generates better rollouts next round. There is no global coordinator, no weight server, and no synchronization barrier. Each node operates on its own clock.
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First, the swarm abstraction (Section 3.1)** — what a node is, what it holds, what it generates, and the minimal requirements for participation. This establishes the decentralized operating environment.
+
+- **Second, the SAPO algorithm proper (Section 3.2)** — the step-by-step mechanics of how nodes share, sample, assemble training data, and update. This is the core contribution, and understanding it requires the swarm abstraction as context.
+
+- **Third, the training set construction logic** — how nodes choose between local and external rollouts, why filtering matters, and how the local-to-external ratio `$I_n : J_n$` controls the exploration-exploitation tradeoff. This is the key design parameter that the experiments vary.
+
+- **Fourth, the policy update details** — which algorithm is used (GRPO), how rewards are computed, and what design choices were made (KL-divergence weight set to zero, asymmetric clipping thresholds). This connects SAPO to the broader RL fine-tuning literature.
+
+- **Fifth, the GenRL infrastructure** — the decentralized framework that implements SAPO and enables the controlled experiments. Understanding this explains how the paper moves from algorithmic description to reproducible experiments.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is an **algorithmic framework paper** whose core idea is that replacing weight synchronization with experience sharing in a decentralized RL setting enables collaborative learning across heterogeneous nodes, and that a balanced ratio of local-to-external experience provides the strongest training signal because it captures the benefits of diverse exploration while maintaining enough self-generated data to ground each policy's learning in its own distribution.
+
+---
+
+#### The Swarm Abstraction
+
+SAPO defines a swarm as a decentralized network of independent compute nodes that communicate only through the exchange of decoded rollouts. This abstraction is the foundation of the algorithm, and its simplicity is what enables heterogeneity.
+
+**Node definition.** Each node `$n \in [N]$` (where `$N$` is the total number of nodes in the swarm) is an independent entity with three core possessions:
+
+- **A dataset** `$\mathcal{D}_n$`, which consists of pairs `$(q, y_q)$` where `$q$` is a question (task) from the node's question set `$\mathcal{Q}_n$` and `$y_q$` is the corresponding ground-truth answer. The paper imposes one critical requirement: tasks must be *verifiable*—meaning the correctness of an answer can be efficiently and algorithmically checked. This is the RLVR (RL with verifiable rewards) setting, where rewards come from rule-based checkers rather than learned reward models.
+
+- **Metadata** `$\mathcal{M}_n$`, which specifies how each task in the node's dataset can be verified. In practice, this is often implicit to the swarm configuration (e.g., all nodes know which verifier functions to call for each task type), but the paper makes it explicit for formal completeness.
+
+- **A policy model** `$\pi_n$` (e.g., a language model) that maps an appropriately formatted input to candidate answers. In RL terminology, `$\pi_n$` is the node's policy—the distribution from which it samples completions. The paper assumes the policy is a small language model (SLM, fewer than 10B parameters), reflecting the practical reality that decentralized swarms run on consumer-grade hardware (Section 1).
+
+**Rollout generation.** When presented with a question `$q \in \mathcal{Q}_n$`, the node generates `$L_n$` candidate answers:
+
+$$\mathcal{R}_n(q) := \{ a_n^1(q), \ldots, a_n^{L_n}(q) \}$$
+
+where each `$a_n^i(q)$` is a single sampled completion from `$\pi_n$` conditioned on prompt `$q$`. In the controlled experiments, `$L_n = 8$` for all nodes—each question gets eight candidate answers (Section 4.1). The set of completions for a single question constitutes that question's *rollout* from node `$n$`.
+
+**What it computes:** For each question, the node samples `$L_n$` independent completions from its policy and collects them into a set. This is standard RL rollout generation—the policy explores the space of possible answers through stochastic sampling.
+
+**Why this structure:** The swarm abstraction does not require that all nodes use the same `$L_n$`, the same questions, or even the same modality (the paper notes that multimodal swarms are possible if nodes filter incompatible rollouts locally). The only hard requirements are verifiability and compatible modalities for rollouts that will be shared. This minimalism is deliberate: it is what allows the swarm to operate without centralized coordination. In the paper's words, "the dataset, number of generated answers, and sampled rollouts can all vary with time, however we omit the time subscript for notational convenience" (Section 3.1).
+
+**A subtlety about non-training nodes.** The paper notes an interesting property that is not explored experimentally but is architecturally significant: nodes can participate in the swarm as *generators* without being *learners*. "nodes in the swarm do not necessarily need to partake in training and can use any compatible policy; hence, in principle, humans and other non-traditional policies can serve as generators in the swarm" (Section 3.1). This means a human providing answers to questions could be treated as just another node sharing rollouts, and an LM in the swarm could learn from those human-generated examples through the same mechanism it uses to learn from other LMs. This property makes SAPO conceptually compatible with RLHF-like settings where human demonstrations could enter the experience pool.
+
+---
+
+#### The SAPO Algorithm: Step-by-Step Mechanics
+
+The SAPO algorithm is a repeating cycle of four phases: question sampling, rollout generation and sharing, training set assembly, and policy update. The pseudocode in Algorithm 1 of the paper specifies this cycle, and the text in Section 3.2 walks through each phase.
+
+**Phase 1: Question Sampling.** At the start of each training round `$t$`, each node independently subsamples a batch of questions from its local dataset:
+
+$$\mathcal{B}_n \subseteq \mathcal{Q}_n$$
+
+In the controlled experiments, each node samples 8 specialties uniformly from the ReasoningGYM task list and receives one question per specialty, producing `$|\mathcal{B}_n| = 8$` questions per round (Section 4.1). This batch size is kept constant across baseline and SAPO configurations to ensure fair comparison—the total number of training samples per round is fixed.
+
+**Phase 2: Rollout Generation and Sharing.** For each question in its batch, the node generates `$L_n$` completions (8 in the experiments), producing a set of rollouts. The node then decides which of these rollouts to *broadcast* to the swarm. Specifically, it selects a subset:
+
+$$\mathcal{S}_n \subseteq \mathcal{B}_n$$
+
+and for each question `$q \in \mathcal{S}_n$`, it broadcasts a communication packet `$\mathcal{C}_n(q)$` containing four pieces of information:
+
+$$\mathcal{C}_n(q) := (q, y_q, \mathcal{R}_n(q), \mathcal{M}_n)$$
+
+where `$q$` is the question text, `$y_q$` is the ground-truth answer, `$\mathcal{R}_n(q)$` is the set of generated completions, and `$\mathcal{M}_n$` is the metadata specifying how to verify answers for this task.
+
+**What it computes:** The node selects which of its generated rollouts to share and packages them with enough information that any other node can reconstruct the training signal—the question, the correct answer, the candidate completions, and instructions for scoring.
+
+**Why this structure:** The decoded format is the critical design choice. By sharing completions as plain text rather than as token sequences, model logits, or weight updates, SAPO achieves independence from model architecture. A node running a Qwen2.5 0.5B model can learn from rollouts generated by a node running a completely different model family or size because all it needs to do is re-tokenize the text and compute log-probabilities under its own policy. The paper is explicit: "individuals in the swarm can emulate these rollouts as if generated by their own policy, e.g. individuals can re-encode and compute token-level values as if the rollout was generated by their policy regardless of how unlikely" (Section 3.2). The phrase "regardless of how unlikely" is key—the external rollout may have near-zero probability under the receiving node's policy, but that does not prevent computation of the policy-gradient update. This is what enables heterogeneous model participation.
+
+**Phase 3: Training Set Assembly.** After sharing, each node constructs its training batch `$\mathcal{T}_n$` by combining two types of samples:
+
+$$\mathcal{T}_n = \underbrace{\left\{ I_n\text{-many samples from } \bigcup_{q \in \mathcal{B}_n} \mathcal{C}_n(q) \right\}}_{\text{self-rollouts}} \cup \underbrace{\left\{ J_n\text{-many samples from } \bigcup_{m \neq n, q \in \mathcal{S}_m} \mathcal{C}_m(q) \right\}}_{\text{external rollouts}}$$
+
+where `$I_n$` is the number of local (self-generated) samples the node uses, `$J_n$` is the number of external (swarm-contributed) samples it draws, and `$I_n + J_n = 8$` in the controlled experiments to keep total training batch size constant across configurations.
+
+**What it computes:** The node samples its training data from two distributions: its own rollouts and the collective pool of all rollouts shared by other nodes. The ratio `$I_n : J_n$` is the primary experimental variable—values of 8:0 (baseline), 6:2, 4:4, and 2:6 are tested in Section 5.
+
+**Why this form:** The dual-source construction is the mechanism that enables collective learning without weight synchronization. Self-rollouts ground the policy update in the node's own experience—the distribution it would naturally encounter when generating answers. External rollouts inject diversity, exposing the node to solution strategies it might never discover on its own. This is the algorithmic realization of the "Aha moment" propagation: if one node discovers a correct solution pattern, other nodes can learn from it in their next training round without needing to independently stumble upon the same insight.
+
+**The filtering mechanism.** A crucial practical detail modifies the naive sampling from the external pool. The paper states that "all nodes first discard rollouts with zero advantage, and then uniformly sample from the remaining swarm rollouts" (Section 3.2). This filtering step removes uninformative samples—completions that received zero reward—from the external pool before sampling. The baseline cannot do this filtering because it only sees its own rollouts and must use all of them to satisfy the fixed batch size constraint. This filtering is an inherent advantage of SAPO: the swarm pool is typically larger than any individual node's batch, allowing for selective sampling of informative (positive-reward) examples. However, the paper does not explore more sophisticated filtering strategies (e.g., sampling proportional to reward magnitude, or filtering based on sequence-level properties), flagging this as future work (Section 7).
+
+**A subtlety about advantage computation.** What does "zero advantage" mean here? In GRPO, the advantage for a completion is computed relative to the mean reward of the group of completions for that same question. A completion with "zero advantage" is one whose reward equals the group mean—it contributes no learning signal because it is neither better nor worse than average. By discarding these, the node focuses its external-sample budget on completions that were either notably good or notably bad, both of which carry gradient information. The baseline setup cannot discard such samples because each node must use all its own rollouts to fill its training batch.
+
+**Phase 4: Policy Update.** Once the training set is assembled, the node uses its local reward model `$\rho_n$` to compute a reward for each completion in `$\mathcal{T}_n$`, then applies a policy-gradient algorithm to update `$\pi_n$`. The paper uses GRPO with specific hyperparameter choices (detailed in the Policy Update subsection below). The cycle then repeats: the updated policy generates new rollouts in the next round, potentially of higher quality, which get shared and contribute to the swarm's collective knowledge.
+
+**The baseline case (no sharing).** Setting `$J_n = 0$` for all nodes reduces SAPO to standard RL fine-tuning—each node generates its own rollouts, scores them, and updates its policy in isolation. This is the experimental baseline against which all SAPO configurations are compared. The paper notes this connection explicitly: "Note that setting `$J_n = 0$` reduces node `$n$`'s training to standard RL fine-tuning" (Section 3.2).
+
+---
+
+#### The Local-to-External Ratio and the Exploration-Exploitation Tradeoff
+
+The ratio `$I_n : J_n$` is not merely a hyperparameter—it encodes a fundamental tension in decentralized learning that the paper's experimental results make vivid.
+
+**What the ratio controls.** When `$I_n$` is high and `$J_n$` is low, the node primarily learns from its own experience. This is high *exploitation*—the policy refines what it already knows how to do but may miss solution strategies discovered by other nodes. When `$J_n$` is high and `$I_n$` is low, the node primarily learns from external experience. This is high *exploration* (through others' eyes)—the policy is exposed to diverse solution strategies but risks learning on data that is out-of-distribution for its own policy.
+
+**The empirical sweet spot.** The paper finds that 4 local / 4 external achieves the best cumulative reward (1093.31 vs. 561.79 baseline), while 2 local / 6 external actually performs worse than 4/4. This non-monotonicity reveals two failure modes at the extremes:
+
+- **Too much local (8/0, the baseline):** The node never sees discoveries made by others. If it is stuck on a particular type of error, it may never encounter the corrective example that another node has generated. This is standard isolated RL—sample-inefficient because each node must rediscover everything independently.
+
+- **Too much external (2/6):** The paper identifies two interacting network effects that degrade performance when external sampling dominates. First, when high-performing agents over-rely on external rollouts, their progress can be adversely affected by worse-performing agents' answers. Second, and more subtly, "when agents draw many rollouts from the swarm but collectively contribute too few, the quality of the shared pool diminishes" (Section 5). This is a tragedy-of-the-commons dynamic: if every node takes more than it gives, the shared resource degrades.
+
+**The oscillation phenomenon.** The 2/6 configuration shows "strong oscillations as training progresses" (Section 5). The paper interprets this as "steep learning and forgetting behavior": a node learns something useful from the swarm, updates its policy, but then in the next round the swarm pool quality has changed (perhaps deteriorated), causing the node to unlearn or shift to a different strategy. This pattern is a signature of over-reliance on non-stationary external data—the node's policy chases a moving target because the swarm's collective behavior is itself evolving.
+
+**Why this is not a bug but an inherent feature.** The paper frames these dynamics as intrinsic to the decentralized paradigm: "SAPO turns experience sharing into a core advantage" (Section 7). The existence of an optimal ratio suggests that future work could develop *adaptive* mechanisms that adjust `$I_n : J_n$` per-node and per-round based on local performance metrics or swarm pool quality estimates. This is explicitly called out as future work: "a promising direction is to develop meta-strategies for adaptively balancing local vs. shared rollouts, or for strategically filtering swarm samples" (Section 7).
+
+---
+
+#### Policy Update: GRPO with Custom Hyperparameters
+
+The paper uses Group Relative Policy Optimization (GRPO) as its policy-gradient algorithm with specific modifications inspired by DAPO (Yu et al., 2025). Understanding these choices requires briefly reviewing what GRPO is and why the modifications matter.
+
+**GRPO in brief.** GRPO (Shao et al., 2024) is a variant of PPO designed for RL fine-tuning of language models with verifiable rewards. Unlike standard PPO, which requires a separate value network to estimate advantages, GRPO computes advantages *within a group* of completions for the same question. For a question `$q$` with `$G$` generated completions and corresponding rewards `$r_1, \ldots, r_G$`, the advantage of completion `$i$` is computed as:
+
+$$A_i = \frac{r_i - \text{mean}(\{r_1, \ldots, r_G\})}{\text{std}(\{r_1, \ldots, r_G\})}$$
+
+**What it computes:** For each completion, GRPO computes a normalized advantage: how much better (or worse) this completion's reward is compared to the average reward for that question, expressed in units of standard deviation. Positive advantages mean the completion was better than average; negative advantages mean worse. The normalization by standard deviation ensures that the advantage scale is comparable across questions with different reward distributions.
+
+**Why this form:** The group-relative normalization eliminates the need for a learned value function. Instead of training a separate network to predict expected reward (as in PPO), GRPO uses the empirical mean of the group as a baseline. This is particularly well-suited to verifiable reward settings where rewards are binary or discrete and value function learning can be unstable. The standard deviation normalization provides adaptive scaling—if all completions for a question receive similar rewards, the advantages are small (the group is in agreement), while if there is high variance (some completions are clearly better), the advantages are larger, providing a stronger gradient signal.
+
+**KL-divergence penalty set to zero.** Standard PPO and GRPO often include a KL-divergence penalty term that discourages the updated policy from deviating too far from a reference policy (usually the pre-trained or pre-fine-tuned model). This penalty acts as a regularizer, preventing catastrophic forgetting of general language capabilities. The paper states: "as identified in DAPO (Yu et al., 2025), we found training to be more efficient without the KL-divergence penalty, so we set its weight to zero" (Section 4.2).
+
+**Why this matters:** Removing the KL penalty means the policy can move further from its initialization in each update. This can accelerate learning on the target task but risks overfitting or loss of general capabilities. The fact that the paper finds this beneficial suggests that on ReasoningGYM's procedurally generated tasks, the risk of catastrophic forgetting is low—the tasks are sufficiently narrow and the base model's general capabilities are not being eroded. However, this choice may not transfer to settings where maintaining broad capabilities is important (e.g., RLHF for general instruction following). The paper does not ablate this choice or compare with-KL vs. without-KL performance, so it remains an empirical observation rather than a general recommendation.
+
+**Asymmetric clipping thresholds.** PPO's core mechanism is a clipped surrogate objective that prevents policy updates from being too large. The standard PPO clip uses symmetric bounds `$[1 - \epsilon, 1 + \epsilon]$` on the probability ratio `$r_t(\theta) = \pi_\theta(a_t|s_t) / \pi_{\theta_{\text{old}}}(a_t|s_t)$`. The paper uses asymmetric thresholds: `$\epsilon_{\text{low}} = 0.2$` (lower ratio bound) and `$\epsilon_{\text{high}} = 0.28$` (upper ratio bound).
+
+**What this means concretely:** When the new policy assigns higher probability to an action than the old policy did (ratio > 1), the ratio is clipped at `$1 + 0.28 = 1.28$`. When it assigns lower probability (ratio < 1), the ratio is clipped at `$1 - 0.2 = 0.80$`. The asymmetry means the policy is allowed to *increase* probabilities more aggressively (up to 28%) than it can *decrease* them (down to 20%).
+
+**Why this asymmetry:** The paper does not provide an explicit justification, but this choice is consistent with DAPO's finding that asymmetric clipping can improve training stability. A plausible interpretation: in RL fine-tuning, actions that receive positive advantage should be reinforced (probability increase), but the policy may need to increase probabilities substantially to overcome the base model's uniform prior over unlikely but correct completions. Conversely, decreasing probabilities for negative-advantage actions is less urgent because the policy already assigns them low probability—overly aggressive decreases could destabilize the model's token distribution. The asymmetry provides a larger "upside" budget for reinforcement while maintaining tighter control on suppression.
+
+**Optimizer and training duration.** Training ran for 2000 rounds using the Adam optimizer with default hyperparameters (specifically, learning rate 0.001). The paper does not specify a learning rate schedule, suggesting constant learning rate throughout. The 2000-round duration was sufficient for convergence across all configurations (visible in the flattening reward curves in Figure 1).
+
+---
+
+#### Reward Model: Programmatic Verifiers with No Formatting Reward
+
+The paper uses the rule-based verifiers provided by ReasoningGYM as the reward function. This is a pure RLVR (RL with verifiable rewards) setup—there is no learned reward model, no human preference data, and no shaped reward.
+
+**Verifier mechanics.** For each task type, ReasoningGYM provides a domain-specific programmatic verifier that takes a model completion as input, attempts to parse a final answer, and checks correctness against the ground-truth answer. The default behavior:
+
+> "If the task-specific verifier was able to parse the correct answer from a completion, then it assigned a reward of 1 otherwise 0." (Section 4.3)
+
+The paper notes that "there are exceptions in specific verifiers where completions can receive partial credit for edge cases." These partial-credit cases are not enumerated, but they imply that some verifiers can assign intermediate rewards (e.g., for answers that are structurally correct but have minor calculation errors), which provides a richer gradient signal than pure binary rewards.
+
+**Why this reward structure works with SAPO:** Binary or near-binary rewards align well with the group-relative advantage computation in GRPO. Since rewards are comparable across completions within a group (they are all 0 or 1, possibly with intermediate values), the advantage normalization is meaningful. Moreover, because the verifier is deterministic and rule-based, there is no reward model over-optimization risk—the verifier cannot be "hacked" by the policy generating outputs that look correct to a learned reward model but are actually wrong. The ground-truth answer provides an objective correctness signal.
+
+**The formatting reward removal.** The paper reports an interesting empirical finding:
+
+> "in our early experiments we added a formatting reward, but soon removed it. Experience sharing in SAPO made it unnecessary because knowledge about the correct formatting (expected by ReasoningGYM's verifiers) spread throughout the swarm almost immediately without needing an explicit formatting reward signal." (Section 4.3)
+
+This is a concrete demonstration of the "Aha moment" propagation mechanism. One or more nodes discovered the correct answer format (e.g., "Answer: 42" versus "42" versus "the answer is 42"), received reward for it, and shared those rollouts. Other nodes sampled these successful rollouts, learned the formatting implicitly from the examples, and began producing correctly formatted answers themselves—all without an explicit reward shaping term. This emergent format learning is a small-scale example of the collective intelligence that SAPO enables: a discovery made by one node propagates through experience sharing, bootstrapping the entire swarm.
+
+**Why this matters beyond formatting:** The formatting example is a microcosm of a more general phenomenon. Any aspect of solution quality that improves reward—reasoning strategy, step-by-step decomposition, error checking, notation conventions—can propagate through the same mechanism. The swarm effectively acts as a distributed search over solution strategies, with successful strategies amplified through experience sharing.
+
+---
+
+#### The GenRL Infrastructure
+
+The paper implements SAPO using GenRL (Gensyn, 2025), the backend for Gensyn's RLSwarm platform. GenRL is described as "a decentralized, modular framework designed for scalable, multi-agent, multi-stage reinforcement learning" that "supports peer-to-peer coordination and communication, giving full control over system architecture" (Section 4.4).
+
+**Containerized deployment.** The controlled experiments used eight Qwen2.5 0.5B models, each running within its own Docker container. Docker Compose scripts orchestrated the containers, enabling scalable deployment. This containerization is more than an implementation detail—it demonstrates that SAPO nodes can be truly independent processes, each with its own environment, model weights, and training state.
+
+**Multi-GPU parallelism.** Each agent was assigned one GPU, with PyTorch's distributed package managing inter-GPU communication. The paper specifies that NCCL (NVIDIA Collective Communications Library) facilitated communication "in a swarm." This is somewhat misleading terminology—NCCL is used for GPU-to-GPU communication within a single machine or cluster, not for the decentralized peer-to-peer rollouts sharing that defines SAPO. The rollout sharing in the controlled experiments likely occurred through a simpler mechanism (e.g., a shared filesystem or message queue) rather than through NCCL, while NCCL handled the intra-node parallelism for model training. This distinction is important for understanding what "decentralized" means in the experimental setup versus in a true geographically distributed swarm (as in the large-scale demo of Section 6).
+
+**ReasoningGYM integration.** GenRL integrates seamlessly with ReasoningGYM, providing out-of-the-box access to over 100 procedurally generated, verifiable reasoning tasks. This integration handles the question generation, answer verification, and metadata management that the SAPO algorithm requires, allowing the experiments to focus on the sharing mechanism rather than task infrastructure.
+
+**Why GenRL matters for reproducibility.** By building on an existing open-source framework rather than a custom one-off implementation, the paper makes SAPO reproducible. The specific tasks, verifiers, and training configurations are all accessible through GenRL and ReasoningGYM. This is particularly important for a decentralized algorithm, where implementation details (how rollouts are shared, how nodes discover each other, how filtering is implemented) could significantly affect results.
+
+---
+
+#### Design Choices Summary
+
+**Why experience sharing instead of weight synchronization:** Weight synchronization requires homogeneous model architectures and low-latency communication. Experience sharing via decoded rollouts requires neither. A node receiving a rollout does not need to know what model generated it, what hardware it ran on, or even what learning algorithm produced it—it only needs to be able to re-encode the text and compute log-probabilities under its own policy. This is the fundamental insight that makes decentralization possible.
+
+**Why GRPO instead of PPO:** GRPO eliminates the need for a separate value network by computing group-relative advantages. This is important in a decentralized setting because training a value network would add complexity (another model to maintain) and potential instability (value function errors compound with policy errors). The group-relative advantage also handles reward scale automatically, which matters when different nodes might use different reward functions (e.g., partial credit vs. binary) or when the swarm includes nodes with different task difficulties.
+
+**Why zero KL-divergence penalty:** Efficiency. The KL penalty slows down policy updates, which in a decentralized setting with limited per-node compute is a meaningful cost. The paper's finding that removing it does not cause training instability (at least on ReasoningGYM tasks) suggests that the base model's capabilities are not fragile enough to require this protection. This is an empirical observation rather than a principled claim—the paper does not argue that KL penalties are unnecessary in general.
+
+**Why asymmetric clipping:** To allow the policy to increase probabilities of good actions more aggressively than it decreases probabilities of bad actions. This asymmetry may be particularly important in SAPO because external rollouts can contain high-quality solutions that are far from the node's current policy distribution—the policy needs room to increase their probability substantially to incorporate the external insight.
+
+**Why uniform sampling from filtered external rollouts:** Simplicity and fairness. More sophisticated sampling strategies (e.g., based on reward magnitude, recency, or similarity to the node's own distribution) could improve performance, but the paper deliberately uses the simplest reasonable strategy to isolate the effect of the sharing mechanism itself. The filtering of zero-advantage rollouts is the only selectivity applied. This choice means the reported gains are a lower bound on what more sophisticated sampling could achieve.
+
+**Why decoded (plain text) format for sharing:** It is the only format that is guaranteed to be compatible across arbitrary model architectures, tokenizers, and frameworks. A Qwen2.5 model using the Qwen tokenizer can share rollouts with a LLaMA model using the LLaMA tokenizer because the shared artifact is human-readable text. Each receiving node handles tokenization under its own vocabulary. The cost is that the receiving node must re-encode the text and compute log-probabilities from scratch, but this is a one-time per-external-sample cost that is small compared to the training update itself.
+
+## 4. Key Insights and Innovations
+
+### Innovation 1: Decentralizing RL Post-Training by Replacing Weight Synchronization with Experience Sharing
+
+The fundamental intellectual move in SAPO is not algorithmic novelty in the gradient update itself—it uses standard GRPO with modest hyperparameter adjustments—but rather the **reconceptualization of what must be shared for collective RL learning to occur**. Prior distributed RL systems for language models (LlamaRL, AREAL, the infrastructure behind Magistral) all operate on the assumption that policy improvement requires weight synchronization: multiple workers generate rollouts from the same policy, gradients are aggregated, and the updated weights are distributed back. This is the natural distributed analogue of single-machine RL, and it carries an implicit requirement that all workers share a model architecture, a parameter space, and a synchronization protocol.
+
+SAPO's core insight is that **weight synchronization is sufficient but not necessary for collective improvement**. What each learner truly needs from other learners is not their gradient vectors but their *experiences*—the (state, action, reward) tuples that constitute the RL training signal. If experiences can be shared in a model-agnostic format, then each node can independently compute its own gradient from shared experiences without ever knowing what model generated them. The decoded rollout format—plain text completions with ground-truth answers and verifier metadata—is the minimal representation that preserves the training signal while being completely independent of model architecture, tokenizer, parameter count, or hardware.
+
+This is a **fundamental reframing**, not an incremental improvement. It shifts the scaling bottleneck from communication bandwidth (gradient synchronization requires high-throughput, low-latency interconnects) to data representation (experience sharing requires only that text can be transmitted and re-tokenized). The former demands homogeneous clusters; the latter tolerates arbitrary heterogeneity. The conceptual move is analogous to the distinction between shared-memory multiprocessing and message-passing distributed computing: SAPO does for RL post-training what message-passing architectures did for distributed systems generally—it eliminates the shared-state assumption that constrains scalability and participation.
+
+**What the field did before:** Distributed RL for language models was treated as an engineering problem of making weight synchronization fast and reliable enough at scale. Systems like LlamaRL and AREAL are impressive feats of distributed systems engineering, but they reinforce the assumption that large-scale RL post-training requires capital-intensive homogeneous infrastructure.
+
+**Why this matters beyond performance:** SAPO opens a participation model that centralized systems structurally cannot. If a researcher with a single MacBook can contribute to and benefit from a swarm that includes nodes running on A100s, the economics of RL post-training change fundamentally. The paper's large-scale demo (Section 6) with thousands of community-contributed nodes demonstrates that this is not merely a theoretical possibility—it works in practice across genuinely heterogeneous hardware and models. The finding that Qwen3 0.6B models did not benefit from swarm participation while Qwen2.5 0.5B models did (Section 6) further refines the significance: SAPO is not universally beneficial, but it specifically helps models that have *room to absorb* external discoveries—what the paper calls "mid-capacity models that can actively absorb and propagate diverse rollouts." This nuanced outcome is more intellectually interesting than a blanket "more sharing = better" result.
+
+**Evidence:** The framework's agnosticism is demonstrated by the fact that the large-scale demo included diverse hardware, diverse models, and nodes joining and leaving dynamically (Section 6)—conditions that would be catastrophic for a weight-synchronized system—yet produced statistically significant improvement over isolated training after approximately 175 normalized rounds (Figure 3).
+
+---
+
+### Innovation 2: The "Aha Moment" Propagation Mechanism as an Emergent Collective Phenomenon
+
+The paper's most evocative concept—the propagation of "Aha moments" through the swarm—is not merely a colorful metaphor for sample efficiency. It identifies a **specific emergent dynamic in decentralized RL that has no analogue in single-agent or synchronized multi-worker training**. When a single node discovers a solution strategy that yields reward (an "Aha moment"), the decoded rollout encoding that discovery enters the shared pool. Other nodes sampling from this pool encounter the successful trajectory, compute positive advantages for it under their own policies, and update toward that strategy. These nodes then generate their own rollouts informed by the shared discovery, potentially refining or extending it, and share those back. The discovery propagates and amplifies.
+
+**What makes this distinctive:** This is not simply "using other agents' experiences," which is standard in multi-agent RL. It is specifically the *decoded text format* that enables a qualitatively different propagation dynamic. Because the shared artifact is the completion text itself—not a gradient, not a value estimate, not an abstract representation—the receiving node can learn from it using exactly the same policy-gradient mechanism it uses for its own rollouts. There is no off-policy correction, no importance sampling reweighting, no assumption that the generating policy is "close" to the receiving policy. The phrase "regardless of how unlikely" (Section 3.2) captures the radical implication: a rollout that has probability 10⁻⁴ under the receiving policy is treated identically to one with probability 0.9, because the policy-gradient update uses the log-probability under the *current* policy regardless of the generating distribution. This would be disastrous in standard off-policy RL (it would produce enormous importance weights and gradient variance), but SAPO makes it work because the GRPO advantage normalization and the verifiable reward structure constrain the effective gradient signal.
+
+**Why this is a genuine insight rather than an obvious consequence:** The field has long understood that off-policy learning from diverse sources introduces bias and variance challenges. The standard solution is to constrain the divergence between generating and learning policies (via KL penalties, trust regions, importance sampling). SAPO demonstrates empirically that with the right combination of factors—group-relative advantages, binary or near-binary verifiable rewards, and the natural regularization of language modeling objectives—this off-policy challenge largely disappears. The formatting reward removal (Section 4.3) is a concrete miniature of this phenomenon: a discovery about output formatting made by one or a few nodes propagated through the swarm without any explicit reward signal for formatting, purely through the text-level imitation that experience sharing enables.
+
+**Evidence:** The formatting reward removal is the cleanest demonstration. More broadly, the progressive improvement in reward trajectories as the sharing ratio increases from 8/0 to 4/4 (Figure 1) reflects the propagation dynamic, and the oscillation in the 2/6 configuration (Figure 1d) shows what happens when too many nodes sample from the shared pool and too few contribute fresh discoveries—the "Aha moments" stop flowing because collective exploration diminishes.
+
+---
+
+### Innovation 3: The Local-to-External Ratio as a Diagnosed Exploration-Exploitation Tradeoff with a Tragedy-of-the-Commons Failure Mode
+
+The paper's experimental design—systematically varying the ratio `I_n : J_n` from 8/0 through 6/2 and 4/4 to 2/6—produces a result that is **conceptually richer than a simple "sharing helps" finding**. The non-monotonic performance curve (4/4 > 2/6 > 6/2 > 8/0 in cumulative reward; Figure 2) reveals a **structural tension intrinsic to decentralized collective learning** that the paper explicitly diagnoses.
+
+**The diagnostic contribution:** The paper identifies and names two distinct failure modes at the extremes. At the high-local extreme (8/0, the baseline), the failure is straightforward *sample inefficiency through isolation*—each node rediscovers everything independently. At the high-external extreme (2/6), the failure is more subtle and involves two interacting network effects:
+
+1. **Cross-contamination:** High-performing agents suffer when they over-sample from worse-performing agents' rollouts.
+2. **Tragedy of the commons:** When collective contribution to the shared pool drops below a threshold, the pool's quality degrades for everyone, creating a downward spiral.
+
+The oscillation pattern in the 2/6 configuration (Figure 1d) is the empirical signature of this second failure mode: the shared pool becomes a non-stationary, degrading resource, and nodes' policies churn as they chase a moving target of declining quality.
+
+**Why this is an intellectual contribution beyond the specific numbers:** The paper has essentially identified a **phase transition** in decentralized RL—a point beyond which additional reliance on shared experience becomes counterproductive because the collective exploration budget has been depleted. This is a property of the *system* rather than of any individual node, and it provides a conceptual framework for thinking about resource allocation in decentralized learning more generally. The 4/4 optimum is not a universal constant—it depends on the number of nodes, their heterogeneity, the task distribution, and the filtering strategy—but the *existence* of an optimum and its interpretation as a balance between individual and collective exploration is a general insight.
+
+**Comparison to prior work:** The multi-agent RL literature has long recognized that agent interactions can be cooperative or competitive and that Nash equilibria can be suboptimal. But SAPO's setting is different in an important way: nodes are not interacting strategically (they do not choose actions that affect other nodes' rewards). The interaction is purely informational—through the shared experience pool. The tragedy-of-the-commons dynamic is therefore not a strategic equilibrium but an *informational externality*: each node's decision about how many rollouts to contribute and how many to consume affects the quality of a shared information resource. This is a novel failure mode specific to decentralized experience-sharing architectures, and diagnosing it is a contribution that will matter for any future system built on similar principles.
+
+**Evidence:** The quantitative comparison—1093.31 (4/4) vs. 945.87 (2/6) vs. 854.43 (6/2) vs. 561.79 (baseline) in cumulative reward (Section 5)—anchors the claim. The oscillation analysis and the interpretation of the 2/6 dynamics (Section 5) provide the mechanistic explanation.
+
+---
+
+### Innovation 4: The Swarm as a Bridge Between Single-Agent RL and Structured Multi-Agent Collaboration
+
+The paper explicitly positions SAPO as "a bridge for interpolating between single-agent RL fine-tuning and structured multi-agent frameworks" (Section 2). This is more than a taxonomic claim—it identifies an **architectural continuum** that the field had not previously recognized, with SAPO occupying a previously empty region.
+
+**The continuum the paper reveals:** At one extreme is standard single-agent RL fine-tuning (RLHF, RLVR), where a single policy learns from its own rollouts. At the other extreme are structured multi-agent systems (debate, specialization, role-playing), where agents interact through engineered protocols with explicit coordination mechanisms, designated roles, and often a verifier or aggregator. Between these lies a vast, underexplored territory: systems where multiple agents learn independently but share *information* without sharing *objectives* or *coordination protocols*. SAPO demonstrates that this intermediate territory is not just feasible but can capture key benefits of both extremes—the simplicity and independence of single-agent RL with the exploration diversity and collective intelligence of multi-agent systems.
+
+**What makes this positioning novel:** Prior work that combined RL with multi-agent methods for language models (MARFT, Ma et al., 2024; Park et al., 2025) added RL updates *within* structured multi-agent frameworks—the agents still had defined roles and interaction protocols. SAPO inverts this: it adds multi-agent information sharing *to* independent RL training, without imposing any structure on agent interactions. The result is a system where collaborative behavior emerges from the sharing mechanism rather than being designed into agent roles. This is "multi-agent" in the ecological sense—independent entities affecting each other through a shared environment—rather than the orchestrated sense.
+
+**Why this reframing matters:** It suggests that many of the benefits attributed to structured multi-agent collaboration (diverse reasoning, robustness through consensus, exposure to alternative strategies) may be achievable through much simpler mechanisms—specifically, through experience sharing in a verifiable-reward setting. If this holds beyond ReasoningGYM, it would simplify the design of collaborative LM systems substantially. Rather than engineering debate protocols or role assignments, one could simply let independent models train and share rollouts, and let the beneficial dynamics emerge.
+
+**Evidence:** The paper's controlled experiments (Figures 1 and 2) show that even with *identical* model architectures and *uniform* task sampling—conditions that minimize the benefits of heterogeneity—experience sharing provides substantial gains over isolated training. This suggests that the benefit comes from the sharing mechanism itself, not from the diversity of models or tasks (though adding such diversity would likely amplify the effect, as the paper suggests for future work). The large-scale demo (Section 6) provides initial evidence that the effect persists under real heterogeneity.
+
+## 5. Experimental Analysis
+
+### Evaluation Methodology
+
+- **Dataset.** All controlled experiments use the ReasoningGYM dataset (Stojanovski et al., 2025), which procedurally generates problems on demand across nine selected task categories: `base_conversion`, `basic_arithmetic`, `arc_1d`, `bf`, `propositional_logic`, `fraction_simplification`, `decimal_arithmetic`, `calendar_arithmetic`, and `binary_matrix`. Each time an agent requests a question, the domain-specific generator produces a fresh instance with adjustable size, structure, and difficulty, yielding what the paper describes as "an unlimited stream of diverse training and evaluation tasks" (Section 4.1). The dataset is integrated with GenRL and provides programmatic verifiers for each task type, enabling reliable off-the-shelf correctness checks without human annotation. No fixed held-out test set is used; evaluation is reported as the reward trajectory observed during training.
+
+- **Base model(s).** The controlled experiments use eight instances of Qwen2.5 with 0.5B parameters (Qwen Team, 2024), all with identical architecture and initial weights. The choice of 0.5B parameters reflects the paper's focus on small language models (SLMs, fewer than 10B parameters), motivated by the practical consideration that "swarms are most often implemented on local or edge devices, which typically run smaller models rather than large ones" (Section 1). For the large-scale open-source demo (Section 6), the swarm included heterogeneous models—specifically Qwen2.5 0.5B and Qwen3 0.6B—running on diverse consumer-grade hardware contributed by community members.
+
+- **Metrics.** The primary metric is cumulative agent reward, computed as the sum of rewards obtained by all agents across all training rounds. For the controlled experiments, this is reported as total accumulated reward over 2000 rounds across the eight agents for each configuration (Section 5). The paper also reports per-round average agent reward, visualized with a moving average of window size 100 rounds to smooth task-level idiosyncrasy, making it serve as "a reasonable estimate of the expected average reward across tasks" (Section 5). Confidence intervals for the moving average are given by the minimum and maximum across agents. Individual agent reward trajectories are shown in Figure 1. For the large-scale demo, performance is evaluated through periodic judge evaluations: a controlled judge node randomly samples a ReasoningGYM question, the participating node generates a pass@1 answer, and the judge scores it with the appropriate verifier. Statistical significance is assessed via adjusted p-values (Figure 3).
+
+- **Baselines.** The sole baseline is standard isolated RL fine-tuning, implemented as SAPO with `I_n = 8` local rollouts and `J_n = 0` external rollouts—what the paper refers to as "no sharing" (Section 5). This corresponds to the GRPO training procedure described in Section 4.2 applied independently to each node. The paper does not compare against prior distributed RL systems (e.g., LlamaRL, AREAL) or against structured multi-agent methods (e.g., MALT, debate), arguing that these address different operational regimes and would require infrastructure that fundamentally differs from the decentralized, heterogeneous setting SAPO targets.
+
+- **Generation budget / compute accounting.** At each training round, every agent samples 8 task specialties uniformly (with replacement) from the nine categories and receives one ReasoningGYM question per specialty, resulting in `|B_n| = 8` questions per agent per round. For each question, the agent generates `L_n = 8` completions, producing 64 completions total per agent per round (Section 4.1). This per-agent budget is held constant across all sharing configurations to ensure fair comparison—only the source of the rollouts (local vs. external) varies. In the baseline (8 local / 0 external), the agent uses all 64 of its own completions. In the sharing configurations, the agent still processes 8 completions total but draws some fraction from the swarm pool, with the paper explicitly noting that "the total number of training samples was fixed across all setups" (Section 5). Training runs for 2000 rounds per configuration, totaling 2000 × 8 × 8 = 128,000 completions generated per agent across training (with actual training samples varying by configuration due to filtering). The paper does not report wall-clock time, FLOP counts, or communication overhead, making latency comparisons impossible from the reported data.
+
+- **Cross-validation / statistical protocol.** No formal cross-validation is used for the controlled experiments; learning curves are reported as single training runs with confidence intervals derived from the min/max across the eight agents (Figure 2). For the large-scale demo, the paper uses statistical hypothesis testing to compare swarm-trained and isolated models. Specifically, it computes adjusted p-values to determine whether "swarm participation consistently led to improved cumulative performance over time compared to isolated training" (Section 6), with statistical significance at p < 0.05 after applying correction for multiple comparisons across rounds. The paper does not specify the exact adjustment method (e.g., Bonferroni, Benjamini-Hochberg). Rounds are normalized based on "how many total rounds individuals participated in" (Section 6) to account for the ephemeral nature of the open swarm where nodes joined and left dynamically.
+
+### Main Quantitative Results
+
+The controlled experiments systematically vary the local-to-external sampling ratio across four configurations: 8 local / 0 external (baseline), 6 local / 2 external, 4 local / 4 external, and 2 local / 6 external. All results are from training eight identical Qwen2.5 0.5B models using GRPO with the hyperparameters in Section 4.2.
+
+#### Aggregate Reward Performance Across Configurations
+
+**Cumulative total reward.** The 4 local / 4 external configuration achieves the highest cumulative reward across all agents and rounds: 1093.31 total, compared to 945.87 for 2/6, 854.43 for 6/2, and 561.79 for the 8/0 baseline. This represents a 94.6% improvement over the baseline. All sharing configurations outperform the baseline by substantial margins—the weakest sharing configuration (6/2) still achieves a 52.1% improvement over no sharing.
+
+These numbers, reported in Section 5, are the headline quantitative result. Figure 1 visualizes the per-agent reward trajectories that produce these cumulative totals:
+
+- **Figure 1a (8/0 baseline):** Rewards show a gradual and relatively steady upward trend, with all eight agents clustered in a narrow band. The trajectory is monotonic with low variance—"the baseline shows much lower variation" (Section 5). Peak rewards per agent reach approximately 0.4–0.5 (per-question average) by round 2000.
+
+- **Figure 1b (6/2):** Rewards begin similarly to baseline but diverge upward around round 250–500, with agents reaching peak per-question rewards of approximately 0.6–0.7. Individual agent trajectories remain relatively clustered, though with slightly more spread than the baseline.
+
+- **Figure 1c (4/4):** Rewards diverge from baseline earlier (by roughly round 250) and achieve the highest individual agent peaks, with some agents reaching per-question rewards above 0.8. The spread across agents widens compared to 6/2, reflecting some agents benefiting more from swarm samples than others. The paper notes this configuration "achieves the largest total reward accumulated across agents and rounds" (1093.31).
+
+- **Figure 1d (2/6):** This configuration produces the most dramatic divergence in both directions. Some agents achieve high peak rewards comparable to the 4/4 configuration, but trajectories exhibit "strong oscillations as training progresses" (Section 5). Agents swing between high-reward plateaus and sharp drops, producing a sawtooth pattern absent from other configurations. Despite achieving peak rewards comparable to 4/4, the cumulative total suffers because periods of high performance are punctuated by rapid forgetting.
+
+The paper's interpretation of these oscillation dynamics is the most analytically rich part of the results. In the 2/6 configuration, agents are contributing only 2×8 = 16 rollouts per round to the shared pool while drawing 6×8 = 48 from it. This creates the two interacting failure modes identified in Section 5: when high-performing agents over-rely on external rollouts, "their progress can be adversely effected by the answers of worse-performing agents," and "when agents draw many rollouts from the swarm but collectively contribute too few, the quality of the shared pool diminishes." The oscillation reflects learning-and-forgetting cycles: an agent learns from a good external sample, improves its policy, then the next round's swarm pool is populated by rollouts from policies that have diverged or degraded, and the agent unlearns. The paper explicitly notes that the moving average smoothing (Figure 2) confirms these "reflect meaningful large-scale training dynamics rather than task related randomness" because the window "smooths out task-level idiosyncrasy."
+
+#### Time-Smoothed Average Reward Analysis
+
+Figure 2 presents the same data as Figure 1 but averaged across the eight agents and smoothed with a moving average of window 100 rounds, with confidence intervals showing the min/max across agents. This view clarifies the expected reward per round as a function of training progress:
+
+- **4/4 configuration:** "consistently achieves higher expected average reward than the baseline, and in nearly all training rounds, it also outperforms the 6 local / 2 external configuration" (Section 5). By round 2000, the smoothed average reward reaches approximately 0.55–0.60 for 4/4 versus approximately 0.40–0.45 for the baseline.
+
+- **4/4 vs. 2/6 comparison:** The 4/4 configuration "surpasses the 2 local / 6 external setup for most rounds, though the difference is smaller than in the other cases." The two configurations' smoothed curves are close enough that in some training windows they overlap within the confidence intervals, but 4/4 maintains a consistent edge throughout. This is the key evidence that "relying too heavily on external rollouts can actually hinder performance" (Section 5).
+
+- **6/2 configuration:** Outperforms the baseline throughout training but falls below both 4/4 and 2/6 for most of training. The ordering of configurations by final smoothed average reward is: 4/4 > 2/6 > 6/2 > 8/0.
+
+- **Variance patterns:** The confidence intervals (min/max across agents) grow wider as the external sampling ratio increases. The baseline has the narrowest band, consistent with identical isolated training producing similar trajectories. The 2/6 configuration has the widest band, reflecting the heterogeneous impact of swarm samples on different agents.
+
+#### Peak Reward Analysis
+
+The paper reports that both the 4/4 and 2/6 schemes "achieve the highest peak rewards, clearly outperforming the no-sharing baseline" (Section 5). This is notable because it means 2/6 *can* reach similar heights as 4/4—the problem is not that 2/6 cannot learn well, but that it cannot *sustain* the learning. The oscillation pattern in Figure 1d shows agents repeatedly reaching high reward plateaus and then crashing, which the cumulative total metric penalizes. This distinction—between peak capability and sustained capability—is not explicitly discussed in the paper but is visible in the trajectory data.
+
+#### Large-Scale Demo Results
+
+Section 6 presents results from an open-source demo where "thousands of Gensyn community members contributed training runs across diverse hardware and model configurations" (Section 6). The evaluation protocol differs from the controlled experiments: rather than tracking reward during training, a controlled "judge" periodically evaluates each node's pass@1 performance on randomly sampled ReasoningGYM questions.
+
+**Qwen2.5 0.5B results.** For Qwen2.5 0.5B models, "swarm participation consistently led to improved cumulative performance over time compared to isolated training" (Section 6). Figure 3 shows the test statistic over normalized rounds, with a shaded red region indicating where the adjusted p-value exceeds 0.05 (not statistically significant). The key finding: "After a certain number of rounds, in this case approximately 175, the performance per round of the models in the swarm significantly exceeds that of the model trained in isolation" (Section 6). Before round 175, the curves are not distinguishable at the p < 0.05 level; after, the swarm advantage becomes statistically significant and grows.
+
+**Qwen3 0.6B results.** By contrast, the stronger Qwen3 0.6B models "achieved similar performance in and out of the swarm" (Section 6). The paper interprets this as evidence that "SAPO's benefits are most pronounced for mid-capacity models that can actively 'absorb' and propagate diverse rollouts." The stronger Qwen3 models may saturate performance on the ReasoningGYM tasks even without swarm participation, leaving no headroom for external rollouts to improve. Alternatively—and the paper does not rule this out—the uniform random sampling strategy without filtering (used in the demo) may have been particularly ineffective for the stronger model because the external rollouts it sampled were on average lower quality than what it could generate itself.
+
+**Filtering limitation.** The paper explicitly notes that in the demo, "models selected rollouts from the swarm using straightforward uniform random sampling without any filtering" (Section 6). This is a weaker protocol than the controlled experiments, which filtered out zero-advantage rollouts. The paper hypothesizes that "with better sampling strategies, more performant models could also benefit from participating in the swarm under SAPO," suggesting that the negative Qwen3 result may be an artifact of the sampling strategy rather than a fundamental limitation.
+
+### Ablation Studies and Robustness Checks
+
+The paper does not contain large-scale ablation experiments in the conventional sense (varying one component while holding others fixed). However, several design choices documented throughout Sections 4 and 5 function as implicit ablations or sensitivity analyses:
+
+**KL-divergence penalty weight.** In initial experiments, the authors "found training to be more efficient without the KL-divergence penalty, so we set its weight to zero" (Section 4.2). This finding echoes DAPO (Yu et al., 2025). The paper reports this as an empirical choice rather than a systematic ablation—no learning curves comparing with-KL to without-KL are shown, and no analysis of whether the KL penalty interacts with the sharing ratio (e.g., whether KL regularization becomes more important when learning from off-policy external rollouts). This is a notable gap: since external rollouts may have very low probability under the receiving policy, the absence of a KL penalty could contribute to the oscillation behavior observed in the 2/6 configuration by allowing policies to move too far toward out-of-distribution modes.
+
+**Formatting reward.** The paper documents that "in our early experiments we added a formatting reward, but soon removed it. Experience sharing in SAPO made it unnecessary because knowledge about the correct formatting (expected by ReasoningGYM's verifiers) spread throughout the swarm almost immediately" (Section 4.3). This serves as a natural experiment demonstrating the "Aha moment" propagation mechanism. No quantitative comparison of with-formatting-reward vs. without-formatting-reward is reported, so the claim that formatting knowledge "spread throughout the swarm almost immediately" is supported only by the authors' observation that formatting converged without explicit reward—a qualitative rather than quantitative finding.
+
+**Asymmetric clipping thresholds.** The paper uses epsilon_low = 0.2 and epsilon_high = 0.28 (Section 4.2), following DAPO. No ablation comparing symmetric vs. asymmetric clipping is reported. The choice is presented as a configuration detail rather than a claim of superiority.
+
+**Number of agents.** All controlled experiments use exactly eight agents. The paper does not report how performance scales with swarm size (2 agents? 16? 64?), which is a significant limitation for understanding the generality of the 4/4 optimal ratio. The optimal local-to-external split likely depends on the number of agents in the swarm—with only 2 agents, the shared pool is much smaller and each agent has fewer external samples to draw from; with 64 agents, the shared pool is much larger and the marginal value of an additional external sample may change. The large-scale demo (thousands of nodes) provides some evidence at scale, but the demo's uncontrolled conditions and different evaluation protocol make direct comparison impossible.
+
+**Task diversity.** All agents in the controlled experiments are generalists—they "received questions from all specialties with equal probability" (Section 4.1). The paper does not test the counterfactual where agents specialize on different task subsets (e.g., some agents focus on algebra, others on logic), which would increase the diversity of the shared pool and potentially amplify the benefits of sharing. The paper identifies task specialization as a direction for future work (Section 7).
+
+**Model homogeneity.** All agents in the controlled experiments use identical Qwen2.5 0.5B models. The paper acknowledges that "adding more heterogeneity could make the swarm effect even stronger" (Section 5) but does not test heterogeneous model architectures or sizes in the controlled setting. The large-scale demo (Section 6) introduces heterogeneity but under uncontrolled conditions, making causal attribution to heterogeneity impossible.
+
+**Filtering strategy.** The controlled experiments filter out zero-advantage rollouts from the swarm pool before uniform random sampling; the large-scale demo uses no filtering at all. The paper does not ablate the filtering strategy (e.g., no filtering, filtering by reward threshold, filtering by recency, filtering by similarity to the receiving policy's distribution). This is significant because the filtering strategy likely interacts with the optimal local-to-external ratio—better filtering might allow a higher external ratio without the degradation observed in the 2/6 configuration. The paper acknowledges this gap and flags "strategically filtering swarm samples" as future work (Section 7).
+
+**Number of completions per question (L_n).** All experiments use L_n = 8 completions per question. The paper does not ablate this parameter, which affects both the quality of each node's local advantage estimates (more completions = better group mean estimate in GRPO) and the size of the shared pool. With fewer completions per question, the advantage normalization in GRPO becomes noisier, which might make external samples less reliable as training signals.
+
+**Training duration.** The 2000-round limit is held fixed across configurations. Figure 1 shows that reward curves appear to mostly plateau by round 2000 for all configurations except possibly 2/6, which continues to oscillate. Longer training might reveal whether the 2/6 configuration eventually stabilizes or whether the oscillation is a permanent feature. The paper does not report results beyond 2000 rounds.
+
+**ReasoningGYM task selection.** The paper selects nine specific task types from ReasoningGYM's catalog of over 100. No justification is provided for excluding the other domains, and no analysis is given of whether the sharing benefit varies across task types. It is possible—and would be consistent with the paper's framework—that experience sharing is more beneficial for some task types (where solution strategies are transferable) than others (where each instance requires genuinely novel reasoning).
+
+**Negative result from the large-scale demo.** The finding that Qwen3 0.6B models did not benefit from swarm participation (Section 6) is a significant negative result, even though it comes from the uncontrolled demo setting. It establishes a boundary condition on SAPO's applicability: the algorithm's benefits are not universal and depend on the relationship between model capability and task difficulty. The paper's interpretation—that stronger models have less room to absorb external discoveries—is plausible but incomplete, since the uniform random sampling without filtering in the demo means that the Qwen3 models were likely sampling from rollouts generated by weaker models, effectively adding noise to their training signal. This is a different mechanism from the "no headroom" interpretation.
+
+### Critical Assessment
+
+The experiments described in Sections 5 and 6 provide credible evidence for SAPO's central empirical claim: that sharing decoded rollouts in a decentralized RL setting improves learning efficiency compared to isolated training, and that there exists an optimal ratio of local to external samples. However, the scope of demonstrated evidence is narrower than what the paper's framing implies, and several important dimensions of the claimed contributions are not directly tested.
+
+**Does the evidence support the claim of a 94% cumulative reward improvement?**
+
+Yes, for the specific experimental conditions tested. The numbers are unambiguous: 1093.31 cumulative reward for 4/4 vs. 561.79 for the 8/0 baseline, yielding a 94% relative improvement (Section 5, Figures 1 and 2). However, this number should be interpreted with several qualifications:
+
+First, "cumulative reward" is a training metric, not a held-out generalization metric. The paper does not report final policy performance on a fixed evaluation set, final pass@1 accuracy, or any measure of the trained policies' downstream task capability. The cumulative reward metric reflects training progress, which is a proxy for learning but conflates learning rate with asymptotic performance. Two policies with different learning curves might achieve the same final capability; the cumulative metric would report them as different.
+
+Second, the 2000-round duration, while long enough for curves to approximately plateau (Figures 1, 2), may not fully capture asymptotic differences. If the 4/4 configuration learns faster but converges to roughly the same asymptote as the baseline (given enough rounds), then the 94% cumulative improvement overestimates the practical benefit for long-running training regimes.
+
+Third, the filtering advantage means the comparison is not perfectly controlled. The sharing configurations can discard zero-advantage rollouts from the external pool, while the baseline must use all its own rollouts regardless of informativeness (Section 5). This means the sharing configurations effectively train on a higher average-quality batch of samples, not just more diverse samples. The 94% improvement therefore reflects a combination of (a) diversity from external rollouts, (b) higher per-sample informativeness from filtering, and (c) any emergent propagation dynamics. These effects are not disentangled in the experiments.
+
+**Does the evidence support the "Aha moment" propagation claim?**
+
+The formatting reward removal (Section 4.3) is the strongest evidence for this claim, but it is qualitative rather than quantitative. The paper reports that the authors observed formatting knowledge spreading "almost immediately" without explicit reward, but no data is presented—no plots of formatting accuracy over time, no comparison of formatting convergence rates with and without sharing, no quantification of how many rounds "almost immediately" corresponds to. The claim is plausible and consistent with the reward trajectory data, but it is observational rather than experimentally isolated.
+
+The broader "Aha moment" propagation concept—that discoveries made by one node propagate through experience sharing and lift collective performance—is supported by the comparative trajectories in Figure 2. The 4/4 curve consistently exceeds the baseline, which is consistent with propagation but does not directly demonstrate it. A direct demonstration would require tracking specific solution strategies (e.g., a particular reasoning pattern) from their first appearance in one agent's rollouts to their subsequent adoption by other agents, which the paper does not do.
+
+**Does the evidence support the non-monotonic optimal ratio claim (4/4 > 2/6 > 6/2 > 8/0)?**
+
+Yes, for the experimental configuration tested. The ordering is consistent across the reported metrics: cumulative reward (Section 5), per-round smoothed average reward (Figure 2), and peak rewards (Figure 1). The oscillation analysis for the 2/6 configuration provides a mechanistic interpretation that is consistent with the data, though alternative explanations are not ruled out (e.g., the degradation at 2/6 might be purely due to the reduced number of fresh rollouts per agent rather than tragedy-of-the-commons dynamics).
+
+However, the specific 4/4 optimum is almost certainly not a universal constant. It depends on:
+
+- **Swarm size** (8 agents, untested at other sizes)
+- **Model homogeneity** (identical Qwen2.5 0.5B, untested with heterogeneous models in controlled settings)
+- **Task distribution** (9 specific ReasoningGYM tasks sampled uniformly, untested with other task mixtures)
+- **Filtering strategy** (zero-advantage removal, untested with other strategies)
+- **Number of completions per question** (8, untested at other values)
+- **Policy update algorithm** (GRPO with specific hyperparameters, untested with other algorithms)
+
+The paper does not claim the 4/4 ratio is universal, but it also does not systematically explore the boundaries. The large-scale demo (Section 6) uses a completely different setup (thousands of nodes, uncontrolled hardware, no filtering, different evaluation protocol), making it evidence that the *qualitative* benefit of sharing extends to heterogeneous settings, not that a 50/50 split is generally optimal.
+
+**What is not tested that would strengthen the paper?**
+
+The most significant missing experiments are:
+
+1. **Held-out evaluation set.** Reporting final model performance on a fixed set of reasoning tasks would distinguish between faster learning and better final capability. This is the standard way to evaluate RL fine-tuning and its absence is notable.
+
+2. **Scaling with number of agents.** The 4/4 optimum found with 8 agents is a specific point on a curve that likely changes with swarm size. Experiments with 2, 4, 16, and 32 agents would reveal how the optimal ratio scales.
+
+3. **Heterogeneous models in controlled conditions.** The large-scale demo (Section 6) introduces heterogeneity but loses control. A controlled experiment with, say, four Qwen2.5 0.5B and four Qwen3 0.6B models would test whether model diversity amplifies the sharing benefit (as the paper hypothesizes in Section 5) while maintaining experimental rigor.
+
+4. **Filtering strategy ablation.** Testing no filtering, zero-advantage filtering, reward-threshold filtering, and similarity-based filtering would disentangle the filtering benefit from the diversity benefit and potentially shift the optimal ratio.
+
+5. **KL-divergence penalty ablation with sharing.** Since external rollouts are off-policy, the KL penalty may interact with the sharing ratio. The paper's choice to set the KL weight to zero (based on DAPO's findings in a non-sharing context) may be suboptimal when external samples dominate the training batch. An ablation comparing KL weights at different sharing ratios would clarify this.
+
+6. **Computational cost analysis.** The paper mentions that "communication with the swarm and re-encoding sampled rollouts introduces communication and computational overhead" but claims these costs "are outweighed by their collective gains" (Section 2). No quantitative cost analysis is provided—no measurements of communication bandwidth, re-encoding time, or total wall-clock time per round for different configurations. Without this, the efficiency claim is incomplete: a 94% improvement in per-round reward may not translate to a 94% reduction in time-to-solution if external sampling adds significant latency.
+
+7. **Comparison to a centralized multi-worker baseline.** The paper argues SAPO addresses a different regime than centralized distributed RL, which is fair, but a comparison against a simulated centralized system (e.g., aggregating all agents' rollouts into a single policy update, which would use 8× more data per round than any individual SAPO agent) would help contextualize the tradeoff between decentralization and data efficiency.
+
+**Does the paper's evidence support the bridge claim (interpolating between single-agent and structured multi-agent)?**
+
+The evidence shows that SAPO with experience sharing outperforms isolated single-agent RL (8/0), which is the "single-agent" endpoint of the claimed continuum. The evidence does not compare SAPO against structured multi-agent methods (debate, specialization), so the claim that SAPO "captures many benefits of multi-agent methods" while being simpler is asserted rather than demonstrated. The paper's contribution is establishing that the intermediate point on the continuum exists and works; it does not establish where SAPO sits relative to the multi-agent endpoint. This is a reasonable scope limitation for a paper introducing a new paradigm, but it means the "bridge" framing is aspirational rather than empirically substantiated.
+
+**Conditional scope of the findings.**
+
+The paper's claims hold under these conditions, based on what was actually tested:
+
+- **Model scale:** 0.5B parameter models (Qwen2.5). The Qwen3 0.6B result suggests the benefit may diminish or vanish for stronger models, though this is confounded with the filtering strategy.
+- **Task type:** Procedurally generated reasoning tasks with programmatic verifiers and binary/near-binary rewards. No evidence is provided for open-ended generation, dialogue, or tasks requiring learned reward models.
+- **Task diversity:** Nine specific ReasoningGYM domains sampled uniformly. Task specialization effects are unexplored.
+- **Swarm size and homogeneity:** Eight identical models in controlled conditions; thousands of heterogeneous models in uncontrolled conditions.
+- **Policy update algorithm:** GRPO with zero KL penalty and asymmetric clipping. Transferability to PPO, REINFORCE, or other policy-gradient methods is not tested.
+- **Training duration:** 2000 rounds, which appears sufficient for approximate convergence but may not capture very long-horizon dynamics.
+- **Filtering:** Zero-advantage removal for the controlled experiments; no filtering for the large-scale demo.
+
+The paper's central insight—that experience sharing can replace weight synchronization in decentralized RL post-training—is well-motivated and finds clear empirical support in the reported experiments. The 94% improvement headline is grounded in the data but overstates the practical significance without accompanying generalization metrics or cost analysis. The optimal ratio finding (4/4) is solid for the tested configuration but should be understood as a proof of concept for the existence of an optimum rather than a recommended default. The tragedy-of-the-commons diagnosis for the 2/6 configuration is theoretically interesting and qualitatively supported by the oscillation data, but alternative explanations (e.g., simple undersampling of fresh rollouts) are not ruled out. The large-scale demo provides ecological validity and demonstrates that SAPO functions in genuinely heterogeneous, uncontrolled conditions—a significant practical validation that many algorithmic papers lack—but its uncontrolled nature means it cannot isolate causal mechanisms the way the controlled experiments can.
+
+## 6. Limitations and Trade-offs
+
+### Limitation 1: No Generalization Evaluation — All Reported Metrics Are Training-Time Rewards
+
+**The assumption or constraint.** The paper evaluates SAPO exclusively using training-time metrics — cumulative reward during training (Section 5) and per-round average reward (Figure 2) — without ever measuring the final trained policies' performance on a held-out evaluation set. The ReasoningGYM dataset's procedural generation means "an unlimited stream of diverse training and evaluation tasks" (Section 4.1) is available, but the paper uses the same distribution for both training and reporting. The large-scale demo (Section 6) introduces a judge-based pass@1 evaluation on randomly sampled questions, but these evaluations occur *during training* rather than on a fixed held-out set after training completes.
+
+**The consequence.** Without held-out evaluation, it is impossible to distinguish between two fundamentally different interpretations of the 94% cumulative reward improvement. The 4/4 configuration could be achieving (a) faster convergence to the same asymptotic policy quality as the baseline, or (b) genuinely better final policy quality. If the former, the practical benefit is that training reaches a given performance level in fewer rounds — a speedup in wall-clock time, assuming per-round costs are comparable. If the latter, the benefit is more profound: the shared experience produces policies that are fundamentally more capable than isolated training can achieve. The paper's cumulative reward metric conflates these two interpretations. Moreover, training on filtered external rollouts that have positive advantage could lead to *overfitting* to the specific solution patterns that happen to yield reward on the training distribution, while the baseline's unfiltered exposure to its own failures might produce a more robust policy. A held-out evaluation set would reveal whether the 4/4 advantage reflects genuine capability improvement or merely accelerated fitting to training-distribution patterns.
+
+**What evidence exists in the paper.** The paper provides no held-out evaluation results whatsoever. The large-scale demo's judge evaluations (Section 6, Figure 3) measure pass@1 performance during training, with the comparison being swarm vs. isolated *at matched normalized rounds* rather than at final convergence. The statistical test in Figure 3 asks whether swarm-trained models outperform isolated models at the same point in training, not whether they converge to a higher asymptote. The paper does not report what the maximum achieved performance was for either condition, nor does it compare the policies at the end of training on a fixed benchmark.
+
+**Mitigation status.** The paper does not acknowledge this gap. The "Future Directions" section (Section 7) focuses on heterogeneity, stability, adaptive sampling strategies, and multi-modal applications — none of which address the absence of generalization evaluation. This is a significant omission because many of the paper's core claims ("improving cumulative rewards by up to 94%," "models trained with the swarm perform better with fewer rounds of training") are framed in ways that could be interpreted as claims about final capability, but the evidence only supports claims about training efficiency.
+
+---
+
+### Limitation 2: Difficulty Estimation and Difficulty-Conditioned Strategy Selection Are Absent
+
+**The assumption or constraint.** SAPO treats all questions and all external rollouts as equally valuable, using uniform random sampling from the filtered shared pool regardless of task type, question difficulty, or the relationship between the external rollout and the receiving node's current capabilities. The only selectivity applied is discarding zero-advantage rollouts (controlled experiments; Section 5) or no filtering at all (large-scale demo; Section 6). The paper does not estimate how difficult a question is for a particular node, does not condition the local-to-external sampling ratio on any per-question or per-node characteristics, and does not prioritize external rollouts based on their expected informativeness for a given learner.
+
+**The consequence.** This is a missed opportunity that limits SAPO's efficiency and may contribute to the degradation observed at high external ratios. Consider two scenarios: an external rollout that demonstrates a solution strategy very similar to what the receiving node already generates, and an external rollout that demonstrates a genuinely novel approach the node has never produced. Under uniform random sampling, these are equally likely to be selected. But the former provides minimal new information — the node could have learned the same thing from its own rollouts — while the latter could trigger an "Aha moment." Without difficulty estimation or informativeness-based filtering, SAPO wastes some of its external sample budget on redundant experiences.
+
+More fundamentally, the optimal local-to-external ratio almost certainly depends on question difficulty in the same way that test-time compute scaling depends on difficulty. On questions that a node can already solve reliably (analogous to difficulty bin 1–2 in the reference paper), external rollouts may provide little marginal value — the node's own successful completions already provide a strong training signal. On questions at the edge of the node's capability (medium difficulty), external rollouts showing successful strategies could be transformative. On questions far beyond the node's current capability (hard), external rollouts may be too out-of-distribution to provide a useful gradient signal, or worse, may destabilize training as the node attempts to imitate strategies it cannot yet execute. SAPO's uniform treatment of all external rollouts means it cannot exploit these difficulty-dependent dynamics, leaving efficiency gains on the table and potentially causing some of the instability observed in the 2/6 configuration.
+
+**What evidence exists in the paper.** The paper provides no difficulty analysis whatsoever. The nine ReasoningGYM task types are treated as a single uniform distribution, with no breakdown of performance or sharing benefit by task type. The per-task-type analysis — which could reveal whether SAPO helps more on some reasoning domains than others — is entirely absent. The Qwen3 0.6B result from the large-scale demo (Section 6) is suggestive: the stronger model did not benefit from swarm participation, which the paper attributes to the model being too capable to absorb external discoveries. But without difficulty-conditioned analysis, this interpretation remains speculative. It could equally be that the uniform random sampling (without filtering) in the demo meant the Qwen3 model was sampling rollouts from weaker models that were on average worse than its own outputs, effectively injecting noise. A difficulty-aware system would recognize that a strong model should only sample external rollouts on questions where it is uncertain — i.e., filter by difficulty relative to the receiving policy.
+
+**Mitigation status.** The paper gestures toward this limitation indirectly. The "Future Directions" section (Section 7) mentions "meta-strategies for adaptively balancing local vs. shared rollouts, or for strategically filtering swarm samples" as a "promising direction," which encompasses difficulty-conditioned strategies. But the absence of even a basic per-task-type analysis in the current paper means readers cannot assess how urgent or impactful this limitation is. The paper does not frame the uniform sampling as a limitation to be overcome; it presents it as the default behavior of the algorithm, with the optimal fixed ratio (4/4) as the key finding. This is consistent with a first paper on a new paradigm — establishing that sharing helps at all is the primary contribution — but for practitioners considering deployment, the inability to allocate the external sample budget based on question or node characteristics is a significant practical gap.
+
+---
+
+### Limitation 3: The Optimal Sharing Ratio Is Likely Highly Context-Dependent, and the Paper Tests Only One Point in a Large Configuration Space
+
+**The assumption or constraint.** The paper's headline finding — that a 4 local / 4 external split achieves a 94% cumulative reward improvement — comes from experiments that fix all variables except the sharing ratio. Specifically, the experiments use: exactly 8 agents, all running identical Qwen2.5 0.5B models, with all agents as generalists sampling uniformly from 9 ReasoningGYM task types, generating exactly 8 completions per question, training for exactly 2000 rounds, using GRPO with zero KL-divergence penalty and asymmetric clipping, and filtering external rollouts by removing zero-advantage samples before uniform random selection (Section 4, Section 5). The paper does not test how the optimal ratio changes when any of these fixed variables is modified.
+
+**The consequence.** A practitioner attempting to deploy SAPO cannot use the 4/4 ratio as a recommended default. The optimal split depends on factors the paper leaves unexplored:
+
+- **Swarm size.** With 8 agents, the shared pool contains at most 8 × 8 = 64 external rollouts per round (before filtering). With 2 agents, the pool is much smaller, and the marginal value of an external sample may be lower due to reduced diversity. With 64 agents, the pool is much larger, and external samples could be more selectively filtered, potentially supporting a higher external ratio without degradation. The 4/4 optimum found with 8 agents is a single data point on an unknown scaling curve.
+
+- **Model heterogeneity.** The controlled experiments use identical models. If models varied in capability — as in the large-scale demo's mix of Qwen2.5 0.5B and Qwen3 0.6B — the optimal ratio would likely differ per node. A weaker node might benefit from a higher external ratio (learning from stronger peers), while a stronger node might benefit from a lower external ratio (its own rollouts are already high-quality). The paper's finding that Qwen3 models did not benefit from swarm participation (Section 6) supports this intuition but does not test whether a different ratio or filtering strategy would change the outcome.
+
+- **Task diversity and specialization.** The uniform task sampling means all agents see the same distribution. If agents specialized — some focusing on algebra, others on logic — the external pool would contain rollouts from task types the receiving agent rarely encounters, potentially increasing the marginal value of external samples and shifting the optimal ratio.
+
+- **Number of completions per question (L_n).** With L_n = 8, each agent's per-question advantage computation uses a group of size 8. Smaller L_n would produce noisier advantage estimates, making external samples less reliable as training signals. The interaction between L_n and the optimal ratio is entirely unexplored.
+
+- **Policy update algorithm and hyperparameters.** The zero KL-divergence penalty, asymmetric clipping, and Adam learning rate were chosen based on initial experiments (Section 4.2) but were not systematically varied with the sharing ratio. It is plausible that when external samples dominate (2/6), a non-zero KL penalty would help stabilize training by preventing the policy from moving too far toward out-of-distribution modes learned from external rollouts. The paper's blanket removal of the KL penalty (based on DAPO's finding in a single-agent context) may be suboptimal specifically for high-external-ratio configurations.
+
+- **Training duration.** The 2000-round limit may not fully capture asymptotic behavior, particularly for configurations that learn faster. If 4/4 converges faster but to the same asymptote as the baseline, then longer training would shrink the cumulative reward gap. The paper does not test this.
+
+**What evidence exists in the paper.** The paper provides no sensitivity analysis on any of these dimensions. The large-scale demo (Section 6) introduces variation in model type, hardware, and filtering strategy, but its uncontrolled nature means it cannot isolate how any single variable affects the optimal ratio. The demo's use of uniform random sampling without filtering (Section 6) is a different setting from the controlled experiments' zero-advantage filtering, making it impossible to disentangle which differences between the demo and controlled results are due to heterogeneity versus filtering strategy.
+
+**Mitigation status.** The paper acknowledges the need for "meta-strategies for adaptively balancing local vs. shared rollouts" (Section 7), which implies recognition that a fixed ratio is not universally optimal. However, no experiments probe the boundaries of the 4/4 finding, and the paper's presentation of "the 4 local / 4 external configuration achieves the strongest performance" (Section 5) could mislead readers into treating this as a general recommendation rather than a configuration-specific result. The paper would benefit from explicitly stating that the 4/4 optimum was found under specific conditions and may not generalize, and from providing at least one sensitivity analysis (e.g., varying the number of agents, testing with and without KL penalty at different sharing ratios) to give practitioners a sense of how fragile or robust the finding is.
+
+---
+
+### Limitation 4: No Quantitative Cost Analysis — Communication, Computational, and Latency Overheads Are Unmeasured
+
+**The assumption or constraint.** SAPO introduces two additional costs compared to isolated RL training: (1) communication overhead from broadcasting rollouts to the swarm and receiving rollouts from other nodes, and (2) computational overhead from re-encoding external rollouts — tokenizing the shared text and computing log-probabilities under the receiving node's policy. The paper acknowledges these costs in general terms: "communication with the swarm and re-encoding sampled rollouts introduces communication and computational overhead" but asserts that "each individuals' additional costs are outweighed by their collective gains" (Section 2). However, no quantitative measurements of these costs are reported — no bandwidth measurements, no latency statistics, no FLOP counts, no wall-clock time comparisons between SAPO configurations and the baseline.
+
+**The consequence.** The efficiency claims in the paper are expressed in terms of *sample efficiency* (cumulative reward per training round), not *computational efficiency* (reward per FLOP or per wall-clock second). A 94% improvement in cumulative reward over 2000 rounds does not translate to a 94% reduction in time-to-solution if each round takes longer in the sharing configurations than in the baseline. Several factors could make sharing configurations slower per round:
+
+- **Network latency.** In a geographically distributed swarm (as in the large-scale demo), broadcasting rollouts and waiting to receive external samples introduces round-trip delays that do not exist in isolated training. If a node must wait for external rollouts to assemble its training batch, the per-round time is bounded by the slowest-responding peer.
+
+- **Re-encoding cost.** Each external rollout must be tokenized under the receiving node's vocabulary and processed through the policy model to compute log-probabilities for the policy-gradient update. This is essentially a forward pass per external sample on top of the forward passes already performed for the node's own rollouts. For the 4/4 configuration, this represents approximately a 50% increase in forward-pass computation per round (4 additional completions to score, out of 8 total). For the 2/6 configuration, it represents a 300% increase.
+
+- **Batch assembly complexity.** The baseline simply uses all local rollouts. SAPO requires communication, filtering (zero-advantage removal), and sampling from the external pool, all of which add implementation complexity and potential bottlenecks.
+
+- **Straggler effects.** In a decentralized network with heterogeneous hardware, some nodes will generate and share rollouts faster than others. A node waiting for external samples may be delayed by slow peers, introducing synchronization-like bottlenecks in what is supposed to be an asynchronous system. The paper does not describe how nodes handle the case where external rollouts are not yet available for the current round — do they wait? Proceed with only local rollouts? Use stale rollouts from previous rounds?
+
+The practical consequence is that a practitioner cannot determine, from the paper's reported results, whether SAPO actually reduces wall-clock time to reach a given performance level, or whether it merely reduces the number of training rounds at the cost of making each round substantially slower.
+
+**What evidence exists in the paper.** No cost measurements are reported anywhere in the paper. The controlled experiments (Section 5) report cumulative reward and per-round average reward (Figures 1 and 2) but no timing data. The large-scale demo (Section 6) reports pass@1 performance but no latency, bandwidth, or throughput metrics. The paper does not specify the communication protocol used for rollout sharing, the size of shared messages, the network topology, or how nodes discover each other. The GenRL framework (Section 4.4) is described as supporting "peer-to-peer coordination and communication," but no performance characteristics of this communication are provided.
+
+**Mitigation status.** The paper acknowledges the existence of overhead (Section 2) but makes no attempt to quantify it. The claim that additional costs "are outweighed by their collective gains" is therefore unsubstantiated — it is a hypothesis, not a finding. The "Future Directions" section (Section 7) does not mention cost analysis or efficiency optimization as a direction for future work. This is the most significant gap between the paper's framing (SAPO as a practical, scalable, cost-effective alternative to centralized RL) and its evidence, because the entire motivation for decentralization — reducing financial and infrastructure barriers — depends on the total cost of training, not just the sample efficiency. If SAPO requires 10× more wall-clock time than isolated training to achieve the same performance (due to communication and re-encoding overhead), then its practical advantage for consumer-grade hardware deployments may be minimal despite the impressive sample-efficiency gains.
+
+---
+
+### Limitation 5: Applicability Is Limited to Verifiable Reward Settings with Text-Modal Rollouts
+
+**The assumption or constraint.** SAPO requires two conditions that, while explicitly stated in the paper, sharply constrain the algorithm's applicable domain. First, "tasks in D_n are verifiable (i.e. their answers can be efficiently and algorithmically checked for correctness)" (Section 3.1). Second, "rollouts generated by n have the same (or compatible) modalities as other nodes in the swarm" (Section 3.1). In practice, the paper's experiments operate entirely within text-modal, programmatically verifiable reasoning tasks (ReasoningGYM; Section 4.1), where rewards are binary or near-binary (Section 4.3).
+
+**The consequence.** Many of the most important and widely-deployed applications of RL post-training for language models do not satisfy these conditions:
+
+- **RLHF settings** (Ziegler et al., 2020; Ouyang et al., 2022) use learned reward models trained on human preference data rather than programmatic verifiers. The reward signal is continuous, noisy, and subject to reward hacking. SAPO's mechanism for sharing rollouts assumes that the ground-truth answer y_q and metadata M_n specifying verification are included in the shared packet C_n(q). In RLHF, there is no ground-truth answer — the "correctness" of a response is a human preference judgment, not an algorithmic fact. It is unclear how SAPO would function when rewards cannot be deterministically recomputed from shared text by any receiving node. Different nodes might assign different rewards to the same rollout if they use different reward models, undermining the consistency of the shared training signal.
+
+- **Open-ended generation tasks** (dialogue, creative writing, summarization) lack clean verifiability. The "right answer" is not a parseable value but a qualitative property of the generated text. Extending SAPO to such tasks would require either (a) sharing the reward model itself (which reintroduces synchronization-like requirements) or (b) trusting the generating node's reward assignment (which creates incentive problems in adversarial or competitive settings).
+
+- **Partially observable or multi-step tasks** where reward is delayed or sparse pose challenges for the rollout-sharing format. If a rollout consists of a multi-turn interaction where reward is only received at the end, the shared text must include the full trajectory, and the receiving node must be able to simulate the environment's responses to evaluate intermediate actions — which may not be possible for environment-mediated tasks.
+
+- **Multimodal settings** are mentioned as a theoretical possibility (Section 3.1: "An example of a multimodal swarm is one in which some nodes only generate images while others only generate language"), with the claim that "nodes filter samples from the swarm locally, the assumption about modalities can be omitted and these rollouts in different modalities would simply be ignored when incompatible." This filtering approach means that a text-only node in a multimodal swarm would discard all image rollouts, receiving no benefit from image-generating nodes. The cross-modal learning benefits implied by the multimodal discussion are therefore limited to nodes that can process all modalities present in the swarm.
+
+The net effect is that SAPO, as currently formulated and evaluated, applies primarily to domains with algorithmic verifiability — mathematical reasoning, code execution (where unit tests provide verifiability), puzzle solving, and similar structured reasoning tasks. This is a substantial and valuable domain (it covers much of the "reasoning" capabilities that DeepSeek-R1-Zero demonstrated), but it excludes the broader RLHF and instruction-following settings that dominate practical LLM deployment.
+
+**What evidence exists in the paper.** The entire experimental evaluation (Sections 5 and 6) is conducted exclusively on ReasoningGYM tasks with programmatic verifiers. The paper provides no experiments, ablations, or even conceptual discussion of how SAPO would adapt to learned reward models, human preference data, or open-ended tasks. The verifiability requirement is stated as a condition in Section 3.1 but its restrictiveness is not analyzed.
+
+**Mitigation status.** The paper does not frame the verifiability requirement as a limitation. It is presented as a design condition rather than a constraint on applicability. The "Future Directions" section (Section 7) mentions "hybrid approaches that integrate SAPO with... RLHF" as a potential resolution, but this is a single sentence with no technical detail. The paper does not discuss whether the sharing mechanism could be extended to settings where rewards are model-dependent (different nodes compute different rewards for the same rollout) or whether trust mechanisms would be needed to prevent nodes from misrepresenting rewards on shared rollouts. The multimodal discussion (Section 3.1) acknowledges that incompatible modalities would be filtered, which is a form of graceful degradation, but does not claim cross-modal learning benefits.
+
+---
+
+### Limitation 6: The Tragedy-of-the-Commons Dynamic Is Diagnosed but Not Resolved, and No Mechanism Exists to Ensure Collective Exploration Quality
+
+**The assumption or constraint.** SAPO has no mechanism to ensure that the shared pool of rollouts maintains sufficient quality and diversity to support collective learning. Each node independently decides which rollouts to share and how many external samples to draw, with no coordination, no quality standards, and no incentive structure. The paper diagnoses this as a problem — the 2/6 configuration's oscillations are attributed to (among other factors) "when agents draw many rollouts from the swarm but collectively contribute too few, the quality of the shared pool diminishes" (Section 5) — but does not propose any solution within the SAPO framework.
+
+**The consequence.** The tragedy-of-the-commons dynamic means that SAPO's performance is fragile with respect to participant behavior. In a genuinely open, decentralized network — exactly the setting SAPO is designed for — there is no guarantee that participants will contribute high-quality rollouts, contribute at all, or avoid free-riding (consuming shared rollouts without contributing). Several failure modes are possible:
+
+- **Free-riding.** Nodes may set J_n high and contribute few or low-quality rollouts to the shared pool, parasitizing on others' exploration while contributing nothing. If free-riding becomes widespread, the shared pool degrades — fewer fresh discoveries enter, existing rollouts become stale as the swarm's policies evolve, and the collective learning benefit collapses. This is the exact dynamic the 2/6 configuration reveals in microcosm: when agents collectively contribute only 2×8 rollouts per round while drawing 6×8, the pool quality deteriorates.
+
+- **Adversarial contamination.** A malicious node could share rollouts that are deliberately incorrect or deceptive — solutions that appear plausible but contain subtle errors. Since SAPO trusts shared rollouts (the receiving node computes rewards using shared ground-truth answers and metadata, but these could be falsified by a malicious node), there is no mechanism to detect or filter adversarial contributions beyond the local filtering (zero-advantage removal, which wouldn't catch a subtly wrong answer that passes the verifier because the ground-truth answer has been changed).
+
+- **Quality collapse through regression to the mean.** If weaker models contribute proportionally more rollouts than stronger models (e.g., because stronger models have less to gain from sharing and may opt out), the shared pool's average quality drifts downward. Subsequent nodes training on this pool see their performance degrade, their contributions further degrade the pool, and a downward spiral ensues. This is not a hypothetical concern — the large-scale demo's finding that Qwen3 0.6B models did not benefit from the swarm (Section 6) suggests that when the shared pool contains many rollouts from weaker models, stronger models receive no net benefit.
+
+- **Exploration collapse.** The swarm may converge prematurely to a narrow set of solution strategies that work well on the current task distribution, reducing the diversity of the shared pool. Nodes sampling from a homogeneous pool receive less benefit from sharing (since the external rollouts are similar to what they generate themselves), and the collective loses the exploration benefit that motivated sharing in the first place.
+
+**What evidence exists in the paper.** The 2/6 configuration's degradation (1093.31 cumulative reward for 4/4 vs. 945.87 for 2/6; Section 5) is the primary evidence for the tragedy-of-the-commons dynamic. The oscillation pattern in Figure 1d and the paper's interpretation — that steep learning-and-forgetting cycles reflect degradation of the shared pool when contribution is insufficient — directly demonstrate the fragility. The large-scale demo (Section 6) provides additional suggestive evidence: the uniform random sampling without filtering meant that "rollouts without useful reward signals [were] overrepresented in the swarm," and the paper hypothesizes that "with better sampling strategies, more performant models could also benefit." However, this evidence is incomplete: the paper does not measure pool quality directly (e.g., average reward of shared rollouts over time, diversity metrics, contribution rates per node), so the tragedy-of-the-commons interpretation, while consistent with the aggregate reward data, is not directly verified.
+
+**Mitigation status.** The paper acknowledges the problem and identifies it as a direction for future work, but proposes no concrete mechanisms for addressing it. The "Future Directions" section (Section 7) mentions "hybrid approaches that integrate SAPO with reward-guided sharing" and "meta-strategies for adaptively balancing local vs. shared rollouts, or for strategically filtering swarm samples," but these are suggestions rather than solutions. The paper also notes that "especially in large swarm settings where trust cannot be assumed, a promising direction is to develop" such meta-strategies, acknowledging the adversarial concern. However, no reputation system, quality-rating mechanism, contribution-tracking system, or incentive structure is proposed or evaluated. This is a significant gap because the tragedy-of-the-commons dynamic is not a minor edge case — it is the central challenge for any open, decentralized learning system, and SAPO's vulnerability to it directly undermines the vision of "thousands of heterogeneous SLMs running locally on consumer grade hardware" (Section 1) participating in collaborative training. Without mechanisms to ensure collective pool quality, SAPO's benefits may be limited to trusted, small-scale swarms where participants can be relied upon to contribute in good faith — which is precisely the centralized or semi-centralized setting the paper argues against.
+
+The paper's framing of the 4/4 optimum as a fixed ratio per node — rather than an emergent property of a well-designed incentive system — implicitly assumes that all nodes will adhere to this ratio, which is not guaranteed in a genuinely decentralized network. A more complete solution would need either (a) incentive-compatible mechanisms that make contribution individually rational, (b) reputation or quality-filtering systems that allow nodes to selectively consume from high-quality contributors, or (c) architectural changes that decouple contribution from consumption (e.g., a separate "explorer" role that generates diverse rollouts for the pool without training). None of these are explored.
+
+## 7. Implications and Future Directions
+- Field impact
+  - SAPO offers a practical blueprint for collaborative RL post‑training without centralized orchestration. This can democratize RL‑based reasoning improvements by leveraging heterogeneous edge devices and volunteer compute (§1, §6).
+- Practical applications
+  - Organizations without large clusters can post‑train small LMs for domains with verifiable checks (math, code, data cleaning, constrained generation). Multi‑modal extensions could enable shared learning of style or “taste” when rewards encode aesthetics (§7).
+- Research avenues
+  - Adaptive sharing policies: learn to balance `I_n` vs. `J_n` per node and per phase; design filters based on advantage, diversity, or learned verifiers (§7).
+  - Robustness and trust: reputation systems, cryptographic attestations, or incentive mechanisms to ensure high‑quality contributions in open swarms (§7).
+  - Hybrid objectives: combine SAPO with RLHF, generative verifiers, or curriculum mechanisms to stabilize learning and expand beyond strictly verifiable tasks (§7; refs. to generative verifiers).
+  - Heterogeneity at scale: systematic studies with mixed base models, specialized agents, and role emergence; explore whether structured roles emerge from unstructured sharing (§2, §7).
+  - Theoretical analysis: characterize convergence/stability when using others’ decoded trajectories under PPO/GRPO clipping; derive principled rules for sampling and clipping thresholds in decentralized settings.
+
+Overall, SAPO reframes distributed RL for LMs around exchanging lightweight experience rather than heavyweight weights. The controlled experiments and a real‑world demo support its core promise: collective sharing can accelerate and stabilize learning—up to a point—provided the mix of local and external data is balanced and sampling quality is maintained.

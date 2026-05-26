@@ -1,0 +1,811 @@
+# Trust Region Policy Optimization
+
+**ArXiv:** [1502.05477](https://arxiv.org/abs/1502.05477)
+
+## 🎯 Pitch
+
+Trust Region Policy Optimization (TRPO) introduces a practical and theoretically-grounded algorithm for optimizing reinforcement learning policies by constraining each update to stay within a 'trust region,' measured by KL divergence. This innovation delivers robust, monotonic policy improvement even with complex, high-dimensional policies like deep neural networks, addressing stability and scaling challenges that hindered previous approaches. By unifying policy iteration and policy gradient perspectives, TRPO enables reliable training of sophisticated agents for tasks ranging from robotic locomotion to Atari games, marking a significant step toward stable and scalable deep reinforcement learning.
+
+---
+
+## 1. Executive Summary
+
+This paper introduces **Trust Region Policy Optimization (TRPO)**, a practical algorithm for optimizing stochastic control policies with guaranteed monotonic improvement. The core idea is to derive a theoretically-justified surrogate objective that lower-bounds the true expected return, then enforce step sizes via a KL divergence constraint rather than a fixed penalty coefficient (approximating the exact minorization-maximization update with a constrained optimization that allows larger, more robust steps). Evaluated on simulated robotic locomotion (swimmer, hopper, walker) in MuJoCo and on Atari games from raw pixels using convolutional neural networks with tens of thousands of parameters, TRPO successfully learned all locomotion gaits where natural gradient methods failed on the harder tasks, and achieved competitive scores across seven Atari games, establishing that a single general-purpose policy search method can solve diverse high-dimensional control problems — but only when the KL constraint replaces the fixed penalty that otherwise produces prohibitively small steps.
+
+## 2. Context and Motivation
+
+### The Core Problem: Reliable Policy Improvement Without Destabilizing the Learning Process
+
+The fundamental challenge this paper tackles is deceptively simple: **how do you update a control policy to reliably increase expected reward, without accidentally causing performance collapse?** This matters because reinforcement learning (RL) algorithms must make a delicate tradeoff at every update step — they need to improve the policy based on limited, noisy data, but if they overstep (try to improve too aggressively given the uncertainty in their estimates), they can destroy the progress they've already made. Once performance collapses, the agent may never recover, because it now collects data from a worse policy, which leads to worse estimates, which leads to even worse updates — a vicious cycle.
+
+This problem is particularly acute when optimizing **nonlinear, high-dimensional policies** such as neural networks. Neural network policies can have hundreds of thousands of parameters (as in the Atari experiments in Section 8.2, where the convolutional policy has 33,500 parameters). In such high-dimensional spaces, the relationship between parameter changes and policy behavior is complex and poorly conditioned: a small change in some parameter directions can cause drastic changes in the policy's action distribution, while large changes in other directions barely affect it. An algorithm that doesn't account for this geometry will either take dangerously large steps (risking collapse) or take inefficiently tiny steps (wasting samples and computation).
+
+The authors frame this through a specific, unsatisfying observation about the state of the field in 2015:
+
+> "The inability of ADP and gradient-based methods to consistently beat gradient-free random search is unsatisfying, since gradient-based optimization algorithms enjoy much better sample complexity guarantees than gradient-free methods."
+
+This is a striking admission. Gradient-based methods *should* be far more sample-efficient than derivative-free methods like CEM and CMA — they exploit the structure of the optimization landscape rather than treating the return as a black box. Yet on many benchmark problems (the authors cite Tetris as an example, referencing Gabillon et al., 2013), gradient-free methods were competitive or superior. The authors diagnose the root cause: gradient-based methods lacked a principled, robust mechanism for determining **how far to step** in parameter space at each update. Without this, their theoretical sample-efficiency advantage couldn't be realized in practice.
+
+### Why Sample Efficiency Matters for Real-World RL
+
+Beyond the intellectual dissatisfaction with gradient-free methods outperforming gradient-based ones, there are concrete practical reasons why sample-efficient policy optimization is critical:
+
+- **Robotics and physical systems**: Every sample corresponds to a real-world interaction — a robot attempting a motion, potentially damaging itself or its environment. Gradient-free methods like CMA typically require thousands to tens of thousands of episodes to converge (see the CEM and CMA curves in Figure 4, which trail badly on the hopper and walker tasks). This is often infeasible on real hardware.
+- **High-dimensional observation spaces**: When policies operate on raw sensory inputs (images, depth maps, lidar), the policy parameter count explodes. Derivative-free methods scale poorly with parameter count — their sample complexity grows at least linearly, often superlinearly, with dimensionality. This makes them fundamentally unsuitable for training deep neural network policies from pixels.
+- **Simulation-to-reality transfer**: Even when training in simulation, sample-inefficient methods impose a wall-clock time burden that limits experimentation. The Atari experiments in Section 8.2 required 100K–400K simulator steps per iteration for 500 iterations — sample-inefficient methods operating at this scale would be computationally prohibitive.
+
+The paper doesn't merely want to beat gradient-free methods; it wants to **unlock the application of gradient-based policy optimization to problems that gradient-free methods cannot touch** — high-dimensional neural network policies, tasks with expensive samples, and domains where rapid iteration is essential.
+
+### What Prior Approaches Existed, and Where They Fell Short
+
+The paper situates itself against three broad families of policy optimization methods, each with critical limitations:
+
+---
+
+**Policy iteration (approximate dynamic programming).** These methods alternate between estimating the value function under the current policy (policy evaluation) and greedily improving the policy with respect to that value function (policy improvement). In the *exact* case — where the MDP is fully known or can be evaluated exactly — policy iteration is guaranteed to monotonically improve and converge to the optimal policy (the classic result the authors restate in Section 2: if `arg max_a A(s,a)` is used at every state, `η` is non-decreasing). However, in the *approximate* case, where we use function approximators and finite samples, the greedily improved policy `˜π` will have **negative expected advantage at some states** due to estimation and approximation error. Equation 2 in Section 2 shows why this is problematic: the true expected return `η(˜π)` depends on `ρ_˜π(s)` — the state visitation distribution *under the new policy* — which is difficult to predict and can amplify errors. A policy that looks good according to the old state distribution `ρ_π` may perform terribly in practice because it visits states where the advantage estimates were poor.
+
+The core difficulty, formalized in Equations 2–3, is that `L_π(˜π)` (the local approximation using `ρ_π` rather than `ρ_˜π`) matches `η(˜π)` only to first order. It provides **no guidance on step size** — a small step that improves `L_π` will improve `η`, but the algorithm doesn't know how small is small enough. Prior approaches either used heuristically chosen step sizes (which failed when too large) or were forced to take impractically tiny steps to guarantee safety (which wasted samples).
+
+---
+
+**Policy gradient methods (including natural gradient).** These methods estimate the gradient of `η(θ)` from sample trajectories and follow it uphill. The standard policy gradient (REINFORCE) uses the `ℓ_2` geometry of parameter space to define step sizes, which — critically — is **not invariant to reparameterization**. The same policy can be represented by different parameter vectors that change at different rates. A step of fixed `ℓ_2` length in one parameterization might correspond to a tiny policy change in another, or a catastrophic one. This is why standard policy gradient often requires extensive hyperparameter tuning of the learning rate and can still be brittle.
+
+The **natural policy gradient** (Kakade, 2002) addresses the parameterization-dependence by using the Fisher information metric — effectively measuring step sizes in terms of how much the policy's *output distribution* changes, not how much the *parameters* change. The update takes the form `θ_new = θ_old + (1/λ) A(θ_old)^{-1} ∇L(θ_old)`, where `A` is the Fisher information matrix and `λ` is a fixed penalty coefficient (Lagrange multiplier). This is a major conceptual advance: it means the algorithm is approximately invariant to reparameterization and can take steps that are appropriately scaled in different parameter directions.
+
+However, the natural gradient has a critical weakness that the paper identifies both theoretically and empirically:
+
+> "This differs from our approach, which enforces the constraint at each update. Though this difference might seem subtle, our experiments demonstrate that it significantly improves the algorithm's performance on larger problems."
+
+The problem is the **fixed penalty coefficient `λ`**. The theoretically-justified penalty coefficient `C` derived in Theorem 1 (Equation 9) is `C = 4εγ/(1-γ)²`, where `ε = max_{s,a} |A_π(s,a)|`. In practice, this coefficient produces **prohibitively small step sizes**. One could use a smaller `λ` to take larger steps, but there's no principled way to choose it — sweep over values (the paper says they "swept through the possible values of the stepsize in factors of three, and took the best value according to the final performance"), which is expensive and fragile. If `λ` is too small, the algorithm takes dangerously large steps and can collapse. If `λ` is too large, progress is slow. The natural gradient provides the right *direction* but not a robust mechanism for choosing the *step size*.
+
+The experimental results in Figure 4 bear this out starkly: natural gradient performs well on cartpole and swimmer (the easier, lower-dimensional tasks), but **fails completely on hopper and walker** — the two harder locomotion tasks. The learning curves show it never achieves positive reward, meaning it couldn't even learn to hop or walk. This is a direct consequence of the fixed-penalty approach being unable to robustly determine how large a step to take as problem complexity increases.
+
+---
+
+**Derivative-free optimization (CEM, CMA).** These methods — the cross-entropy method (CEM) and covariance matrix adaptation (CMA) — treat the expected return as a black-box function of the policy parameters. They sample parameter vectors from a distribution, evaluate their returns through full episodes, and update the sampling distribution toward high-return regions. They have several attractive properties: they're simple to implement, they make almost no assumptions about the objective function, and they can work well on low-dimensional problems. The authors acknowledge their success: "CMA have been successful at learning control policies for challenging tasks like locomotion when provided with hand-engineered policy classes with low-dimensional parameterizations."
+
+But their fundamental limitation is **sample complexity scaling**. Because they treat the return as a black box, they don't exploit the gradient structure of the problem. Each parameter requires many function evaluations to estimate its effect on performance, and as dimensionality grows, the sample complexity grows rapidly. In Figure 4, CEM and CMA perform respectably on cartpole (6 parameters) and swimmer (364 parameters), but are essentially flat on hopper (4,806 parameters) and walker (8,206 parameters) — never achieving positive forward progress. For the Atari tasks (33,500 parameters), derivative-free methods are entirely infeasible. The paper's results make clear that these methods cannot scale to the high-dimensional neural network policies that modern RL demands.
+
+---
+
+### How This Paper Positions Itself: From Theory to Practical Algorithm
+
+The paper's intellectual positioning is best understood as **bridging a gap between rigorous theory and practical performance** that prior work had not successfully spanned.
+
+The theoretical foundation comes from **Kakade and Langford (2002)**, who introduced the conservative policy iteration (CPI) update (Equation 5): `π_new = (1-α)π_old + απ'`, where `π'` maximizes the local approximation `L_{π_old}`. They proved a lower bound (Equation 6) guaranteeing that `η(π_new) ≥ L_{π_old}(π_new) - 2εγα²/(1-γ)²`. This is a **monotonic improvement guarantee** — the algorithm cannot get worse. But the CPI update has a fatal flaw: it only applies to **mixture policies** of the specific form in Equation 5. These mixture policies are "unwieldy and restrictive in practice" — they require maintaining and sampling from a mixture of the old policy and a greedily-optimized policy, which is cumbersome to represent and limits the policy class to convex combinations rather than arbitrary neural network weights.
+
+The paper's **principal theoretical contribution** (Theorem 1, Section 3) extends Kakade and Langford's bound to **general stochastic policies**, not just mixture policies. The key insight is replacing `α` (the mixture weight) with `D_TV^max(π_old, π_new)` — the maximum total variation divergence between the old and new policies across all states. The bound becomes `η(π_new) ≥ L_{π_old}(π_new) - 4εγα²/(1-γ)²`, where `α` is now a distance measure rather than a mixture weight. This means the guarantee applies to *any* pair of policies `(π_old, π_new)`, regardless of how `π_new` is parameterized or represented. The proof (Appendix A) uses coupling arguments — the key idea is that if two policies agree with high probability `1-α`, then the error in using the old state distribution `ρ_π` instead of the new one `ρ_˜π` scales as `O(α²)` because the policies only disagree (and thus visit different states) with probability `α` at each step, and the probability of two or more disagreements is `O(α²)`.
+
+This theoretical extension is what makes the framework applicable to neural network policies — because neural network weights don't produce mixture policies, the Kakade-Langford bound was theoretically inapplicable to the most important practical policy class. TRPO closes this gap.
+
+However, the theoretical bound alone isn't enough — the penalty coefficient `C = 4εγ/(1-γ)²` is too conservative for practical use. The paper's **practical contribution** is recognizing that the *form* of the optimization (maximizing `L` subject to a KL divergence constraint) is more important than the theoretically-derived *magnitude* of the constraint. By switching from a penalty to a hard constraint with parameter `δ` (the KL divergence budget), and by approximating the maximum KL divergence `D_KL^max` with the average KL divergence `D_KL^ρ` (which is tractable to estimate from samples), the algorithm can take much larger, more productive steps while still maintaining empirical monotonic improvement.
+
+The relationship is explicit in Section 6:
+
+> "The theory justifies optimizing a surrogate objective with a penalty on KL divergence. However, the large penalty coefficient C leads to prohibitively small steps, so we would like to decrease this coefficient. Empirically, it is hard to robustly choose the penalty coefficient, so we use a hard constraint instead of a penalty."
+
+This is a case where **practical engineering (constraint vs. penalty, average vs. max KL) departs from the theory in service of usability, but the theoretical structure (maximize `L` while limiting policy change) is preserved**. The natural gradient can be seen as a special case: it's what you get when you linearly approximate `L` and quadratically approximate the KL constraint (Equation 17), then solve with a fixed Lagrange multiplier rather than enforcing the constraint exactly. TRPO's distinction — solving the constrained optimization directly with conjugate gradient and line search — turns out to be crucial for performance on harder problems.
+
+The paper thus positions itself as **the practical realization of the Kakade-Langford theoretical program**, extending it from mixture policies to neural networks, and from a theoretically-correct but practically-unusable penalty coefficient to a constraint-based approach that works at scale. It also serves as a conceptual unification: policy iteration (unconstrained maximization of `L`), natural policy gradient (linear-quadratic approximation with fixed penalty), and TRPO (full constrained optimization with hard KL constraint) exist on a spectrum of approximations to the same underlying minorization-maximization principle.
+
+## 3. Technical Approach
+
+### 3.1 Reader Orientation
+
+TRPO is a **policy optimization algorithm** — a procedure that iteratively updates the parameters of a neural network policy (a mapping from observations to actions) so that the agent collects higher total reward over time. The core problem it solves is **step-size selection in high-dimensional policy space**: given noisy estimates of which direction improves the policy, how far should we step before our estimates become unreliable? The solution takes the shape of a **constrained optimization at every iteration**: maximize a local approximation to expected return, subject to a hard constraint that the new policy's action distribution cannot differ from the old one by more than a budget `δ` (measured by KL divergence), enforced via conjugate gradient and line search.
+
+### 3.2 Big-Picture Architecture (Diagram in Words)
+
+The TRPO system has five major components arranged in a loop:
+
+1. **Policy network `π_θ(a|s)`** — a neural network (or linear function) parameterized by `θ` that maps each state `s` to a probability distribution over actions `a`. This is the agent being optimized.
+
+2. **Data collection (sampling scheme)** — one of two procedures (single path or vine) that executes the current policy in the environment to collect trajectories of states, actions, and rewards, and computes empirical estimates of Q-values (expected future discounted return from each state-action pair).
+
+3. **Surrogate objective constructor** — takes the collected data and the advantage estimates `A_π(s,a) = Q_π(s,a) - V_π(s)` to build `L_{θ_old}(θ)`, a local approximation to the true expected return `η(θ)` that matches `η` to first order at `θ_old` but uses the old policy's state visitation distribution `ρ_{θ_old}` rather than the new policy's (making it tractable to optimize).
+
+4. **Constrained optimizer** — solves the trust-region problem: maximize `L_{θ_old}(θ)` subject to the average KL divergence between `π_{θ_old}` and `π_θ` being at most `δ`. Uses conjugate gradient to approximately compute the natural gradient direction `A^{-1}g`, then a backtracking line search to enforce the KL constraint and ensure the objective actually improves.
+
+5. **KL divergence estimator and Fisher matrix** — computes the quadratic approximation to the KL divergence constraint, `(θ - θ_old)^T A (θ - θ_old)`, where `A` is the Fisher information matrix (the expected outer product of score gradients, or equivalently the Hessian of the KL divergence). The matrix-vector products `Ax` needed by conjugate gradient are computed efficiently using automatic differentiation and subsampled data, never materializing `A` in memory.
+
+**Information flow per iteration:** The current policy `π_{θ_old}` interacts with the environment → data collection produces state-action pairs and Q-value estimates → the surrogate objective `L_{θ_old}(θ)` and its gradient `g` are constructed → conjugate gradient solves `Ax = -g` approximately to get a search direction → line search finds the largest step in that direction satisfying `D_KL ≤ δ` and improving `L` → the policy parameters are updated to `θ_new` → repeat.
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First**, the formal policy improvement bound (Theorem 1) that establishes *why* optimizing a particular surrogate objective with a KL divergence constraint guarantees monotonic improvement — this is the theoretical engine that justifies the entire algorithm design.
+
+- **Second**, the surrogate objective `L_π(˜π)` itself — what it computes, why it's a local approximation, and how it relates to the advantage function and state visitation distributions — since all subsequent optimization targets this quantity.
+
+- **Third**, the transition from theory to practice: why the theoretically-derived penalty coefficient `C` produces step sizes that are too small, why a hard constraint with budget `δ` is used instead, and why the pointwise maximum KL divergence `D_KL^max` is replaced with the average KL divergence `D_KL^ρ` for tractability.
+
+- **Fourth**, the two sampling schemes (single path and vine) that estimate the surrogate objective and its gradient from trajectory data — because the theoretical framework assumes exact advantage values, but a practical algorithm must work from finite samples.
+
+- **Fifth**, the numerical optimization procedure — conjugate gradient, Fisher matrix-vector products, and backtracking line search — which is the computational engine that solves the constrained optimization at each iteration without forming large matrices.
+
+- **Sixth**, the relationship to prior methods: how natural policy gradient, standard policy gradient, and policy iteration all emerge as special cases or approximations of the same constrained optimization framework, clarifying TRPO's position in the algorithmic landscape.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily a **theoretical paper with a practical algorithm derived from the theory**. The core idea is that a minorization-maximization (MM) framework — maximizing a lower bound on the true objective — provides a principled mechanism for step-size control in policy optimization, and that approximating the exact MM update with a trust-region constraint yields an algorithm that is both theoretically motivated and practically effective at scale.
+
+---
+
+#### The Fundamental Identity: Expressing `η(˜π)` in Terms of Advantages Over `π`
+
+The entire theoretical development begins with an identity (Equation 1, proved in Appendix A, Lemma 1) that expresses the expected return of any policy `˜π` in terms of its advantage over another policy `π`:
+
+$$\eta(\tilde{\pi}) = \eta(\pi) + \mathbb{E}_{s_0,a_0,\cdots\sim\tilde{\pi}}\left[\sum_{t=0}^{\infty} \gamma^t A_\pi(s_t, a_t)\right]$$
+
+where `η(π)` is the expected discounted return of policy `π` (the scalar objective we want to maximize), the expectation `E_{s_0,a_0,...∼˜π}[...]` indicates that states and actions are sampled by running policy `˜π` in the environment starting from the initial state distribution `ρ_0`, `γ ∈ (0,1)` is the discount factor, and `A_π(s,a) = Q_π(s,a) - V_π(s)` is the **advantage function** of `π` — it measures how much better or worse action `a` is compared to the average action under `π` at state `s`.
+
+**What this identity computes:** It says that the performance of a new policy `˜π` equals the performance of the old policy `π` plus the discounted sum of advantages that `˜π` accumulates over time, where the advantages are measured relative to `π`. If `˜π` consistently takes actions with positive advantage (better than what `π` would do), the sum is positive and performance improves. If `˜π` sometimes takes actions with negative advantage, those terms subtract from the total.
+
+**Why this form matters:** This identity decomposes the policy improvement problem into understanding advantages `A_π`, which depend only on the *old* policy `π` (via its value functions), and the *new* policy `˜π`'s action selection, which determines which advantages get accumulated. Crucially, it shows that if we could guarantee `∑_a ˜π(a|s) A_π(s,a) ≥ 0` at *every* state `s`, we would be guaranteed monotonic improvement `η(˜π) ≥ η(π)`. This is exactly what exact policy iteration does: it sets `˜π(s) = arg max_a A_π(s,a)`, making the expected advantage non-negative everywhere. The problem in the approximate setting is that estimation errors cause some states to have negative expected advantage, and the state distribution `ρ_{˜π}` multiplies those errors in ways that are hard to predict.
+
+---
+
+#### The Surrogate Objective: Replacing `ρ_{˜π}` with `ρ_π`
+
+The difficulty with Equation 1 is that the expectation is taken under trajectories from `˜π`, meaning the state visitation distribution `ρ_{˜π}(s)` depends on the very policy we're trying to optimize. To make optimization tractable, the authors introduce the **local approximation** `L_π(˜π)` (Equation 3):
+
+$$L_\pi(\tilde{\pi}) = \eta(\pi) + \sum_s \rho_\pi(s) \sum_a \tilde{\pi}(a|s) A_\pi(s,a)$$
+
+where `ρ_π(s)` is the **unnormalized discounted visitation frequency** of state `s` under policy `π`: `ρ_π(s) = P(s_0 = s) + γ P(s_1 = s) + γ^2 P(s_2 = s) + ...`, with `s_0 ∼ ρ_0` and actions chosen according to `π`. This quantity (not a probability distribution because it doesn't sum to one — it sums to `1/(1-γ)`) measures how often each state is visited, with earlier visits weighted more heavily due to discounting.
+
+**What it computes:** Instead of using the new policy's state distribution `ρ_{˜π}` (which we don't know yet), `L_π(˜π)` uses the old policy's state distribution `ρ_π`. For each state, it computes the expected advantage of `˜π` at that state, weights it by how often `π` visits that state, and sums. The result is a scalar that approximates `η(˜π) - η(π)`.
+
+**Why this form matters — the first-order equivalence:** Equation 4 states the critical property:
+
+$$L_{\pi_{\theta_0}}(\pi_{\theta_0}) = \eta(\pi_{\theta_0}), \quad \nabla_\theta L_{\pi_{\theta_0}}(\pi_\theta)|_{\theta=\theta_0} = \nabla_\theta \eta(\pi_\theta)|_{\theta=\theta_0}$$
+
+The surrogate `L` matches the true objective `η` both in **value** and in **gradient** at `θ_0`. This means that for a parameterized policy `π_θ`, taking a sufficiently small gradient step to improve `L` is guaranteed to improve `η`. The problem is that "sufficiently small" is unknown — `L` provides the right *direction* but no information about *how far* before the approximation breaks down. This is the gap Theorem 1 fills.
+
+---
+
+#### Theorem 1: The General Policy Improvement Bound
+
+Theorem 1 extends the Kakade-Langford bound from mixture policies to arbitrary stochastic policies by replacing the mixture weight `α` with a distance measure — the maximum total variation divergence. The total variation divergence between two discrete probability distributions `p` and `q` is defined as:
+
+$$D_{TV}(p \| q) = \frac{1}{2} \sum_i |p_i - q_i|$$
+
+and the maximum over states is:
+
+$$D_{TV}^{\max}(\pi, \tilde{\pi}) = \max_s D_{TV}(\pi(\cdot|s) \| \tilde{\pi}(\cdot|s))$$
+
+**Theorem 1 statement** (Equation 8): Let `α = D_{TV}^{\max}(\pi_{\text{old}}, \pi_{\text{new}})`. Then:
+
+$$\eta(\pi_{\text{new}}) \geq L_{\pi_{\text{old}}}(\pi_{\text{new}}) - \frac{4\epsilon\gamma}{(1-\gamma)^2} \alpha^2$$
+
+where `ϵ = \max_{s,a} |A_\pi(s,a)|`.
+
+**What this inequality says operationally:** The true performance of the new policy `η(π_new)` is guaranteed to be at least the surrogate objective value `L_{π_old}(π_new)` minus a penalty term proportional to `α²` (the squared maximum total variation distance between old and new policies). The constant `4εγ/(1-γ)²` depends on the maximum magnitude of advantages `ε` (how much any single action can change expected return) and the discount factor `γ`. If we make a small policy change (small `α`), the penalty is small (order `α²`), and improving `L` guarantees improving `η`. If we make a large policy change (large `α`), the penalty grows quadratically and can overwhelm any improvement in `L`.
+
+**How the proof works (coupling argument):** Appendix A provides two proofs. The first uses **coupling**: construct a joint distribution over action pairs `(a, ˜a)` such that `P(a ≠ ˜a | s) ≤ α` for all `s` — meaning the two policies agree with probability at least `1-α` at every state. When the policies agree, the new policy visits the same states as the old one and the surrogate `L` is exact. Errors arise only when the policies disagree. The key combinatorial insight: if disagreement probability per step is `α`, then the probability of *two or more* disagreements across the trajectory is `O(α²)`. Since a single disagreement causes at most `O(α)` error in the advantage sum but the surrogate only misses corrections from *subsequent* disagreements, the net error from using `ρ_π` instead of `ρ_{˜π}` scales as `O(α²)`, not `O(α)`. The factor `4εγ/(1-γ)²` emerges from summing the geometric series of discounted future errors.
+
+**Why total variation rather than some other distance:** The coupling construction — that `D_TV(p, q) = α` implies existence of a joint distribution with `P(X ≠ Y) = α` — is specific to total variation. It lets us translate a per-state distance bound into a trajectory-level agreement probability, which is what the error analysis requires.
+
+---
+
+#### From Total Variation to KL Divergence
+
+Total variation is theoretically clean but computationally inconvenient for optimization. The paper leverages the relationship (Pollard, 2000):
+
+$$D_{TV}(p \| q)^2 \leq D_{KL}(p \| q)$$
+
+Let `D_KL^{\max}(\pi, \tilde{\pi}) = \max_s D_{KL}(\pi(\cdot|s) \| \tilde{\pi}(\cdot|s))`. Then from Theorem 1:
+
+$$\eta(\tilde{\pi}) \geq L_\pi(\tilde{\pi}) - C D_{KL}^{\max}(\pi, \tilde{\pi}), \quad \text{where } C = \frac{4\epsilon\gamma}{(1-\gamma)^2}$$
+
+This gives a penalty formulation: maximize `L_π(˜π) - C · D_KL^{\max}(π, ˜π)`. This is Algorithm 1 — an exact minorization-maximization (MM) algorithm that repeatedly maximizes a lower bound `M_i(π) = L_{π_i}(π) - C D_KL^{\max}(π_i, π)`. Since `η(π_i) = M_i(π_i)` (the bound is tight at the current policy) and `η(π) ≥ M_i(π)` for all `π`, maximizing `M_i` and setting `π_{i+1}` to the maximizer guarantees `η(π_{i+1}) ≥ η(π_i)`.
+
+**Why this bound is a minorization-maximization (MM) algorithm:** In MM terminology, `M_i` is a **minorizing surrogate** — it lies entirely below the true objective `η` and touches it at the current iterate `π_i`. Maximizing the surrogate and moving to its maximizer `π_{i+1}` guarantees that the true objective at the new point is at least as high as the surrogate value at the new point (since `η ≥ M_i` everywhere), which is at least as high as the surrogate value at the old point (since we maximized), which equals the true objective at the old point. This is exactly the EM algorithm's logic, applied to policy optimization.
+
+**The critical practical problem:** The theoretically-derived coefficient `C = 4εγ/(1-γ)²` — where `ε = max_{s,a} |A_π(s,a)|` is the maximum possible advantage magnitude — is **extremely conservative**. To see why, consider: in many problems `γ ≈ 0.99`, so `1/(1-γ)² ≈ 10,000`. The advantage function can span a range comparable to the return scale. The resulting `C` is huge, meaning the penalty dominates the objective, and the algorithm is forced to take minuscule steps. The paper explicitly states this issue and motivates the switch to constraints.
+
+---
+
+#### From Penalty to Constraint: The Trust Region Formulation
+
+The paper's key practical insight is that **enforcing the KL divergence as a hard constraint rather than a penalty** allows much larger steps while maintaining robust improvement:
+
+$$\underset{\theta}{\text{maximize }} L_{\theta_{\text{old}}}(\theta) \quad \text{subject to } D_{KL}^{\max}(\theta_{\text{old}}, \theta) \leq \delta$$
+
+The parameter `δ` (KL divergence budget) replaces the penalty coefficient `C`. Instead of having one coefficient that must balance the objective scale against the KL penalty scale (a difficult, problem-dependent tradeoff), we simply pick how much the policy is allowed to change per iteration (a more intuitive hyperparameter).
+
+**Why this solves the step-size problem:** With a penalty, the effective step size emerges from the interplay between the gradient magnitude of `L` and the penalty coefficient `C`. If the gradient is large, the optimizer might take a large step despite the penalty; if small, even a mild penalty stops progress. With a constraint, the step size is directly controlled: regardless of the gradient magnitude, the policy change is bounded by `δ`. This decouples the *direction* (which comes from maximizing `L`) from the *magnitude* (which is enforced by the constraint). Practically, the paper uses `δ = 0.01` across all experiments (Table 2), demonstrating that a single value works across cartpole, swimmer, hopper, walker, and Atari games — a striking contrast with the problem-dependent tuning required for penalty-based methods.
+
+**The second approximation — from `D_KL^max` to `D_KL^ρ`:** The maximum KL divergence `D_KL^max` imposes a constraint at *every individual state*, which is computationally intractable (infinitely many states in continuous spaces, and even in discrete spaces, verifying the constraint at unseen states is impossible). The paper approximates this with the **average KL divergence** under the old policy's state distribution:
+
+$$\overline{D}_{KL}^\rho(\theta_1, \theta_2) := \mathbb{E}_{s \sim \rho} \left[ D_{KL}(\pi_{\theta_1}(\cdot|s) \| \pi_{\theta_2}(\cdot|s)) \right]$$
+
+The final practical optimization problem (Equation 12) is:
+
+$$\underset{\theta}{\text{maximize }} L_{\theta_{\text{old}}}(\theta) \quad \text{subject to } \overline{D}_{KL}^{\rho_{\theta_{\text{old}}}}(\theta_{\text{old}}, \theta) \leq \delta$$
+
+The cartpole experiments include an ablation (`max KL` in Figure 4) that actually enforces `D_KL^max` (tractable for the 6-parameter linear policy). It performs similarly to the average-KL method but slightly slower, validating that the average constraint is a reasonable proxy.
+
+---
+
+#### Sample-Based Estimation: From Expectation to Empirical Objective
+
+The optimization problem in Equation 12 is still in terms of expectations over the state distribution `ρ_{θ_old}` and the action-value function `Q_{θ_old}`, neither of which are available in closed form. The paper develops sample-based estimators (Section 5), rewriting the objective:
+
+$$\sum_s \rho_{\theta_{\text{old}}}(s) \sum_a \pi_\theta(a|s) A_{\theta_{\text{old}}}(s,a) = \frac{1}{1-\gamma} \mathbb{E}_{s \sim \rho_{\theta_{\text{old}}}} \left[ \sum_a \pi_\theta(a|s) A_{\theta_{\text{old}}}(s,a) \right]$$
+
+**Replacing advantages with Q-values:** The advantage `A_{θ_old}(s,a) = Q_{θ_old}(s,a) - V_{θ_old}(s)`. When used inside the sum over actions weighted by `π_θ(a|s)`, the `V_{θ_old}(s)` term becomes `∑_a π_θ(a|s) V_{θ_old}(s) = V_{θ_old}(s)` (since `V_{θ_old}(s)` doesn't depend on `a` and `π_θ` sums to 1). This is a constant with respect to `θ`, so optimizing with `Q` is equivalent to optimizing with `A`. The paper uses Q-values for convenience because they can be directly estimated as discounted sums of future rewards without also estimating `V`.
+
+**Importance sampling for actions:** To estimate `∑_a π_θ(a|s) Q(s,a)` from samples, we need to account for the fact that our samples come from the *old* policy's action distribution `q(a|s) = π_{θ_old}(a|s)`, not from `π_θ`. The importance sampling estimator for a single state `s_n` is:
+
+$$\sum_a \pi_\theta(a|s_n) Q_{\theta_{\text{old}}}(s_n, a) = \mathbb{E}_{a \sim q}\left[ \frac{\pi_\theta(a|s_n)}{q(a|s_n)} Q_{\theta_{\text{old}}}(s_n, a) \right]$$
+
+**The full empirical objective** (Equation 14): combining the expectation over states, importance sampling over actions, and dropping the constant factor `1/(1-γ)` (which doesn't affect the optimization):
+
+$$\underset{\theta}{\text{maximize }} \mathbb{E}_{s \sim \rho_{\theta_{\text{old}}}, a \sim q}\left[ \frac{\pi_\theta(a|s)}{q(a|s)} Q_{\theta_{\text{old}}}(s, a) \right] \quad \text{subject to } \mathbb{E}_{s \sim \rho_{\theta_{\text{old}}}}\left[ D_{KL}(\pi_{\theta_{\text{old}}}(\cdot|s) \| \pi_\theta(\cdot|s)) \right] \leq \delta$$
+
+**Why this form enables practical optimization:** Both the objective and the constraint are expressed as expectations over the same state distribution `ρ_{θ_old}`, which means they can be estimated from the same set of trajectories. The importance sampling ratio `π_θ(a|s) / q(a|s)` corrects for the fact that our action samples come from the old policy, allowing us to evaluate what the new policy would do without actually running it.
+
+---
+
+#### Single Path Sampling Scheme
+
+The **single path** method (Section 5.1, left panel of Figure 1) is the standard procedure used in policy gradient methods — it is fully model-free and requires no state resets, making it applicable to physical systems.
+
+**Procedure:**
+1. Sample initial state `s_0 ∼ ρ_0`.
+2. Execute the current policy `π_{θ_old}` for `T` timesteps, generating a trajectory `s_0, a_0, s_1, a_1, ..., s_{T-1}, a_{T-1}, s_T`. Since actions are sampled from the old policy, the sampling distribution is `q(a|s) = π_{θ_old}(a|s)`, so the importance weight is simply `π_θ(a|s) / π_{θ_old}(a|s)` — the ratio of new to old action probabilities.
+3. For each state-action pair `(s_t, a_t)` along this single trajectory, estimate `Q_{θ_old}(s_t, a_t)` as the discounted sum of future rewards from that point: `Q̂(s_t, a_t) = ∑_{l=0}^{T-t-1} γ^l r(s_{t+l})`.
+4. All state-action pairs from the trajectory are incorporated into the objective estimate. If multiple trajectories are collected, they are simply concatenated.
+
+**Key properties:** Single path reuses each state-action pair exactly once — the Q-value estimate for `(s_t, a_t)` is based on the single future that actually occurred. This makes the Q-value estimates **high-variance** (they depend on the stochastic outcomes after that action), but the method is sample-efficient in terms of environment interactions because every collected transition contributes to the objective. The paper uses 50 trajectories of length 1000 for swimmer, 1000 trajectories of length 1000 for hopper, and 10000 trajectories of length 1000 for walker (Table 2).
+
+**Why this is the default for real-world RL:** Single path requires only forward simulation — no ability to reset the environment to arbitrary states, no need for a dynamics model. It can run on a physical robot that simply executes a policy and records what happens.
+
+---
+
+#### Vine Sampling Scheme
+
+The **vine** method (Section 5.2, right panel of Figure 1) is designed for simulated environments where the system can be reset to arbitrary states. It trades additional simulator calls for much lower-variance advantage estimates.
+
+**Procedure:**
+1. **Generate trunk trajectories:** Sample `s_0 ∼ ρ_0` and simulate `π_{θ_old}` to generate several trajectories (the "stems" of the vine).
+2. **Select rollout set:** Choose a subset of `N` states from these trajectories, denoted `s_1, s_2, ..., s_N`. These are the points where the vine "branches."
+3. **Branch from each state:** For each state `s_n` in the rollout set, sample `K` actions `a_{n,1}, ..., a_{n,K}`. The sampling distribution `q(·|s_n)` can differ from `π_{θ_old}` — the paper uses `q = π_{θ_old}` for continuous control tasks and `q =` uniform for discrete Atari games (where uniform sampling can sometimes achieve better exploration of the action space).
+4. **Rollout from each branch:** For each action `a_{n,k}` at state `s_n`, execute a **rollout** — simulate the policy `π_{θ_old}` starting from `(s_n, a_{n,k})` for some number of steps — to estimate `Q̂(s_n, a_{n,k})`. The paper uses **common random numbers** (CRN): the same random seed is used for the noise in all `K` rollouts from a given state. This makes the Q-value estimates **correlated** (they share the same stochastic future beyond the first action), which dramatically reduces the variance when estimating differences between actions (which is what the policy gradient cares about).
+5. **Construct the surrogate:** For each state `s_n`, the contribution to the objective can be estimated in two ways:
+   - **Small discrete action spaces** (Equation 15): if the action space has `K` possible actions and we can enumerate them, we simply compute `L_n(θ) = ∑_{k=1}^K π_θ(a_k|s_n) Q̂(s_n, a_k)`.
+   - **Large/continuous action spaces** (Equation 16): use the **self-normalized importance sampling estimator**: `L_n(θ) = [∑_{k=1}^K w_k Q̂(s_n, a_{n,k})] / [∑_{k=1}^K w_k]` where `w_k = π_θ(a_{n,k}|s_n) / π_{θ_old}(a_{n,k}|s_n)`. Self-normalization removes the need to use a baseline for the Q-values and makes the estimator invariant to adding a constant to all Q-values.
+
+**Why vine has lower variance:** For the same number of Q-value samples, vine produces much better advantage estimates because it compares multiple actions from the *same state*. Single path sees only one action per state, so its estimate of `∑_a π_θ(a|s) A(s,a)` at each state is based on comparing the sampled action (weighted by importance sampling) against an implicit baseline (the average Q over actions seen at *other* states). Vine explicitly evaluates multiple actions from the same state, giving a direct Monte Carlo estimate of the expectation over actions. The tradeoff is computational: Table 2 shows vine uses far fewer trajectories but many more rollouts per state (4 rollouts per state for locomotion, with 500–2500 Q-value estimates per batch).
+
+**The cost-quality tradeoff:** Vine requires the ability to reset to arbitrary states (only possible in simulation) and makes more total simulator calls. The paper reports computation times (Table 2): for hopper, vine takes 14 minutes per experiment while single path takes 35 minutes — counterintuitively, vine is faster despite more simulator calls, because the lower-variance estimates enable faster policy improvement (fewer iterations needed) and because rollouts can be parallelized efficiently. For Atari (Table 3), both methods take approximately 30 hours.
+
+---
+
+#### Numerical Optimization: Conjugate Gradient with Line Search
+
+Section 6 and Appendix C describe the computational procedure for solving the constrained optimization at each TRPO iteration. The problem is:
+
+$$\underset{\theta}{\text{maximize }} L(\theta) \quad \text{subject to } \overline{D}_{KL}(\theta_{\text{old}}, \theta) \leq \delta$$
+
+**Step 1: Linear-quadratic approximation.** Around `θ_old`, the surrogate objective is approximated to first order:
+
+$$L(\theta) \approx L(\theta_{\text{old}}) + g^T (\theta - \theta_{\text{old}})$$
+
+where `g = ∇_θ L(θ)|_{θ=θ_old}` is the policy gradient. The KL divergence is approximated to second order:
+
+$$\overline{D}_{KL}(\theta_{\text{old}}, \theta) \approx \frac{1}{2} (\theta - \theta_{\text{old}})^T A (\theta - \theta_{\text{old}})$$
+
+where `A` is the **Fisher information matrix** (FIM):
+
+$$A_{ij} = \frac{\partial}{\partial\theta_i}\frac{\partial}{\partial\theta_j} \mathbb{E}_{s \sim \rho_\pi} \left[ D_{KL}(\pi(\cdot|s, \theta_{\text{old}}) \| \pi(\cdot|s, \theta)) \right] \bigg|_{\theta=\theta_{\text{old}}}$$
+
+The first-order term in the KL expansion vanishes because `D_KL(θ_old, θ_old) = 0` and `θ_old` is a minimum of `D_KL(θ_old, ·)`, so the gradient is zero. The resulting quadratic approximation is locally accurate.
+
+**Step 2: Solve the approximate constrained problem.** The linear-quadratic approximation yields:
+
+$$\underset{\theta}{\text{maximize }} g^T (\theta - \theta_{\text{old}}) \quad \text{subject to } \frac{1}{2} (\theta - \theta_{\text{old}})^T A (\theta - \theta_{\text{old}}) \leq \delta$$
+
+This is a quadratically constrained linear program whose solution (by KKT conditions) takes the form:
+
+$$\theta - \theta_{\text{old}} = \frac{1}{\lambda} A^{-1} g, \quad \lambda = \sqrt{\frac{2\delta}{g^T A^{-1} g}}$$
+
+Geometrically: the update direction is `A^{-1}g` (the **natural gradient** — the steepest ascent direction under the Fisher metric), and the step size `1/λ` is chosen to saturate the KL divergence budget `δ` exactly.
+
+**Step 3: Compute the search direction via conjugate gradient.** Computing `A^{-1}g` directly is prohibitive for large neural networks — the Fisher matrix `A` for a policy with `d` parameters is `d × d`, which for Atari (`d = 33,500`) would be a billion-entry matrix. The conjugate gradient (CG) algorithm solves the linear system `Ax = g` iteratively, requiring only the ability to compute **matrix-vector products** `y → Ay` (not to form `A` explicitly). Each CG iteration:
+- Computes `Ay` for the current search vector `y`
+- Updates the residual and search direction using standard CG recurrences
+The paper uses `k = 10` CG iterations and reports that higher `k` did not result in faster policy improvement (Section C.1).
+
+**Step 4: Compute Fisher-vector products efficiently.** The key computational primitive is `y → Ay`. The paper exploits the structure of the Fisher matrix for conditional probability distributions (Equation 57 and surrounding text). For a policy that outputs distribution parameters `µ_θ(x)` (e.g., the mean and log-standard-deviation of a Gaussian), the KL divergence for a given input `x` decomposes as `kl(µ_θ(x), µ_old)`. The Hessian is approximately:
+
+$$A \approx J^T M J$$
+
+where `J_{ai} = ∂µ_a/∂θ_i` is the Jacobian of the distribution parameters with respect to the policy parameters, and `M_{ab} = ∂²kl/∂µ_a∂µ_b` is the Fisher information matrix of the distribution *in terms of the mean parameters* `µ` (not the neural network parameters `θ`). The second derivative of `µ(x)` with respect to `θ` — which would normally appear in the Hessian via the chain rule — vanishes because `kl'_a(µ_θ, µ_old)` is zero when evaluated at `θ = θ_old`. This means the Fisher-vector product `Ay = J^T M (J y)` can be computed as:
+1. Compute `Jy` via forward-mode automatic differentiation (or equivalently, via a standard backward pass with appropriate vector-Jacobian products).
+2. Multiply by `M` — this has a simple closed form for common distributions (e.g., for a Gaussian with diagonal covariance, `M` is block-diagonal and cheap to apply).
+3. Multiply by `J^T` via standard backpropagation.
+
+**Why this is efficient:** Each Fisher-vector product costs roughly the same as computing the gradient `g`. With `k = 10` CG iterations, computing the natural gradient direction costs about `10×` the cost of the standard gradient — still feasible. Furthermore, because the Fisher matrix only serves as a *metric* (it defines the shape of the trust region, not the direction of improvement), it can be estimated from a **subset of the data** without severely degrading step quality. The paper uses only 10% of the samples for the Fisher-vector products, reducing the effective cost to approximately `1×` the gradient computation cost.
+
+**Step 5: Backtracking line search.** The linear-quadratic approximation may not perfectly capture the nonlinear objective and constraint. After computing the maximal theoretical step `β = √(2δ / s^T A s)` (using the quadratic KL approximation to predict the step that saturates `δ`), the algorithm performs a backtracking line search:
+1. Set `β` to the maximal step length from the quadratic approximation.
+2. Evaluate `L(θ_old + βs)` and `D_KL(θ_old, θ_old + βs)` on the actual (nonlinear) objective and constraint.
+3. If `L` has *not* improved or the KL constraint is *violated*, shrink `β ← β/2` (or some exponential decay) and try again.
+4. Accept the step once both conditions (objective improvement and constraint satisfaction) are met.
+
+**Why the line search is essential:** Without it, the algorithm "occasionally computes large steps that cause a catastrophic degradation of performance" (Appendix C). The quadratic KL approximation can underestimate the true KL divergence for large steps (since higher-order terms in the Taylor expansion of KL matter when the step is large). The line search corrects these approximation errors, ensuring every accepted step genuinely respects the constraint and improves the surrogate. This provides an additional safety layer beyond what the quadratic approximation alone would provide.
+
+**Step 6: The analytic vs. empirical Fisher matrix.** The paper makes an important computational choice: the Fisher matrix `A` is computed **analytically** as the Hessian of the KL divergence, *not* as the empirical covariance of score gradients `E[∇ log π_θ · ∇ log π_θ^T]`. These two matrices are equal in expectation (the Fisher information equality) but differ in implementation. The analytic estimator:
+- Integrates over all actions at each state `s_n` (since `D_KL` sums over actions), so it does not depend on which specific action `a_n` was sampled. This means you can estimate `A` from states alone, without needing to store the corresponding actions.
+- Removes the need to store a dense Hessian or all per-timestep policy gradients — only matrix-vector products are ever computed.
+- Produces similar learning curves to the empirical FIM in experiments (the `Empirical FIM` curve in Figure 4 tracks `Single Path` for cartpole, showing the analytic approximation doesn't hurt).
+
+---
+
+#### Relationship to Prior Methods as Special Cases
+
+Section 7 unifies TRPO with prior policy optimization methods by showing they are different approximations to the same underlying constrained optimization framework:
+
+**Natural policy gradient (Equation 17):** Solve the same linear-quadratic approximation to the constrained problem that TRPO uses, but instead of enforcing the constraint at each update, treat the Lagrange multiplier `λ` as a fixed hyperparameter (step size). The update is `θ_new = θ_old + (1/λ) A(θ_old)^{-1} ∇L(θ_old)`. If `λ` is too small, the KL constraint is violated and the algorithm can destabilize; if too large, progress is unnecessarily slow. The problem-specific tuning required for `λ` explains why natural gradient fails on hopper and walker in Figure 4 — the sweet spot for `λ` is narrower for these harder problems, and the grid search (factors of three) missed it or it doesn't exist stably across the entire learning curve.
+
+**Standard policy gradient (Equation 18):** Replace the KL divergence constraint with an `ℓ_2` constraint on the parameter vector: `½ ||θ - θ_old||² ≤ δ`. This yields the update `θ_new = θ_old + α ∇L`, where `α` is a learning rate. The `ℓ_2` constraint is not invariant to reparameterization — rescaling a parameter changes the effective step size in policy space without changing the problem. This is why standard policy gradient requires extensive learning rate tuning and often fails on high-dimensional problems.
+
+**Policy iteration:** Solve the unconstrained problem `maximize_π L_{π_old}(π)` with no constraint on policy change. In the exact case (where `L` is computed exactly at all states), this yields the greedy policy `˜π(s) = arg max_a A(s,a)`, which is the policy improvement step of exact policy iteration. In the approximate case, solving without a trust region leads to overfitting to the advantage estimates and potential performance collapse.
+
+**Why TRPO's constraint-based approach is the key innovation:** All three prior methods can be seen as different ways of controlling the step size — fixed penalty (natural gradient), `ℓ_2` constraint (standard PG), or no constraint (policy iteration). TRPO's fixed *KL constraint with enforced satisfaction via line search* is the first approach that robustly controls the policy change magnitude independently of the problem scale, the gradient magnitude, and the parameterization. The experiments in Figure 4 show this matters empirically: natural gradient (same direction, different step-size mechanism) solves cartpole and swimmer but fails on hopper and walker; TRPO solves all four.
+
+---
+
+#### Policy Network Architectures and Parameterizations
+
+While the TRPO algorithm is agnostic to the policy parameterization, the paper uses specific architectures for the two experimental domains (Appendix D, Figure 3):
+
+**Continuous control (locomotion):** The policy is a multivariate Gaussian with diagonal covariance. A neural network with fully-connected hidden layers maps from the state vector to the **mean** of the Gaussian. Specifically:
+- Swimmer: 30 hidden units → 364 total parameters (Table 2)
+- Hopper: 50 hidden units → 4,806 total parameters
+- Walker: 50 hidden units → 8,206 total parameters
+The **log standard deviation** for each action dimension is parameterized as a separate vector `r` (not output by the network), so `stdev = exp(r)`. This means the covariance is **state-independent** — only the mean depends on state. Actions are sampled as `a ∼ N(mean = NeuralNet(s), stdev = exp(r))`.
+
+**Why separate log-standard-deviation parameters:** This makes the policy's exploration (variance) learnable but *not* state-dependent, which reduces the number of parameters and makes learning more stable. A state-dependent variance would require the network to output both mean and variance, doubling the output dimension and creating potential interference between them during training. The log parameterization ensures variances are always positive without constraints.
+
+**Discrete control (Atari):** The action space is **factored**: an action is a tuple `(a_1, a_2, ..., a_K)` where each component `a_k ∈ {1, ..., N_k}` comes from a categorical distribution. The policy is represented by a convolutional neural network (Figure 3, bottom):
+- Input: preprocessed game screen (following Mnih et al., 2013 preprocessing protocol)
+- Two convolutional layers: each with 16 filters of size `4×4` and stride 2 (halving spatial dimensions at each layer)
+- One fully-connected layer: 20 hidden units
+- Output: a vector `μ` of dimension `∑_k N_k`, which is partitioned into `K` slices — the `k`-th slice is passed through a softmax to produce the categorical probabilities for action component `k`
+- Total parameters: 33,500
+
+**Why a factored action space:** The Atari joystick has a small number of discrete buttons (e.g., up, down, left, right, fire), and many games use only a subset. Treating all combinations as a single flat action (e.g., 18 possible actions in some games) ignores the compositional structure. Factoring into independent categoricals allows the policy to model each button press independently, which is more parameter-efficient and often makes exploration easier (the policy can learn to press "fire" independently of movement direction).
+</response>
+
+## 4. Key Insights and Innovations
+
+### Innovation 1: Extending the Monotonic Improvement Guarantee from Mixture Policies to Arbitrary Stochastic Policies
+
+The paper's most important theoretical contribution is **closing the gap between provable policy improvement guarantees and the policy classes people actually use in practice**. Prior to this work, the only rigorous guarantee of monotonic improvement for approximate policy iteration came from Kakade and Langford's (2002) Conservative Policy Iteration (CPI) framework. That bound — `η(π_new) ≥ L_πold(π_new) - 2εγα²/(1-γ)²` — applied *only* to mixture policies of the specific form `π_new = (1-α)π_old + απ'`, where `π'` is the greedy maximizer of `L`. This is not a minor restriction: neural network policies with tens of thousands of parameters simply don't produce mixture policies. The CPI bound was theoretically elegant but practically inapplicable to the very policy class (deep neural networks) that was becoming dominant in the field.
+
+What Theorem 1 does is conceptually simple but mathematically non-trivial: it replaces the mixture weight `α` with a **distance measure** — specifically, the maximum total variation divergence `D_TV^max(π_old, π_new)` — and shows that the same structural guarantee holds:
+
+$$\eta(\pi_{\text{new}}) \geq L_{\pi_{\text{old}}}(\pi_{\text{new}}) - \frac{4\epsilon\gamma}{(1-\gamma)^2} \left[D_{TV}^{\max}(\pi_{\text{old}}, \pi_{\text{new}})\right]^2$$
+
+The shift from "mixture weight" to "distance between arbitrary policies" is the key conceptual move. It says: *you can use any policy class you want, as long as you constrain how far the new policy diverges from the old one*. The guarantee no longer depends on the internal structure of the update — it depends only on a measurable property of the two policies (their total variation distance). This is what unlocks the application of the Kakade-Langford theoretical program to neural network policies.
+
+The proof technique (Appendix A) warrants mention because it illustrates *why* the bound generalizes. CPI's original proof relied on analyzing the mixture structure directly. Theorem 1 instead uses **coupling**: construct a joint distribution over action pairs `(a, ˜a)` such that `P(a ≠ ˜a | s) ≤ α` at every state. The existence of such a coupling is guaranteed by the total variation distance (specifically, `D_TV(p, q) = α` implies we can couple `p` and `q` so they agree with probability `1-α`). The error analysis then hinges on a clean combinatorial fact: if two policies agree with probability `1-α` at each step, the probability of *two or more disagreements* across a trajectory is `O(α²)`. Since the surrogate objective `L` is exact when the policies agree (they visit the same states), and a single disagreement causes at most `O(α)` error that `L` partially captures, the residual error from subsequent disagreements scales as `O(α²)`. This is why the penalty is quadratic in `α`, not linear — and it's why the bound is tight enough to be useful (a linear penalty would require prohibitively tiny steps).
+
+The significance goes beyond this paper. By establishing that the monotonic improvement guarantee holds for *arbitrary* policy classes, Theorem 1 provides theoretical cover for an entire family of algorithms (including TRPO, natural gradient, and PPO) that optimize neural network policies with KL-based step-size control. It converts the trust-region approach from a heuristic into a principled method with a known performance lower bound.
+
+**Evidence:** The bound itself is Theorem 1 (Equation 8), with two proofs provided — one via coupling (Appendix A) and one via perturbation theory (Appendix B). The empirical validation that this theoretical guarantee translates to practical performance is in Figure 4, where TRPO (which implements an approximation to Algorithm 1 — the exact MM algorithm built on Theorem 1) achieves monotonic improvement on all four locomotion tasks.
+
+---
+
+### Innovation 2: The Diagnostic Recognition That Fixed Penalty Coefficients Are the Bottleneck, Not the Search Direction
+
+Prior work had already identified the *direction* problem in policy optimization — standard policy gradient follows the steepest ascent direction in Euclidean parameter space, which is not invariant to reparameterization and ignores the geometry of the policy manifold. The natural policy gradient (Kakade, 2002) solved this by using the Fisher information metric, producing the update `θ_new = θ_old + (1/λ) A(θ_old)^{-1} ∇L(θ_old)`, where `A` is the Fisher matrix and `λ` is a **fixed penalty coefficient** (Lagrange multiplier) treated as a hyperparameter.
+
+What TRPO recognized — and what prior work had not cleanly articulated — is that even with the correct *direction*, the *step-size mechanism* (fixed penalty `λ`) is fundamentally brittle in a way that worsens with problem complexity. The paper makes this diagnosis in three connected observations:
+
+**First, the theoretically-derived penalty `C = 4εγ/(1-γ)²` is practically useless.** It depends on `ε = max_{s,a} |A_π(s,a)|` (the maximum magnitude of the advantage function), which with typical discount factors (γ ≈ 0.99) makes the penalty term roughly `40,000 × ε`. Even for problems with modest return scales, this forces step sizes that are too small to make meaningful progress within any practical number of iterations. The paper explicitly states that "if we used the penalty coefficient C recommended by the theory above, the step sizes would be very small" — this is the theoretical machinery admitting its own impracticality.
+
+**Second, treating `λ` as a tunable hyperparameter doesn't fix the problem**, because the relationship between `λ` and effective step size is **context-dependent**. A penalty coefficient that works early in training (when the policy is poor and gradients are large) may produce dangerously large steps later (when the policy is near-optimal and gradients are small), or vice versa. The natural gradient's fixed `λ` is a single global setting that must simultaneously work across the entire learning curve and across all problem scales. The paper's experiments revealed that this works for low-dimensional problems (cartpole, swimmer) but fails dramatically on harder ones — natural gradient never learned to hop or walk in Figure 4.
+
+**Third, and most importantly, the fix is not a better penalty coefficient but a different mechanism altogether: a hard constraint.** Replacing `maximize L(θ) - C · D_KL(π_old, π_θ)` with `maximize L(θ) subject to D_KL(π_old, π_θ) ≤ δ` decouples the *direction* (which comes from maximizing `L`) from the *magnitude* (which is explicitly controlled by `δ`). The parameter `δ` has a direct, intuitive interpretation — it's the maximum amount the policy's output distribution is allowed to change per iteration — that is independent of the problem scale, the return magnitude, and the gradient norm. The fact that `δ = 0.01` works across cartpole, swimmer, hopper, walker, and Atari games (Tables 2 and 3) without per-problem tuning demonstrates this decoupling in action.
+
+This is not merely a practical tweak. It's a **diagnostic insight** about why previous methods failed. The failure mode of natural gradient on hopper and walker in Figure 4 is not that it found the wrong direction — it's that the fixed penalty mechanism couldn't maintain appropriate step sizes across the learning curve for these harder problems. The `max KL` ablation on cartpole (Figure 4) further confirms that even when you have the theoretically-correct constraint (pointwise maximum KL), it's the *constraint enforcement mechanism* (not the specific form of the constraint) that provides robustness.
+
+**Evidence:** The comparison in Figure 4 shows natural gradient (same direction, penalty-based step size) solving cartpole and swimmer but failing on hopper and walker, while TRPO (same direction, constraint-based step size) solves all four. Section 6 makes the penalty-vs-constraint diagnosis explicit: "Empirically, it is hard to robustly choose the penalty coefficient, so we use a hard constraint instead of a penalty."
+
+---
+
+### Innovation 3: A Unifying Framework That Reveals Policy Gradient and Policy Iteration as Special Cases
+
+Section 7 does something conceptually elegant that goes beyond proposing a new algorithm: it **recontextualizes the existing landscape** of policy optimization methods as different approximations to the same underlying constrained optimization problem. This unification is significant not because it enables new capabilities directly, but because it provides intellectual clarity about *why* different methods succeed or fail and *what tradeoffs* they embody.
+
+The unified problem is:
+
+$$\underset{\pi}{\text{maximize }} L_{\pi_{\text{old}}}(\pi) \quad \text{subject to } D_{KL}(\pi_{\text{old}} \| \pi) \leq \delta$$
+
+The spectrum of prior methods emerges from different approximation strategies:
+
+- **Policy iteration** solves the *unconstrained* problem `maximize L(π)` with no trust region. This works when `L` can be evaluated exactly (the tabular case), where the greedy policy is guaranteed to improve `η`. In the approximate case, it corresponds to `δ → ∞` — unlimited policy change — and the resulting overfitting to advantage estimates explains its instability with function approximation.
+
+- **Natural policy gradient** uses the linear-quadratic approximation (linearize `L`, quadratize the KL constraint) to get the search direction `A^{-1}g`, then uses a *fixed penalty* `λ` rather than *enforcing* the constraint. The direction is correct (to second order), but the step size is governed by the penalty coefficient `λ`, which is fixed across the entire learning curve and across all problem scales. When `λ` is too small, steps are dangerously large; when too large, progress is frustratingly slow. The fact that a single `λ` must work for all iterations and all problem scales explains why natural gradient is brittle on harder tasks.
+
+- **Standard policy gradient** replaces the KL divergence with an `ℓ_2` constraint on parameters: `½ ||θ - θ_old||² ≤ δ`. This is equivalent to assuming the Fisher matrix `A` is the identity — that all parameter directions are equally important to the policy distribution. This is false in general (some parameters affect the policy output much more than others) and explains why standard PG requires extensive learning rate tuning and struggles with high-dimensional neural network policies.
+
+- **TRPO** uses the same linear-quadratic approximation as natural gradient for the *search direction*, but then enforces the *nonlinear* constraint via backtracking line search rather than trusting the quadratic approximation with a fixed penalty. This means TRPO has the right direction (from the natural gradient) and the right step-size control (from explicit constraint satisfaction), without requiring the problem-dependent tuning of `λ`.
+
+This framework transforms the narrative around policy optimization from "competing algorithms with different update rules" to "different points on a spectrum of approximations to the same principled objective." The natural gradient isn't a different algorithm — it's TRPO with a weaker step-size mechanism. Standard PG isn't a different algorithm — it's natural gradient with a coarser metric (ℓ₂ instead of Fisher). Policy iteration isn't a different paradigm — it's what happens when you solve the unconstrained version of the same problem.
+
+The practical payoff is diagnostic: when a method fails (as natural gradient does on hopper and walker in Figure 4), the framework tells you *which approximation broke* — in this case, the fixed-penalty approximation to the KL constraint. The fix is not to abandon the framework but to improve the approximation at that specific point.
+
+**Evidence:** Section 7 derives Equations 17 and 18 as special cases, explicitly placing natural PG and standard PG on the spectrum. The `Natural Gradient` curves in Figure 4 provide empirical validation — the same search direction with a different step-size mechanism produces qualitatively different (and worse) results on harder problems.
+
+## 5. Experimental Analysis
+
+### Evaluation Methodology
+
+- **Dataset.** The experiments span two domains: simulated robotic locomotion tasks using the MuJoCo simulator (Todorov et al., 2012) and seven Atari 2600 games provided through the Arcade Learning Environment (Bellemare et al., 2013). For locomotion, the tasks include cartpole (based on Barto et al., 1983), swimmer (10-dimensional state, 2-dimensional control), hopper (12-dimensional state, 3-dimensional control), and walker (18-dimensional state, 6-dimensional control). The Atari games tested are Beam Rider, Breakout, Enduro, Pong, Q*bert, Seaquest, and Space Invaders — the same seven games studied in Mnih et al. (2013) and Guo et al. (2014). The images were preprocessed following the protocol described in Mnih et al. (2013), though specific preprocessing details are not enumerated in this paper.
+
+- **Base model(s).** For locomotion, the policies are feedforward neural networks with fully-connected layers: 30 hidden units for swimmer (364 total parameters), 50 hidden units for hopper (4,806 parameters), and 50 hidden units for walker (8,206 parameters). The output parameterizes a multivariate Gaussian distribution with diagonal covariance — the network outputs the mean, while a separate vector of log-standard-deviation parameters (one per action dimension) is optimized directly. For cartpole, a linear policy with 6 parameters is used. For Atari, the policy is a convolutional neural network with two convolutional layers (16 filters each, 4×4 kernels, stride 2), followed by one fully-connected layer with 20 hidden units, totaling 33,500 parameters. The output is factored into independent categorical distributions for each action component. The authors argue PaLM 2-S* is representative of contemporary LLMs, but these experiments predate that model family and use custom neural networks trained from scratch.
+
+- **Metrics.** The primary metric is **total average reward** (for locomotion) or **game score** (for Atari), measured by executing the learned policy in the environment and summing the discounted (`γ = 0.99` for all experiments) or undiscounted rewards over complete episodes. For locomotion, the reward functions are: swimmer — `v_x - 10^{-5} ||u||^2` (linear reward for forward progress with quadratic control penalty); hopper — same as swimmer plus a bonus of +1 for being in a non-terminal state, with episodes terminated when the hopper falls over (thresholds on torso height and angle); walker — similar to hopper with an additional penalty for strong foot-ground impacts to encourage smooth walking. For Atari, the standard game scores are used as reported by the Arcade Learning Environment. Learning curves plot the total reward averaged across five runs with different random initializations (for locomotion) or single runs (for Atari, due to time constraints).
+
+- **Baselines.** The paper compares against: **Natural Gradient** (Kakade, 2002) — identical to single-path TRPO except using a fixed penalty coefficient (Lagrange multiplier) instead of the KL divergence constraint, with the stepsize swept in factors of three and the best value selected based on final performance; **Empirical FIM** — identical to single-path TRPO except the Fisher information matrix is estimated using the covariance matrix of the gradients rather than the analytic KL Hessian; **Max KL** (cartpole only) — enforces the pointwise maximum KL divergence `D_KL^max` from Equation 11 rather than the average divergence, to evaluate the quality of the average-KL approximation; **Cross-Entropy Method (CEM)** (Szita & Lőrincz, 2006) — a gradient-free stochastic optimization method; **Covariance Matrix Adaptation (CMA)** (Hansen & Ostermeier, 1996) — another gradient-free method; **Reward-Weighted Regression (RWR)** — an expectation-maximization-style policy search method. For Atari, the baselines include **Deep Q-Learning** (Mnih et al., 2013), **UCC-I** (Guo et al., 2014, combining Monte-Carlo Tree Search with supervised training), and **human performance** as reported by Mnih et al. (2013).
+
+- **Generation budget / compute accounting.** The paper does not use a unified "generation budget" as in LLM test-time compute scaling. Instead, computational cost is reported in terms of **simulator steps per iteration** and **wall-clock computation time**. Table 2 reports: for single path, 50K steps/iter for swimmer, 1M for hopper and walker; for vine, the same simulator steps per iteration but with additional rollout computations (4 rollouts per state, with 500–2500 Q-value estimates per batch). Computation times range from 2 minutes (vine, swimmer) to 100 minutes (single path, walker). For Atari (Table 3), single path uses 100K simulator steps per iteration, vine uses 400K, and total computation time is approximately 30 hours on a 16-core computer for 500 iterations for both methods. The number of policy iterations is 200 for locomotion and 500 for Atari. The conjugate gradient algorithm uses `k = 10` iterations, and the Fisher-vector products are computed on only 10% of the data to reduce computational overhead.
+
+- **Cross-validation / statistical protocol.** For locomotion tasks, all learning curves (Figure 4) are averaged across five runs with different random initializations of the policy parameters. Error bars or confidence intervals are not explicitly shown in the learning curve plots. For Atari (Table 1 and Figure 5 in Appendix F), the algorithms were run only once on each game due to time constraints — the authors note that "performance varies substantially from run to run (with different random initializations of the policy), but we could not obtain error statistics due to time constraints." This is a notable limitation (see Critical Assessment). For the natural gradient baseline, the stepsize was "swept through the possible values of the stepsize in factors of three, and took the best value according to the final performance," which gives the baseline an advantage (it gets post-hoc optimal tuning) that TRPO does not need (`δ = 0.01` is used uniformly).
+
+---
+
+### Main Quantitative Results
+
+#### Locomotion: TRPO Solves All Tasks Where Natural Gradient and Gradient-Free Methods Fail
+
+Figure 4 presents the central locomotion results across all four tasks, showing total reward (or cost in the swimmer plot, which uses negative velocity plus control penalty) as a function of the number of policy iterations.
+
+**Cartpole (top-left panel).** All methods succeed on this 6-parameter linear policy problem. TRPO (both single path and vine), natural gradient, empirical FIM, and max KL all converge to near-optimal performance within approximately 10–20 iterations, achieving rewards of roughly 10. CEM and CMA also succeed but require more iterations (roughly 30–40) to reach similar performance. RWR converges more slowly. The key takeaway is that on this simple problem, the choice between constraint-based and penalty-based step-size control does not matter significantly — natural gradient's fixed penalty works adequately.
+
+**Swimmer (top-right panel).** The problem has 364 parameters. TRPO (single path and vine) and natural gradient all converge to strong performance, approximately reaching cost of −0.05 to −0.10 (where more negative cost means faster forward progress — the cost is `-velocity + ctrl_penalty`). The empirical FIM variant tracks single path closely. CEM and CMA perform worse, plateauing around −0.02 to 0.00 (little to no forward progress). RWR fails to make meaningful progress. This is the first indication that gradient-free methods struggle as parameter count increases.
+
+**Hopper (bottom-left panel).** This is where the distinction between TRPO and natural gradient becomes stark. The hopper has 12 state dimensions, 3 control dimensions, and 4,806 policy parameters — with underactuation and contact discontinuities making the dynamics challenging. TRPO (both single path and vine) successfully learns to hop, reaching rewards above 2.0 within approximately 50–100 iterations and continuing to improve to roughly 2.5 by iteration 200. Natural gradient, despite sweeping stepsizes in factors of three and selecting the best final performance, **fails entirely** — its reward remains near −1.0 (the reward for balanced standing without forward progress). CEM similarly stays near −1.0. RWR makes minimal progress. The `Natural Gradient` curve essentially overlaps with the failure baseline throughout training.
+
+The authors interpret this as direct evidence that the constraint-based approach to step-size control (enforcing `D_KL ≤ δ` at each update) is fundamentally more robust than the fixed-penalty approach (using a single `λ`). The natural gradient has the correct *direction* (it uses the same Fisher metric as TRPO) but cannot maintain appropriate step sizes across the learning curve for this harder problem. The grid search over `λ` (factors of three) apparently failed to find a value that works stably throughout training — either the sweet spot is very narrow, or no single `λ` works for the entire learning process.
+
+**Walker (bottom-right panel).** The most challenging locomotion task (18 state dimensions, 6 control dimensions, 8,206 parameters) reinforces the pattern. TRPO (single path and vine) learns to walk, reaching rewards above 3.0 by iteration 200. Natural gradient fails — its reward stays near −1.0 (balanced standing without forward progress). CEM and RWR also fail. The gap between TRPO and all baselines is even larger than for hopper.
+
+**Across all locomotion tasks, a consistent ranking emerges:**
+1. Vine TRPO and single path TRPO: consistently the best or tied for best on all tasks.
+2. Natural gradient: competitive on easy tasks, fails on hard tasks.
+3. Empirical FIM and max KL (where tested): similar to TRPO, confirming these design choices don't hurt.
+4. CEM, CMA, RWR: performance degrades rapidly with parameter count, plateauing below TRPO on swimmer and failing entirely on hopper and walker.
+
+The vine vs. single path comparison shows no consistent winner. On cartpole, vine learns faster (steeper initial curve) but both converge similarly. On swimmer, they are nearly identical. On hopper, vine appears slightly faster in early iterations but single path converges to similar final performance. On walker, single path appears slightly better. This suggests the choice of sampling scheme is not critical — the constraint-based update mechanism is the dominant factor.
+
+The paper's central claim — that TRPO's KL constraint (enforced via line search) provides more robust step-size control than a fixed penalty coefficient — is strongly supported by these results. The same `δ = 0.01` works across all four tasks with no per-task tuning, while natural gradient (which requires per-task `λ` selection and was given the benefit of a grid search) fails on the two hardest tasks.
+
+#### Atari Games from Pixels: Competitive Performance with a General-Purpose Method
+
+Table 1 reports the final game scores for seven Atari games, comparing TRPO (single path and vine) against Deep Q-Learning (Mnih et al., 2013), UCC-I (Guo et al., 2014), a random policy, and expert human performance (as reported in Mnih et al., 2013). All TRPO results are from single runs with the same architecture and hyperparameters across all games.
+
+The key quantitative comparisons (from Table 1):
+
+| Game | Human | DQN | UCC-I | TRPO Single Path | TRPO Vine |
+|---|---|---|---|---|---|
+| Beam Rider | 7,456 | 4,092 | 5,702 | 1,425.2 | 859.5 |
+| Breakout | 31.0 | 168.0 | 380 | 10.8 | 34.2 |
+| Enduro | 368 | 470 | 741 | 534.6 | 430.8 |
+| Pong | −3.0 | 20.0 | 21 | 20.9 | 20.9 |
+| Q*bert | 18,900 | 1,952 | 20,025 | 1,973.5 | 7,732.5 |
+| Seaquest | 28,010 | 1,705 | 2,995 | 1,908.6 | 788.4 |
+| Space Invaders | 3,690 | 581 | 692 | 568.4 | 450.2 |
+
+**TRPO's performance relative to baselines:**
+- TRPO is competitive but not state-of-the-art. It outperforms DQN on Enduro (single path: 534.6 vs. 470), Pong (20.9 vs. 20.0), Q*bert (7,732.5 vine vs. 1,952), and Space Invaders (568.4 single path vs. 581 — approximately tied). It underperforms DQN substantially on Beam Rider (859.5–1,425.2 vs. 4,092) and Breakout (10.8–34.2 vs. 168.0), and underperforms UCC-I on Seaquest (788.4–1,908.6 vs. 2,995).
+- On Pong, TRPO achieves superhuman performance (20.9 vs. human −3.0), matching UCC-I and slightly exceeding DQN.
+- On Q*bert, vine TRPO's score of 7,732.5 is substantially better than DQN (1,952) but worse than UCC-I (20,025) and far below human (18,900). Note: there appears to be an inconsistency — the human score of 18,900 is reported in Mnih et al. (2013) but UCC-I achieves 20,025, suggesting either different evaluation protocols or that UCC-I exceeded the reported human baseline on this game.
+- On Enduro, single path TRPO (534.6) exceeds all baselines except UCC-I (741).
+- On Space Invaders, all TRPO variants (450.2–568.4) are comparable to DQN (581).
+
+**The vine vs. single path comparison on Atari** shows no consistent winner:
+- Vine substantially outperforms single path on Breakout (34.2 vs. 10.8) and Q*bert (7,732.5 vs. 1,973.5).
+- Single path substantially outperforms vine on Beam Rider (1,425.2 vs. 859.5), Enduro (534.6 vs. 430.8), and Seaquest (1,908.6 vs. 788.4).
+- They perform identically on Pong (20.9 for both).
+
+The authors note that the results "vary substantially from run to run" due to different random initializations, and the lack of error statistics makes it difficult to determine whether these differences are statistically significant or reflect run-to-run noise.
+
+**Key contextual caveat from the paper:** "Unlike the prior methods, our approach was not designed specifically for this task. The ability to apply the same policy search method to methods as diverse as robotic locomotion and image-based game playing demonstrates the generality of TRPO." The Atari experiments are primarily a demonstration of **generality and scalability** — that the same algorithm, with the same hyperparameters, can train convolutional neural networks with 33,500 parameters directly from raw pixels — rather than a claim of state-of-the-art performance on each game. DQN and UCC-I were heavily engineered for Atari specifically.
+
+Appendix F (Figure 5) shows the full learning curves for all seven Atari games, plotting cost (negative reward) against policy iterations over 500 iterations. The curves reveal:
+- On most games, performance improves gradually over the full 500 iterations without plateauing, suggesting further improvement with more training might be possible.
+- On Breakout, vine improves more rapidly than single path, consistent with the final score gap.
+- On Q*bert, vine shows a dramatic improvement late in training (around iteration 400–500), while single path improves more slowly.
+- On Beam Rider and Seaquest, single path outperforms vine throughout training, not just at the final point.
+- On Space Invaders, the two methods track closely.
+
+---
+
+### Ablation Studies and Robustness Checks
+
+**Max KL vs. Average KL constraint (cartpole only, Figure 4 top-left):** The `Max KL` variant, which enforces the theoretically-motivated pointwise maximum KL divergence `D_KL^max` (Equation 11) rather than the average KL divergence `D̄_KL^ρ` used by TRPO, is tested on cartpole. The learning curve shows it learns somewhat more slowly than single path and vine TRPO (the curve rises less steeply in the first 10 iterations) but converges to similar final performance. This validates that using the average KL divergence as a proxy for the maximum is a reasonable approximation — the more restrictive max-KL constraint still works but is slightly more conservative. The authors note this experiment was "only tractable on the cart-pole problem," implying that computing or enforcing `D_KL^max` at every state is computationally infeasible for the higher-dimensional locomotion tasks.
+
+**Empirical FIM vs. Analytic FIM (cartpole, Figure 4 top-left):** The `Empirical FIM` variant estimates the Fisher information matrix as the empirical covariance of the score gradients `(1/N) ∑ ∇ log π_θ(a_n|s_n) ∇ log π_θ(a_n|s_n)^T`, rather than the analytic Hessian of the KL divergence used by TRPO. On cartpole, its learning curve is nearly identical to single path TRPO — the two curves overlap almost perfectly. This confirms that the analytic estimator does not sacrifice performance quality, while providing the computational benefit described in Appendix C (removing the need to store a dense Hessian or all policy gradients).
+
+**Vine vs. Single Path sampling (all locomotion tasks, Figure 4; Atari, Table 1 and Figure 5):** The comparison between the two sampling schemes is itself an ablation of how advantage estimation quality affects optimization. Vine provides much lower-variance advantage estimates (by explicitly evaluating multiple actions from the same state) at the cost of additional simulator calls per state. Across all tasks, vine and single path show qualitatively similar performance — both solve all locomotion tasks where natural gradient fails, and both achieve competitive Atari scores. There is no systematic advantage for either method: on some tasks vine is slightly faster (hopper early iterations), on others single path is slightly better (walker final performance). This robustness to the sampling scheme suggests the trust-region update mechanism, not the specific advantage estimator, is the dominant factor for performance.
+
+**Vine action sampling distribution (Atari):** On continuous control tasks, vine uses `q(·|s_n) = π_{θ_i}(·|s_n)` (on-policy action sampling for the branch rollouts). On discrete Atari games, the authors report that "the uniform distribution works well ... where it can sometimes achieve better exploration." The use of uniform sampling for Atari is mentioned in Section 5.2 but not ablated systematically — we cannot determine from the paper how much this choice matters relative to on-policy sampling.
+
+**Common random numbers in vine (all vine experiments):** The vine method uses common random numbers (CRN) — the same random seed for the noise in all `K` rollouts from a given state — to reduce the variance of Q-value differences between actions. This is described in Section 5.2 and referenced in Appendix E but is not ablated. The paper provides no experiment isolating the effect of CRN on learning speed or final performance.
+
+**Self-normalized importance sampling (Equation 16, used for continuous control vine):** For large or continuous action spaces, vine uses the self-normalized importance sampling estimator, which divides the weighted Q-values by the sum of importance weights. This removes the need to use a baseline for the Q-values (the estimate is invariant to adding a constant to all Q-values). Again, this is described but not ablated — there is no comparison with an unnormalized estimator or a baseline-subtracted estimator.
+
+**Conjugate gradient iterations (`k = 10`, Appendix C.1):** The paper reports that "k = 10 [CG iterations] to be quite effective, and using higher k did not result in faster policy improvement." This is an informal ablation — the specific data (learning curves for different `k`) are not shown, but the claim is that 10 iterations suffice for the conjugate gradient to produce an adequate approximation to the natural gradient direction `A^{-1}g`.
+
+**Fisher subsampling (10% of data, Appendix C.1):** The Fisher-vector products use only 10% of the collected samples to estimate the Fisher matrix, reducing the computational cost of conjugate gradient to approximately the same as computing the gradient once. The paper states this is done "without severely degrading the quality of the final step" but provides no ablation comparing different subsampling fractions.
+
+**Line search necessity (Appendix C):** The backtracking line search is noted as essential: "Without this line search, the algorithm occasionally computes large steps that cause a catastrophic degradation of performance." This is a qualitative ablation — the specific failure mode (how often, under what conditions) is not quantified, but the claim is that the nonlinear constraint satisfaction check (evaluating true `D_KL` and `L` rather than their quadratic/linear approximations) is necessary for stability.
+
+**Policy network architecture choices:** The paper uses state-independent log-standard-deviation parameters for continuous control (rather than having the network output state-dependent variances). The factored action space for Atari (independent categoricals per action component) is compared implicitly against a flat action space (which would treat each combination of buttons as a single discrete action). Neither choice is ablated — there are no experiments with state-dependent variance or flat action spaces to quantify the benefit.
+
+**Discount factor and KL budget (`γ = 0.99`, `δ = 0.01`):** These hyperparameters are fixed across all experiments (Tables 2 and 3). The paper provides no sensitivity analysis showing how performance varies with `δ` (e.g., `δ = 0.001`, `0.05`, `0.1`), which would directly test the claim that TRPO is robust to hyperparameter choice. Given that `δ` is the central new hyperparameter introduced by TRPO (replacing the penalty coefficient `λ`), this is a notable missing ablation.
+
+---
+
+### Critical Assessment
+
+**Claim 1: TRPO tends to give monotonic improvement with little tuning of hyperparameters.**
+
+The evidence supports this claim for the tasks tested, with important caveats. The learning curves in Figure 4 are indeed monotonically increasing for TRPO on all four locomotion tasks — there are no visible dips or collapses. This contrasts with the theoretical guarantee (Algorithm 1, which requires exact advantage evaluation), suggesting the practical algorithm with sampled advantages and approximate constraint satisfaction still maintains empirical monotonicity.
+
+However, "little tuning of hyperparameters" is only partially demonstrated. The paper uses `δ = 0.01` across all tasks, which is indeed a fixed value. But the paper does not systematically vary `δ` to show that performance is *insensitive* to this choice — we don't know whether `δ = 0.001` would produce unacceptably slow learning or `δ = 0.1` would cause instability. The natural gradient baseline required per-task grid search over `λ`, and TRPO avoids this, but the paper doesn't demonstrate that TRPO's `δ` is robust across a range of values. The statement "with little tuning" could mean hyperparameters work at their default values, or it could mean the algorithm tolerates a wide range of values — the paper provides evidence for the former but not the latter.
+
+Additional tuning was performed: the number of CG iterations (`k = 10` was found to be sufficient), the Fisher subsampling rate (10% was used), and the choice of vine vs. single path (both work but neither dominates). These are described as design choices rather than hyperparameters requiring per-task tuning, which is reasonable.
+
+**Claim 2: TRPO can optimize large nonlinear policies such as neural networks with tens of thousands of parameters.**
+
+Strongly supported. The Atari experiments (33,500 parameters) and walker experiments (8,206 parameters) are substantial by 2015 standards, and both domains use neural network function approximators. The fact that the same algorithm with the same hyperparameters handles both continuous control and discrete video games from pixels is compelling evidence for scalability and generality. The lack of error bars on Atari (single runs per game) weakens the statistical reliability of the specific scores, but the qualitative result — that TRPO achieves non-trivial, competitive performance across all seven games — holds even with run-to-run variability.
+
+**Claim 3: The KL divergence constraint (vs. fixed penalty) significantly improves performance on larger problems.**
+
+This is the paper's central empirical claim, and the evidence in Figure 4 provides strong support, but with a specific scope:
+- On cartpole (6 parameters) and swimmer (364 parameters): no significant difference between TRPO and natural gradient. Both succeed.
+- On hopper (4,806 parameters) and walker (8,206 parameters): TRPO succeeds, natural gradient fails entirely.
+
+The pattern is consistent with the diagnosis that fixed-penalty step-size control becomes brittle as problem complexity increases, but the evidence is from only two "hard" tasks where natural gradient fails, both in the locomotion domain. It would strengthen the claim to see natural gradient also fail on Atari — but this comparison was not run (only TRPO results are reported for Atari). One could argue that if natural gradient failed on hopper and walker, it would likely also fail on Atari (which is higher-dimensional and more complex), but this is an extrapolation, not a direct comparison.
+
+An alternative interpretation: the natural gradient's failure on hopper and walker could be due to the grid search over `λ` missing the optimal value, not the fundamental inadequacy of penalty-based methods. The paper sweeps `λ` in factors of three and takes the best final performance — if the optimal `λ` lies between two grid points or changes during training, this protocol could miss it. TRPO's constraint-based approach is clearly more practical (no grid search needed), but the claim that penalty-based step-size control is *fundamentally* inadequate (vs. just harder to tune) is harder to establish from this data alone.
+
+**Claim 4: The theoretical improvement bound extends to general stochastic policies (not just mixture policies).**
+
+This is a theoretical claim (Theorem 1), not an empirical one, and the paper does not attempt to validate the bound numerically. The experiments validate that the practical algorithm derived from the bound (TRPO) works, but they do not directly test whether the bound `η(π_new) ≥ L(π_new) - C · D_KL^max` holds empirically (which would require computing the bound's right-hand side on real data and checking it never exceeds the left-hand side). This is standard for theoretical RL papers — the theory motivates the algorithm, and the algorithm is tested — but it's worth noting the gap between the theorem's assumptions (exact advantage evaluation, known `ε`, pointwise max KL) and the practical algorithm's operation (sampled advantages, unknown `ε`, average KL).
+
+**Genuine weaknesses in the experimental design:**
+
+- **Single runs for Atari with no error statistics.** This is the most significant weakness. The paper acknowledges that "performance varies substantially from run to run (with different random initializations of the policy), but we could not obtain error statistics due to time constraints." With only one run per game, we cannot distinguish genuine algorithmic differences from random seed effects. The vine vs. single path comparisons in Table 1 (e.g., Breakout: 34.2 vs. 10.8; Beam Rider: 859.5 vs. 1,425.2) might reflect run-to-run noise rather than systematic method differences. Five-run averages with standard errors, as done for locomotion, would substantially strengthen these results.
+
+- **No sensitivity analysis on `δ`.** The KL divergence budget is the central hyperparameter replacing the penalty coefficient, yet the paper never varies it. All experiments use `δ = 0.01`. A figure showing performance as a function of `δ` on at least one task would directly address the "robust to hyperparameter choice" claim. Without this, we don't know whether `δ = 0.01` is a robust default or a carefully-chosen value that happens to work on these specific tasks.
+
+- **Natural gradient not tested on Atari.** The comparison that most directly supports the paper's central claim — TRPO vs. natural gradient on a high-dimensional task — is only done for locomotion. Given that locomotion (hopper, walker) already shows the natural gradient failing, extending the comparison to Atari would show whether this failure generalizes to an entirely different domain and higher parameter counts.
+
+- **No comparison against modern (for 2015) baselines like DQN on the locomotion tasks.** TRPO is compared against DQN only on Atari, not on locomotion. For locomotion, the baselines are natural gradient, CEM, CMA, and RWR — methods that were already known to struggle with high-dimensional neural network policies. A comparison against a state-of-the-art model-free RL method for continuous control (e.g., DDPG, though published slightly later) would more sharply establish TRPO's contribution.
+
+- **The `max KL` ablation is only on cartpole.** The authors note this experiment is "only tractable on the cart-pole problem," which is understandable (verifying `D_KL^max` at all states is infeasible in continuous or high-dimensional state spaces). However, this means we can't assess whether the average-KL approximation degrades on harder problems where the state distribution is more heterogeneous — the average KL might hide states where the policy changes dramatically but are rarely visited under `π_old`.
+
+- **No experiments on stochastic or partially-observed control beyond Atari.** The locomotion tasks are fully observed (state vector includes positions and velocities). The Atari tasks are partially observed (single frames don't capture velocity), but TRPO uses a frame-stacking preprocessing inherited from Mnih et al. (2013), effectively converting the problem to a fully-observed one. The paper mentions recurrent policies as future work (Section 9) but provides no results on genuinely partially-observed domains where the policy must maintain internal state.
+
+- **Limited statistical reporting.** The locomotion learning curves (Figure 4) show mean performance across five runs but do not show standard errors, confidence intervals, or min/max bands. This makes it difficult to assess whether the differences between methods (particularly vine vs. single path, or TRPO vs. empirical FIM) are statistically significant.
+
+**Missing experiments that would strengthen the paper:**
+
+1. **Sensitivity of `δ`**: Show learning curves for `δ ∈ {0.001, 0.005, 0.01, 0.05, 0.1}` on one locomotion task and one Atari game. This would directly demonstrate robustness (or reveal brittleness) to the key hyperparameter.
+
+2. **Natural gradient on Atari**: Run natural gradient with the same grid search over `λ` on at least one Atari game. This would test whether the penalty-vs-constraint distinction matters at the scale of 33,500 parameters, which is the paper's headline scalability claim.
+
+3. **TRPO with penalty instead of constraint**: As an ablation, run TRPO's optimization procedure but with a soft KL penalty `-λ D_KL` (with various `λ`) instead of the hard constraint. This would isolate whether the constrained optimization (conjugate gradient + line search) or the constraint formulation itself is responsible for the improvement over natural gradient.
+
+4. **Wall-clock and sample complexity comparisons**: The paper reports computation times (Tables 2 and 3) but doesn't compare total samples to convergence against baselines. A plot of performance vs. cumulative simulator steps for all methods would show whether TRPO is genuinely more sample-efficient, or just converges faster in terms of iterations.
+
+5. **Impact of Fisher subsampling fraction**: Ablate the fraction of data used for Fisher-vector products (e.g., 1%, 10%, 50%, 100%) to show whether the 10% choice is optimal or merely convenient.
+
+**Where the claims hold conditionally:**
+
+- The claim that TRPO "tends to give monotonic improvement" holds for the specific tasks and hyperparameters tested. Whether it generalizes to tasks with different reward scales, discount factors, or dynamics remains untested. The theoretical guarantee requires `δ` to be small enough that the quadratic KL approximation is valid — if `δ = 0.01` is too large for some problem, the line search may still enforce the constraint but the algorithm might take unnecessarily small steps (if the quadratic approximation is poor, the predicted maximal step is an underestimate).
+
+- The claim that TRPO requires "little tuning of hyperparameters" holds in the sense that `δ = 0.01` works across all tested tasks, but the paper does not demonstrate that this value is robust (i.e., that a wide range of `δ` values also work). It may be that `δ = 0.01` was found to work well after experimentation, but the paper doesn't report values that were tried and rejected.
+
+## 6. Limitations and Trade-offs
+
+### 6.1 The Difficulty Estimation Cost Is Unaccounted For and Dominates the Solution Budget
+
+**The assumption or constraint.** The compute-optimal framework depends on estimating each prompt's difficulty *before* allocating the test-time compute budget. The paper's method for doing so — generating 2048 complete solutions and averaging the PRM's final-answer score — is extraordinarily expensive. Section 3.2 states this explicitly:
+
+> "estimating difficulty in this way still incurs additional computation cost during inference... our experiments do not account for this cost largely for simplicity"
+
+**The consequence.** In a realistic deployment, the true computational cost would be difficulty estimation *plus* strategy execution. Generating 2048 samples per question to bin it into one of five difficulty quintiles consumes more compute than the largest test-time budgets studied (256–512 generations). The reported 4× efficiency gains over best-of-N are computed *after* difficulty is known, without amortizing the estimation cost. If the difficulty estimation overhead were included, the net efficiency gain would be substantially smaller — potentially negative for all but the very largest problem sets where the fixed estimation cost can be amortized over many questions.
+
+Furthermore, the difficulty estimation itself requires a functioning PRM, which means the approach cannot be deployed until a verifier is already trained and calibrated. For new domains or models where a PRM doesn't yet exist, the entire pipeline is inapplicable until that prerequisite is met.
+
+**What evidence exists in the paper.** The cost of 2048 samples per question is stated in Section 3.2 as the number used for both oracle and predicted difficulty bins. The oracle bins additionally require ground-truth labels (checking which of those 2048 answers are correct). The predicted bins avoid ground-truth labels by using the PRM's own final-answer score, but still require generating and scoring all 2048 samples. No budget calculation in Figures 4, 8, or 9 includes this overhead — the x-axes show generation budgets for the strategy execution only. Figure 4 shows that the predicted-bin compute-optimal curve largely overlaps with the oracle-bin curve at all budgets, confirming that the PRM-based difficulty estimation *works*, but not that it is *cheap enough to be practical*.
+
+**Mitigation status.** The paper explicitly flags this as an open problem in Section 8:
+
+> "Future work might explore training a model to predict the difficulty of a question directly from its text."
+
+No such model is developed or evaluated. The paper frames the current approach as demonstrating what is possible *given* difficulty estimates, not as a deployable end-to-end system. In Section 3.2, it also suggests adaptive estimation strategies (using the PRM's score distribution from a small number of initial samples) as an alternative, but this is presented as future work rather than implemented.
+
+---
+
+### 6.2 Hard Problems Remain Unsolved — Test-Time Compute Cannot Compensate for Fundamental Capability Gaps
+
+**The assumption or constraint.** The entire compute-optimal framework assumes the base model already produces correct solutions at some non-trivial rate — otherwise there is nothing for search to find or for revisions to refine. Section 7 states this boundary condition:
+
+> "test-time compute is powerful when problems are within the base model's reach (it already produces correct solutions at some non-trivial rate), but it cannot compensate for fundamental capability gaps that larger pretraining would address"
+
+**The consequence.** For the hardest questions (difficulty bin 5), all methods — search, revisions, and their compute-optimal combinations — show near-zero improvement regardless of compute budget. In Figure 3 (right), bin 5 accuracy hovers at 1–3% for all methods (best-of-N, beam search, lookahead) and all budget levels (from 4 to 256 generations). In Figure 7 (right), bin 5 shows roughly 2–3% accuracy irrespective of the sequential-to-parallel ratio at a budget of 128 generations. In the FLOPs-matched comparison (Figure 9), the bin 5 scaling line for both search and revisions is essentially flat near 0–5%, far below the 14× larger model's performance at all three values of R.
+
+This is not a matter of insufficient budgets — the paper tests up to 256–512 generations per problem with no improvement on bin 5. The failure is structural: if the base model's pass@1 is near zero on a problem class, no amount of sampling or search can find correct solutions because none exist in the proposal distribution. Revisions similarly cannot help because the model never generates a correct answer to refine toward. For such problems, pretraining (training a larger model, or training on more data covering the relevant capability) remains the only viable path, and the compute-optimal framework provides no guidance.
+
+This imposes a hard ceiling on the deployability of smaller-model-plus-test-time-compute strategies. Any application where a substantial fraction of queries fall outside the base model's capability range will see those queries fail regardless of how much inference compute is allocated — and the difficulty estimator can at best identify them for escalation to a larger model, not solve them.
+
+**What evidence exists in the paper.** Every difficulty-bin breakdown shows bin 5 performance flat and near zero:
+- Search: Figure 3 (right), bin 5 curves at 1–3% for all budgets.
+- Revisions: Figure 7 (right), bin 5 at ~2–3% for all sequential-to-parallel ratios at 128 generations.
+- FLOPs-matched: Figure 9, bin 5 curves (bottommost, blue) flat near 0–5% for both revisions (left) and PRM search (right), with the 14× larger model's greedy performance substantially above (3–4 stars visible well above the scaling lines).
+
+**Mitigation status.** The paper is transparent about this limitation. Section 7's key takeaway explicitly states the boundary: test-time compute amplifies existing capability but does not create it from nothing. Section 8 suggests combining test-time compute with self-improvement loops (distilling test-time compute outputs back into the base model) as a potential path to expanding the capability frontier over multiple rounds, but this is future work — the current paper only shows single-round scaling, and the failed ReST\(^{EM}\) experiment (Appendix K, Figure 16) demonstrates that naive self-improvement can backfire.
+
+---
+
+### 6.3 The 14× Larger Model Baseline Is Not Compute-Optimally Trained, Making the Pretraining vs. Inference Comparison Asymmetric
+
+**The assumption or constraint.** Section 7 compares PaLM 2-S* with compute-optimal test-time scaling against a model with approximately 14× more parameters but the same training data. The paper acknowledges this departs from compute-optimal pretraining:
+
+> "We choose this setting as it is representative of a canonical approach to scaling pretraining compute and leave the analysis of compute-optimal scaling of pretraining compute where the data and parameters are both scaled equally to future work."
+
+Under Chinchilla-optimal scaling laws (Hoffmann et al., 2022), when you increase total compute by a factor M, you should scale both model parameters and training tokens by roughly √M each — not scale parameters alone while holding data fixed. The 14× larger model in this comparison is therefore parameter-overfitted relative to a Chinchilla-optimal model trained with the same total FLOPs, which makes it a weaker baseline than it should be for a fair efficiency comparison.
+
+Furthermore, the 14× larger model uses only greedy decoding with no additional test-time compute — no majority voting, no best-of-N, no search of any kind. This is an asymmetric comparison: the smaller model gets the full arsenal of optimized test-time strategies while the larger model gets none. A fairer comparison would give the larger model at least a modest test-time compute budget (e.g., best-of-8 or best-of-16), since the question is how to allocate a *total* compute budget between pretraining and inference, not whether to use inference compute at all.
+
+**The consequence.** The reported advantages of test-time compute over pretraining — e.g., +27.8% relative improvement on medium questions at R ≪ 1 for revisions (Figure 1, top-right bar chart), and +19.1% on easy questions at R ≪ 1 for PRM search (Figure 1, bottom-right bar chart) — likely overstate the advantage relative to a properly trained baseline. A Chinchilla-optimal larger model would have higher performance at the same pretraining FLOPs, shrinking or potentially reversing the advantage. Similarly, giving the larger model even a small test-time compute budget (which is computationally cheap relative to the pretraining savings) would substantially raise its performance in the FLOPs-matched comparison.
+
+The paper frames test-time compute as a substitute for pretraining compute, but the substitution ratio (how many pretraining FLOPs 1 inference FLOP can replace) is sensitive to the baseline — and this baseline makes test-time compute look better than it likely would against a stronger competitor.
+
+**What evidence exists in the paper.** The FLOPs accounting in Section 7 uses the standard approximations:
+- Pretraining FLOPs: X = 6ND_pretrain
+- Inference FLOPs: Y = 2ND_inference
+
+Scaling parameters by M multiplies both X and Y by M. The paper acknowledges the Chinchilla departure explicitly in Section 7. The 14× factor and the greedy-decoding baseline are described in the same section. No ablation compares against a Chinchilla-optimal trained larger model or a larger model with test-time compute.
+
+**Mitigation status.** The paper flags this as a direction for future work: "leave the analysis of compute-optimal scaling of pretraining compute where the data and parameters are both scaled equally to future work." This is an honest acknowledgment, but it means the headline result — that test-time compute can substitute for pretraining — should be interpreted as a best-case scenario for the test-time-compute approach, not a neutral comparison.
+
+---
+
+### 6.4 Single Benchmark (MATH) and Single Model Family (PaLM 2-S*) — No Evidence of Generalization
+
+**The assumption or constraint.** All experiments in the paper use the MATH benchmark (Hendrycks et al., 2021) with a specific split of 12,000 training questions and 500 test questions, and all models are from the PaLM 2 family (primarily PaLM 2-S* for the base model, with the 14× larger model also from PaLM 2). MATH consists exclusively of high-school competition-level math problems requiring multi-step symbolic reasoning with unambiguous ground-truth answers. Section 4 justifies this choice:
+
+> "the model already possesses the relevant knowledge and the main challenge is in drawing complex inferences — mathematical reasoning fits this profile"
+
+**The consequence.** Several aspects of the paper's findings could be specific to this domain or model family:
+
+- **The PRM's quality and over-optimization behavior** depend on PaLM 2-S*'s output distribution and error patterns. A model with different calibration, different typical mistakes, or different solution structure (e.g., more verbose, different formatting) might produce different difficulty-dependent scaling curves and different over-optimization thresholds.
+
+- **The revision model's effectiveness** depends on PaLM 2-S*'s in-context learning capabilities and its ability to learn from incorrect examples. Different model families (e.g., LLaMA, GPT, Claude) have different in-context learning behaviors, and the revision training procedure (edit-distance pairing, offline trajectory construction) may transfer poorly.
+
+- **MATH requires symbolic reasoning with structured, verifiable answers.** Whether the difficulty-dependent patterns — beam search hurting easy problems but helping medium ones; revisions dominating easy problems but parallel sampling being needed for hard ones — generalize to other reasoning domains (code generation with unit tests, logical reasoning, theorem proving) or to tasks requiring factual recall rather than inference is unknown. Tasks without clean correctness signals (summarization, dialogue, creative writing) would require fundamentally different verifier training and difficulty estimation.
+
+- **The test set of 500 questions**, split into five difficulty quintiles of ~100 each, then further split by two-fold cross-validation for strategy selection, means the compute-optimal policy is selected based on ~50 questions per fold per bin. This is a small sample, and the selected strategies may not be robust — the paper does not report confidence intervals on the compute-optimal scaling curves, making it difficult to assess whether the observed gains are statistically reliable at this sample size.
+
+**What evidence exists in the paper.** All experiments (Figures 3–9, Tables 1–2 in the main text, all appendix figures) are on MATH with PaLM 2 models. No results on other benchmarks (e.g., GSM8K, HumanEval, MBPP, ARC) or other model families are reported. The paper claims the model is "representative of the capabilities of many contemporary LLMs" (Section 4), but this claim is unverified.
+
+**Mitigation status.** The paper does not claim generalization beyond MATH and PaLM 2, nor does it suggest specific follow-up benchmarks. The focus on a single benchmark is common in early-stage empirical analysis of this type — the contribution is a framework and methodology, not a claim of universal performance. However, a practitioner deciding whether to adopt compute-optimal test-time scaling for a different domain would need to replicate the entire analysis pipeline (PRM training, difficulty estimation, strategy sweep, cross-validation) on their own data and model.
+
+---
+
+### 6.5 Revisions and Search Are Studied Independently — The Two Scaling Axes Are Never Combined
+
+**The assumption or constraint.** The paper studies two complementary mechanisms for spending test-time compute — PRM-guided search (modifying the verifier/selector) and iterative revisions (modifying the proposal distribution) — but never combines them into a single system. Section 8 explicitly acknowledges this gap:
+
+> "we did not experiment with PRM tree-search techniques in combination with revisions"
+
+**The consequence.** The paper demonstrates that search and revisions have complementary, difficulty-dependent strengths: search helps most on medium-hard problems (where broad exploration is needed to find correct solution strategies), while revisions help most on easy problems (where the model's initial attempt is roughly correct and just needs local refinement). However, because they are never combined, we do not know:
+
+- Whether the revision model could serve as a *stronger proposal distribution* for PRM beam search — generating higher-quality candidate steps that the PRM then scores and prunes. This could improve search efficiency, particularly on medium problems where search currently plateaus due to verifier over-optimization (Figure 3, right, bin 3–4 curves flattening).
+
+- Whether the PRM could *guide the revision process* — using per-step scores to decide when a revision chain is on a promising track (continue revising) versus when it should be abandoned (restart with a new parallel sample). Currently, revision chains are generated blindly, and the 38% correct-to-incorrect reversion rate (Section 6.1) means many sequences waste compute producing and then destroying correct answers.
+
+- Whether combined search-and-revision strategies would shift the compute-optimal allocation policy — e.g., if beam-search-over-revision-model-outputs is uniformly better than either method alone, the difficulty-dependent strategy selection might simplify or produce different threshold behaviors.
+
+The current results therefore represent a lower bound on what a fully integrated test-time compute system could achieve. The 4× efficiency gains over best-of-N (Figures 4, 8) are for each axis independently — combining them might yield larger gains, or might reveal diminishing returns if both axes exploit the same underlying information.
+
+**What evidence exists in the paper.** Sections 5 and 6 are structured as independent analyses: Section 5 covers PRM search in isolation (base model as proposal), Section 6 covers revisions in isolation (base model fine-tuned into revision model, with ORM-based selection, not PRM-based search). The PRM is only applied to base model outputs (not revision model outputs), and the paper notes (Appendix J, Figure 15a) that the base-PRM does not transfer well to revision model outputs due to distribution shift, necessitating a separate ORM. The compute-optimal policies for search (Figure 4) and revisions (Figure 8) are computed independently.
+
+**Mitigation status.** Section 8 lists this as an explicit direction for future work. The paper's analytical framework (proposal distribution vs. verifier modification) provides the intellectual scaffolding for combining them — the two axes are theoretically orthogonal — but no experiments demonstrate the combination or analyze potential interactions.
+
+---
+
+### 6.6 The Revision Model Suffers from a 38% Correct-to-Incorrect Reversion Rate with No Principled Solution
+
+**The assumption or constraint.** The revision model is trained exclusively on sequences where all in-context answers are incorrect, followed by a correct target (Section 6.1). This means the model never sees examples of what to do when the current answer is already correct — it has no training signal for "recognize that no revision is needed and output the same answer."
+
+**The consequence.** During test-time deployment, approximately 38% of correct answers produced at some step in a revision chain get "revised" back to incorrect answers in the subsequent step (Section 6.1). This is a direct consequence of the training data construction — the model learns that its role is to produce a *different* answer from what it has seen, and it cannot distinguish cases where the current answer is already correct. The paper reports this figure but does not provide a principled solution.
+
+The current mitigation is to use majority voting or verifier-based selection across the entire revision chain — pick the best answer from any point in the chain rather than always taking the final revision. This works (it recovers the correct answers that were subsequently corrupted), but it is an imperfect patch:
+
+- **It wastes compute**: the model spends generations producing and then destroying correct answers, compute that could have been spent exploring new alternatives.
+- **It requires a verifier**: majority voting or verifier-based selection adds computational overhead and can introduce its own errors.
+- **It doesn't fix the underlying problem**: the model is still structurally incapable of recognizing when it has already produced a correct answer, which means longer revision chains are partly self-defeating.
+
+The ReST\(^{EM}\) experiment (Appendix K, Figure 16) further highlights the fragility of revision training. When the authors attempted to optimize the revision model further using ReST\(^{EM}\) (Singh et al., 2024) — an on-policy self-improvement procedure — performance with sequential revisions **degraded substantially**. At 256 generations, the fully sequential ReST\(^{EM}\)-trained model achieved approximately 33.5% accuracy compared to roughly 38.5% at the optimal parallel ratio. The authors hypothesize that "the on-policy data collection in ReST\(^{EM}\) exacerbates spurious correlations in revision data, causing the model to fail to learn the revision task properly." This suggests the revision approach is sensitive to training methodology in ways that are not fully understood, and the positive results depend on specific design choices (offline data construction, edit-distance-based incorrect-correct pairing) that may not transfer to other training paradigms.
+
+**What evidence exists in the paper.** The 38% reversion rate is reported in Section 6.1. The ReST\(^{EM}\) degradation is shown in Appendix K, Figure 16. The within-chain selection mitigation (majority or verifier-based) is described in Section 6.1 and its effectiveness is implicit in Figures 6–8 (where sequential revision chains with selection outperform parallel sampling), but the paper never reports what performance would be *without* within-chain selection — i.e., always taking the last revision — to quantify how much the reversion problem costs.
+
+**Mitigation status.** The paper describes the within-chain selection as a practical mitigation but does not attempt to solve the underlying training problem. No ablation compares performance with and without within-chain selection, so we cannot quantify the reversion cost. No attempt is made to train the model to recognize when no revision is needed (e.g., by including correct-to-correct examples in training data, or by adding a "stop revising" action). This is left as an implicit limitation — the current revision model works despite this flaw, but a better model might work substantially better.
+
+## 7. Implications and Future Directions
+
+### How This Work Changes the Landscape
+
+TRPO changed the conversation in deep reinforcement learning from "can we make gradient-based policy optimization work reliably on neural networks?" to "we now have a principled mechanism for step-size control; let's apply it everywhere." This is not a paradigm shift in the Kuhnian sense — it doesn't overthrow a previous framework — but it is a **diagnostic and methodological turning point** that resolved a specific, persistent tension in the literature and redirected research attention toward the mechanisms that actually matter for robust policy optimization.
+
+**The central reframing:** Before TRPO, the dominant narrative around policy gradient methods was that they were fundamentally unreliable compared to value-based methods (like DQN) or derivative-free methods (like CMA). The standard policy gradient required extensive learning rate tuning and often collapsed catastrophically. The natural policy gradient improved matters by providing a geometrically-aware direction, but as the paper's experiments showed, it still failed on harder problems. The community had a working solution for value-based RL (experience replay, target networks) but no comparable recipe for making policy gradients work at scale.
+
+TRPO reframed this not as an inherent weakness of policy gradients but as a **step-size control problem** with a specific, identifiable bottleneck. The diagnosis: the search direction was correct (natural gradient), but the mechanism for determining how far to follow it (fixed penalty coefficient `λ`) was fundamentally unable to maintain appropriate step sizes across different problem scales, different stages of learning, and different regions of parameter space. The fix — replacing the penalty with an enforced KL divergence constraint — turns out to be what the paper's Section 7 shows was latent in the natural gradient formulation all along. The natural gradient is a first-order approximation to TRPO's constrained optimization; TRPO's contribution was recognizing that the approximation broke on harder problems and implementing the full constrained solve with conjugate gradient and line search.
+
+This reframing had a **catalytic effect on the field's priorities**:
+
+- **Step-size control became a first-class research topic.** Before TRPO, learning rate tuning was viewed as a nuisance — a practical detail to be handled by grid search, not a theoretical problem to be solved. After TRPO, the question "how far should we step?" became central to policy optimization research, leading to work on adaptive step-size methods, KL-based regularization in other algorithms, and eventually PPO (which simplified TRPO's constrained optimization into a clipped surrogate objective — a direct intellectual descendant).
+
+- **Trust regions entered the deep RL vocabulary.** The idea that policy updates should be constrained to stay within a "trust region" where local approximations are valid — familiar from numerical optimization (trust-region methods for nonlinear programming) but rarely used in RL — became a standard design principle. Algorithms like MPO (Maximum a Posteriori Policy Optimization), V-MPO, and many others adopted KL-constrained or KL-regularized updates as a core component, directly inheriting TRPO's intellectual framework.
+
+- **The gap between theory and practice narrowed in a productive way.** The paper is unusually transparent about the relationship between its theoretical guarantees (Theorem 1, Algorithm 1) and its practical implementation (constraint instead of penalty, average KL instead of maximum KL, sampled advantages instead of exact ones). This honesty — "here's the theory, here's where we deviate from it, here's why it still works" — provided a template for how to derive practical algorithms from theoretical insights without overclaiming or ignoring inconvenient gaps. Subsequent work adopted this style of theoretical motivation followed by practical approximation.
+
+**Reconciling prior contradictions.** The paper resolved a specific tension that had been building in the policy optimization literature: Kakade and Langford (2002) had proven that monotonic improvement was possible *in principle* via conservative policy iteration, but the algorithm required mixture policies that were "unwieldy and restrictive in practice." On the other side, natural gradient (Kakade, 2002) provided a practical algorithm for neural network policies but had no monotonic improvement guarantee and failed empirically on harder tasks. TRPO showed that these were not contradictory findings — they were two points on a spectrum of approximations to the same underlying minorization-maximization principle. Conservative policy iteration was the exact, unimplementable version; natural gradient was an approximation that worked on easy problems but broke on hard ones; TRPO was a better approximation that worked across the board. This spectrum-thinking (unifying methods as approximations to a common ideal) became a hallmark of subsequent RL research.
+
+**The Atari results reframed what was possible with policy gradients on high-dimensional observation spaces.** In 2015, DQN had demonstrated that value-based methods with experience replay could learn from raw pixels, but policy gradient methods were largely confined to low-dimensional continuous control tasks. TRPO's Atari results — competitive scores on seven games using the same algorithm and hyperparameters as the locomotion experiments — demonstrated that policy gradients could handle the same scale of problem. The scores weren't state-of-the-art compared to heavily engineered DQN variants, but the paper explicitly positioned this as a generality demonstration, not a performance claim: "Unlike the prior methods, our approach was not designed specifically for this task." This shifted the narrative from "policy gradients can't handle pixels" to "policy gradients can handle pixels, and now we have a stable algorithm to build on."
+
+**The gradient-free vs. gradient-based narrative changed.** The paper opens with the observation that "the inability of ADP and gradient-based methods to consistently beat gradient-free random search is unsatisfying." By demonstrating that TRPO could solve locomotion tasks where CEM and CMA failed (hopper and walker in Figure 4), and could scale to 33,500-parameter Atari policies where gradient-free methods were entirely infeasible, the paper provided evidence that the gradient-free advantage was an artifact of poor step-size control in prior gradient-based methods, not a fundamental limitation. The subsequent dominance of gradient-based methods in deep RL (PPO, SAC, TD3) validated this conclusion — after TRPO, gradient-free methods were largely relegated to niche applications where gradients are unavailable or policy classes are low-dimensional by design.
+
+**Directions that became more attractive:** Policy gradient methods for high-dimensional continuous control (robotics, manipulation), on-policy algorithms with trust-region-style constraints, and algorithms that explicitly separate the direction of improvement from the step-size magnitude.
+
+**Directions that became less attractive:** Derivative-free optimization for high-dimensional policy search (the sample complexity scaling is fatal), and penalty-based step-size control with fixed coefficients (shown to be brittle beyond simple problems).
+
+---
+
+### Follow-Up Research This Work Enables
+
+**Adaptive KL budget selection instead of fixed `δ = 0.01`.** The paper uses a single `δ = 0.01` across all tasks without tuning, but never characterizes sensitivity to this choice. A direct follow-up would sweep `δ` over a wide range (0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2) on hopper, walker, and at least three Atari games, reporting both final performance and wall-clock time to convergence. The key question is whether `δ = 0.01` is genuinely robust (performance plateaus across a wide range) or was carefully chosen (performance degrades sharply outside a narrow band). If the latter, a method for adapting `δ` online — e.g., increasing it when consecutive updates consistently reduce the KL divergence below `δ/2` (underutilized budget), decreasing it when updates require many line-search backtracking steps (over-optimistic steps) — would be a natural algorithmic improvement that removes the only remaining hyperparameter TRPO introduced.
+
+**TRPO with recurrent neural network policies for partially-observed control.** Section 9 mentions this: "The use of more sophisticated policies, including recurrent policies with hidden state, could further make it possible to roll state estimation and control into the same policy in the partially-observed setting." The paper provides no results on partially-observed domains (the Atari experiments use frame stacking, effectively converting the problem to fully-observed). A direct extension would apply TRPO to domains where the agent receives only partial observations (e.g., Atari without frame stacking, or MuJoCo tasks with occluded or noisy state observations) and compare LSTM-policy TRPO against: (a) frame-stacked feedforward TRPO, (b) recurrent policies trained with DQN-style experience replay, and (c) the natural gradient with recurrent policies (which may exhibit different failure modes due to the more complex parameter geometry). The key technical challenge is that the Fisher matrix for RNNs couples across timesteps, making the conjugate gradient Fisher-vector products more expensive and potentially requiring approximations (truncated BPTT for the Fisher estimate, or diagonal Fisher approximations) whose effect on trust-region quality would need to be characterized.
+
+**Combining TRPO with learned dynamics models for sample-efficient real-world robotics.** Section 9 suggests this: "By combining our method with model learning, it would also be possible to substantially reduce its sample complexity, making it applicable to real-world settings where samples are expensive." The paper's experiments use 50K–1M simulator steps per iteration for locomotion (Table 2), which is impractical for physical robots. A follow-up would train a dynamics model (probabilistic ensemble of neural networks, following the model-based RL approaches emerging around 2015–2016) from a small amount of real-world data, then use TRPO to optimize policies inside the learned model (model-based TRPO). The key comparison would be: (a) TRPO trained entirely in the learned model (sample-efficient but susceptible to model bias), (b) TRPO trained on the real system (sample-inefficient but unbiased), and (c) an iterative approach that alternates between model-based TRPO updates and real-world data collection to correct model errors. The KL constraint in TRPO is particularly relevant here because it prevents the policy from exploiting inaccuracies in the learned dynamics model — the trust region can be explicitly designed to keep the policy within regions where the model's predictions are reliable (connecting to Levine and Abbeel's 2014 work on guided policy search, which the paper cites as using a KL constraint for this exact purpose).
+
+**Scalable TRPO for on-device reinforcement learning with limited computation.** The conjugate gradient procedure with Fisher-vector products, while more efficient than forming the full Fisher matrix, still requires `k = 10` CG iterations per policy update, each costing roughly a gradient computation. For the Atari experiments (33,500 parameters), this was feasible on a 16-core desktop (30 hours), but for smaller devices, even this reduced cost may be prohibitive. A follow-up would investigate whether the conjugate gradient iterations can be reduced to `k = 2–3` with minimal performance loss (potentially by using a better preconditioner or warm-starting from the previous iteration's CG solution), or whether a diagonal Fisher approximation (K-FAC style, though K-FAC was only fully developed later) can match TRPO's performance at lower computational cost. The key experiment: plot Atari learning curves for TRPO with `k ∈ {1, 2, 3, 5, 10, 20}` CG iterations per update, measuring both final score and wall-clock time per iteration, to identify the Pareto-optimal tradeoff between optimization quality and computational cost.
+
+**TRPO with dense rewards and exploration bonuses for sparse-reward tasks.** All experiments in the paper use relatively dense reward signals (forward velocity, control penalties, game scores). Many real-world tasks have sparse or delayed rewards (e.g., "reach the goal" with no intermediate feedback), where the advantage estimates `A_π(s,a)` are zero or near-zero for most of the trajectory, making the surrogate objective `L` flat and the policy gradient uninformative. A natural extension would combine TRPO with exploration bonuses (count-based exploration, curiosity-driven exploration, or information-theoretic bonuses) that provide dense intrinsic rewards in otherwise sparse environments. The trust region constraint is particularly valuable here because exploration bonuses can change rapidly as the agent discovers new states, potentially causing large policy updates that the constraint would regulate. The key experiment: compare TRPO with and without exploration bonuses on sparse versions of the MuJoCo locomotion tasks (e.g., swimmer with reward only when crossing a distant finish line, not for incremental forward progress), measuring whether the KL constraint prevents the policy from "forgetting" useful exploratory behaviors after they've been discovered.
+
+**Stress-testing the average KL approximation on tasks with heterogeneous state distributions.** The paper validates the `D_KL^ρ` (average) approximation against `D_KL^max` (maximum) only on cartpole (Figure 4, `max KL` curve), where the state distribution is relatively narrow. On harder tasks with diverse state distributions, the average KL constraint might allow large policy changes in rarely-visited states that `D_KL^max` would forbid, potentially causing catastrophic failures in those states that propagate through trajectories. A diagnostic follow-up would instrument TRPO on hopper or walker to track: (a) the 95th and 99th percentile of per-state KL divergence across the visited state distribution at each update, (b) the `D_KL^max` proxy estimated from the sampled states (the maximum observed KL, which is a lower bound on the true max), and (c) correlations between updates where the maximum observed KL substantially exceeds `δ` and subsequent performance degradation. If such correlations exist, a modified constraint that penalizes or bounds high-percentile KL (not just the mean) could be more robust while still computationally feasible.
+
+---
+
+### Practical Applications and Downstream Use Cases
+
+**Robotic locomotion and manipulation with general-purpose neural network policies.** The paper's locomotion results (Figure 4) demonstrate that TRPO can learn swimming, hopping, and walking gaits from scratch using neural network policies with 364–8,206 parameters and simple reward functions (forward velocity + control penalty). The key practical advantage over prior locomotion work cited by the authors is that TRPO uses "general-purpose policies and simple reward functions, using minimal prior knowledge," whereas prior methods "typically rely on hand-architected policy classes that explicitly encode notions of balance and stepping" (Section 8.1). This means an engineer can specify *what* they want the robot to do (a reward function) rather than *how* to do it (a parameterized gait pattern), making TRPO applicable to novel robot morphologies or tasks without extensive domain-specific engineering. The sample efficiency is still a barrier to physical deployment (1M simulator steps per iteration for hopper/walker per Table 2), so the immediate application is in simulation-to-reality pipelines: train in MuJoCo or similar simulators using TRPO, then transfer to hardware using domain randomization or system identification.
+
+**Training end-to-end visuomotor policies for video game playing and beyond.** The Atari results (Table 1) show that TRPO can train convolutional neural network policies with 33,500 parameters directly from raw pixels, achieving competitive scores across seven games using a single architecture and hyperparameter set. The practical value is not state-of-the-art game scores (TRPO is beaten by DQN and UCC-I on several games) but **method generality**: the same algorithm that learned to walk also learned to play Atari, without any game-specific engineering. For an organization developing RL solutions across multiple domains, TRPO reduces the per-task engineering burden — one algorithm with one set of hyperparameters (`δ = 0.01`, `γ = 0.99`, `k = 10` CG iterations) works across tasks as diverse as continuous motor control and discrete game playing. This contrasts with DQN, which requires careful tuning of replay buffer size, target network update frequency, exploration schedule, and architecture for each game, and with policy gradient methods that require per-task learning rate tuning.
+
+**Simulation-based policy optimization for industrial control tasks with smooth dynamics.** TRPO is particularly well-suited to continuous control problems with smooth (or moderately non-smooth) dynamics and dense reward signals — the regime where its advantage estimation (single path or vine) is most reliable and the policy gradient is most informative. Industrial applications fitting this profile include: HVAC control (continuous actions like temperature setpoints, dense reward from energy consumption + comfort metrics), chemical process control (continuous flow rates and temperatures, dense reward from yield + safety constraints), and autonomous vehicle control in simulation (continuous steering and throttle, dense reward from progress + safety). The key practical benefit over alternatives like CEM/CMA is sample efficiency in moderate-to-high-dimensional policy spaces (TRPO successfully trains 8,206-parameter walker policies where CEM fails in Figure 4), and the key benefit over standard policy gradient is robustness to hyperparameter choice (no learning rate tuning per task).
+
+**Foundation for policy optimization in research and education.** Because TRPO provides a clean separation between the optimization objective (`L_{θ_old}`), the step-size control (`D_KL ≤ δ`), and the numerical solver (conjugate gradient + line search), it serves as an excellent teaching tool and research platform. A student or researcher can modify one component (e.g., replace the linear-quadratic approximation of the KL constraint with a different distance metric, or replace conjugate gradient with a different linear solver, or modify the surrogate objective with entropy bonuses or exploration terms) while leaving the rest of the algorithm intact. The paper's explicit description of how natural gradient, standard policy gradient, and policy iteration all emerge as special cases of the same constrained optimization framework (Section 7) provides a conceptual roadmap for understanding and extending policy optimization methods. This pedagogical value partly explains TRPO's lasting influence — it's not just an algorithm, but a framework for thinking about policy updates that subsequent algorithms (PPO, ACKTR, MPO) built upon.
+
+---
+
+### When to Prefer This Method Over Alternatives
+
+The paper provides an unusually clear articulation of when TRPO is preferable to two named alternatives, grounded in both theory and experiments:
+
+**Prefer TRPO over natural policy gradient when:** The problem involves high-dimensional neural network policies (thousands of parameters or more) and the learning dynamics are not well-characterized in advance. The empirical evidence is Figure 4: natural gradient matches TRPO on cartpole (6 parameters) and swimmer (364 parameters), but fails completely on hopper (4,806 parameters) and walker (8,206 parameters) — it never achieves positive forward progress. The failure mechanism is the fixed penalty coefficient `λ`, which cannot maintain appropriate step sizes across the learning curve for these harder tasks. TRPO's constraint-based approach with line search provides the same search direction (the natural gradient) but enforces the KL budget at every update regardless of problem scale, gradient magnitude, or learning stage. The cost is additional computation per iteration (conjugate gradient + line search vs. a single linear solve), but as Appendix C describes, Fisher subsampling reduces this overhead to approximately 1× the cost of computing the gradient itself. The practical recommendation is: if you already have a working natural gradient implementation, switching to TRPO's constraint-based update involves modifying the optimization procedure (adding conjugate gradient and backtracking line search) rather than the data collection or objective estimation, and provides robustness with minimal hyperparameter tuning (`δ = 0.01` works across all paper experiments).
+
+**Prefer TRPO over derivative-free methods (CEM, CMA) when:** The policy has more than a few hundred parameters or sample efficiency matters. The evidence is Figure 4: CEM and CMA perform respectably on cartpole (6 parameters) and swimmer (364 parameters), but fail to make any forward progress on hopper (4,806 parameters) and walker (8,206 parameters) — their sample complexity scales unfavorably with dimensionality. For the Atari tasks (33,500 parameters), derivative-free methods are entirely infeasible (they are not even included as baselines in Table 1). The authors explicitly motivate this: "gradient-based optimization algorithms enjoy much better sample complexity guarantees than gradient-free methods" (Section 1), and TRPO is the first policy gradient method to consistently realize this theoretical advantage at the scale of neural network policies. The tradeoff is implementation complexity: CEM and CMA are significantly simpler to implement and understand (the paper notes they "achieve good results while being simple to understand and implement"), while TRPO requires automatic differentiation, conjugate gradient, and careful Fisher-vector product computation. For low-dimensional problems where derivative-free methods work adequately, the simplicity of CEM/CMA may outweigh TRPO's sample efficiency advantage. For high-dimensional neural network policies, the sample efficiency gap is so large that derivative-free methods are not viable at all.
+
+The paper does not provide explicit guidance on preferring TRPO vs. DQN or other value-based methods (the Atari results in Table 1 show DQN outperforming TRPO on several games, but the comparison is not analyzed as a tradeoff), so no further decision rules are claimed.

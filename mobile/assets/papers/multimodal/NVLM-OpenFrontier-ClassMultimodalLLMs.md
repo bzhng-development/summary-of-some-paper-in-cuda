@@ -1,0 +1,670 @@
+# NVLM: Open Frontier-Class Multimodal LLMs
+
+**ArXiv:** [2409.11402](https://arxiv.org/abs/2409.11402)
+
+## 🎯 Pitch
+
+NVLM 1.0 introduces a family of open, frontier-class multimodal large language models (LLMs) that achieve state-of-the-art results on vision-language tasks while preserving—or even improving—text-only capabilities, breaking the prevalent trade-off seen in prior open models. Through a unified architectural comparison (decoder-only, cross-attention, hybrid), a novel high-resolution 'tile-tagging' approach, and a carefully curated training recipe, NVLM demonstrates that open models can match proprietary leaders like GPT-4o and Gemini Pro 1.5 in both vision and text tasks. This work empowers the research community with a transparent, high-performing foundation for seamless, production-grade multimodality, setting new standards for open-access LLM development.
+
+---
+
+## 1. Executive Summary
+
+This paper introduces **NVLM 1.0**, a family of frontier-class multimodal LLMs that achieve state-of-the-art results on vision-language tasks while rivaling leading proprietary models (e.g., GPT-4o) and open-access models (e.g., Llama 3-V 405B, InternVL 2). Through systematic comparison across three architectures — decoder-only (NVLM-D), cross-attention-based (NVLM-X), and a novel hybrid (NVLM-H) — trained on identical curated data blends, the work isolates the effects of architecture design, dynamic high-resolution input handling via a **1-D tile-tagging** mechanism (inserting text tokens like `<tile_1>` to delineate tiled image regions), and training data composition on downstream performance, establishing that dataset quality and task diversity outweigh scale even during pretraining. The paper further demonstrates **production-grade multimodality** — maintaining and even improving text-only performance after multimodal training — through the integration of high-quality text-only SFT data and abundant multimodal math data, with NVLM-D 1.0 72B improving text-only average accuracy by 4.3 points over its LLM backbone while achieving top scores on OCRBench (853) and VQAv2 (85.4) among all leading proprietary and open-access models. A key boundary finding is that cross-attention architectures offer superior computational efficiency for high-resolution images (NVLM-X achieves 1.76× higher training throughput than NVLM-D at 34B scale) while decoder-only architectures provide higher accuracy on OCR-related tasks, motivating the hybrid NVLM-H design that achieves the best multimodal reasoning scores (60.2 MMMU Val, 66.6 MathVista) among all open-access models at publication time, though the advantages of unfreezing the LLM backbone during SFT over the frozen-LLM strategy depend critically on incorporating high-quality text-only data — without which significant text-only degradation occurs.
+
+## 2. Context and Motivation
+
+### The Core Problem: We Don't Know Which Multimodal Architecture Works Best — Or Why
+
+The central problem this paper addresses is that **the field of multimodal LLMs lacks systematic, apples-to-apples comparisons of architectural design choices** trained on identical data. As the authors state bluntly in Section 1:
+
+> "existing multimodal LLM architectures (e.g., decoder-only vs. cross-attention models) have not been studied and compared in an apples-to-apples manner."
+
+This gap matters because the research community is converging on multimodal LLMs as universal vision-language solvers — systems that can handle OCR, chart understanding, mathematical reasoning in visual contexts, natural image understanding, and diagram comprehension within a single model. But without controlled comparisons, practitioners cannot make principled decisions about which architecture to adopt, what trade-offs to expect, or how to allocate their training budgets across architectural components.
+
+The practical stakes are high. Multimodal LLMs are being deployed for real-world applications — document processing, visual assistants, accessibility tools for blind users (e.g., VizWiz), scientific diagram interpretation — where accuracy on OCR-related tasks and multimodal reasoning directly impacts user experience. If cross-attention models are substantially worse at OCR but significantly cheaper to train, that's a trade-off deployment teams need to quantify. If decoder-only models lose text-only capabilities during multimodal training, that's a regression that affects users switching between text and image inputs. Without controlled comparisons, these decisions are made on intuition rather than evidence.
+
+### Three Interconnected Gaps in Prior Work
+
+The paper identifies three specific limitations in existing multimodal LLM research, each of which it systematically addresses:
+
+#### Gap 1: No Controlled Architecture Comparison
+
+Prior studies on multimodal architectures differ simultaneously along multiple axes — they use different LLM backbones (e.g., LLaMA vs. Vicuna vs. Qwen), different vision encoders (CLIP vs. InternViT vs. SigLIP), different training datasets (varying widely in size, quality, and task composition), and different training recipes (frozen vs. unfrozen components, pretraining data scale). This makes it **impossible to attribute performance differences to architecture alone**.
+
+The paper gives a concrete example of how these confounds distort the literature's narrative. IDEFICS-80B, an open-access reproduction of Flamingo's cross-attention architecture built on LLaMA-65B, is "perceived as significantly lagging behind LLaVA-1.5-13B" on VQA tasks (Section 1). But LLaVA-1.5 uses a decoder-only architecture with a different LLM (Vicuna-13B), a different vision encoder, and different training data. Is the performance gap due to architecture? Model scale? Data quality? The field cannot answer this because the comparison was never controlled.
+
+Proprietary models compound this opacity. The authors note:
+
+> "There is no information regarding the architectures of proprietary models."
+
+GPT-4o, Claude 3.5, and Gemini Pro 1.5 — the state-of-the-art systems that open-source work aspires to match — are black boxes. The community knows they achieve high accuracy on both vision-language and text-only tasks (what the paper calls "production-grade multimodality"), but doesn't know how they're built. This means replication efforts operate in the dark, guessing at architectural choices that may or may not matter.
+
+#### Gap 2: The High-Resolution Trade-off Is Poorly Understood
+
+A second gap concerns **dynamic high-resolution (DHR) image handling**. Vision encoders like CLIP are typically trained on low-resolution images (e.g., 224² or 336² pixels), producing a fixed number of tokens regardless of input complexity. For OCR tasks — reading text in scanned documents, scene-text recognition, chart axis labels — this resolution is insufficient. The field's solution has been dynamic tiling: split a high-resolution image into smaller tiles matching the vision encoder's training resolution, encode each tile independently, and feed all tokens into the LLM.
+
+This approach (used by InternVL 1.5, LLaVA-NeXT, and InternLM-XComposer2) "significantly boosts performance on OCR-related tasks (e.g., OCRBench), but sometimes shows reduced accuracy on reasoning-related tasks (e.g., MMMU) compared to their low-resolution counterparts" (Section 1).
+
+The mechanism for this degradation is not well-characterized. The authors hypothesize that simply concatenating hundreds or thousands of image tokens from multiple tiles without explicit spatial delimiters confuses the LLM — it doesn't know which tokens belong to which tile, making it harder to reason across the image as a coherent whole. But no prior work had systematically tested different tile-tagging strategies to isolate whether the problem is the increased token count, the lack of spatial structure, or something else entirely.
+
+#### Gap 3: Text-Only Performance Degradation After Multimodal Training
+
+Perhaps the most practically significant gap is that **open-access multimodal LLMs consistently lose text-only capabilities during multimodal training** — a phenomenon the paper terms "catastrophic forgetting" in the multimodal context, though it's fundamentally a problem of distribution shift in the training objective.
+
+The paper demonstrates this with concrete numbers in Section 6.4 and Table 8. VILA-1.5 40B loses 6.9 points on average across four text benchmarks (MMLU, GSM8K, MATH, HumanEval) compared to its text-only backbone. LLaVA-OneVision 72B loses 6.3 points. InternVL-2-Llama3-76B loses 6.7 points. These are not marginal regressions — they represent substantial capability erosion in tasks that users of these models care about.
+
+The root cause is structural. In decoder-only models like LLaVA, the LLM backbone is typically unfrozen during multimodal supervised fine-tuning (SFT) because the MLP projector connecting vision features to text embeddings has limited capacity — freezing the LLM prevents it from learning to use visual information effectively. But unfreezing the LLM on a purely multimodal dataset causes it to drift away from its text-only instruction-following distribution. The new multimodal data teaches it to attend to image tokens and produce vision-grounded responses, but without corresponding text-only examples reinforcing the original capabilities, those capabilities decay.
+
+Proprietary models like GPT-4o **do not suffer from this problem** — they maintain or even improve text-only performance alongside multimodal capabilities, achieving what the paper calls "production-grade multimodality." But how they achieve this is undocumented. Llama 3-V offers one documented approach: freeze the LLM entirely and train only cross-attention layers, guaranteeing zero text-only degradation because the LLM parameters literally cannot change. However, this comes with a performance cost on vision-language tasks (as the paper demonstrates in its frozen-vs-unfrozen ablation, Table 9), and the Llama 3-V weights were not publicly available at publication time, meaning the approach remained unverified and unreproducible.
+
+### Why These Gaps Persist
+
+Several structural factors have prevented the field from closing these gaps:
+
+**Computational cost of controlled comparisons.** Training a single multimodal LLM from a 72B-parameter backbone is enormously expensive. Training three variants (decoder-only, cross-attention, hybrid) with identical data and hyperparameters to isolate architectural effects requires roughly 3× the compute budget of a typical research project. Most academic labs cannot afford this, and most industry labs have not prioritized it, focusing instead on achieving the highest benchmark numbers with whatever architecture happens to work.
+
+**Data quality as a hidden confound.** The paper observes that "previous studies have shown that abundant and diverse multimodal pretraining data is crucial for the success of cross-attention-based models, such as Flamingo" (Section 1). Flamingo was trained on billions of interleaved image-text pairs; LLaVA-1.5 was pretrained on a small filtered subset of captioning datasets (CC3M, SBU, LAION-115M). If cross-attention models genuinely require more pretraining data to work well, then comparing them to decoder-only models trained on the small LLaVA pretraining mix is unfair — but without testing both architectures on both data regimes, the field couldn't know whether this requirement was real or an artifact of specific implementation choices.
+
+**Proprietary opacity.** The leading systems are closed-source, and their developers provide no architectural details. This means the community's understanding of what matters is driven by what open-source projects choose to explore, which is in turn driven by what's easy to implement and what prior open-source work has done. This creates path dependency: decoder-only architectures dominate open-source multimodal LLMs partly because LLaVA (an early, influential, easy-to-implement decoder-only model) established the template, not necessarily because decoder-only is inherently superior.
+
+### How This Paper Positions Itself
+
+The paper's positioning is explicitly comparative and systematic rather than methodologically novel. It does not claim to invent a new architecture (though NVLM-H is novel), a new training objective, or a new dataset. Instead, it positions itself as providing the **controlled empirical foundation** that the field has been missing.
+
+The three-architecture comparison — NVLM-D (decoder-only), NVLM-X (cross-attention), NVLM-H (hybrid) — all trained on the same LLM backbone (Qwen2-72B-Instruct for the final models), the same vision encoder (InternViT-6B-448px-V1-5), the same pretraining data blend (Table 4), and the same SFT data blend (Table 6), isolates architecture as the independent variable. Any performance differences between these models can be attributed to architecture and architecture alone, which is precisely the analysis prior work could not perform.
+
+The tile-tagging ablation (Table 1, Table 2) similarly isolates a specific design variable — how to communicate tile spatial structure to the LLM — within a fixed architecture and training setup. By testing no-tag, 2-D grid tags, 2-D bounding-box tags, and 1-D flattened tags, the paper identifies which aspect of tile-tagging matters (hint: it's the presence of *any* tag, with 1-D performing best, suggesting the model benefits from explicit tile boundaries but does not require precise 2-D coordinate information).
+
+The text-only preservation analysis reframes the problem. Rather than treating text-only degradation as an inevitable consequence of multimodal training (as the field has largely accepted, with even leading open-source models showing 6–7 point drops), the paper demonstrates that **high-quality text-only SFT data blended into multimodal training can not only prevent degradation but yield improvements**. This shifts the narrative from "multimodal training damages text capabilities" to "multimodal training amplifies reasoning capabilities if you include the right data" — a more optimistic and actionable framing.
+
+The paper also positions its models as **frontier-class with transparent methodology**, explicitly contrasting with proprietary models whose methods are unknown. The release of model weights and the promised release of training code (Section 1) make this a reproducible contribution, not just a benchmark leaderboard entry. This matters because frontier-class multimodal LLMs — models competitive with GPT-4o and Claude 3.5 — have been almost exclusively proprietary. NVLM provides a fully open pathway to that performance tier.
+
+Finally, the paper acknowledges that it cannot answer every question. The authors note they "did not experiment with PRM tree-search techniques in combination with revisions" (Section 8 of the related work discussion, though this specific quote is from the earlier paper's context), and they leave several architecture variants unexplored — combinations of frozen and unfrozen components, different X-attention layer placement strategies, and scaling the hybrid approach to even larger models. This honesty about scope limitations is itself a contribution: it defines the boundaries of what the paper's evidence supports and prevents overclaiming.
+
+## 3. Technical Approach
+
+### 3.1 Reader Orientation
+
+NVLM 1.0 is a family of three multimodal large language models — NVLM-D, NVLM-X, and NVLM-H — that share the same vision encoder, language model backbone, and training data but differ in *how* visual information flows into the language model: through self-attention layers (decoder-only), through gated cross-attention layers, or through a hybrid combination of both. The core idea is that by training all three architectures on identical data with identical hyperparameters, the paper can perform the first controlled, apples-to-apples comparison of these architectural paradigms, isolating which design choices cause which performance differences while simultaneously establishing a recipe for maintaining text-only capabilities after multimodal training.
+
+### 3.2 Big-Picture Architecture (Diagram in Words)
+
+The system has four major components, arranged in a feedforward pipeline:
+
+1. **Vision Encoder (InternViT-6B-448px-V1-5)** — a frozen, pretrained vision transformer that takes an input image (possibly tiled into multiple 448×448 pixel chunks via dynamic high-resolution processing) and produces a fixed set of visual feature tokens. It is shared across all three NVLM architectures and never updated during training.
+
+2. **Dynamic High-Resolution (DHR) Tiling Module** — a preprocessing step that splits high-resolution images into a global thumbnail tile (a scaled-down version of the entire image capturing overall context) plus up to 6 regular tiles (each 448×448 pixels), encodes each tile independently through the frozen vision encoder, then applies pixel shuffle downsampling to reduce each tile's 1,024 tokens to 256 tokens.
+
+3. **Modality-Alignment Module** — the architecture-specific component that projects visual features into the LLM's text embedding space. For NVLM-D, this is a 2-layer MLP whose output tokens are concatenated with text tokens and processed by the LLM's self-attention layers. For NVLM-X, this is a set of gated cross-attention layers interleaved with the frozen LLM's self-attention layers, with image tokens attended to *by* text tokens without being unrolled into the LLM decoder sequence. For NVLM-H, this is a combination: the thumbnail tile goes through the MLP into self-attention, while regular tiles go through cross-attention layers.
+
+4. **Large Language Model Backbone (Qwen2-72B-Instruct)** — the pretrained instruction-tuned LLM that processes text tokens and (depending on architecture) image tokens to produce the final text response. Its self-attention parameters are frozen during pretraining and unfrozen during SFT, with text-only capabilities preserved through a curated text-only SFT dataset blended into multimodal training.
+
+Information flows as follows: an image enters the system → the DHR module splits it into thumbnail + regular tiles → each tile is independently encoded by the frozen InternViT-6B → pixel shuffle reduces token counts from 1,024 to 256 per tile → a 1-D tile tag (e.g., `<tile_1>`) is inserted as a text token before each tile's visual tokens → the modality-alignment module projects visual tokens into the LLM's embedding space using architecture-specific mechanisms → the LLM autoregressively generates text, attending to text and visual tokens according to its architecture's attention pattern.
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First**, the **shared vision pathway** — the InternViT-6B encoder, the dynamic high-resolution tiling mechanism, and the pixel shuffle downsampling operation — since every NVLM variant depends on this component and it determines the shape of visual information entering the LLM.
+- **Second**, the **NVLM-D (decoder-only) architecture**, including its MLP projector, its training stages (pretraining then SFT), and the **1-D tile-tagging design** for communicating spatial structure to the LLM, since this is the simplest and most widely-used architecture, establishing the baseline against which the others are compared.
+- **Third**, the **NVLM-X (cross-attention) architecture**, including why it omits the Perceiver resampler used in Flamingo, how gated cross-attention provides computational efficiency, and how tile tags are adapted for cross-attention (with attention masking so each tag attends only to its corresponding tile's tokens).
+- **Fourth**, the **NVLM-H (hybrid) architecture**, which combines the previous two by routing thumbnail tokens through self-attention and regular tile tokens through cross-attention, motivated by the complementary strengths identified in the NVLM-D vs. NVLM-X comparison.
+- **Fifth**, the **training methodology** shared across all architectures — the two-stage process (pretraining with frozen LLM, SFT with unfrozen LLM), the specific hyperparameters for each stage and each architecture, and how text-only SFT data is incorporated to prevent catastrophic forgetting.
+- **Finally**, a **summary of design choices and their justifications**, connecting each architectural decision to the empirical evidence (from ablations in Tables 1–3, 5, and 9) that motivated it.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily a **systems and empirical analysis paper** whose core idea is that by controlling for training data, vision encoder, LLM backbone, and training recipe, one can isolate the effects of architecture on multimodal LLM performance — and that a hybrid architecture combining the strengths of decoder-only and cross-attention designs yields the best multimodal reasoning while maintaining strong OCR and computational efficiency.
+
+---
+
+#### Shared Vision Pathway: InternViT-6B Encoder and Dynamic High-Resolution Tiling
+
+The vision pathway is the one component that is **identical across all three NVLM architectures**. Every NVLM model uses the same frozen vision encoder (InternViT-6B-448px-V1-5) and the same dynamic high-resolution tiling procedure, so any performance differences between architectures cannot be attributed to differences in visual feature quality.
+
+**Vision encoder selection.** The paper uses InternViT-6B-448px-V1-5, a 6-billion-parameter vision transformer trained on a fixed resolution of 448² pixels. This encoder produces exactly 1,024 output tokens per image (or per tile) — 32 × 32 patches of 14×14 pixels each, plus a CLS token or equivalent aggregation. The encoder is kept **frozen at all stages of training**, which the authors justify as simplifying the training process while still delivering strong results. This contrasts with some prior work (e.g., Cambrian-1) that unfreezes or combines multiple vision encoders; the paper acknowledges this alternative but opts for a single large frozen encoder for simplicity and reproducibility.
+
+The choice of InternViT-6B over alternatives (CLIP ViT-L/14, SigLIP, etc.) is motivated by its strength on vision-language benchmarks, as established in prior work by Chen et al. (2024) and InternVL 2. The authors note that they experimented with jointly training the vision encoder during pretraining when using a weaker encoder (ViT-L/14), but "after upgrading to the more powerful InternViT-6B-448px-V1-5, the performance gains became marginal" (Section 4.2). This is an important practical finding: with a sufficiently strong frozen vision encoder, the added complexity and GPU memory cost of training the vision encoder is not worth the marginal accuracy improvement.
+
+**Dynamic high-resolution tiling mechanism.** The core challenge is that vision encoders are trained on fixed-resolution images (448² for InternViT-6B), but real-world images vary enormously in resolution and aspect ratio — a scanned document might be 2,000 × 3,000 pixels, while a meme might be 800 × 600. Simply resizing all images to 448² loses fine-grained detail critical for OCR (reading small text, recognizing individual characters). Directly feeding high-resolution images to the vision encoder is not possible because the encoder's positional embeddings and patch extraction are tied to its training resolution.
+
+The solution is **dynamic tiling**, adapted from Chen et al. (2024) and InternVL 1.5. The procedure works as follows:
+
+1. **Aspect ratio matching.** The system maintains a predefined set of allowed aspect ratios formed by 1 to 6 tiles: `{1:1, 1:2, 1:3, 1:4, 1:5, 1:6, 2:1, 2:2, 2:3, 3:1, 3:2, 4:1, 5:1, 6:1}`. For a given input image, the system selects the aspect ratio that best matches the image's native dimensions. For example, a 896 × 672 image would match 2:1 (two tiles wide, one tile tall, total 2 tiles), while a 448 × 2,240 image would match 1:5 (one tile wide, five tiles tall, total 5 tiles).
+
+2. **Image division.** The image is divided into tiles of exactly 448 × 448 pixels each, following the selected aspect ratio. For the 896 × 672 example, this produces two tiles of 448 × 672 each (which are then resized to 448 × 448 to match the encoder's input size). The number of tiles ranges from 1 to 6, depending on the image resolution.
+
+3. **Thumbnail tile.** In addition to the regular tiles, the system always includes a **global thumbnail tile** — a version of the *entire* image scaled down to 448 × 448 pixels. This thumbnail captures global context and spatial relationships that individual tiles lose. When the image already fits in a single 448 × 448 tile, the thumbnail is identical to the regular tile.
+
+4. **Independent encoding.** Each tile (regular tiles plus the thumbnail) is independently fed through the frozen InternViT-6B, producing 1,024 tokens per tile. There is no cross-tile attention or information sharing at the vision encoder level.
+
+5. **Pixel shuffle downsampling.** Each tile's 1,024 tokens are reduced to 256 tokens using a **pixel shuffle** operation (also called "pixel unshuffle" or "space-to-depth"). This operation groups every 2 × 2 block of spatially adjacent image tokens into a single token by concatenating their channel dimensions, then applies a linear projection. Specifically: take the 32 × 32 grid of tokens from InternViT-6B (assuming a 32 × 32 patch grid for 448² images with a 14-pixel patch size), group them into 16 × 16 blocks of 2 × 2 tokens each, concatenate the feature vectors within each block along the channel dimension (producing a feature vector 4× the original channel dimension), then project back to the desired hidden dimension via a learned linear layer (which is part of the MLP projector in NVLM-D and NVLM-H, or a separate 1-layer MLP in NVLM-X).
+
+The downsampling from 1,024 to 256 tokens per tile is a **computational necessity**. With up to 6 regular tiles plus 1 thumbnail tile, the maximum number of visual tokens entering the LLM is 7 × 256 = 1,792 tokens. Without downsampling, this would be 7 × 1,024 = 7,168 tokens — a sequence length that would dramatically increase the quadratic complexity of self-attention in the LLM decoder. The pixel shuffle operation preserves spatial structure better than alternative downsampling methods (e.g., learned pooling, strided attention) because it explicitly keeps neighboring patches together, and it has been used successfully in prior work (InternVL 1.5, Chen et al., 2024).
+
+**Maximum tiles at training vs. inference.** At training time, the system allows a maximum of 6 regular tiles (plus 1 thumbnail = 7 tiles total). This is a practical limit constrained by GPU memory — with a batch size of 128 or 256 during SFT, each sample containing up to 1,792 visual tokens plus text tokens, the sequence lengths become very long for decoder-only models (3,200 tokens for NVLM-D 72B SFT, per Table 11). At inference time, more tiles could theoretically be used, but the paper does not explore this.
+
+**Design choice: why 6 tiles?** The paper does not explicitly justify the choice of 6 tiles versus 4, 9, or 12. This appears to be a pragmatic trade-off: more tiles improve OCR accuracy on high-resolution documents but increase computational cost and may exacerbate the MMMU degradation problem (since more tokens make it harder for the LLM to reason globally). The ablation in Table 1 shows that even with 6 tiles, MMMU accuracy drops from 50.9 (low-resolution) to 50.0 (DHR with no tags) for the Yi-34B decoder-only model, suggesting that 6 tiles already push the model into the regime where reasoning degrades. Future work might explore adaptive tile counts based on estimated image complexity.
+
+**Data format for visual tokens.** Throughout the training pipeline, visual tokens are inserted into the text sequence using special `<image>` tags in the ChatML template (Figure 11, Appendix E). The actual visual features from the vision encoder replace these placeholder tags. For example, a training sample for visual question answering is formatted as:
+
+```
+<Image><image></Image> What color is the hydrant? Black and yellow<|im_end|>
+```
+
+where `<image>` indicates where to insert the visual features. During pretraining, the model is trained to generate the text response given the image and question; during SFT, multi-turn conversations are formatted with `<|im_start|>user`, `<|im_start|>assistant` markers. The loss is computed only on the assistant's response tokens, not on the user's input or the image tokens.
+
+---
+
+#### NVLM-D: Decoder-Only Architecture
+
+NVLM-D follows the dominant paradigm in open-source multimodal LLMs, popularized by LLaVA and continued by InternVL, LLaVA-OneVision, and Cambrian-1. The defining characteristic is that **image tokens are projected into the text embedding space and then concatenated with text tokens, so the LLM processes everything through its standard self-attention layers** — it does not know or care whether a given token originated from text or an image.
+
+**Modality-alignment module: 2-layer MLP projector.** The connection between the vision encoder and the LLM is a 2-layer MLP with GELU activations. Its architecture is:
+
+- **Input dimension:** 12,800 (InternViT-6B hidden dimension 3,200 × 4 after pixel shuffle concatenation).
+- **Hidden dimension:** 20,480 → 7,168 for the 34B model (Yi-34B backbone, hidden dimension 7,168); 29,568 → 8,192 for the 72B model (Qwen2-72B-Instruct backbone, hidden dimension 8,192).
+- **Output dimension:** matches the LLM's hidden dimension (7,168 or 8,192).
+
+The 2-layer design (rather than a single linear projection or a deeper MLP) is inherited from LLaVA and subsequent work. A single linear layer might not have enough capacity to align the vision encoder's representation space (trained for contrastive image-text matching) with the LLM's representation space (trained for next-token prediction). A deeper MLP might overfit to the pretraining data or be too slow. The 2-layer design is an empirical sweet spot that the field has converged on; the paper adopts it without extensive ablation.
+
+**Training stages: pretraining then SFT.** NVLM-D training proceeds in two distinct stages, following the LLaVA recipe:
+
+**Stage 1: Pretraining (modality alignment).** In this stage, **only the MLP projector is trained** — the vision encoder and LLM are both frozen. The goal is to teach the randomly initialized MLP to map visual features into a representation space that the frozen LLM can interpret as if they were text tokens (or something close enough that the LLM's next-token prediction machinery produces sensible outputs).
+
+Why freeze the LLM during pretraining? The MLP is randomly initialized, so its initial outputs are essentially noise. If the LLM were unfrozen during this stage, the noisy gradients would update the LLM's parameters in directions that degrade its pretrained language capabilities. The MLP needs to first learn a reasonable mapping before the LLM can safely be exposed to it.
+
+The pretraining dataset is listed in Table 4 and includes:
+- **Captioning:** COCO, CC3M, SBU, LAION-115M (filtered and recaptioned version from BLIP).
+- **VQA on natural images:** VQAv2, Visual Genome.
+- **Chart understanding:** DVQA.
+- **Document understanding:** Docmatix.
+- **OCR and scene text:** OCR-VQA, COCO-Text, TextOCR, ReCTs, RRC-ArT, RRC-LSVT, RCTW, synthdog-en, pdfa-eng-wds.
+- **Math in visual context:** CLEVR-Math.
+
+A critical design finding is that **including task-oriented datasets (VQA, OCR, math) during pretraining — not just captioning data — significantly improves downstream performance**, even for decoder-only models. The paper's ablation in Table 5 demonstrates this: training NVLM-D (Yi-34B) with the standard LLaVA-1.5 pretraining data (captioning only: CC3M, SBU, LAION-115M) versus the paper's diverse pretraining blend, then fine-tuning both on the same SFT data, shows consistent improvements across all benchmarks, with particularly large gains on MathVista (48.9 → 53.8) and OCRBench (760 → 806). This challenges the prevailing wisdom from the LLaVA lineage that pretraining only needs image caption data for modality alignment, and shows that **decoder-only models benefit from diverse pretraining data just as cross-attention models do** (contrary to the earlier assumption that only cross-attention architectures require large, diverse pretraining corpora).
+
+Pretraining hyperparameters (Table 10): global batch size 2,048, max learning rate 1e-4 with cosine schedule (minimum 2.5e-5), 500 warmup steps, AdamW optimizer with β1=0.9, β2=0.95, weight decay 0.1, gradient clipping at 10.0, sequence length in LLM decoder set to 512 tokens, images at 1 tile (no dynamic tiling during pretraining to keep training efficient), 20,000 training steps.
+
+The large batch size of 2,048 deserves note. The authors state they "find a large batch size of 2048 improves the pretraining with frozen LLMs" (Section 4.5). This is likely because the frozen LLM provides a stable training signal (its outputs don't change, so the MLP is learning a fixed target mapping), and large batch sizes provide more stable gradient estimates for this relatively small number of trainable parameters (the MLP has far fewer parameters than the LLM).
+
+**Stage 2: Supervised Fine-Tuning (SFT).** In this stage, **both the MLP projector and the LLM are unfrozen and trained together**. The vision encoder remains frozen. The goal is to teach the full model to follow diverse vision-language instructions, including tasks that require novel capabilities not present in the text-only LLM (e.g., reading text from images, reasoning about spatial layouts, interpreting charts).
+
+Why unfreeze the LLM during SFT? The paper argues (and prior work supports) that the MLP projector has limited capacity — it can map visual features into the LLM's embedding space, but it cannot teach the LLM *how to use* those features for novel tasks. The LLM's self-attention layers need to learn new attention patterns that integrate visual and textual information for multimodal reasoning. Freezing the LLM during SFT in decoder-only models "leads to poor results on vision-language tasks" (Section 6.5), as demonstrated in similar studies by Lin et al. (2024).
+
+However, unfreezing the LLM introduces the **catastrophic forgetting problem** that Section 1 identifies as a key limitation of prior open-access multimodal LLMs. The LLM's parameters drift from their text-only instruction-tuned state toward a multimodal distribution, and without text-only data in the SFT blend, its text-only capabilities degrade. The solution, detailed later, is incorporating high-quality text-only SFT data.
+
+SFT hyperparameters (Table 11): global batch size 128 (much smaller than pretraining because the LLM is now being updated and each sample has longer sequences), max learning rate 2e-6 with cosine schedule (minimum 2.5e-7), 1,000 warmup steps, AdamW optimizer with β1=0.9, β2=0.98, weight decay 0.1, gradient clipping at 10.0, sequence length in LLM decoder 3,200 tokens, dynamic high-resolution with 6 regular tiles + 1 thumbnail tile, 40,000 training steps.
+
+The learning rate for SFT (2e-6) is 50× smaller than for pretraining (1e-4). This is standard practice: the pretrained LLM already has strong capabilities, and the goal of SFT is to adapt it to new tasks without destroying its existing knowledge. A large learning rate would cause rapid parameter drift and catastrophic forgetting; a small learning rate enables gradual adaptation.
+
+The SFT dataset (Table 6) is substantially larger and more diverse than the pretraining dataset, covering:
+- **Captioning:** COCO, TextCaps, ShareGPT-4o (detailed image descriptions).
+- **VQA on natural images:** VQAv2, Visual Genome, TallyQA (counting), Visual7W (grounded QA), VizWiz (photos from blind users).
+- **Knowledge-based VQA:** OK-VQA, A-OKVQA (requiring external world knowledge).
+- **Visual reasoning:** GQA, Super-CLEVR, Raven (abstract reasoning), VSR (visual spatial reasoning).
+- **Chart and diagram understanding:** DVQA, PlotQA, MMC-Instruction, ChartQA, InfographicVQA, FigureQA, IconQA, Chart2Text, Diagram Image2Text.
+- **Table understanding:** WikiTableQuestions, RobuT (adversarial table QA), HiTab (hierarchical tables).
+- **Document understanding:** DocVQA, Docmatix, DUDE, VisualMRC, TAT-DQA, UReader IE/KG/QA.
+- **OCR, screen, and scene text:** OCR-VQA, TextVQA, ST-VQA, ScreenQA, SlideQA, PDF-VQA, plus numerous specialized OCR datasets (VQA-CD, VQAonBD, POIE, SROIE, ORAND, EST-VQA, FUNSD, SQuAD-rendered, WordArt, IAM, IIIT5K, HME100K, synthdog-en, Bentham QA, HW-SQuAD, WebSight, ChromeWriting, K12 Printing, COCO-Text, TextOCR, ReCTs, pdfa-eng-wds — a comprehensive collection covering printed text, handwritten text, scene text, document forms, mathematical expressions, and rendered text).
+- **Math:** CLEVR-Math, GeoQA+, Geometry3K, TabMWP, GSM8K (rendered), MetaMathQA (rendered), MAVIS Data Engine and Manual Collection, Geo170K Align and QA, GeoMVerse, GEOS, UniGeo — an unusually large and diverse set of multimodal math reasoning datasets.
+- **Science:** AI2D, ScienceQA, TQA (textbook QA), ArXivQA, plus unspecified "textbook data."
+- **Visual instruction-tuning:** LRV-Instruction, LLaVA-158K, LLaVAR (text-rich image instruction data).
+- **Text-only SFT:** SlimOrca, ShareGPT, EvolInstruct, GPTeacher, AlpacaGPT4, UltraInteract, OrcaMathWordProblems, MathInstruct, MetaMath, GlaiveCodeAssistant, Magicoder, WizardCoder.
+
+**Dynamic high-resolution in NVLM-D.** During SFT, the model receives up to 6 regular tiles plus 1 thumbnail tile, each producing 256 tokens after pixel shuffle, for a total of up to 1,792 visual tokens. These are concatenated with text tokens (the user's question, system prompt, and conversation history) to form the full input sequence. The sequence length limit of 3,200 tokens during SFT (Table 11) means that text context beyond about 1,400 tokens would be truncated.
+
+**Tile-tagging design for NVLM-D.** This is one of the paper's key technical contributions. The problem is that when image tokens from multiple tiles are concatenated without delimiters, the LLM has no way to know which tokens belong to which tile — it sees a flat sequence of 1,792 visual tokens with no spatial structure. This is hypothesized to cause the MMMU degradation observed in prior dynamic high-resolution work, where reasoning about the image as a coherent whole becomes harder because the model cannot distinguish local details from global context.
+
+The solution is to insert **text-based tile tags** — special tokens that mark the start of each tile's visual tokens and indicate the tile's position in the grid. The paper tests four variants in an ablation study (Table 1, using NVLM-D with Yi-34B backbone, trained for 20K iterations without checkpoint selection for clean comparison):
+
+**a) No tag:** Visual tokens from all tiles are simply concatenated in order, with no delimiters. This is the design used in InternVL 1.5.
+
+**b) 1-D flattened tile tag:** Tags are inserted as `<tile_1>`, `<tile_2>`, ..., `<tile_6>`, `<tile_global>`, where the numbering follows a raster scan order (left-to-right, top-to-bottom) across the tiles. After each tag, the 256 image tokens for that tile are appended. The sequence structure is:
+
+```
+<tile_1> [256 image tokens for tile 1] <tile_2> [256 image tokens for tile 2] ... <tile_global> [256 thumbnail tokens]
+```
+
+**c) 2-D grid tag:** Tags encode the tile's (x, y) position in the grid: `<tile_x0_y0>`, `<tile_x1_y0>`, ..., `<tile_xW_yH>`, `<tile_global>`. The W and H values depend on the selected aspect ratio — for a 2×3 grid, valid tags range from `<tile_x0_y0>` to `<tile_x1_y2>`. This provides explicit spatial coordinate information.
+
+**d) 2-D bounding-box tag:** Tags enclose the pixel-level bounding box coordinates of each tile within the full image resolution: `<box> (x0, y0), (x1, y1) </box>`, where (x0, y0) is the top-left corner and (x1, y1) is the bottom-right corner in the original image's pixel space. This is the most information-rich format, giving the model precise spatial grounding.
+
+The results in Table 1 show a clear progression:
+
+- **Low-resolution baseline (448², single tile):** MMMU 50.9, MathVista 46.1, AI2D 67.0, ChartQA 64.8, DocVQA 52.9, TextVQA 78.2, OCRBench 622.
+- **DHR + No tag:** All benchmarks improve *except* MMMU, which drops to 50.0. OCRBench jumps from 622 to 728. This confirms the prior finding that dynamic high-resolution hurts reasoning while helping OCR.
+- **DHR + any tag:** MMMU *recovers and exceeds* the low-resolution baseline (51.1 for 2-D grid, 52.0 for 1-D). OCRBench improves further (787 for 2-D grid, 806 for 1-D). This is the key finding: **adding explicit tile delimiters eliminates the MMMU degradation while preserving the OCR gains**, solving the trade-off that prior work accepted as inevitable.
+- **1-D tag performs best overall,** achieving the highest scores on MMMU (52.0), MathVista (53.8), AI2D (82.1), DocVQA (87.4), and OCRBench (806).
+
+**Why does the 1-D tag work better than 2-D tags?** The authors hypothesize that "although the 1-D tile tag does not tell 2-D information (e.g., 2×3 vs. 3×2), it offers better generalization at test time" (Section 4.2). This is an intriguing claim. In training, the model sees examples with specific aspect ratios (e.g., 2×3 grids for wide images, 3×2 grids for tall images). A 2-D grid tag like `<tile_x1_y2>` explicitly encodes the grid dimensions — the model can infer that the image is at least 2 tiles wide and 3 tiles tall. But at test time, if the model encounters an unusual aspect ratio not well-represented in training, the 2-D coordinates might be misleading or out-of-distribution. The 1-D tag, by contrast, only encodes the *order* of tiles in a flattened sequence, which is always well-defined regardless of grid shape. The thumbnail tile provides global spatial context anyway, so the model may not need explicit grid coordinates — it just needs to know that "these 256 tokens are one tile, these next 256 are another," which the 1-D tag provides perfectly.
+
+This finding has practical implications beyond NVLM: future dynamic high-resolution systems should include at minimum a simple tile delimiter, and elaborate spatial encoding schemes may be unnecessary or even harmful.
+
+---
+
+#### NVLM-X: Cross-Attention Architecture
+
+NVLM-X departs from the decoder-only paradigm by processing image tokens through **gated cross-attention layers** interleaved with the LLM's self-attention layers. This design traces its lineage to Flamingo (Alayrac et al., 2022), where it was shown to enable few-shot visual learning while preserving the frozen LLM's text capabilities.
+
+**Why cross-attention?** In a decoder-only model, all image tokens are concatenated with text tokens, so the LLM's self-attention must process a sequence of length `text_tokens + image_tokens`. With 1,792 image tokens, this substantially increases the quadratic computational cost of self-attention. In a cross-attention model, image tokens are **not** part of the decoder's input sequence — they are accessed via cross-attention layers that compute attention from text token queries to image token keys/values, without ever expanding the sequence length of the self-attention layers. The text sequence length remains `text_tokens` only, which is typically much shorter (e.g., 1,024 tokens during SFT for NVLM-X vs. 3,200 for NVLM-D, per Table 11).
+
+This is what gives NVLM-X its computational efficiency advantage. Table 3 quantifies this: NVLM-X 34B processes 50.6 samples per second during SFT (with 128 H100 GPUs, tensor parallelism 8), while NVLM-D 34B processes only 28.8 samples per second — a **1.76× throughput improvement**. The difference is entirely due to sequence length in the LLM decoder: 1,024 for NVLM-X vs. 2,816 for NVLM-D (1,024 text + 1,792 image tokens).
+
+**Differences from Flamingo.** NVLM-X makes two deliberate departures from the standard Flamingo design:
+
+**1. No Perceiver resampler.** Flamingo uses a Perceiver resampler (Jaegle et al., 2021) between the vision encoder and the cross-attention layers. The Perceiver takes the vision encoder's output tokens (a variable number, e.g., 1,024 for a 32×32 grid) and compresses them into a fixed, smaller number of "latent" tokens (e.g., 64 or 256) through learned cross-attention to a learned latent array. This reduces the number of tokens that the cross-attention layers must process, improving efficiency. However, the authors find it **hurts OCR performance**:
+
+> "during our initial exploration, we found that while the perceiver resampler is beneficial for natural image captioning, it negatively impacts dense OCR tasks, such as transcribing text from scanned documents" (Section 4.3).
+
+The hypothesized mechanism is that the Perceiver's cross-attention to the latent array "mixes the input image tokens, potentially disrupting the spatial relationships between image patches, which are crucial for document OCR" (Section 4.3). For natural image captioning, this mixing might be beneficial — it allows the model to extract high-level semantic features while discarding pixel-level noise. But for OCR, the precise spatial arrangement of pixels determines which characters appear where, and blurring this information makes reading text harder.
+
+The paper includes an overfitting experiment (Appendix C, Figure 9) that dramatically illustrates this point. A Flamingo model with the Perceiver resampler, fine-tuned on a 30K-sample document OCR dataset, struggles to reduce training loss — it plateaus around 0.4 even after many epochs. Removing the Perceiver and training only the cross-attention layer causes the loss to drop to near zero at the same iteration. The Perceiver's compression is lossy in ways that matter for OCR.
+
+Consequently, NVLM-X omits the Perceiver entirely and cross-attends directly to the vision encoder's output tokens (after pixel shuffle downsampling to 256 tokens per tile).
+
+**2. Unfrozen LLM during SFT.** Flamingo (and Llama 3-V) freezes the LLM's self-attention parameters and trains only the cross-attention layers, guaranteeing zero text-only degradation. NVLM-X chooses to **unfreeze the LLM during SFT** and compensate with high-quality text-only SFT data. The paper's ablation in Table 9 quantifies the trade-off: NVLM-X 72B with a frozen LLM achieves MMMU Val 54.4, MathVista 60.6, OCRBench 722; with an unfrozen LLM and text-only SFT data, it achieves MMMU Val 57.4, MathVista 64.6, OCRBench 828 — improvements of 3.0, 4.0, and 106 points respectively. The cost is a small risk of text-only degradation, which the paper demonstrates can be eliminated with sufficient text-only data quality.
+
+**Modality-alignment module for NVLM-X.** The image features from the vision encoder (after pixel shuffle: 12,800-dimensional vectors per token) are first projected to the LLM's hidden dimension using a **1-layer MLP** (12,800 → 7,168 for 34B, 12,800 → 8,192 for 72B). This is simpler than NVLM-D's 2-layer MLP because the projected features are not directly embedded into the LLM's text token space — they are accessed via cross-attention, which has its own learned query, key, and value projections.
+
+Gated cross-attention layers are then inserted into the LLM at regular intervals: **one X-attention layer every 6 self-attention layers for the 34B model, and every 8 self-attention layers for the 72B model**. Both models have a total of 10 X-attention layers. Since Qwen2-72B-Instruct has 80 transformer layers (based on the architecture described in the Qwen2 technical report), inserting one X-attention layer every 8 layers means X-attention layers are placed after self-attention layers 8, 16, 24, ..., 80.
+
+The **gating mechanism** is crucial. Each X-attention layer's output is multiplied by a learned scalar gate (initialized to zero) and added to the residual stream from the corresponding self-attention layer. Formally, at layer `l`:
+
+$$\text{output}_l = \text{SelfAttn}_l(x) + \tanh(\alpha_l) \cdot \text{XAttn}_l(x, \text{image\_tokens})$$
+
+where `$\alpha_l$` is a learned scalar parameter initialized to 0 (so `$\tanh(0) = 0$`), meaning the X-attention contribution starts at zero and the model initially behaves exactly like the text-only LLM. As training progresses, `$\alpha_l$` can increase, allowing the X-attention output to influence the representations. This gating is adapted directly from Flamingo.
+
+The gating mechanism serves two purposes. First, it provides a smooth initialization: at the start of training, the X-attention layers contribute nothing, so the model's behavior is identical to the pretrained LLM, preventing the random X-attention weights from corrupting the LLM's existing capabilities. Second, it provides a mechanism for selectively *turning off* multimodal processing at inference time when handling pure text inputs — setting the gate to zero recovers the exact text-only LLM behavior.
+
+**Tile-tagging for NVLM-X.** Tile tags are used differently in the cross-attention architecture than in the decoder-only architecture. In NVLM-D, tile tags are text tokens in the LLM's input sequence that attend to (and are attended by) all other tokens through self-attention. In NVLM-X, tile tags are text tokens in the LLM's input sequence that attend to text tokens via self-attention, but their cross-attention to image tokens is **masked** so that each tag `<tile_k>` only attends to the image tokens from the corresponding tile `k`.
+
+This requires constructing a custom attention mask for the cross-attention layers. For each tile tag `<tile_k>`, the mask allows attention to the 256 tokens of tile `k` and blocks attention to all other tiles' tokens. The thumbnail tile's tag `<tile_global>` can attend to the thumbnail image tokens. Non-tag text tokens (the user's question, the model's generated response) can attend to all image tokens from all tiles — they are not restricted.
+
+This design ensures that tile tags serve as explicit pointers to their corresponding visual information. When the model generates text that references a specific part of the image, it can use the tile tag to "focus" its cross-attention on the relevant tile, rather than having to search across all 1,792 visual tokens. This is more efficient and potentially more accurate.
+
+The ablation in Table 2 confirms the effectiveness of tile tags in NVLM-X: adding 1-D tags improves MMMU Val from 53.0 to 54.1, MathVista from 57.6 to 59.6, and OCRBench from 682 to 744, compared to DHR without tags. The improvements are consistent with the NVLM-D results in Table 1, suggesting that the benefit of tile tags is architecture-agnostic — both self-attention and cross-attention benefit from explicit tile delimiters.
+
+**When X-attention is most advantageous.** The computational advantage of NVLM-X over NVLM-D increases with the number of image tiles. If an image has only 1 tile, NVLM-D's sequence length is `text_tokens + 256`, while NVLM-X's is `text_tokens` — a relatively small difference. But with 7 tiles, NVLM-D's sequence length is `text_tokens + 1,792`, while NVLM-X's remains `text_tokens`. For high-resolution document OCR applications where many tiles are common, NVLM-X's efficiency advantage is substantial. For low-resolution natural image understanding, the advantage narrows.
+
+**Comparing decoder-only and X-attention on benchmark results.** The main results in Table 7 show that NVLM-D 72B outperforms NVLM-X 72B on most benchmarks, particularly OCR-related ones: OCRBench 853 vs. 828, DocVQA 92.6 vs. 82.9, TextVQA 82.1 vs. 80.2, ChartQA 86.0 vs. 82.9. The gap is largest on document and chart understanding, where dense spatial information matters most. On multimodal reasoning (MMMU: 59.7 vs. 57.4; MathVista: 65.2 vs. 64.6), the gap is smaller. This pattern supports the paper's characterization of the trade-off: NVLM-D provides "higher accuracy in OCR-related tasks" and "unified multimodal reasoning," while NVLM-X offers "superior computational efficiency when handling high-resolution images" (Section 1, Contribution 1).
+
+---
+
+#### NVLM-H: Hybrid Architecture
+
+NVLM-H is the paper's novel architectural contribution, designed to capture the complementary strengths of NVLM-D and NVLM-X while mitigating their weaknesses. The key insight is that **not all image tokens are equally important for all tasks**: the global thumbnail provides context and spatial relationships useful for reasoning, while regular tiles provide fine-grained detail useful for OCR. Processing the thumbnail through self-attention (like NVLM-D) enables joint multimodal reasoning at low computational cost (only 256 extra tokens in the sequence), while processing regular tiles through cross-attention (like NVLM-X) avoids the quadratic scaling cost of unrolling all tile tokens in the self-attention layers.
+
+**Two-path image token processing.** NVLM-H processes image tokens through two separate pathways:
+
+1. **Thumbnail path (self-attention):** The global thumbnail tile follows the NVLM-D pathway. Its 256 tokens (after pixel shuffle) are projected through the 2-layer MLP (same architecture as NVLM-D: 12,800 → 29,568 → 8,192 for 72B) and concatenated with text tokens in the LLM's input sequence. These tokens participate in the LLM's standard self-attention, allowing every text token to attend directly to the global image context.
+
+2. **Regular tile path (cross-attention):** Up to 6 regular tiles follow the NVLM-X pathway. Their tokens (256 each, after pixel shuffle) are projected through the same 2-layer MLP and then accessed via gated cross-attention layers inserted into the LLM, using the same arrangement as NVLM-X (10 layers, one every 8 self-attention layers for 72B).
+
+The total sequence length in the LLM decoder is therefore `text_tokens + 256` (for the thumbnail) + however many text tokens are used for tile tags and other purposes, capped at 1,280 tokens during SFT for the 34B model (Table 11). This is significantly shorter than NVLM-D's 3,200 tokens, explaining the throughput advantage: NVLM-H 34B achieves 36.2 samples/second vs. NVLM-D's 28.8 samples/second (Table 3), a 1.26× improvement.
+
+**Tile-tagging for NVLM-H.** Tile tags `<tile_k>` are inserted as text tokens in the LLM's input sequence, but instead of being placed next to the visual tokens (as in NVLM-D), they are processed through the cross-attention layers alongside the regular tile tokens. The text embedding of `<tile_k>` is integrated into the cross-attention mechanism with the corresponding tile's visual embeddings. This is possible because "the text and visual embeddings are well-aligned during pre-training, enabling the model to seamlessly interpret tile tags within the cross-attention mechanism" (Section 4.4).
+
+In effect, the tile tag acts as a query that retrieves information from its corresponding tile via cross-attention. This is a cleaner separation of concerns than in NVLM-D, where tile tags and image tokens are all mixed together in self-attention. The hybrid design puts global reasoning (what is this image about?) in self-attention and local detail retrieval (what does it say in this specific region?) in cross-attention.
+
+**Hybrid performance on benchmarks.** Table 7 shows NVLM-H 72B achieving the highest MMMU Val score (60.2) among all multimodal LLMs that were open-access at publication time, beating NVLM-D (59.7) and NVLM-X (57.4). It also achieves the best MathVista (66.6) within the NVLM family and matches or exceeds the leading proprietary models on both benchmarks (GPT-4o: 63.8 MathVista; Claude 3.5 Sonnet: 67.7 MathVista). On OCR-related tasks, NVLM-H (OCRBench 831, DocVQA 83.1, TextVQA 80.3) underperforms NVLM-D (853, 92.6, 82.1) but outperforms NVLM-X (828, 82.9, 80.2).
+
+This pattern aligns with the architectural design: NVLM-H's self-attention processing of the thumbnail enables better global reasoning than NVLM-X (which only has cross-attention to all tiles), while its cross-attention processing of regular tiles is less effective for OCR than NVLM-D's direct self-attention access to all tiles. The hybrid achieves a Pareto improvement — it dominates NVLM-X on both reasoning and OCR, and it approaches NVLM-D on reasoning while being computationally cheaper.
+
+**Why does NVLM-H beat NVLM-D on reasoning despite having fewer image tokens in self-attention?** This is the most surprising result. NVLM-D has all 1,792 image tokens in self-attention, giving every text token direct access to every image patch at every self-attention layer. NVLM-H has only 256 thumbnail tokens in self-attention, with the remaining 1,536 regular tile tokens accessible only through the 10 cross-attention layers. Yet NVLM-H achieves higher MMMU and MathVista scores. The paper hypothesizes (implicitly through its design choices) that the long sequences in NVLM-D's self-attention may actually *impair* reasoning by diluting the attention weights — when the model must attend to 1,792 image tokens plus text tokens, its attention is spread thin, and it may struggle to identify the most relevant visual information for a given reasoning step. The hybrid design forces the model to use the thumbnail for global reasoning (which is computationally cheap, only 256 tokens) and use cross-attention for targeted detail retrieval (which is more focused, since cross-attention can selectively query specific tiles via the tile tag mechanism).
+
+---
+
+#### Training Methodology Shared Across Architectures
+
+All three NVLM architectures follow the same two-stage training recipe, with the only differences being which modules are trainable in each stage and the specific hyperparameters optimized for each architecture's memory and throughput characteristics.
+
+**Stage 1: Pretraining (modality alignment).** Across all architectures:
+- **Frozen components:** Vision encoder (InternViT-6B) and LLM backbone (all self-attention and FFN parameters).
+- **Trainable components:** For NVLM-D, the 2-layer MLP projector; for NVLM-X, the gated cross-attention layers (and the 1-layer MLP projection before them); for NVLM-H, both the 2-layer MLP and the gated cross-attention layers.
+- **Data:** The pretraining blend from Table 4, with images at 1 tile (no dynamic tiling — "1 tile" in Table 10 means the thumbnail only, at 448² resolution, to keep pretraining efficient and focus on basic modality alignment before introducing the complexity of multi-tile processing).
+- **Key hyperparameters (Table 10):** Global batch size 2,048, max learning rate 1e-4 with cosine schedule, 20,000 training steps, sequence length 512 in the LLM decoder, gradient clipping at 10.0 (NVLM-D) or 1.0 (NVLM-X, NVLM-H), weight decay 0.1 (NVLM-D) or 0.05 (NVLM-X, NVLM-H).
+
+The differences in gradient clipping and weight decay between NVLM-D and the other architectures reflect the different parameter counts and gradient scales of training cross-attention layers versus MLP layers. The cross-attention layers are trained from scratch (like the MLP) but have more parameters and involve attention operations that can produce larger gradients; tighter gradient clipping (1.0 vs. 10.0) prevents training instability.
+
+**Stage 2: Supervised Fine-Tuning (SFT).** Across all architectures:
+- **Frozen components:** Vision encoder only.
+- **Trainable components:** For NVLM-D, MLP + all LLM parameters; for NVLM-X, X-attention layers + all LLM parameters; for NVLM-H, MLP + X-attention layers + all LLM parameters.
+- **Data:** The multimodal SFT blend from Table 6 plus the text-only SFT blend from §5.3, with dynamic high-resolution enabled (6 regular tiles + 1 thumbnail, 256 tokens each).
+- **Key hyperparameters (Table 11):** Learning rates differ by architecture: NVLM-D uses max 2e-6/min 2.5e-7; NVLM-X uses max 1e-5/min 1e-6 (34B) or 1e-7 (72B); NVLM-H uses max 1e-5/min 1e-7. Batch sizes differ: NVLM-D uses 128; NVLM-X uses 512 (34B) or 256 (72B); NVLM-H uses 256. Training steps: 40,000 for NVLM-D and NVLM-H; 20,000 for NVLM-X. All use cosine schedule, AdamW with β1=0.9, β2=0.98, 500–1,000 warmup steps, gradient clipping at 10.0 (NVLM-D) or 1.0 (NVLM-X, NVLM-H).
+
+The higher learning rate for NVLM-X and NVLM-H (1e-5 vs. 2e-6) is notable. The cross-attention layers are less mature than the MLP projector at the start of SFT (since the MLP was pretrained on the same pretraining blend, but the X-attention layers start from a different initialization and may need more aggressive adaptation). The larger batch sizes for NVLM-X and NVLM-H (256–512 vs. 128) are possible because their sequence lengths are shorter (1,024–1,280 vs. 3,200), allowing more samples per GPU.
+
+**Text-only SFT data integration.** The text-only SFT dataset is blended with the multimodal SFT data during the SFT stage. The paper does not specify the exact mixing ratio, but the dataset construction process (Section 5.3) describes the sources: general instruction-following data (ShareGPT, SlimOrca, EvolInstruct, GPTeacher, AlpacaGPT4, UltraInteract), math reasoning data (OrcaMathWordProblems, MathInstruct, MetaMath), and coding data (GlaiveCodeAssistant, Magicoder, WizardCoder). The key quality improvement step is that **GPT-4o and GPT-4o-mini are used to refine the responses** — the original prompts from these datasets are fed to GPT-4o or GPT-4o-mini, and the higher-quality responses are used as training targets. This "distillation from stronger models" approach is common in the LLM fine-tuning literature and is known to significantly improve data quality.
+
+The paper also performs **data decontamination** to ensure the text-only SFT dataset does not contain prompts from the evaluation benchmarks (MMLU, GSM8K, MATH, HumanEval). Without this step, the model might memorize benchmark answers during training, inflating its apparent text-only performance.
+
+**Why not freeze the LLM during SFT for NVLM-X?** The paper directly compares frozen and unfrozen LLM strategies for NVLM-X in Table 9. Freezing the LLM during SFT produces reasonable results — NVLM-X 72B frozen achieves MMMU Val 54.4, MathVista 60.6, VQAv2 85.3, OCRBench 722. These are competitive with many open-access models and represent a viable approach if text-only preservation is the absolute priority (since freezing guarantees zero text-only degradation, as with Llama 3-V). However, unfreezing the LLM with text-only SFT data yields strictly better vision-language performance: MMMU Val 57.4 (+3.0), MathVista 64.6 (+4.0), OCRBench 828 (+106), with similar or slightly better text-only performance (NVLM-X 72B unfrozen: avg. 82.3 vs. Qwen2-72B-Instruct: avg. 79.8, a +2.5 improvement). The paper's position is that unfreezing with high-quality text-only data is strictly Pareto-superior to freezing — you get better vision-language performance *and* maintained or improved text-only performance, with the only cost being the engineering effort of curating the text-only SFT dataset and the modest risk of text-only degradation if the dataset quality is insufficient.
+
+**Why does the 34B model show much larger text-only improvements (+11.2 to +11.8 across architectures, Table 12) compared to the 72B model (+2.5 to +4.3, Table 8)?** The 34B models start from a much weaker text-only backbone: Nous-Hermes-2-Yi-34B averages only 54.8% across the four text benchmarks (MMLU 75.5, GSM8K 78.6, MATH 21.8, HumanEval 43.3). The Qwen2-72B-Instruct backbone averages 79.8% (MMLU 82.3, GSM8K 91.1, MATH 59.7, HumanEval 86.0). The 34B model has enormous room for improvement on MATH (21.8 → 47.8 for NVLM-D 34B) and HumanEval (43.3 → 62.8), while the 72B model is already near the top of these benchmarks. The math-heavy multimodal SFT data (geometry datasets, rendered math problems) and the text-only math SFT data (MetaMath, MathInstruct) provide a much larger relative boost to the weaker model. This is consistent with the finding in the FLOPs-matched literature that adding test-time or training compute to a smaller model can yield larger relative improvements than adding it to an already-strong model.
+
+---
+
+#### Summary of Design Choices and Their Justifications
+
+The paper's architecture designs are heavily driven by empirical ablations and controlled comparisons. Each major design choice has a clear justification rooted in the paper's experiments:
+
+- **InternViT-6B as the vision encoder (frozen throughout training):** Stronger than ViT-L/14, and joint training provides only marginal gains with this sufficiently powerful encoder, so freezing it simplifies the training pipeline without sacrificing accuracy. Supported by early exploration described in Section 4.2.
+
+- **Dynamic high-resolution with 1-D tile tags:** Dynamic tiling improves OCR substantially, but concatenation without delimiters causes MMMU degradation (Table 1). Adding 1-D tile tags (`<tile_1>`, `<tile_2>`, ...) eliminates the degradation while preserving OCR gains, and outperforms more complex 2-D tagging schemes. Supported by the ablation in Table 1.
+
+- **Pixel shuffle downsampling (1,024 → 256 tokens per tile):** Reduces computational cost while preserving spatial structure, inherited from InternVL 1.5 and validated by the strong OCR and reasoning results.
+
+- **Pretraining with diverse task-oriented data, not just captions:** Even for decoder-only models, including VQA, OCR, and math data in pretraining (not just in SFT) improves downstream performance (Table 5). This challenges the LLaVA paradigm of caption-only pretraining.
+
+- **Unfreezing the LLM during SFT with high-quality text-only data:** Beats the frozen-LLM strategy on vision-language tasks while maintaining or improving text-only performance (Table 9). The frozen-LLM strategy is a viable fallback but leaves vision-language performance on the table.
+
+- **No Perceiver resampler in NVLM-X:** The Perceiver disrupts spatial relationships critical for OCR, as demonstrated by the overfitting experiment in Appendix C (Figure 9). Direct cross-attention to pixel-shuffled tokens preserves OCR accuracy.
+
+- **Hybrid NVLM-H architecture:** Thumbnail through self-attention for global reasoning, regular tiles through cross-attention for efficient high-resolution detail. Motivated by the complementary strengths of NVLM-D (better OCR, better reasoning) and NVLM-X (better computational efficiency), and validated by NVLM-H achieving the best reasoning scores while maintaining competitive OCR performance and intermediate throughput.
+
+- **GPT-4o-refined text-only SFT data:** Standard open-source SFT datasets are refined using GPT-4o and GPT-4o-mini to improve response quality, which is the key differentiator enabling text-only performance preservation where prior work failed (Section 5.3). Without this refinement step, the text-only data quality is insufficient to prevent the 6–7 point degradation seen in InternVL-2 and LLaVA-OneVision (Table 8).
+
+- **Gated cross-attention with tanh initialization at zero:** Ensures the model initially behaves exactly like the text-only LLM, preventing the randomly initialized X-attention weights from corrupting existing capabilities. Inherited from Flamingo and validated by the model's ability to maintain text-only performance when combined with text-only SFT data.
+
+Each of these design choices is independently motivated by a specific ablation or comparison in the paper, making the NVLM architecture a composition of empirically validated components rather than an untested hypothesis. The paper's primary contribution is not the individual components (most are adapted from prior work) but the **systematic integration and controlled comparison** that demonstrates which components matter, how much they matter, and why.
+
+## 4. Key Insights and Innovations
+
+### Innovation 1: The First Controlled, Apples-to-Apples Architecture Comparison in Multimodal LLMs
+
+The field of multimodal LLMs has accumulated a zoo of architectures — decoder-only (LLaVA, InternVL), cross-attention (Flamingo, IDEFICS), and various hybrids — but prior to NVLM, **there was no way to attribute performance differences to architecture versus confounds** like LLM backbone quality, vision encoder strength, training data composition, or hyperparameter choices. The paper identifies this directly: "existing multimodal LLM architectures (e.g., decoder-only vs. cross-attention models) have not been studied and compared in an apples-to-apples manner" (Section 1). The consequence is a distorted literature where IDEFICS-80B (cross-attention, LLaMA-65B backbone) is "perceived as significantly lagging behind LLaVA-1.5-13B" (decoder-only, Vicuna-13B backbone) on VQA — but nobody knows whether architecture, model scale, or data explains the gap.
+
+NVLM's contribution here is not a new architecture but a **methodological intervention**: train all three architectural variants on identical data blends, identical vision encoders, identical LLM backbones, and identical training recipes, then measure what differs. This transforms the conversation from "which architecture is better?" (unanswerable without controls) to "what does each architecture trade off, and by how much?" (answerable with NVLM's evidence). The results in Table 7 and Table 3 provide the first clean quantification of these trade-offs: decoder-only NVLM-D achieves the highest OCR accuracy (OCRBench 853, DocVQA 92.6) but has the lowest training throughput (28.8 samples/sec at 34B scale); cross-attention NVLM-X achieves 1.76× higher throughput (50.6 samples/sec) but sacrifices 25 points on OCRBench and nearly 10 points on DocVQA; hybrid NVLM-H achieves the best multimodal reasoning (MMMU Val 60.2, MathVista 66.6) at intermediate throughput (36.2 samples/sec), effectively splitting the difference.
+
+This is more than a leaderboard contribution. It establishes **architecture as a first-class design variable** with predictable, quantifiable consequences — not a matter of taste or implementation convenience. A practitioner choosing between NVLM-D and NVLM-X now has concrete evidence: if your application is document processing where OCR accuracy dominates, pay the computational cost of decoder-only; if you're building a high-throughput visual chatbot where latency matters more than perfect text reading, cross-attention is the rational choice. Prior to NVLM, these decisions were made on intuition or historical accident (the community gravitated toward decoder-only largely because LLaVA was easy to implement and worked well enough). NVLM provides the evidentiary basis for principled architectural decisions.
+
+The innovation is fundamentally **diagnostic**, not algorithmic. The paper didn't invent decoder-only or cross-attention architectures; it invented the controlled comparison that reveals what each architecture actually costs and delivers.
+
+---
+
+### Innovation 2: Tile-Tagging as a Principle — Spatial Structure Matters More Than Token Count
+
+The degradation of multimodal reasoning performance under dynamic high-resolution (DHR) input was a known problem before NVLM. InternVL 1.5 and InternLM-XComposer2 both observed that adding more tiles improved OCR but hurt MMMU, and the field had implicitly accepted this as an unavoidable trade-off — more visual detail means more tokens, and more tokens dilute attention or exceed the model's effective context window. The dominant assumption was that the **quantity** of visual tokens was the problem.
+
+NVLM's tile-tagging ablation (Tables 1 and 2) demolishes this assumption with a clean experiment. With DHR and no tile tags, MMMU drops from 50.9 to 50.0 for the decoder-only model — exactly the degradation prior work documented. But **adding simple 1-D text tags** (`<tile_1>`, `<tile_2>`, ...) before each tile's image tokens — which does not change the number of visual tokens at all — not only recovers the lost MMMU performance but **exceeds the low-resolution baseline** (52.0 with tags vs. 50.9 without DHR), while simultaneously boosting OCRBench from 728 to 806. The same pattern replicates in the cross-attention architecture (Table 2): MMMU goes from 53.0 (DHR no tags, below the 53.2 low-resolution baseline) to 54.1 (DHR with 1-D tags, above baseline), with OCRBench jumping from 682 to 744.
+
+This is a **reframing of the problem**. The issue was never the number of tokens — it was the **absence of spatial structure information**. The LLM, which has no prior knowledge of the dynamic tiling process, was being asked to reason about a flat concatenation of 1,792 tokens with no indication of which tokens belonged to which spatial region. The tile tags provide exactly this missing information: they tell the model "these next 256 tokens are one coherent spatial tile, separate from the next 256." The fact that the 1-D tag (which encodes only tile order, not 2-D coordinates) outperforms both 2-D grid tags and 2-D bounding-box tags is itself revealing — the model doesn't need precise spatial coordinates; it just needs to know that tile boundaries exist. The thumbnail tile already provides global context, so the combination of "here's the whole image" (thumbnail) plus "these are the distinct local regions" (tagged tiles) is sufficient.
+
+The broader implication extends beyond NVLM's specific implementation. This finding suggests that **any architecture that processes tiled visual inputs should explicitly communicate tile structure to the LLM**, and that the specific format of this communication matters less than its presence. It also explains why prior DHR methods sometimes hurt reasoning: they were solving the right problem (insufficient resolution for OCR) but creating a new one (destroying spatial structure information) that tile-tagging elegantly resolves. The innovation is not the tag format itself — it's the **diagnosis that spatial structure, not token quantity, is the binding constraint**, enabling a solution that costs nothing in parameters or compute and yields improvements on both reasoning and OCR simultaneously.
+
+---
+
+### Innovation 3: Production-Grade Multimodality Through Data Quality, Not Architectural Gimmicks
+
+The finding that open-access multimodal LLMs lose 6–7 points of average text-only accuracy after multimodal training (Table 8: VILA-1.5 40B loses 6.9 points, LLaVA-OneVision 72B loses 6.3, InternVL-2-Llama3-76B loses 6.7) was an open secret in the field — everyone knew it happened, but nobody had a reproducible fix. The only documented solution was Llama 3-V's approach of freezing the LLM entirely and training only cross-attention layers, which guarantees zero text degradation at the cost of reduced vision-language performance (quantified in NVLM's Table 9: frozen NVLM-X 72B loses 3.0 MMMU Val points and 106 OCRBench points compared to unfrozen). The field's implicit assumption was that this was a fundamental trade-off: you could have strong vision-language performance or preserved text capabilities, but not both.
+
+NVLM challenges this framing by demonstrating that **text-only degradation is a data quality problem, not an architectural constraint**. By incorporating a text-only SFT dataset refined with GPT-4o and GPT-4o-mini into the multimodal SFT blend, all three NVLM architectures not only maintain their LLM backbone's text performance but actually **improve** it — NVLM-D 1.0 72B gains 4.3 points on average across MMLU, GSM8K, MATH, and HumanEval, with particularly dramatic improvements on MATH (59.7 → 73.1, a 13.4-point gain) and HumanEval (86.0 → 88.4). The 34B models show even larger gains (+11.2 to +11.8 points), partly because they start from a weaker text backbone with more room for improvement.
+
+What makes this an innovation rather than an obvious recipe is the **specific diagnosis of why prior text-only data blending failed**. The paper notes that "previous leading open-access multimodal LLMs also include text-only SFT datasets but still show significant performance degradation" (Section 5.3). InternVL-2 and LLaVA-OneVision both blend text data into their SFT — yet they lose 6–7 points. The difference, NVLM argues, is **data quality**: the paper uses GPT-4o and GPT-4o-mini to refine responses from open-source SFT datasets, producing higher-quality training targets than the original human-written or weaker-model-generated responses. This is a distillation-from-stronger-models approach applied to the data curation pipeline, not to the model architecture.
+
+The second factor is the **abundance of multimodal math data** in the SFT blend. The paper explicitly attributes the math improvements to "the superb quality of text-only data and the significant amount of multimodal math data (e.g., geometry) incorporated into multimodal SFT blend, which improves NVLM's reasoning capabilities, regardless of modality" (Section 1). This is a subtle but important claim: math reasoning, whether grounded in visual contexts (geometry diagrams, function plots) or purely textual (algebra, number theory), draws on shared reasoning primitives. Training on multimodal math data strengthens these primitives and transfers to text-only math benchmarks. This is not obvious a priori — one might expect multimodal math training to improve only vision-grounded math (MathVista) while leaving text-only math unchanged. The fact that it transfers suggests a deeper connection between visual and symbolic reasoning than the field typically assumes.
+
+The innovation here is **reframing the text-only degradation problem from "architectural limitation" to "data engineering challenge."** This is both more optimistic (it suggests the problem is solvable with better data, not requiring new architectures) and more actionable (it provides a concrete recipe: curate high-quality text SFT data, include multimodal math, use stronger models for response refinement). It also explains why proprietary models like GPT-4o achieve production-grade multimodality without apparent architectural tricks — they likely have access to much larger and higher-quality text data pipelines during multimodal training, which is a data advantage, not an architectural one.
+
+---
+
+### Innovation 4: The Cross-Attention Efficiency Advantage Is Real, Quantified, and Task-Dependent
+
+Cross-attention architectures have been part of the multimodal LLM landscape since Flamingo (2022), but their practical advantages over decoder-only architectures were never cleanly quantified. Flamingo demonstrated that cross-attention could work, but the open-source reproductions (IDEFICS, OpenFlamingo) underperformed decoder-only models on popular benchmarks, creating a narrative that cross-attention was an interesting but ultimately inferior design choice. This narrative persisted despite the fact that the comparison was confounded by different LLM backbones, different training data, and different training budgets.
+
+NVLM's controlled comparison provides the first clean quantification of cross-attention's computational efficiency advantage. Table 3 shows NVLM-X 34B achieving 50.6 samples/second during SFT versus NVLM-D 34B's 28.8 samples/second — a 1.76× throughput improvement — while using the same LLM backbone, the same vision encoder, and the same training data. The mechanism is straightforward: NVLM-X's LLM decoder sequence length is 1,024 tokens (text only) versus NVLM-D's 2,816 tokens (1,024 text + 1,792 image tokens for 7 tiles), and the quadratic self-attention cost scales with sequence length. The hybrid NVLM-H achieves intermediate throughput (36.2 samples/second with 1,280-token sequence length), confirming that the efficiency gain is proportional to how many image tokens are kept out of the self-attention layers.
+
+But the paper's deeper contribution is showing that **this efficiency advantage is not uniform across tasks** — it comes with a specific, quantifiable accuracy cost on OCR-related benchmarks. NVLM-D 72B beats NVLM-X 72B by 25 points on OCRBench (853 vs. 828), 9.7 points on DocVQA (92.6 vs. 82.9), and 3.1 points on ChartQA (86.0 vs. 82.9), while the gap on multimodal reasoning is much smaller (MMMU: 59.7 vs. 57.4, a 2.3-point difference). This pattern makes intuitive sense: OCR tasks require attending to fine-grained spatial details distributed across multiple tiles, which decoder-only self-attention handles naturally (every text token can attend to every image patch at every layer), while cross-attention restricts image access to specific layers and may not propagate low-level visual information as effectively through the network.
+
+The innovation is **making the cross-attention trade-off legible and decision-relevant**. Prior to NVLM, a practitioner choosing an architecture had to rely on vague intuitions ("cross-attention is more efficient but maybe worse at some things"). After NVLM, they have specific numbers: if you need maximum OCR accuracy on high-resolution documents, decoder-only costs you 1.76× more compute per sample but buys you 25 OCRBench points and nearly 10 DocVQA points. If you're building a real-time visual assistant where latency dominates and OCR is secondary, cross-attention saves nearly half the compute with modest accuracy trade-offs on most benchmarks. If you want the best of both worlds and can tolerate intermediate costs, the hybrid architecture captures most of the reasoning benefit of decoder-only and most of the efficiency benefit of cross-attention, at the cost of added architectural complexity.
+
+This quantification is a **foundational contribution to multimodal LLM engineering**, analogous to how the Chinchilla scaling laws made pretraining compute allocation legible. It doesn't tell you which architecture to use — it tells you what you're trading off, which is what enables rational architectural decisions.
+
+### Evaluation Methodology
+
+- **Dataset.** All experiments use the MATH benchmark (Hendrycks et al., 2021), consisting of high-school competition-level math problems. The authors use the specific split from Lightman et al. (2022): 12,000 training questions and 500 test questions. The choice of MATH is deliberate (Section 4): test-time compute is expected to help most when the model already possesses the necessary knowledge and the challenge is drawing complex inferences — mathematical reasoning fits this profile because it requires multi-step logical deduction rather than novel factual recall.
+
+- **Base model(s).** All experiments use PaLM 2-S* (Codey) (Anil et al., 2023). The authors argue this model is "representative of the capabilities of many contemporary LLMs" and sits in a useful regime: non-trivial performance on MATH (roughly 10–19% pass@1 depending on the prompt and sampling configuration) but far from saturation, leaving room for test-time compute to make a difference. For the FLOPs-matched comparison, a second model with approximately 14× more parameters is used as the pretraining-scaled baseline.
+
+- **Metrics.** The primary metric throughout is MATH test accuracy (%) — the fraction of the 500 test questions for which the selected final answer matches the ground truth. Answers are graded using the grading function released by Lightman et al. (2022) (Appendix G). When analyzing difficulty-dependent behavior, the paper reports accuracy within each of the five difficulty quintiles separately.
+
+- **Baselines.** The paper uses several baselines:
+  - **Majority voting**: select the most common final answer among N sampled solutions (no learned verifier).
+  - **ORM best-of-N weighted**: score N solutions with an outcome reward model and apply best-of-N weighted selection.
+  - **PRM best-of-N weighted**: score N solutions with the process reward model and apply best-of-N weighted selection.
+  - **Parallel sampling** (for revisions): generate N independent solutions from the revision model and select the best via verifier or majority.
+
+- **Generation budget / compute accounting.** One "generation" equals one complete sampled answer from the base LLM. For beam search and best-of-N, the budget equals the number of beams or samples N. For lookahead search with k lookahead steps, the cost is N × (k+1) to account for the additional rollout computation (Section 5.3). Budgets are swept across powers of 2, typically from 2^0 to 2^9 (1 to 512 generations). The paper notes that difficulty estimation — which requires generating 2,048 samples per question — is not included in the budget calculations, representing an exploration-exploitation trade-off the authors flag as future work.
+
+- **Cross-validation / statistical protocol.** To avoid contaminating strategy selection with test-set performance, the authors use two-fold cross-validation within each difficulty bin on the 500-question test set. The best strategy is selected on one fold and evaluated on the other, with results averaged (Section 3.2).
+
+### Main Quantitative Results
+
+#### Search Against PRM Verifiers (Section 5)
+
+**Aggregate search algorithm comparison (Figure 3, left).** Across all 500 test questions with a maximum budget of 256 generations:
+
+- At low budgets (2–8 generations), beam search with M = 4 significantly outperforms best-of-N weighted. For example, at 4 generations beam search (M = 4) achieves roughly 27% accuracy versus roughly 16% for best-of-N weighted — a substantial gap.
+- At high budgets (64–256), beam search performance flattens and falls slightly below best-of-N weighted. Best-of-N weighted reaches approximately 38% at 512 generations; beam search (M = 4) plateaus around 34%.
+- Lookahead search (both k = 1 and k = 3) generally underperforms at the same generation budget due to its higher per-step cost. The 3-step lookahead variants converge to similar performance as other methods at very high budgets but never surpass them.
+- Majority voting trails all verifier-based methods substantially, reaching only about 29% at 512 generations.
+
+**Difficulty-bin analysis for search (Figure 3, right).** The per-difficulty breakdown (beam search M = 4 vs. best-of-N weighted, shown at four budget levels: 4, 16, 64, 256 generations) reveals the core pattern:
+
+- **Bin 1 (easiest):** Beam search accuracy decreases from roughly 78% to 77% as the budget goes from 4 to 256, while best-of-N weighted increases from 68% to 88%. This is the clearest evidence of PRM over-optimization — beam search finds solutions that exploit the verifier signal.
+- **Bin 2:** Beam search improves modestly (roughly 14% → 32%) but best-of-N weighted improves faster (roughly 14% → 60%), maintaining a clear advantage at high budgets.
+- **Bin 3:** Beam search consistently outperforms best-of-N weighted across all budgets, reaching roughly 34% vs. 23% at 256 generations.
+- **Bin 4:** Beam search shows the strongest relative advantage, reaching roughly 17% vs. 10% for best-of-N at 256 generations.
+- **Bin 5 (hardest):** Both methods hover near 1–3% regardless of budget. No method makes meaningful progress.
+
+**Compute-optimal search (Figure 4).** By selecting the best search strategy per difficulty bin at each budget level:
+
+- At 16 generations, compute-optimal (oracle bins) achieves approximately 27% accuracy, roughly matching PRM best-of-N weighted at 64 generations — a roughly 4× compute reduction.
+- At 256 generations, compute-optimal oracle reaches approximately 39.5%, surpassing PRM best-of-N weighted at the same budget (roughly 37%).
+- Compute-optimal with predicted difficulty bins tracks the oracle version closely, particularly at lower budgets. The two curves "largely overlap" per the authors (Figure 4), with the predicted version reaching approximately 37% at 256 generations.
+- Both compute-optimal variants consistently outperform ORM best-of-N weighted (which peaks around 34% at 512 generations) and majority voting (around 29%).
+
+**PRM vs. ORM (Figure 14, Appendix F).** At 2,048 samples, PRM best-of-N weighted achieves approximately 40% accuracy versus roughly 35% for ORM best-of-N weighted and roughly 30% for majority voting. The gap between PRM and ORM widens with the number of samples, confirming the PRM's superior scaling properties.
+
+#### Revision Model Results (Section 6)
+
+**Revision model pass@1 trajectory (Figure 6, left).** Starting from approximately 18.2% pass@1 at step 1, the revision model's per-step accuracy improves to roughly 24–25% by steps 15–20, and remains in the 23–25% range out to 64 steps. The model generalizes beyond its 4-step training horizon.
+
+**Sequential vs. parallel (Figure 6, right).** At 64 generations:
+- Sequential + best-of-N weighted: approximately 41.5%
+- Parallel + best-of-N weighted: approximately 39%
+- Sequential + majority: approximately 38%
+- Parallel + majority: approximately 35%
+
+Sequential outperforms parallel under both selection mechanisms, with the verifier-based gap (roughly 2.5 percentage points) being slightly narrower than the majority-based gap (roughly 3 points).
+
+**Sequential-to-parallel ratio sweep (Figure 7, left).** For a fixed generation budget, varying the ratio reveals:
+- At 256 generations, the optimal ratio is around 2^1 to 2^3 (2:1 to 8:1 sequential-to-parallel), achieving approximately 43–44% accuracy.
+- Fully parallel (leftmost point) yields approximately 40%.
+- Fully sequential (rightmost point) yields approximately 42%.
+- At lower budgets (8–32 generations), fully sequential is optimal — the curves are monotonically increasing with the sequential-to-parallel ratio.
+
+**Difficulty-dependent ratio (Figure 7, right).** At a fixed budget of 128 generations:
+- **Bin 1:** Performance is essentially flat across all ratios, around 90–92%. Easy questions are insensitive to the allocation strategy.
+- **Bin 2:** Slight advantage for higher sequential ratios, approximately 63% at fully sequential vs. 58% at fully parallel.
+- **Bin 3:** A clear optimal ratio emerges at moderate sequential-to-parallel values (around 2^1 to 2^3), reaching approximately 42% vs. 35% at the extremes.
+- **Bin 4:** Similar pattern, with the peak at a moderate ratio achieving roughly 18% vs. 14% at fully parallel.
+- **Bin 5:** All ratios produce roughly 2–3% accuracy. No allocation strategy helps.
+
+**Compute-optimal revisions (Figure 8).** Selecting the optimal sequential-to-parallel ratio per difficulty bin:
+- At 64 generations, compute-optimal oracle achieves approximately 40%, matching parallel best-of-N weighted at 256 generations — a roughly 4× improvement.
+- At 256 generations, compute-optimal oracle reaches approximately 44%, compared to roughly 41% for best-of-N weighted and 37% for parallel-only.
+- Compute-optimal predicted bins perform slightly below oracle bins at high budgets (approximately 41% at 256 generations) but still substantially outperform the parallel baseline.
+- Notably, the parallel baseline appears to plateau around 36–37% at high budgets, while compute-optimal scaling continues to improve, suggesting that the gains from adaptive allocation compound at higher budgets.
+
+#### FLOPs-Matched Comparison: Test-Time vs. Pretraining Compute (Section 7)
+
+**Revisions (Figure 9, left; Figure 1, top-right bar chart).** Comparing PaLM 2-S* with compute-optimal revisions against the ~14× larger model:
+
+| Difficulty | R ≪ 1 (0.16) | R ≈ 1 (0.79) | R ≫ 1 (22) |
+|---|---|---|---|
+| Easy (bin 1) | +11.8% | +3.5% | −11.9% |
+| Medium (bin 2–3) | +27.8% | +16.7% | +5.4% |
+| Hard (bins 4–5) | +21.6% | −(implied negative) | −37.2% |
+
+(Numbers from the bar chart in Figure 1, top-right. Note: the "easy/medium/hard" groupings in the bar chart differ slightly from the five difficulty bins, aggregating bins for readability.)
+
+At R ≪ 1, test-time compute outperforms the larger model across all difficulty levels. At R ≫ 1, it only remains preferable on easy questions, with hard questions showing a −37.2% relative disadvantage.
+
+**PRM search (Figure 9, right; Figure 1, bottom-right bar chart).** The pattern is starker:
+
+| Difficulty | R ≪ 1 (0.16) | R ≈ 1 (0.79) | R ≫ 1 (22) |
+|---|---|---|---|
+| Easy | +19.1% | +2.2% | +2.0% |
+| Medium | 0.0% | −35.3% | −30.8% |
+| Hard | −3.6% | −35.3% | −52.9% |
+
+PRM search shows weaker benefits than revisions for the FLOPs-matched comparison, with substantial disadvantages on medium and hard questions even at moderate R values. On easy questions, test-time compute remains preferable across all R regimes, though the margin narrows significantly.
+
+**Figure 9 detail.** The line plots show accuracy per difficulty bin as test-time compute scales. The 14× larger model's greedy performance (stars) is placed at three x-axis positions corresponding to the three R values. Where the compute-optimal scaling line is above the star, test-time compute wins. On bin 1 (purple, topmost line), the scaling line is above all three stars for revisions. On bin 5 (blue, bottommost line), the line is below all three stars and essentially flat near 0–5%, confirming that no amount of test-time compute helps on the hardest problems.
+
+### Ablation Studies and Robustness Checks
+
+**PRM step-wise aggregation strategy (Appendix E, Figure 13):** Comparing "min," "prod," and "last" step-wise aggregation, "last" achieves roughly 37% at 256 samples, "min" achieves roughly 35%, "prod" achieves roughly 27%, and a separately trained ORM achieves roughly 34%. The "last" aggregation's superiority is notable because it effectively reduces the PRM to ORM-like behavior at aggregation time, yet the PRM still outperforms a separately trained ORM, suggesting step-level PRM training provides beneficial representation learning even when intermediate predictions are not directly used.
+
+**PRM vs. ORM scaling (Appendix F, Figure 14):** The PRM consistently outperforms the ORM, with the gap widening at higher sample counts: at 2,048 samples, PRM best-of-N weighted reaches approximately 40% vs. ORM's 35%. This confirms that the PRM's training procedure (Monte Carlo rollout supervision with soft labels) produces a more reliable verifier than ORM training, and the advantage compounds as optimization pressure increases.
+
+**Revision model verifier choice (Appendix J, Figure 15a):** The base-LM PRM underperforms the revision-specific ORM when scoring revision model outputs, with sequential + base-LM PRM achieving roughly 40% at 64 generations vs. sequential + revision ORM at roughly 42%. This confirms that distribution shift between the base model's outputs and the revision model's outputs is a practical concern — verifiers trained on one distribution do not transfer cleanly to another.
+
+**Revision history in verifier context (Appendix J, Figure 15b):** Including previous revisions in the ORM's context provides a small improvement over the no-history ablation (approximately 1–2 percentage points at 64 generations), but both variants outperform the parallel baseline. This confirms that the sequential sampling benefit is not solely attributable to the verifier seeing more context — the revision model itself generates better candidates.
+
+**Oracle vs. predicted difficulty bins (Figures 4, 8, and Appendix C, Figures 11–12):** Both oracle and predicted bins yield qualitatively similar trends across difficulty levels. Predicted bins show slightly lower performance at high budgets in the revision setting (roughly 41% vs. 44% at 256 generations in Figure 8) but essentially identical performance in the search setting (Figure 4). This is the critical robustness check demonstrating that the compute-optimal strategy works without ground-truth labels.
+
+**Majority voting for revisions (Appendix B, Figure 10):** The sequential-to-parallel ratio trends observed with verifier-based selection are replicated with majority voting: easy questions are insensitive to ratio, hard questions show an optimal intermediate ratio, and fully sequential marginally outperforms fully parallel in aggregate. This demonstrates that the revision model's sequential improvement is not an artifact of verifier interaction.
+
+**ReST^EM revision model (Appendix K, Figure 16):** An attempt to further optimize the revision model using ReST^EM (Singh et al., 2024) backfires: additional sequential revisions substantially hurt performance with this model. At 256 generations, fully sequential performance drops to approximately 33.5% compared to roughly 38.5% at the optimal ratio. The authors hypothesize that on-policy data collection in ReST^EM exacerbates spurious correlations in revision data, causing the model to fail to learn the revision task properly. This is a notable negative result highlighting the sensitivity of revision training to the data generation procedure.
+
+**Pretraining data diversity for decoder-only models (Table 5):** Comparing LLaVA-1.5 pretraining data (captioning only) against NVLM's diverse pretraining blend (including VQA, OCR, chart, document, and math data) on the decoder-only NVLM-D with Yi-34B backbone shows consistent improvements: MathVista 48.9 → 53.8, OCRBench 760 → 806, DocVQA 85.2 → 87.4. This demonstrates that diverse pretraining data benefits decoder-only architectures as well — not just cross-attention models — challenging the earlier assumption that decoder-only models only need caption data for modality alignment.
+
+**Frozen vs. unfrozen LLM during SFT for cross-attention (Table 9):** NVLM-X 72B with a frozen LLM achieves MMMU Val 54.4, MathVista 60.6, OCRBench 722. Unfreezing the LLM with text-only SFT data improves to MMMU Val 57.4, MathVista 64.6, OCRBench 828 — gains of 3.0, 4.0, and 106 points respectively. However, frozen NVLM-X 72B still outperforms many open-access models, confirming that freezing the LLM is a viable strategy if text-only preservation is the absolute priority, though it leaves substantial vision-language performance on the table.
+
+### Critical Assessment
+
+**Claim 1: Compute-optimal scaling improves efficiency by 4× over best-of-N.** The evidence supports this claim but with important scope limitations that the paper acknowledges. For search (Figure 4), 16 generations of compute-optimal scaling match 64 generations of best-of-N — a 4× efficiency gain. For revisions (Figure 8), 64 generations of compute-optimal scaling match 256 generations of best-of-N — also roughly 4×. However, these efficiency figures are reported **excluding the cost of difficulty estimation**, which requires generating 2,048 samples per question. The paper explicitly states "our experiments do not account for this cost largely for simplicity" (Section 3.2). In a deployment context, the total cost would be difficulty estimation + strategy execution, and for a single question, the estimation cost could dominate. The 4× figure should be understood as a **conditional efficiency gain** — it holds when difficulty is known (or amortized across many instances of similar problems), but not necessarily in a cold-start setting. The paper's finding that predicted difficulty bins (using the PRM's own scores) perform nearly as well as oracle bins (Figures 4, 8) is encouraging, but the estimation cost remains unaddressed. A practical deployment would need a much cheaper difficulty estimator, which the paper flags as future work.
+
+**Claim 2: Test-time compute with a smaller model can outperform a roughly 14× larger model.** Supported with sharp, well-characterized boundaries. The FLOPs-matched comparison in Section 7 provides concrete evidence for this claim but also clearly demonstrates its limits. On easy questions at R ≪ 1, the smaller model with revisions outperforms the larger model by 11.8–27.8% across difficulty bins (Figure 1, Figure 9). However, the claim fails on hard questions at R ≫ 1, where the larger model substantially outperforms test-time compute (e.g., −52.9% on hard questions with PRM search at R ≫ 1). The paper is transparent about these boundaries, which strengthens credibility.
+
+A genuine weakness in the baseline: the 14× larger model is evaluated with greedy decoding only — no majority voting, no best-of-N, no search. A fairer comparison would give the larger model a modest test-time compute budget (e.g., best-of-8 or best-of-16), since the entire premise of the paper is that test-time compute improves performance. Comparing a compute-optimal small model against a greedy large model conflates two effects: (1) the choice of model size and (2) the choice of test-time strategy. The paper demonstrates that test-time compute helps, but doesn't isolate whether a compute-optimal large model with some test-time compute would be even better than a compute-optimal small model with more test-time compute. This is a missing experiment that would strengthen the training-inference trade-off analysis considerably.
+
+Additionally, the 14× larger model is parameter-scaled only (not Chinchilla-optimal, where both data and parameters would scale). The authors acknowledge this in Section 7: "We choose this setting as it is representative of a canonical approach to scaling pretraining compute and leave the analysis of compute-optimal scaling of pretraining compute where the data and parameters are both scaled equally to future work." A Chinchilla-optimal larger model would likely be a stronger baseline, potentially narrowing or reversing some of the test-time compute advantages.
+
+**Claim 3: Efficacy depends critically on prompt difficulty.** Very strongly supported. This is the most robust finding in the paper, replicated across search methods (Figure 3, right), revision strategies (Figure 7, right), and selection mechanisms (majority voting in Appendix B, Figure 10). The difficulty-dependent patterns are qualitatively consistent: easy problems benefit from exploitation (beam search hurts, sequential revisions help), medium problems benefit from structured exploration (beam search outperforms best-of-N, balanced sequential-parallel ratios are optimal), and hard problems show near-zero improvement regardless of strategy or budget (bin 5 accuracy hovers at 1–3% in all configurations). The five-bin discretization is coarse, and a finer-grained difficulty estimate might reveal more nuanced patterns, but the qualitative trend is unambiguous and well-supported.
+
+**Claim 4: The proposal distribution and verifier are complementary scaling axes with difficulty-dependent strengths.** Supported by the pattern of results, but the paper never combines them — revisions and PRM search are studied independently. Section 8 acknowledges this explicitly: "we did not experiment with PRM tree-search techniques in combination with revisions." This is a significant gap. The compute-optimal policy selects between search and revisions (or, for revisions, between sequential and parallel ratios), but it never uses both simultaneously — for instance, applying beam search to revision model outputs, or using the PRM to guide which revision paths to pursue. The claim that these are "complementary" scaling axes is an inference drawn from their different difficulty-dependent behaviors, not a directly tested hypothesis. A combined experiment would be needed to confirm complementarity and quantify any synergistic gains. The current results therefore represent a lower bound on what a fully integrated system could achieve.
+
+**Additional limitations in the experimental design:**
+
+- **Single benchmark, single model family.** All results are on MATH with PaLM 2-S*. The authors argue the model is "representative of the capabilities of many contemporary LLMs" (Section 4), but this cannot be verified without replication. MATH is a specific distribution — competition-level math problems requiring symbolic reasoning — and it is unclear whether the difficulty-dependent patterns generalize to code generation, logical reasoning, scientific QA, or factual knowledge tasks. The revision model's behavior (improving through sequential refinement) may be specific to math, where errors are often identifiable and correctable step-by-step; on factual tasks where errors stem from missing knowledge rather than reasoning slips, revisions might behave very differently.
+
+- **Difficulty estimation requires 2,048 samples per question.** This is not included in any budget calculation and makes the reported efficiency gains conditional on amortization across many similar questions or a cheaper difficulty estimator that does not yet exist. The paper acknowledges this but does not quantify the amortization break-even point: how many questions of similar difficulty must be answered before the difficulty estimation cost is recovered by the per-question efficiency gains?
+
+- **Test set of 500 questions.** With five difficulty quintiles (~100 questions each) and two-fold cross-validation, the compute-optimal policy is selected based on ~50 questions per fold per bin. The paper does not report confidence intervals or standard errors on the compute-optimal scaling curves, making it impossible to assess statistical reliability. Given the small per-bin sample sizes, some of the observed differences between strategies (particularly at high budgets where the curves converge) may not be statistically significant.
+
+- **No dynamic difficulty adaptation.** The policy is static: estimate difficulty once, then execute a fixed strategy. A more realistic and potentially more efficient approach would be adaptive — start with a few parallel samples, assess what the verifier and model outputs suggest about difficulty, and dynamically allocate the remaining budget. This would subsume the difficulty estimation cost into the problem-solving process itself. The paper mentions this as an exploration-exploitation trade-off (Section 3.2) but does not implement or evaluate it.
+
+- **Reported numbers are approximate and read from figures.** The paper's results are presented primarily as figures (Figures 3–9), and the specific accuracy values cited here are approximate readings from these plots. The paper does not provide tables of exact numerical results for most experiments, which introduces uncertainty in the precise magnitudes of the reported gains and limits reproducibility.
+
+- **The revision model has a systematic failure mode.** The 38% correct-to-incorrect reversion rate (Section 6.1) is a fundamental limitation of training only on incorrect-to-correct trajectories. The mitigation (selecting the best answer across the chain) is a patch, not a solution — the model fundamentally does not know what to do when it encounters a correct answer in context. This limits the effective length of revision chains and suggests the revision approach is fragile to training data construction choices, as the ReST^EM negative result further confirms.
+
+## 6. Limitations and Trade-offs
+
+### 6.1 The Cross-Attention Architecture's OCR Deficit Remains Unexplained Mechanistically
+
+**The assumption or constraint.** NVLM-X achieves substantially lower accuracy than NVLM-D on OCR-related benchmarks — a gap of 25 points on OCRBench (853 vs. 828), 9.7 points on DocVQA (92.6 vs. 82.9), and 3.1 points on ChartQA (86.0 vs. 82.9) for the 72B models (Table 7). The paper identifies *that* this gap exists and attributes it generally to decoder-only models enabling "unified multimodal reasoning" (Section 4.3), but it does not provide a mechanistic explanation for *why* cross-attention underperforms on dense visual tasks.
+
+**The consequence.** Without understanding the mechanism, practitioners cannot predict whether the OCR deficit will appear in their specific application, nor can they design targeted mitigations. The paper's hypothesis — that cross-attention limits the LLM's ability to attend to fine-grained spatial details — is plausible but untested. If the deficit stems from the number of cross-attention layers (10 for NVLM-X), adding more layers might help but would increase parameter count and reduce the throughput advantage. If it stems from the indirect nature of cross-attention (image tokens never participate in self-attention with each other), no amount of additional X-attention layers would fix it. The paper's architectural contribution would be stronger if it isolated which mechanism causes the OCR gap.
+
+**What evidence exists in the paper.** The pattern is consistent and statistically meaningful across multiple OCR benchmarks (Table 7), and the paper's Perceiver resampler ablation in Appendix C (Figure 9) demonstrates that attention mechanisms that shuffle spatial information hurt OCR dramatically. This provides suggestive evidence that spatial structure preservation is critical, but does not directly test whether self-attention's direct token mixing (where image tokens attend to each other at every layer) versus cross-attention's query-driven access (where only text tokens can attend to image tokens) is the differentiating factor.
+
+**Mitigation status.** The hybrid NVLM-H partially addresses this by routing thumbnail tokens through self-attention, but NVLM-H's OCR scores (OCRBench 831, DocVQA 83.1) still fall short of NVLM-D's. The paper does not propose or test architectural modifications to close the gap, nor does it isolate whether the thumbnail self-attention or the regular tile cross-attention contributes more to NVLM-H's OCR performance. This is an open problem.
+
+---
+
+### 6.2 Text-Only Performance Gains Depend Critically on Access to GPT-4o-Quality Refinement — A Moving Target
+
+**The assumption or constraint.** The paper's recipe for maintaining and improving text-only performance during multimodal SFT relies on a specific data curation pipeline: open-source SFT datasets are refined using GPT-4o and GPT-4o-mini to produce higher-quality responses (Section 5.3). The paper explicitly states that "the key difference between our recipe and theirs lies in the quality of the data" — prior open-access models (InternVL-2, LLaVA-OneVision) included text-only SFT data but still degraded 6–7 points, which the authors attribute to insufficient data quality.
+
+**The consequence.** This creates a **moving-target dependency on proprietary models**. The quality of the text-only SFT data, and thus the preservation of text-only performance, is bounded by GPT-4o's capabilities at the time of refinement. As stronger open-source LLMs emerge, they may produce responses that differ in style or quality from GPT-4o's outputs, and using older GPT-4o-refined data to train a newer, stronger LLM backbone might be suboptimal — or even harmful if the refinement quality is now below the backbone's own capabilities. More practically, organizations without API access to frontier proprietary models (due to cost, data privacy, or policy restrictions) cannot replicate this recipe. The paper does not test whether cheaper or open-source models can serve as refiners, nor does it establish a minimum quality threshold for refinement to be effective.
+
+**What evidence exists in the paper.** The paper demonstrates that text-only SFT data blending works (Tables 7, 8) but provides **no ablation on the refinement step itself**. There is no comparison between GPT-4o-refined data, GPT-4o-mini-refined data, and unrefined data from the same source datasets. The reader cannot determine whether refinement provides 10% of the text-only preservation benefit or 90%. The only indirect evidence is the contrast with prior work: InternVL-2-Llama3-76B and LLaVA-OneVision 72B both include text-only SFT data but lose 6–7 points, while NVLM with refined data gains 2.5–4.3 points. This contrast is confounded by differences in the base datasets, the LLM backbone, and the overall SFT blend composition — it is not a controlled ablation.
+
+**Mitigation status.** The paper does not address this. There is no ablation on refinement quality, no experiment using unrefined or self-refined (distilled from the LLM backbone itself) text data, and no discussion of how the dependency on proprietary models for data refinement might limit reproducibility or longevity. Future work on self-refinement or open-source refinement pipelines would directly address this gap.
+
+---
+
+### 6.3 The Frozen-Vision-Encoder Design Leaves Potential Accuracy Gains Unexplored
+
+**The assumption or constraint.** The paper freezes InternViT-6B-448px-V1-5 during all stages of training, stating that "we keep this vision encoder frozen at all stages of training, as this simplifies the training process while still delivering strong results" (Section 3.1). The paper further reports that "in our early exploration, we found that joint pretraining of the MLP projector and vision encoder is beneficial when the vision encoder is relatively weak (e.g., ViT-L/14) ... However, after upgrading to the more powerful InternViT-6B-448px-V1-5, the performance gains became marginal" (Section 4.2).
+
+**The consequence.** The paper's decision is empirically grounded for the specific encoder (InternViT-6B) and training pipeline tested, but it establishes a **potentially suboptimal local optimum**. Recent work not cited in the paper (Cambrian-1, Tong et al., 2024) has shown that unfreezing and combining multiple vision encoders can improve downstream performance. The paper's claim that gains from unfreezing InternViT-6B are "marginal" is based on early exploration, not a systematic ablation at the final 72B scale with the full curated SFT blend. A practitioner reading this paper might conclude that freezing the vision encoder is always the right choice for strong encoders, when in fact the optimal strategy may depend on the specific encoder, the amount of training data, and the training budget — none of which are systematically varied in the paper's "marginal gains" claim.
+
+Furthermore, freezing the vision encoder creates a **representation bottleneck**. The vision encoder was trained for contrastive image-text alignment, not for producing features optimized for the LLM's next-token prediction objective. The MLP projector can learn to map between these spaces, but it has limited capacity (2 layers, ~58M parameters for the 72B model) relative to the vision encoder (6B parameters). Unfreezing even a subset of the vision encoder's later layers could allow it to adapt its representations to better serve the LLM's needs, potentially improving performance on tasks where the pretrained visual features are suboptimal. The paper's early exploration suggests this gain is small, but this was tested before the full SFT data blend and DHR tile-tagging were finalized, meaning the interaction between vision encoder adaptation and these later design choices is unknown.
+
+**What evidence exists in the paper.** The paper provides only a qualitative description of the early exploration results (Section 4.2), not a table or figure comparing frozen vs. unfrozen InternViT-6B at the final training scale. This makes the claim unverifiable from the paper alone. The strong benchmark results (Table 7) demonstrate that a frozen InternViT-6B is *sufficient* for frontier-class performance, but do not establish that it is *optimal*.
+
+**Mitigation status.** The paper acknowledges this as a deliberate design choice for simplicity, not a claim of optimality. The description of early exploration provides some empirical grounding, but the lack of systematic ablation leaves the question open. The paper does not suggest future work on this topic. For practitioners, the takeaway is conservative: freezing InternViT-6B works well and is simpler to implement, but unfreezing may provide additional gains that remain unquantified.
+
+---
+
+### 6.4 The Single-Benchmark-Per-Task Evaluation Provides Limited Evidence of Robust Generalization
+
+**The assumption or constraint.** The paper evaluates NVLM on exactly **one benchmark per task category**: MMMU for multidisciplinary reasoning, MathVista for math reasoning, VQAv2 for natural image understanding, AI2D for diagram understanding, TextVQA for scene text, ChartQA for chart understanding, DocVQA for document understanding, RealWorldQA for visual perception, and OCRBench for comprehensive OCR (Section 6.1, Table 7). While the paper notes that training splits of several benchmarks (ChartQA, DocVQA, VQAv2, TextVQA, AI2D) are included in the SFT blend and are therefore evaluated in a fine-tuning rather than zero-shot setting, the selection of evaluation benchmarks is narrow relative to the breadth of tasks the model is claimed to handle.
+
+**The consequence.** A single benchmark per task category provides a **noisy and potentially unrepresentative signal** of true capability. A model might overfit to the idiosyncrasies of a specific benchmark's question style, answer format, or evaluation metric without developing generalizable task competence. For example, DocVQA evaluates document understanding, but RealWorldQA evaluates real-world perception — the paper uses one benchmark each, so a weakness in a specific sub-category (e.g., handwritten document understanding, or spatial reasoning about outdoor scenes) would go undetected. This is a particular concern for benchmarks where the training split is included in SFT — while the paper argues it does not apply data augmentation "to the training splits of these benchmark datasets" (Section 5.2), the model still sees thousands of in-distribution examples from the exact same data distribution as the test set. Performance on these benchmarks may overestimate out-of-distribution generalization to new document types, chart styles, or visual scenes.
+
+The text-only evaluation (Section 6.4, Table 8) uses four benchmarks (MMLU, GSM8K, MATH, HumanEval), which is a broader coverage than the vision-language evaluation, but still sparse for a model claimed to achieve "production-grade multimodality." There is no evaluation of long-form generation quality, instruction-following precision, safety behaviors, or robustness to adversarial inputs — all of which are relevant to production deployment.
+
+**What evidence exists in the paper.** The paper's qualitative examples (Figure 1, Appendix A) demonstrate diverse capabilities including meme understanding, scene analysis, math reasoning from handwritten pseudocode, chart interpretation, and table-based reasoning. These are compelling but anecdotal — they show the model *can* handle certain examples, not how often it fails on similar examples from different distributions. The benchmark results in Table 7 are strong, but with one benchmark per task, a single anomalous result (e.g., an unusually high or low score on a particular benchmark) could substantially shift the perceived ranking relative to baseline models.
+
+**Mitigation status.** The paper acknowledges that several benchmarks are evaluated in a fine-tuning rather than zero-shot setting (Section 5.2) and hypothesizes that proprietary models likely use similar data, but this does not address the narrowness of the evaluation suite. The paper does not propose or conduct evaluations on held-out benchmarks, distribution-shift tests, or multi-benchmark aggregation within task categories. This is a limitation shared with most multimodal LLM papers at the time of publication — the field's standard evaluation suite is still consolidating — but it constrains the strength of the paper's generalization claims.
+
+---
+
+### 6.5 The Hybrid Architecture's Design Choices Are Empirically Motivated but Not Systematically Optimized
+
+**The assumption or constraint.** NVLM-H combines decoder-only self-attention for the thumbnail tile with cross-attention for regular tiles (Section 4.4). The specific configuration — one thumbnail tile in self-attention, up to 6 regular tiles in cross-attention, 10 cross-attention layers inserted every 8 self-attention layers for the 72B model — is presented as a single design without systematic ablation of alternatives. The paper does not explore: (1) whether some regular tiles should also be in self-attention for critical regions, (2) whether the number or placement of cross-attention layers could be optimized differently for the hybrid than for pure X-attention, (3) whether the thumbnail tile could be processed at higher resolution, or (4) whether adaptive routing (dynamically deciding which tiles go through which path based on image content) would improve performance.
+
+**The consequence.** NVLM-H achieves the best MMMU Val (60.2) and MathVista (66.6) scores in the NVLM family (Table 7), but the paper cannot determine whether this configuration is near-optimal or merely a single point in a large design space that happens to work well. A practitioner building on this work cannot know which design choices are load-bearing and which are incidental. For example, NVLM-H beats NVLM-D on reasoning but underperforms on OCR (OCRBench 831 vs. 853). Is this because the cross-attention path for regular tiles is inherently worse for OCR, or because 6 regular tiles through cross-attention are insufficient, or because the thumbnail tile's self-attention processing interferes with OCR-related attention patterns? Without ablating the number of tiles per path, the number of X-attention layers, or the placement of X-attention layers, the source of the performance differences is ambiguous.
+
+This limitation also affects the paper's narrative about computational efficiency. NVLM-H achieves 36.2 samples/second vs. NVLM-D's 28.8 (Table 3, 34B models), a 1.26× throughput improvement, while achieving comparable or better reasoning. But if adding one more regular tile to self-attention would close the OCR gap while reducing throughput only modestly, that might be the optimal configuration for document-heavy applications. The paper provides no framework for making such trade-offs, because it evaluates only one hybrid configuration.
+
+**What evidence exists in the paper.** The paper provides detailed ablations for tile-tagging (Tables 1, 2), pretraining data composition (Table 5), and frozen vs. unfrozen LLM (Table 9), demonstrating a systematic approach to other design variables. The hybrid architecture's configuration is stated (10 X-attention layers every 8 self-attention layers, matching the NVLM-X arrangement) but never ablated. The throughput comparison in Table 3 isolates the sequence length effect but does not test alternative hybrid configurations that might shift the throughput-accuracy Pareto frontier.
+
+**Mitigation status.** The paper presents NVLM-H as a proof-of-concept demonstrating that a hybrid approach combining self-attention and cross-attention can capture complementary strengths. The authors do not claim optimality, and the consistent benchmark improvements over NVLM-X (Table 7) validate the basic insight. However, the lack of systematic exploration means NVLM-H should be viewed as a **representative hybrid architecture** rather than an optimized one. Future work on configuration search, learned routing, or architecture-aware neural architecture search could substantially improve on these results, but the paper does not outline such directions.
+
+---
+
+### 6.6 The Training Data Curation Narrative Conflicts with the Inability to Share the Datasets
+
+**The assumption or constraint.** A central claim of the paper is that "dataset quality and task diversity are more important than scale, even during the pretraining phase, across all architectures" (Abstract, Section 1, Section 5.1). The paper provides detailed dataset tables (Tables 4, 6) and describes the curation process, including the critical GPT-4o refinement step for text-only SFT data and the data decontamination procedure. However, **none of the curated datasets are released**, and the model weights release (announced in Section 1) does not include the training data. The paper states it "will open-source the training code for the community soon" but makes no commitment regarding data release.
+
+**The consequence.** This creates a fundamental **reproducibility gap**. The paper's core empirical claim — that data quality and diversity explain the NVLM models' strong performance and text-only preservation — cannot be independently verified or built upon without access to the exact data blend. The dataset tables (Tables 4, 6) list source datasets but do not specify the filtering criteria, the mixing ratios, the prompting templates used for each task, or the exact refinement procedure applied by GPT-4o. A researcher attempting to reproduce NVLM-D 72B's results would need to: (1) independently source all the listed datasets, many of which have multiple versions and subsets, (2) guess at filtering criteria and quality thresholds, (3) replicate the GPT-4o refinement step without knowing the exact prompts or filtering used, and (4) guess at the mixing ratios between datasets in the pretraining and SFT blends. The probability of reproducing the exact training distribution is near zero.
+
+This is particularly problematic because the paper explicitly contrasts its approach with prior work on data quality grounds. The claim that InternVL-2 and LLaVA-OneVision fail to preserve text-only performance because of inferior text-only SFT data quality (Section 5.3) is untestable without access to NVLM's data. It is possible that other factors — the specific LLM backbone (Qwen2-72B-Instruct might be more resilient to multimodal fine-tuning than Llama 3 or Yi), the hyperparameter choices, or the exact training duration — contribute to text-only preservation, and the attribution to data quality alone is overstated.
+
+**What evidence exists in the paper.** The paper includes detailed dataset tables and qualitative descriptions of the curation process, which is substantially more transparent than most industry multimodal LLM papers (which typically provide no dataset information at all). The pretraining data ablation (Table 5) isolates the effect of diverse pretraining data by comparing LLaVA-1.5 pretraining data with NVLM's diverse blend on the same architecture and SFT data — this is the strongest evidence that data quality matters. But without data release, this ablation cannot be replicated or extended by other researchers.
+
+**Mitigation status.** The paper acknowledges the community's need for training data information by providing detailed dataset tables, which is a meaningful step beyond proprietary models that disclose nothing. The data decontamination description demonstrates attention to evaluation validity. However, the lack of data release means the paper's findings on data quality are claims to be taken on trust rather than independently verifiable scientific results. For a paper that positions data quality as its central methodological insight, this is a significant limitation. The promised release of training code will enable others to train models *if* they can independently assemble equivalent datasets, but the key variable in the paper's narrative — the specific curated data blend — remains a proprietary asset.
+
+## 7. Implications and Future Directions
+- How this changes the field
+  - Demonstrates that open multimodal models can reach frontier-level VL performance without sacrificing—indeed, improving—text-only skills by carefully structuring both architecture and data/recipes (Table 7–8). This narrows the “production-grade multimodality” gap in open access (§1; §6.4).
+  - Provides a clear, controlled comparison between decoder-only, cross-attention, and a new hybrid approach, with quantified efficiency and accuracy trade-offs (Figure 3; Table 3; Table 7).
+
+- Follow-up research enabled or suggested
+  - Extending tile-tagging to 2‑D tags that generalize well (Table 1 shows 1‑D tags win here, but there may be smarter 2‑D encodings or learned positional schemas).
+  - Learning to adapt the number of tiles or token budgets dynamically per task/query for better compute–accuracy Pareto fronts.
+  - End-to-end adaptation of the vision encoder (perhaps with careful regularization) for domains like dense documents or charts while preserving text skills.
+  - Unified multi-resolution strategies for video, with temporal “tile tags” or segment tags and memory-efficient attention.
+
+- Practical applications
+  - Document understanding, OCR-heavy workflows, and chart/table reasoning benefit from the DHR + tile-tag pipeline (Table 7: OCRBench 828–853; DocVQA up to 92.6).
+  - General assistants that must switch seamlessly between text-only tasks (coding, math word problems) and image reasoning; the improved GSM8K/MATH/HumanEval scores (Table 8) are particularly relevant for developers and education tools.
+  - On-device or latency-constrained scenarios can opt for `NVLM-X` for higher throughput, whereas offline high-accuracy pipelines might prefer `NVLM-D` or `NVLM-H` depending on task mix (Table 3; Table 7).
+
+In sum, NVLM 1.0 contributes both a set of high-performing open models and concrete design principles—tile-tagged DHR, hybrid processing, and a text-preserving SFT recipe—that others can adopt and build upon. The released weights (`NVLM-D-72B`) and forthcoming code aim to accelerate community progress (Abstract; project links).

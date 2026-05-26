@@ -1,0 +1,660 @@
+# Better & Faster Large Language Models via Multi-token Prediction
+
+**ArXiv:** [2404.19737](https://arxiv.org/abs/2404.19737)
+
+## 🎯 Pitch
+
+This paper introduces a novel training paradigm for large language models—multi-token prediction—where models are trained to predict several future tokens simultaneously at each sequence position using multiple output heads over a shared transformer trunk. This approach dramatically boosts sample efficiency and enables up to 3× faster inference speeds, providing significant gains especially in generative tasks like code synthesis. By fostering stronger long-range reasoning and reducing the gap between training and inference, this technique offers a simple yet powerful way to make state-of-the-art language models both better and more efficient.
+
+---
+
+## 1. Executive Summary
+
+This paper proposes training large language models with a **multi-token prediction** objective—predicting the next $n$ tokens simultaneously via $n$ independent output heads atop a shared model trunk—rather than standard next-token prediction. Evaluated on code benchmarks (MBPP, HumanEval) with models up to 13B parameters trained on up to 1T tokens, multi-token prediction improves sample efficiency at scale, with the 13B model solving 12% more problems on HumanEval and 17% more on MBPP than comparable next-token baselines—a gap that widens with model size but reverses for small models. The method additionally enables self-speculative decoding that accelerates inference up to 3× on code and 6.4× on byte-level models, while controlled synthetic experiments demonstrate that multi-token prediction fosters induction head formation and algorithmic reasoning capabilities that next-token prediction struggles to acquire—establishing that the benefits are most pronounced for larger models and generative tasks, with standard multiple-choice NLP benchmarks showing minimal gains or slight regressions.
+
+## 2. Context and Motivation
+
+### The Core Problem: Next-Token Prediction Is an Inefficient Learning Signal
+
+The fundamental issue this paper tackles is that **standard next-token prediction, despite its remarkable success in training LLMs, is a surprisingly weak teacher**. Every major language model—GPT, Llama, PaLM—is trained to predict exactly one token ahead, receiving a loss signal from the single next token at each position in the training corpus. While this objective has driven the recent explosion in LLM capabilities, the authors argue it is fundamentally limited: it encourages models to focus on local, short-term patterns at the expense of learning the longer-range structure that makes generated text coherent, useful, and correct.
+
+The authors state this criticism directly (Section 1):
+
+> "next-token prediction remains an inefficient way of acquiring language, world knowledge and reasoning capabilities. More precisely, teacher forcing with next-token prediction latches on local patterns and overlooks 'hard' decisions."
+
+This inefficiency manifests concretely: state-of-the-art models require orders of magnitude more training data than human children to reach comparable fluency. The paper cites Frank (2023) to ground this claim, framing the gap as evidence that the learning signal itself—not just model architecture or scale—deserves scrutiny.
+
+The problem is not that next-token prediction fails entirely. It succeeds spectacularly at producing fluent, locally coherent text. Rather, the problem is that **the training objective is misaligned with what models actually need to do at inference time**. During training, teacher forcing provides the ground-truth context at every step—the model never has to recover from its own errors. During autoregressive generation, however, errors compound: a mistake at position $t$ becomes part of the context for position $t+1$, potentially derailing the entire sequence. The model was never trained to handle this distribution shift, and the authors argue that next-token prediction provides no explicit incentive to learn representations that would make generation robust to such cascading failures.
+
+### Why This Problem Matters
+
+The paper's motivation extends beyond theoretical curiosity about learning objectives—it has direct practical and economic implications across several dimensions.
+
+**Sample efficiency and data constraints.** If next-token prediction is an inefficient learning signal, then every training token is being used suboptimally. For organizations spending millions of dollars on pretraining runs, a more efficient objective that extracts more capability from the same data could translate directly to cost savings or performance improvements at the same budget. This is especially relevant as the community approaches potential limits on available high-quality training data—if data becomes scarce, sample efficiency becomes paramount.
+
+**The teacher-forcing gap.** The disconnect between training-time teacher forcing and inference-time autoregressive generation is a well-recognized but under-addressed problem in sequence modeling. The authors argue (Section 5.2) that next-token models are incentivized to predict well "in the very short term, at the potential expense of ignoring longer-term dependencies in the overall structure of the generated sequence." This manifests practically: models may produce locally fluent text that is globally incoherent, contradictory, or factually wrong. The problem is most acute on generative and reasoning tasks—exactly where LLMs are most valuable—rather than on multiple-choice benchmarks where only a single token (the answer label) matters.
+
+**Inference speed.** The additional heads from multi-token prediction enable self-speculative decoding, addressing the well-known bottleneck that autoregressive generation is inherently sequential and slow. With standard next-token models, speeding up inference typically requires either a separate draft model (Leviathan et al., 2023) or architectural modifications explicitly designed for speculative decoding. Multi-token prediction provides this capability "for free" as a byproduct of the training objective.
+
+**Byte-level modeling as a frontier.** Tokenization introduces its own set of problems: out-of-vocabulary tokens, language-specific tokenizer biases, and loss of character-level information. Byte-level models eliminate these issues but are typically impractical because byte sequences are much longer (more sequential steps) and individual bytes carry less information (harder to predict). A training objective that improves byte-level sample efficiency could make byte-level models competitive, opening the door to tokenizer-free architectures that handle any language or data format uniformly.
+
+**Understanding what drives LLM capabilities.** Beyond practical benefits, the paper addresses a fundamental question: *what kinds of learning signals build the reasoning capabilities we observe in large models?* By showing that multi-token prediction specifically improves on tasks requiring induction, algorithmic reasoning, and code generation—but not on multiple-choice benchmarks—the paper provides evidence about which cognitive capabilities are bottlenecked by the training objective versus other factors.
+
+### Where Prior Approaches Fall Short
+
+The paper identifies several strands of prior work that attempt to address related problems, each with significant limitations.
+
+**Prior multi-token prediction work (Qi et al., 2020; ProphetNet).** The most direct predecessor is ProphetNet, which proposed predicting future $n$-grams for sequence-to-sequence pretraining. However, as the authors note, ProphetNet's approach "replicates the residual stream $n$-fold," meaning it creates $n$ separate copies of the hidden representation before feeding them to prediction heads. This is architecturally expensive and importantly **does not enable compute-matched comparisons**: when you add $n-1$ copies of the hidden state, you substantially increase the model's effective capacity doing the predictions, making it unclear whether improvements come from the multi-token objective or simply from having more parameters. The paper's architecture instead uses a compute-matched design where head parameters are taken from the trunk, keeping total parameter count constant. Additionally, ProphetNet was studied primarily in encoder-decoder settings and at smaller scales—the present work's demonstration that benefits *increase* with model size (Section 3.1, Figure 3) was not established in prior work.
+
+**Speculative decoding approaches (Stern et al., 2018; Cai et al., 2024).** Blockwise parallel decoding and Medusa both use multiple prediction heads for faster inference via self-speculative decoding. However, these works treat the additional heads as a finetuning add-on rather than studying their effect during pretraining. The authors explicitly note this gap:
+
+> "Stern et al. (2018) and Cai et al. (2024) propose model finetunings with multi-token prediction for faster inference but do not study the effects of such a loss during pretraining."
+
+The key insight this paper adds is that **pretraining with multi-token prediction makes the additional heads far more accurate** than finetuning alone, which is what unlocks the full speculative decoding speedup. Finetuned heads on a next-token pretrained model are relatively poor predictors of future tokens because the trunk representations were never trained to contain that information.
+
+**Alternative language modeling objectives.** The paper surveys a range of modified training objectives (Section 6) that attempt to go beyond next-token prediction:
+
+- **UniLM (Dong et al., 2019)** mixes full, causal, and prefix attention masks to bridge understanding and generation.
+- **UL2 (Tay et al., 2022)** uses span corruption, replacing spans with sentinel tokens that the decoder must fill in.
+- **XLNet (Yang et al., 2019)** permutes the factorization order, predicting tokens in random order while preserving positional information.
+
+The authors identify a critical limitation shared by all of these: **they only train on a small fraction of the input tokens**. UniLM masks tokens BERT-style, which becomes destructive beyond ~15% masking. UL2's span corruption similarly targets 15–25% of tokens in practice. XLNet in theory could train on all tokens (the sequence is only permuted, not masked), but in practice only 15% are predicted "for training stability reasons" because the completely random permutation is too hard to reconstruct.
+
+This is a key point of differentiation for multi-token prediction: **every token position produces $n$ loss terms**, and no information is discarded or masked. The model gets dense supervision across the entire sequence, which the authors argue is essential for sample efficiency.
+
+**Scheduled sampling (Bengio et al., 2015).** Curriculum learning approaches that gradually replace ground-truth inputs with model-generated ones during training also aim to bridge the teacher-forcing gap. The paper argues this is **"inapplicable to language modelling due to the discrete nature of text"** (Appendix L.1). Replacing portions of a training sequence with model-generated tokens produces ungrammatical or incoherent text as training targets, which could actively harm learning. Moreover, scheduled sampling was developed for recurrent networks and does not adapt cleanly to the parallel training setups used for transformers.
+
+**Probing studies of next-token representations (Pal et al., 2023).** Recent work shows that next-token models *do* contain some information about future tokens in their hidden states—it can be extracted with probing classifiers. This demonstrates that the capability exists latently, but the key finding is that **next-token models are significantly worse at this than models explicitly trained for it**. The present paper's architecture makes this information directly accessible and reinforces its development during training, rather than requiring it to be extracted post-hoc.
+
+### How This Paper Positions Itself
+
+The paper frames its contribution not as a completely new idea—multi-token prediction has been studied before—but as a **systematic demonstration that the idea works at scale, with a memory-efficient implementation, on tasks where it matters most**. The positioning has several key elements:
+
+**Architecture as an enabler.** The paper's memory-efficient implementation (Figure 2, described in Section 2) is presented as a practical breakthrough that makes multi-token prediction feasible at scale. The key insight is that by sequentially computing forward and backward passes for each head—freeing the logits and their gradients before moving to the next head—peak GPU memory drops from $O(nV + d)$ to $O(V + d)$, where $V$ is vocabulary size and $d$ is hidden dimension. This is critical because logit vectors dominate GPU memory in large models. Without this trick, training 4-token predictors at 7B+ parameters would be prohibitively expensive or require impractically small batch sizes. The paper emphasizes that this memory reduction comes "at no expense in runtime" (Table S5), making the method truly cost-free to adopt.
+
+**Scale-dependence as a key finding.** One of the most important results—and a likely explanation for why multi-token prediction was previously overlooked—is that **the benefits are not universal but emerge with scale**. Figure 3 shows that for models below ~3B parameters, multi-token prediction can actually *hurt* performance on code benchmarks. It is only at 6.7B and 13B that consistent gains appear. The paper speculates (Section 4.1) that small models benefit from next-token prediction's focus on local patterns, while larger models have excess capacity that multi-token prediction directs toward learning useful long-range dependencies. This scale-dependent behavior was absent from prior studies, which operated at smaller model sizes where the effect would have been invisible or negative.
+
+**Generative tasks as the primary beneficiary.** The paper is careful to delineate *where* multi-token prediction helps. On code generation (MBPP, HumanEval, APPS)—benchmarks requiring multi-step reasoning and producing coherent multi-line outputs—the gains are substantial and consistent. On abstractive summarization—another generative task—gains are present but more modest (Figure 6). On standard NLP benchmarks consisting of multiple-choice questions—where the model only needs to output a single correct token—the paper reports essentially no improvement (Figure 5, n=2 tracks the baseline) or slight regression (n=4). This pattern is consistent with the theoretical argument: multi-token prediction helps with long-range coherence and reasoning, not with isolated token-level decisions. The paper argues (Section 3.7) that multiple-choice benchmarks are "not suited to effectively discern generative capabilities," positioning generative evaluations as the more meaningful test.
+
+**A principled information-theoretic argument.** Rather than just reporting empirical results, the paper builds a theoretical case for *why* multi-token prediction should help (Section 5). The decomposition of 2-token prediction entropy:
+
+$$H(X) + H(Y) = H(X|Y) + 2I(X;Y) + H(Y|X)$$
+
+shows that multi-token prediction doubles the weight of the mutual information term $I(X;Y)$ compared to next-token prediction alone. In plain language: **the model is explicitly rewarded for learning features in the current token that are predictive of future tokens**. The term $H(X|Y)$ captures local stylistic variations that don't constrain the future, while $I(X;Y)$ captures the "choice points" that determine whether a generated sequence stays on track or derails. By upweighting mutual information, multi-token prediction pushes the model to allocate its representational capacity toward the decisions that matter for long-range coherence.
+
+The paper complements this with a more intuitive argument about "lookahead reinforcing choice points" (Section 5.1, Figure 9). In a sequence where one transition is a hard-to-predict choice point and others are inconsequential, an $n$-token prediction loss assigns weight $\frac{n(n+1)}{2}$ to the choice point (through its correlates at earlier positions) versus weight $n$ to inconsequential transitions. This implicit weighting—which happens automatically through the structure of the loss—means the model naturally focuses its learning on the decisions that have downstream consequences.
+
+**Bridging the teacher-forcing gap.** The paper positions multi-token prediction as a practical solution to the distribution mismatch between training and inference. Scheduled sampling was the classic approach to this problem but is unsuitable for discrete text. Multi-token prediction addresses the gap differently: rather than feeding the model its own (potentially erroneous) outputs during training, it **forces the model to anticipate its future outputs**, creating richer representations that are more robust when those outputs are later generated autoregressively. The model learns to predict not just the immediate next token given perfect context, but the next several tokens given the same perfect context—effectively learning what features will be needed downstream, before they are needed.
+
+**Connection to multi-task and auxiliary learning.** The paper situates its approach within the broader paradigm of multi-target prediction (Caruana, 1997), where training on auxiliary targets improves performance on the primary task. The key difference is that the auxiliary targets here—future tokens—are not separate tasks but are intrinsically related to the primary next-token objective. This is closer to the spirit of learning with "privileged information" (Vapnik and Vashist, 2009) or video prediction with future frames (Mathieu et al., 2016; Srivastava et al., 2016), where the auxiliary targets provide a richer training signal that guides the model toward better representations for the primary task.
+
+### The Open Questions This Work Addresses
+
+The paper implicitly structures its investigation around several open questions that prior work had not resolved:
+
+1. **Can a multi-token objective be made memory-efficient enough for large-scale training?** Prior implementations were either too memory-hungry (replicating the residual stream) or too narrow in scope (finetuning only). The sequential forward/backward scheme in Figure 2 provides a positive answer.
+
+2. **Do multi-token benefits persist at modern model scales?** Prior work operated at smaller scales. The negative result for small models in Figure 3 explains why this was not previously discovered, and the positive scaling trend makes the finding relevant for current training paradigms.
+
+3. **On which tasks does multi-token prediction actually help?** By testing across code generation, summarization, mathematical reasoning, and standard NLP benchmarks, the paper maps out a specificity: generative and reasoning tasks benefit; shallow pattern-matching tasks do not.
+
+4. **What mechanisms drive the improvement—is it just faster inference, or better representations?** The synthetic experiments on induction heads (Section 4.1) and algorithmic reasoning (Section 4.2) isolate representational benefits, showing that multi-token prediction produces qualitatively different model capabilities even when controlled for inference strategy. The speculative decoding results (Section 3.2) then show an additional, orthogonal benefit for deployment.
+
+5. **Does the optimal prediction horizon $n$ depend on the data modality?** The paper explores this for byte-level modeling (n=8 is optimal) versus token-level code (n=4 is optimal, Table 1), suggesting the answer is yes and that choice of $n$ is a tunable hyperparameter tied to data distribution.
+
+## 3. Technical Approach
+
+### 3.1 Reader Orientation
+
+This paper develops a **modified training objective and architecture for transformer language models** that replaces standard next-token prediction with simultaneous prediction of the next $n$ tokens at every position in the training corpus. The system solves the problem of inefficient learning from next-token supervision—which the authors argue focuses model capacity on local patterns at the expense of long-range structure—by adding $n$ independent output heads that all receive gradients from future tokens, **without increasing total parameter count or peak GPU memory usage** compared to a standard model of the same size.
+
+---
+
+### 3.2 Big-Picture Architecture (Diagram in Words)
+
+The system has five major components, arranged in a feedforward pipeline that processes training sequences token by token:
+
+1. **Shared Transformer Trunk ($f_s$)** — the main body of the language model, consisting of standard transformer layers. It processes the observed context $x_{t:1}$ (all tokens up to position $t$) and produces a single hidden representation $z_{t:1}$ of dimension $d$. This trunk is **identical in structure** to a standard next-token model, except that some layers are reallocated to the prediction heads so total parameters remain constant.
+
+2. **$n$ Independent Output Heads ($f_{h_i}$, for $i = 1, \dots, n$)** — each head is a single transformer layer that takes the shared trunk representation $z_{t:1}$ as input and produces a head-specific hidden state. The heads operate **in parallel** architecturally—each receives the same $z_{t:1}$—but their forward and backward passes are executed **sequentially** during training to control memory (see component 5). The first head ($i = 1$) is the standard next-token predictor; heads $i = 2, \dots, n$ predict tokens progressively further into the future.
+
+3. **Shared Unembedding Matrix ($f_u$)** — a single linear layer (weight matrix of shape $d \times V$, where $V$ is vocabulary size) followed by softmax, shared across all $n$ heads. This converts each head's hidden state into a probability distribution over the vocabulary. Sharing the unembedding is critical: it means the model has only one $d \times V$ matrix rather than $n$ of them, keeping the parameter count and memory footprint manageable.
+
+4. **Multi-Token Cross-Entropy Loss ($L_n$)** — computed per position $t$, this loss sums the negative log-probability of each of the $n$ future tokens under their respective heads' predictions. For position $t$, the model tries to predict $x_{t+1}$ (via head 1), $x_{t+2}$ (via head 2), ..., $x_{t+n}$ (via head $n$), all from the same trunk representation $z_{t:1}$. The total training loss is the sum over all positions $t$ and all $n$ heads.
+
+5. **Sequential Forward/Backward Execution Engine** — a memory optimization strategy (Figure 2) that avoids materializing all $n$ sets of logits and their gradients simultaneously. After the shared trunk forward pass, each head's forward and backward passes are computed one at a time. The logits for head $i$ (a tensor of shape `[batch, seq, V]`) are computed, the head-$i$ loss is calculated, gradients flow backward through head $i$ and accumulate at the trunk, and then **the head-$i$ logits and their gradients are freed** before processing head $i+1$. The only persistent storage is the $d$-dimensional trunk gradient $\partial L_n / \partial f_s$.
+
+**Information flow at training time:** input tokens $x_{1:T}$ → shared trunk $f_s$ produces hidden states $z_{1:T}$ (one per position) → for each position $t$, head $i$ takes $z_t$ and outputs a logit vector → shared unembedding $f_u$ converts logits to vocabulary probabilities → cross-entropy computed against ground-truth token $x_{t+i}$ → gradients flow back sequentially per head, accumulating at the trunk.
+
+**Information flow at inference time (basic mode):** input tokens $x_{1:t}$ → shared trunk $f_s$ produces $z_t$ → head $1$ produces next-token logits → unembedding produces $P(x_{t+1}|x_{t:1})$ → sample $x_{t+1}$ → repeat. All other heads are discarded.
+
+**Information flow at inference time (speculative mode):** input tokens $x_{1:t}$ → shared trunk $f_s$ produces $z_t$ → all $n$ heads produce logits in parallel → head 1 produces candidate $x_{t+1}$, head 2 produces $x_{t+2}$ assuming head 1 was correct, etc. → the main model (head 1) verifies the sequence of $n$ candidates in a single forward pass → accepted tokens are kept, rejected ones trigger re-sampling.
+
+---
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First**, the multi-token prediction loss function and its factorization, since understanding what is being optimized is prerequisite to understanding the architecture that optimizes it.
+- **Second**, the output head architecture and the parameter-matched design, because the specific way heads are implemented determines both computational cost and representational properties.
+- **Third**, the memory-efficient sequential forward/backward scheme, since this is the key engineering contribution that makes multi-token prediction feasible at scale.
+- **Fourth**, the self-speculative decoding mechanism for inference acceleration, since it is a direct practical benefit of the architecture beyond training improvements.
+- **Fifth**, the alternative architectures explored and why the parallel independent-head design was chosen, to contextualize the design decisions.
+
+---
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily an **empirical methods paper** whose core idea is that training language models to predict multiple future tokens simultaneously, using a compute-matched architecture with independent output heads and a memory-efficient backward pass, improves sample efficiency at scale—particularly on generative and reasoning tasks—without increasing training time or peak GPU memory.
+
+---
+
+#### 3.4.1 The Multi-Token Prediction Loss
+
+The paper generalizes the standard language modeling objective from predicting one token ahead to predicting $n$ tokens ahead at every position.
+
+**Standard next-token prediction loss:**
+
+$$L_1 = -\sum_t \log P_\theta(x_{t+1} \mid x_{t:1})$$
+
+where $x_{t:1}$ denotes the sequence of tokens from position 1 up to position $t$ (the context available at time $t$), $x_{t+1}$ is the ground-truth next token at position $t+1$, and $P_\theta$ is the language model parameterized by $\theta$. The sum runs over all positions $t$ in the training corpus where a next token exists.
+
+**What it computes:** for each position in the training sequence, the model produces a probability distribution over the vocabulary conditioned on all preceding tokens, and the loss is the negative log-probability assigned to the actual next token. The total loss is the sum over all positions.
+
+**Why this form:** this is the standard maximum-likelihood objective for autoregressive sequence modeling. Minimizing this cross-entropy is equivalent to maximizing the probability the model assigns to the true training data under the causal factorization $P(x_1, \dots, x_T) = \prod_t P(x_{t+1} \mid x_{t:1})$.
+
+**Multi-token prediction loss:**
+
+$$L_n = -\sum_t \log P_\theta(x_{t+n:t+1} \mid x_{t:1})$$
+
+where $x_{t+n:t+1}$ is the sequence of $n$ future tokens $(x_{t+1}, x_{t+2}, \dots, x_{t+n})$. This is the negative log-probability of the entire $n$-token block, conditioned on the same context $x_{t:1}$.
+
+**What it computes:** at each position $t$, the model must predict all $n$ of the next tokens jointly. The loss penalizes the model if the joint probability assigned to the true $n$-token sequence is low.
+
+**Why this form:** the key insight is that this is *not* a next-$n$-token prediction loss where the model conditions on its own predictions. The conditioning context is still $x_{t:1}$—the ground-truth past. This means the model receives supervision about what tokens *will* appear in the future, from the same vantage point it had when originally processing position $t$, without ever being exposed to its own potentially erroneous autoregressive outputs during training.
+
+**Factorization into independent heads:**
+
+The paper makes a critical tractability assumption: the $n$ future tokens are treated as **conditionally independent** given the shared trunk representation. This yields:
+
+$$L_n = -\sum_t \sum_{i=1}^n \log P_\theta(x_{t+i} \mid z_{t:1}) \cdot P_\theta(z_{t:1} \mid x_{t:1})$$
+
+where $z_{t:1} = f_s(x_{t:1})$ is the hidden representation produced by the shared transformer trunk. The factorization means the joint probability of the $n$-token block decomposes into the product of $n$ independent per-token probabilities, each computed by a separate output head from the same trunk representation.
+
+**What this factorization means operationally:** the trunk processes the context once, producing a single vector $z_{t:1}$. This vector is then fed to $n$ separate output heads, each of which independently predicts one of the $n$ future tokens. The heads do not communicate with each other—they are architecturally parallel. The total loss at position $t$ is the sum of $n$ individual cross-entropy losses.
+
+**Why this factorization:** it enables the memory-efficient implementation (Section 3.4.3). Since the heads are independent conditioned on $z_{t:1}$, their losses and gradients can be computed sequentially rather than simultaneously. A non-factorized approach—where the model predicts the joint distribution over all $n$-token sequences—would require $V^n$ output classes, which is astronomically intractable for any realistic vocabulary size. Autoregressive factorization (where head $i$ conditions on the predictions of heads $1$ through $i-1$) is possible and explored as an "anticausal" and "causal" variant (Appendix B), but the parallel factorization proved best-performing.
+
+**Per-head prediction computation:**
+
+$$P_\theta(x_{t+i} \mid x_{t:1}) = \text{softmax}\left(f_u\left(f_{h_i}\left(f_s(x_{t:1})\right)\right)\right)$$
+
+where $f_s$ is the shared trunk (multiple transformer layers), $f_{h_i}$ is the $i$-th independent output head (a single transformer layer), and $f_u$ is the shared unembedding matrix. The softmax converts the final logits to a probability distribution over the vocabulary.
+
+**What this computes for each head $i$:** the context $x_{t:1}$ is embedded and passed through the trunk to produce hidden state $z_{t:1}$. Head $i$ applies one transformer layer to $z_{t:1}$, producing a head-specific representation. The unembedding matrix projects this to vocabulary-sized logits, and softmax normalizes to probabilities. The result is $P_\theta(x_{t+i} \mid x_{t:1})$, the model's predicted distribution for the token at offset $i$.
+
+**Why this architecture:** using transformer layers (rather than linear projections) for the heads gives them sufficient capacity to extract different information from the same trunk representation. A linear head would amount to probing—asking whether the information is already linearly decodable from $z_{t:1}$—while a transformer-layer head can perform additional computation specifically tailored to its prediction offset. The shared unembedding matrix $f_u$ ensures that all heads map to the same vocabulary space and share the same token representation, which is both parameter-efficient and semantically meaningful (the meaning of a token should not depend on which head predicts it).
+
+---
+
+#### 3.4.2 Parameter-Matched Architecture Design
+
+A critical design choice is that **total model parameters are held constant** between next-token and multi-token models. This enables fair comparison: any observed improvement must come from the multi-token objective, not from increased model capacity.
+
+**The layer reallocation rule:** when adding $n-1$ additional output heads (each being one transformer layer), the paper removes $n-1$ layers from the shared trunk. Specifically, "when we add $n-1$ layers in future prediction heads, we remove $n-1$ layers from the shared model trunk" (Section 3 introduction). For example, a next-token 7B model with 32 trunk layers becomes a 4-token prediction model with 29 trunk layers plus 4 head layers—the total remains 33 transformer layers (counting the heads).
+
+**What this means for representational capacity:** the multi-token model has the same number of transformer layers, the same total parameters, and the same FLOPs per forward pass as the next-token baseline. The tradeoff is that the trunk—which processes the input context and produces the shared representation—is slightly shallower, while some computation is deferred to the heads, which specialize by prediction offset.
+
+**Why this design was chosen over alternatives:** Appendix B describes and ablates several alternative architectures. The simplest alternative—replicating the unembedding matrix $n$ times to create $n$ prediction heads without adding any layers—"is prohibitive for large-scale trainings" because the unembedding matrix is $d \times V$, and $n$ copies would require $n \cdot d \cdot V$ parameters, which is enormous when $V$ is 32K or more. Another alternative—linear heads (a single linear projection without nonlinearity)—was tested and found to "improve on baseline but not as consistently" (Table S4). The linear head variant for $n=4$ achieved MBPP pass@1 of 33.6 vs. 33.8 for transformer heads and 30.0 for the next-token baseline, but underperformed on other metrics. The causal and anticausal variants (where heads are stacked rather than parallel) also underperformed the parallel architecture (Table S4).
+
+**Specific architectural configurations (Table S14):** for the 7B ("6.7B") models central to most experiments, the architecture is dim=4096, 32 layers, 32 heads. For the 13B model: dim=5120, 40 layers, 40 heads. For smaller scales: 0.3B (dim=1024, 18 layers, 16 heads), 0.6B (dim=1280, 27 layers, 20 heads), 1.3B (dim=2048, 24 layers, 16 heads), 3B (dim=2560, 36 layers, 20 heads). The exact layer counts are adjusted per $n$ according to the reallocation rule.
+
+---
+
+#### 3.4.3 Memory-Efficient Sequential Forward/Backward
+
+The paper identifies a major engineering challenge: "in current LLMs the vocabulary size $V$ is much larger than the dimension $d$ of the latent representation—therefore, logit vectors become the GPU memory usage bottleneck" (Section 2). For a typical configuration with $d = 4096$, $V = 32000$, and a batch of 4M tokens, a single set of logits consumes approximately 4M × 32000 × 4 bytes (fp32) = 512 GB—exceeding the memory of even the largest GPUs.
+
+**The naive implementation problem:** if all $n$ heads compute their logits simultaneously, peak memory scales as $O(nV + d)$ because $n$ logit tensors of shape `[batch, V]` and their corresponding gradient tensors must be simultaneously resident in GPU memory. For $n=4$ with the numbers above, this would require ~2 TB just for logits and their gradients, making training infeasible.
+
+**The sequential solution (Figure 2):** the paper "propose[s] to carefully adapt the sequence of forward and backward operations." The procedure is:
+
+1. Execute the **forward pass through the shared trunk $f_s$** once, producing hidden representations $z_{t:1}$ for all positions. These are stored (dimension $d$, which is manageable).
+2. **For head $i = 1$**:
+   - Forward pass through head layer $f_{h_1}$.
+   - Forward pass through shared unembedding $f_u$.
+   - Compute softmax and cross-entropy loss $L_n^{(1)}$ for head 1.
+   - Backward pass: compute $\partial L_n^{(1)} / \partial f_u$, $\partial L_n^{(1)} / \partial f_{h_1}$, and $\partial L_n^{(1)} / \partial f_s$ (the gradient to the trunk).
+   - Accumulate trunk gradient: $\partial L_n / \partial f_s \gets \partial L_n^{(1)} / \partial f_s$.
+   - **Free** the logit tensor for head 1 and all intermediate activations.
+3. **For head $i = 2$**: repeat step 2, accumulating into the same trunk gradient buffer.
+4. Continue through head $n$.
+5. Execute the **backward pass through the shared trunk** using the accumulated $\partial L_n / \partial f_s$.
+
+**What this achieves:** peak GPU memory is reduced from $O(nV + d)$ to $O(V + d)$. At any moment, only one head's logits and gradients (size $O(V)$) exist, plus the trunk hidden states and accumulated gradient (size $O(d)$). Since $V \gg d$, this is approximately an $n\times$ reduction in peak memory.
+
+**Why this works without a runtime penalty (Table S5):** the sequential backward passes for each head are independent—they depend only on the trunk output $z_{t:1}$ and the head's own parameters, not on other heads. There is no sequential dependency that would prevent parallelizing the computation across the head layers themselves. The paper reports that training time relative to next-token prediction is: 1.00× for $n=1$ (baseline), 1.04× for $n=2$ at 13B, 1.09× for $n=4$ at 13B. The small overhead is attributed to "a suboptimal use of Fully Sharded Data Parallel" where "when doing separate backward passes for each head, we lose the overlap of layer weight communication and computation" (Table S5 note), and the authors claim this "can be removed if reimplemented correctly."
+
+**A subtle but critical detail:** the shared unembedding matrix $f_u$ receives gradients from all $n$ heads. The sequential scheme must accumulate these gradients across heads before updating $f_u$. The paper handles this by having each head's backward pass compute and accumulate the unembedding gradient, with the same accumulation buffer pattern used for the trunk gradient.
+
+---
+
+#### 3.4.4 Self-Speculative Decoding for Inference Acceleration
+
+The paper leverages the additional output heads for **self-speculative decoding** (also called blockwise parallel decoding), a variant of speculative decoding (Leviathan et al., 2023) that does not require a separate draft model.
+
+**Standard autoregressive decoding:** at each step $t$, the model processes the full context $x_{t:1}$ through all trunk layers and head 1, producing a probability distribution for $x_{t+1}$. One token is sampled/greedily selected. This token is appended to the context, and the process repeats. Generation of $k$ tokens requires $k$ sequential forward passes, each processing the entire growing context.
+
+**Self-speculative decoding with $k$ heads (using the Stern et al., 2018 approach):** at step $t$, the model:
+1. Runs one forward pass through the trunk, then through all $k$ heads in parallel.
+2. Head 1 produces $\hat{x}_{t+1}$ (the next token prediction).
+3. Head 2 produces $\hat{x}_{t+2}$ *assuming head 1's prediction is correct*.
+4. Head $i$ produces $\hat{x}_{t+i}$ assuming all previous heads' predictions are correct.
+5. The main model (head 1) then **verifies** the $k$-token candidate sequence $(\hat{x}_{t+1}, \dots, \hat{x}_{t+k})$ by performing a single forward pass that processes the context with the candidate tokens appended, checking whether head 1's predictions match the candidates.
+6. Tokens are accepted up to the first mismatch; all accepted tokens are appended to the context, and the process repeats.
+
+**Speedup mechanism:** if the heads are accurate, multiple tokens are generated per forward pass. The maximum theoretical speedup is $k\times$ (if all $k$ candidate tokens are accepted every time). In practice, the speedup depends on the acceptance rate of the additional heads.
+
+**Measured speedups (Section 3.2, Table S2):** for a 7B parameter 4-token prediction model trained on code, using all 4 heads yields a **3.05× speedup** relative to standard autoregressive decoding at batch size 42, with an average of **3.50 accepted tokens per forward pass** (out of 4 candidates). For natural language (Wikipedia), the speedup is 2.74× with 3.12 tokens per forward. For byte-level models (Table S3), the 8-token prediction model achieves **6.39× speedup** using 4 heads (7.04 tokens/forward) and **10.84× speedup** using all 32 heads of a 32-token prediction model (15.35 tokens/forward).
+
+**Why pretraining matters for this:** the paper emphasizes that pretraining with multi-token prediction makes the additional heads "much more accurate than a simple finetuning of a next-token prediction model, thus allowing our models to unlock self-speculative decoding's full potential" (Section 3.2). Finetuning only the heads on a frozen trunk would produce heads that predict future tokens from representations that were never trained to contain that information, resulting in low acceptance rates and negligible speedup.
+
+**Implementation details:** the decoding experiments use "greedy self-speculative decoding" with "heterogeneous batch sizes using xFormers" (Lefaudeux et al., 2022). Prompts are 512 tokens from held-out test data, and completions are 512 tokens. Batch size 42 is the maximum that fits in GPU memory. The speedup is evaluated at this batch size "but is constant across batch sizes" (Figure S10).
+
+---
+
+#### 3.4.5 Alternative Architectures Explored (Appendix B)
+
+The paper investigates several architectural variants beyond the parallel independent heads described above, all reported in Table S4 for 7B models trained on 200B tokens of code.
+
+**Linear heads:** replacing the transformer-layer output heads with single linear projections (no nonlinearity, no self-attention, just a learned matrix). For $n=4$, this achieved MBPP pass@1 of 33.6% vs. 33.8% for the transformer head architecture—essentially tied on this metric—but performance was less consistent across benchmarks. On HumanEval pass@1: 21.9% vs. 24.0% for transformer heads. The linear head variant was also tested for finetuning Llama 2 (Table S6) where it similarly showed mixed results.
+
+**Causal architecture:** rather than independent parallel heads, each head $i$ is applied on top of the previous heads: $P_\theta(x_{t+i} \mid \cdot) = \text{softmax} \circ f_u \circ f_{h_i} \circ f_{h_{i-1}} \circ \dots \circ f_{h_1} \circ f_s$. Head 2 sees head 1's output, head 3 sees head 2's output, etc. This respects the natural temporal ordering—predicting $x_{t+2}$ should be informed by the prediction for $x_{t+1}$—and allows the sequential forward/backward memory optimization (Figure S11). However, in practice it underperformed the parallel architecture on most metrics: MBPP pass@1 31.9% vs. 33.8%, HumanEval pass@1 20.9% vs. 24.0%.
+
+**Anticausal architecture:** the reverse ordering—head $n$ (predicting the most distant token) is applied first, then progressively refined by heads $n-1$ through 1. So head 1 (the standard next-token predictor) sees the outputs of all other heads. This is motivated by the idea that predicting the far future first might provide useful context for predicting the near future. In practice, it performed similarly to the causal variant and worse than parallel: MBPP pass@1 30.8%, HumanEval pass@1 20.9%.
+
+**With additional layers ("+Layers"):** for the causal architecture with $n=4$, adding 3 extra layers (so total model size increases) improved MBPP pass@1 to 33.3%—essentially matching the parallel architecture at standard parameter count. This suggests that the causal architecture needs more capacity to be competitive, undermining the parameter-matched comparison.
+
+**Why parallel independent heads won:** the paper does not provide a detailed theoretical justification, but the empirical results (Table S4) show the parallel architecture achieves the best or near-best numbers across all metrics at matched parameter count. The likely explanation is that forcing each head to predict from the same trunk representation $z_{t:1}$—without access to other heads' predictions—creates a stronger learning signal: the trunk must encode all information needed for *all* future offsets simultaneously, rather than allowing heads to compensate for each other's deficiencies. The causal architecture, by contrast, allows later heads to "fix" problems in earlier heads' representations, potentially reducing the pressure on the trunk to learn rich future-aware features.
+
+---
+
+#### 3.4.6 Training Hyperparameters and Scale
+
+The paper conducts experiments at substantial scale, with training runs consuming up to 1T tokens on 7B parameter models. Here are the key hyperparameter configurations (Table S13):
+
+**Base configuration (all experiments):** optimizer is Adam (Kingma and Ba, 2015) with $\beta_1 = 0.9$, $\beta_2 = 0.95$, decoupled L2 weight decay (Loshchilov and Hutter, 2019) with coefficient 0.1, gradient clipping to Euclidean norm 1.0, learning rate schedule with linear warmup and cosine decay (Loshchilov and Hutter, 2017).
+
+**Code model scaling experiments (Section 3.1, models from 0.3B to 13B):** batch size 8 (where batch size is measured in multiples of $2^{20}$ tokens—so effective batch size is 8.4M tokens), peak learning rate $3\times 10^{-4}$, context length 4096, warmup 1000-2000 steps, decay to 0.03× peak LR. Training durations: 10,850 steps (91B tokens) for models up to 3B, 25,000 steps (209.7B tokens) for 7B and 13B.
+
+**7B code models (200B, 500B, 1T tokens):** same base config, with steps adjusted to reach target token counts. For 1T tokens: 136,240 steps at batch size 7 × $2^{20}$.
+
+**7B natural language models (200B, 500B tokens):** peak LR $3\times 10^{-4}$, context length 4096, decay to 0.10× peak LR (less aggressive decay than code models), 25,000 steps for 200B, 60,000 steps for 500B.
+
+**Byte-level 7B model (314B bytes):** batch size 12 × $2^{20}$, peak LR $3\times 10^{-4}$, context length 8192, 25,000 steps, decay to 0.03× peak LR. Uses the replicated unembedding architecture from Appendix B (acknowledging memory cost is manageable for byte-level models with smaller effective vocabulary).
+
+**Synthetic experiments (induction, arithmetic):** much smaller scale—models from 1M to 1B nonembedding parameters, batch size 0.25 × $2^{20}$, peak LR $10^{-4}$, context length 1024–2048, 100,000 steps (26.2B tokens), trained for up to 90 epochs with early stopping.
+
+**Finetuning (CodeContests, summarization):** CodeContests uses batch size 0.25 × $2^{20}$, peak LR $5\times 10^{-5}$, 13,000 steps, context 4096, gradient clipping 0.1. Summarization finetunes run for 3 epochs per dataset with LR $3\times 10^{-5}$ and batch size 0.125 × $2^{20}$.
+
+**Why these specific values:** the code model configuration (LR $3\times 10^{-4}$, decay to 0.03×) follows standard practice for training large language models from scratch. The natural language models use less aggressive decay (0.10×) because they are trained for more steps (0.8 epochs at 200B tokens), and the higher final learning rate prevents the model from overfitting to the limited data. The byte-level model uses a longer context (8192) because byte sequences are inherently longer for the same linguistic content—a 4096-token sequence might correspond to 12,000+ bytes.
+
+---
+
+#### 3.4.7 Evaluation Protocol
+
+The paper uses several evaluation methodologies depending on the task:
+
+**Code generation (MBPP, HumanEval, APPS):** models generate solutions using nucleus sampling (Holtzman et al., 2020) with probability mass 0.95 and various temperatures. The unbiased pass@k estimator from Chen et al. (2021) is computed from $N$ samples per problem (typically $N=200$ or $N=1000$). Pass@k measures the probability that at least one of $k$ randomly selected samples passes all unit tests. For each model, dataset, and pass@k value, the **temperature is chosen optimally** based on test scores (reported in Table S12)—this is described as "oracle temperatures" and gives an upper bound on achievable performance.
+
+**Standard NLP benchmarks (Section 3.7, Appendix G):** evaluated in zero-shot or few-shot mode with accuracy as the metric. Benchmarks include ARC Challenge, COPA, HellaSwag, Natural Questions, PIQA, SIQA, and TriviaQA.
+
+**Summarization (Section 3.7, Appendix H):** models are finetuned on each summarization dataset's training split for three epochs. The checkpoint with highest ROUGE-L F1 score on the validation set is selected. Evaluation reports ROUGE-1, ROUGE-2, ROUGE-3, and ROUGE-L F1 scores against reference summaries.
+
+**GSM8K mathematical reasoning (Appendix I):** evaluated in 8-shot mode with nucleus sampling ($p=0.95$) across temperatures 0.2–1.4. Pass@k is computed as the frequency of the correct final answer appearing among $k$ samples, estimated from 200 samples per problem.
+
+**Induction capability (Section 4.1):** custom evaluation where character names in 100 stories are replaced with randomly generated two-token names. Induction success is measured as accuracy on the second token of a name after it has appeared at least once—requiring the model to recognize that "A" followed by "B" earlier means "A" should be followed by "B" again.
+
+**Algorithmic reasoning (Section 4.2):** polynomial arithmetic in $\mathbb{F}_7[X]/(X^5)$ with operations sampled uniformly. Evaluation uses greedy decoding on a fixed test set of 2000 samples per operation count. Both in-domain (1–5 operations) and out-of-domain (6–10 operations) generalization are measured.
+
+**CodeContests finetuning (Section 3.6, Appendix F):** the Python subset with reward annotations, conditioning on correct solutions at evaluation. 1000 samples per problem across temperatures 0.5–0.9, computing pass@k with a temperature oracle ($k \mapsto \max_T \text{pass@k}(T)$).
+
+**Why oracle temperatures for code benchmarks:** the paper acknowledges this gives results that "grant access to a temperature oracle" (Appendix F) and therefore represent an upper bound. This is standard practice in the code generation literature when the goal is to compare model capabilities rather than to simulate deployment where temperature must be fixed a priori. The actual temperatures used (Table S12) typically favor lower values for pass@1 (0.1–0.2) and higher values (0.8) for pass@100, reflecting the tradeoff between precision and diversity.
+
+---
+
+#### 3.4.8 Computational Cost and Environmental Impact
+
+**Training cost:** "training all models reported in the paper required around 500K GPU hours of computation on hardware of type A100-80GB and H100" (Impact Statement). Estimated total emissions were "around 50 tCO2eq, 100% of which were offset by Meta's sustainability program."
+
+**Training time overhead of multi-token prediction (Table S5):** for 0.3B models, $n=4$ incurs a 1.22× training time increase vs. $n=1$. For 13B models, $n=4$ incurs only a 1.09× increase. The overhead decreases with model size because the trunk computation (which is shared) dominates the total FLOPs, and the sequential backward implementation's suboptimal FSDP overlap becomes a smaller fraction of total time. The authors attribute the remaining overhead to implementation inefficiency and claim it "can be removed if reimplemented correctly."
+
+## 4. Key Insights and Innovations
+
+### Innovation 1: Multi-Token Prediction as a Scale-Dependent Training Paradigm
+
+The paper's most intellectually distinctive contribution is not multi-token prediction itself — prior work existed — but the empirical demonstration that its benefits are **contingent on model scale in a way that explains why it was previously overlooked**. Figure 3 reveals a crossover: for models below ~3B parameters, multi-token prediction underperforms next-token baselines; at 6.7B and 13B, it consistently and substantially outperforms them, with the gap widening as scale increases. This is not a monotonic "more is better" result — it is a qualitative shift in the relative value of the training objective as capacity grows.
+
+Before this work, the dominant assumption was that training objectives either help or don't, uniformly across scales. Qi et al. (2020) studied multi-token prediction at smaller model sizes and found mixed results, which likely contributed to the community's lukewarm reception of the idea. The present paper reframes the question: the utility of a training objective is not an intrinsic property but an interaction effect with model capacity. Small models, the paper argues (Section 4.1), benefit from next-token prediction's focus on local patterns because they lack the representational capacity to simultaneously model short-range and long-range dependencies. Larger models have "excess capacity" that next-token prediction leaves underutilized — multi-token prediction directs this capacity toward learning features that anticipate future tokens, improving sample efficiency without sacrificing local fluency.
+
+This is a **fundamental reframing** rather than an incremental improvement. It changes how researchers should evaluate new training objectives: negative results at small scale do not necessarily generalize, and scaling behavior must be explicitly characterized. The finding connects conceptually to the broader literature on emergent abilities (though the paper does not make this link explicitly): just as certain capabilities only manifest above a threshold model size, certain training objectives only become beneficial above a capacity threshold. The implication for practitioners is direct — if you're training at <3B parameters, multi-token prediction is not for you; if you're at 7B+, it's effectively a free lunch.
+
+### Innovation 2: The Decomposition of Multi-Token Prediction into a Mutual Information Amplifier
+
+The paper makes a **theoretical advance** by decomposing the multi-token prediction objective to reveal that it implicitly reweights the training signal toward high-mutual-information tokens. The decomposition (Section 5.2, Appendix L.2) shows that 2-token prediction loss can be expressed as:
+
+$$H(X) + H(Y) = H(X|Y) + 2I(X;Y) + H(Y|X)$$
+
+where $H(X|Y)$ captures local variations that don't constrain the future, $I(X;Y)$ captures features of the current token that are informative about the next, and $H(Y|X)$ is a shifted next-token entropy term. Compared to next-token prediction alone — which weights the mutual information term at 1x — 2-token prediction **doubles** the relative weight of $I(X;Y)$.
+
+This is not just mathematical formalism; it provides a principled explanation for *where* and *why* multi-token prediction helps. The "choice points" argument (Section 5.1, Figure 9) operationalizes this: in a sequence where one token represents a consequential decision and others are stylistic variations, an $n$-token prediction loss automatically assigns weight $\frac{n(n+1)}{2}$ to the consequential token (via its correlates at earlier positions) versus weight $n$ to inconsequential ones. The model is steered — without explicit difficulty weighting — toward learning the features that determine downstream coherence.
+
+Prior attempts to address the teacher-forcing gap (scheduled sampling; Bengio et al., 2015) were heuristic and, the authors argue, unsuitable for discrete text. Prior multi-token prediction work (Qi et al., 2020) lacked this theoretical framing. What distinguishes this paper's contribution is the **unified explanatory framework**: the empirical improvements on code generation and algorithmic reasoning, the scale-dependent benefits, and the null results on multiple-choice benchmarks all follow from the same mechanism — multi-token prediction upweights learning at choice points, which matters for generative coherence but is irrelevant for single-token accuracy.
+
+This is a **conceptual advance** with practical implications beyond this specific method. Any auxiliary loss that increases the weight of mutual information between current and future predictions could, in principle, produce similar benefits. The decomposition provides a search criterion for designing future auxiliary objectives.
+
+### Innovation 3: A Compute-Matched Architecture That Makes Multi-Token Prediction a Truly Free Lunch
+
+The paper's **engineering contribution** — the sequential forward/backward scheme that reduces peak GPU memory from $O(nV + d)$ to $O(V + d)$ — is deceptively significant because it transforms multi-token prediction from an expensive research curiosity into a drop-in replacement for next-token training. The memory bottleneck had been the primary obstacle to scaling multi-token prediction: prior implementations that materialized all logits simultaneously were prohibitively expensive for large vocabulary sizes, and alternatives that replicated the residual stream (ProphetNet, Qi et al., 2020) broke the parameter-matched comparison that makes the method's benefits interpretable.
+
+But the deeper insight is the **parameter-matched design itself**: by reallocating $n-1$ layers from the trunk to the output heads, total parameter count remains constant. This makes the comparison to next-token baselines genuinely fair — any improvement comes from the multi-token objective, not from increased model capacity. Prior work (ProphetNet) could not make this claim because replicating the residual stream adds effective parameters. The paper's approach is akin to a controlled experiment: hold total parameters constant, vary only the structure of the supervision, and measure the effect.
+
+What makes this more than a routine engineering optimization is that the loss of trunk layers could have hurt performance — a shallower trunk might learn worse representations, and the heads might not compensate. The fact that multi-token prediction *overcomes* this handicap and still outperforms deeper next-token models is strong evidence that the training signal itself is the bottleneck, not architecture depth. The ~1.04–1.09× training time overhead (Table S5), which the authors claim can be eliminated with better FSDP integration, reinforces the "free lunch" framing: adopt multi-token prediction and you get better models, faster inference via self-speculative decoding, and essentially identical training cost.
+
+### Innovation 4: Self-Speculative Decoding as an Emergent Property of Pretraining, Not a Finetuning Hack
+
+Prior work on self-speculative decoding (Stern et al., 2018; Cai et al., 2024) treated additional prediction heads as a **finetuning add-on**: take a pretrained next-token model, attach extra heads, and finetune them to predict future tokens for faster inference. The paper's critical finding — stated explicitly in Section 3.2 — is that pretraining with multi-token prediction makes these heads "much more accurate than a simple finetuning," which is what "unlock[s] self-speculative decoding's full potential."
+
+The reasoning is straightforward but non-obvious: a next-token pretrained trunk's hidden states were never trained to contain information about tokens beyond the immediate next one. Finetuning additional heads on top of such representations is trying to extract information that isn't there — the heads can only learn shallow correlations. When the trunk is pretrained with multi-token prediction, by contrast, the trunk representations are explicitly optimized to contain features predictive of all $n$ future offsets, making the heads genuinely informative.
+
+This reframes speculative decoding from an architectural trick into a **natural consequence of the training objective**. The 3.05× speedup on code and 2.74× on natural language (Table S2) are not just performance numbers — they demonstrate that the additional heads encode non-trivial future information that can be exploited without any post-hoc modification. The byte-level results (Table S3) push this further: an 8-token prediction model achieves 6.39× speedup using 4 heads, and a 32-token model achieves 10.84× speedup using all 32 heads, with 15.35 tokens accepted per forward pass. This is within striking distance of making byte-level models — which eliminate tokenization's language dependence and out-of-vocabulary issues — practical for deployment, since the longer sequence length is compensated by the decoding speedup.
+
+### Innovation 5: The Diagnostic Value of Multi-Token Prediction for Understanding Model Capabilities
+
+The synthetic experiments in Section 4 serve a purpose beyond validating the method: they **diagnose what capabilities next-token prediction fails to teach**. The induction head experiment (Section 4.1, Figure 7) shows that for small models (≤30M nonembedding parameters), next-token prediction produces essentially zero induction capability while 2-token prediction achieves substantial accuracy. At 100M parameters, the gap disappears — larger models can learn induction from next-token prediction alone. The algorithmic reasoning experiment (Section 4.2, Figure 8) shows that multi-token prediction improves out-of-distribution generalization on polynomial arithmetic *more than tripling the model size* does (Figure S16).
+
+These results constitute a **negative diagnostic** about next-token prediction: it is not that next-token models cannot learn long-range dependencies — given enough capacity, they do — but that the objective itself is a bottleneck for data-efficient acquisition of these capabilities. The crossover in Figure 7 (induction capability emerging in next-token models only at 100M parameters, present in 2-token models at 10M) quantifies this inefficiency. The fact that replacing next-token with multi-token prediction has a larger effect than tripling model size on the arithmetic task (30M vs. 100M parameters, Figure S16) sharpens the point: the training objective matters more, at a given capacity, than raw scale for certain reasoning capabilities.
+
+This is **not an incremental finding** — it challenges the prevailing "scale is all you need" narrative by demonstrating that the *form* of the supervision signal has qualitative effects on what models learn, independent of architecture size. It also provides a framework for future research: multi-token prediction can serve as a probe for identifying which reasoning capabilities are bottlenecked by the next-token objective versus other factors (architecture, data quality, scale). The finding that benefits disappear when training data itself enforces induction (Appendix J, Figure S14 — training on books rather than children's stories makes induction necessary earlier) suggests a more nuanced picture: multi-token prediction substitutes for data properties that enforce long-range dependency learning, which has implications for data curation as well as objective design.
+
+## 5. Experimental Analysis
+
+### Evaluation Methodology
+
+**Dataset.** The primary benchmark throughout is **code generation**, evaluated on MBPP (Austin et al., 2021) and HumanEval (Chen et al., 2021), with additional results on APPS/Intro (Hendrycks et al., 2021) and CodeContests (Li et al., 2022). For natural language, the paper evaluates on eight summarization benchmarks (CNN/Dailymail, Multi-News, OrangeSum, pn-summary, SAMSum, ThaiSum, WikiSummary, XSum; listed in Table S8), the GSM8K mathematical reasoning benchmark (Cobbe et al., 2021), and six standard NLP multiple-choice benchmarks: ARC Challenge, COPA, HellaSwag, Natural Questions, PIQA, SIQA, and TriviaQA (Appendix G). Synthetic experiments use custom datasets: a children's stories corpus for induction measurement (Section 4.1) and a procedurally generated polynomial arithmetic task in $\mathbb{F}_7[X]/(X^5)$ (Section 4.2). Training data volumes are reported as tokens (200B, 500B, 1T for code models; 200B, 500B for natural language) or bytes (314B for byte-level models, equivalent to ~116B tokens).
+
+**Base model(s).** All experiments train **transformer language models from scratch** at six scales: 0.3B, 0.6B, 1.3B, 3B, 6.7B ("7B"), and 13B parameters. Architectures follow standard decoder-only designs (Table S14): the 7B model uses dim=4096, 32 layers, 32 heads; the 13B uses dim=5120, 40 layers, 40 heads. The paper also experiments with byte-level models of the same architecture but operating on raw bytes rather than tokenized text. For finetuning comparisons (Appendix D, Table S6), Llama 2 is used as a base to test whether multi-token prediction benefits transfer to already-pretrained models. No model family other than the authors' own trained-from-scratch transformers is used for the main results.
+
+**Metrics.** Code generation is evaluated using the **unbiased pass@k estimator** from Chen et al. (2021), computed from 200 or 1000 samples per problem, where pass@k measures the probability that at least one of $k$ randomly selected samples passes all unit tests. For each model, dataset, and $k$ value, the sampling temperature is chosen optimally post-hoc based on test scores ("oracle temperatures," reported in Table S12). Summarization is evaluated with **ROUGE-1, ROUGE-2, ROUGE-3, and ROUGE-L F1** scores (Lin, 2004) against reference summaries, with checkpoints selected by maximal ROUGE-L F1 on validation splits. Mathematical reasoning (GSM8K) uses pass@k computed as frequency of correct final answers among $k$ samples, using nucleus sampling ($p=0.95$) across temperatures 0.2–1.4. Standard NLP benchmarks report **accuracy**. Induction capability (Section 4.1) uses a custom accuracy metric on second-token prediction for previously-seen names. Algorithmic reasoning (Section 4.2) uses greedy decoding accuracy on a fixed test set. Inference speed is measured in **tokens per forward pass** and **relative throughput** compared to standard autoregressive decoding.
+
+**Baselines.** The primary baseline in all experiments is a **next-token prediction model ($n=1$)** with identical total parameter count, trained on the same data with the same hyperparameters. This is the critical controlled comparison: since multi-token models reallocate $n-1$ layers from the trunk to output heads, both models have identical FLOPs per forward pass. Additional baselines in specific experiments include: majority voting for code generation (not used as a primary comparison point), finetuned Llama 2 with next-token prediction vs. multi-token prediction (Table S6), and for the inference speed experiments, standard autoregressive decoding ($k=1$ head) as the baseline. No prior multi-token prediction methods (e.g., ProphetNet) are directly compared as baselines because they do not support compute-matched parameter counts.
+
+**Generation budget / compute accounting.** The paper measures training compute in **total tokens processed**. All comparisons between next-token and multi-token models are conducted at equal tokens seen — a 7B next-token model trained on 200B tokens is compared to a 7B 4-token model trained on 200B tokens. Since the architectures have matched parameter counts and FLOPs per forward pass, equal tokens correspond to equal training FLOPs (modulo the small overhead reported in Table S5). Training time overhead of multi-token prediction is separately measured (Table S5) and found to be 1.02–1.09× at 7B+ scales, attributed to suboptimal FSDP overlap that the authors claim is fixable. For inference, speedup is measured relative to standard autoregressive decoding at the same batch size.
+
+**Cross-validation / statistical protocol.** For the main scaling experiments (Section 3.1), each configuration is trained once — there is no cross-validation over training runs. Error bars in Figure 3 are 90% confidence intervals computed via **bootstrapping over dataset samples** (resampling the test problems with replacement). For the synthetic induction experiments (Section 4.1 and Appendix J), **two independent runs** with different random seeds are conducted per configuration, with per-loss averages reported (Figure 7, Figure S14). For the algorithmic reasoning experiments (Section 4.2 and Appendix K), two independent runs per configuration are conducted (Figure S16). For summarization finetuning, model selection is done via a held-out validation set within each benchmark's training split, with the checkpoint achieving maximal ROUGE-L F1 on validation selected for test evaluation (Appendix H). For CodeContests finetuning (Section 3.6), a temperature oracle is used at evaluation time ($k \mapsto \max_T \text{pass@k}(T)$), which should be understood as an upper bound rather than a deployable metric since temperature cannot be optimized per-test-problem in practice. No formal statistical significance testing is reported for the main code benchmark comparisons; results rely on the magnitude and consistency of differences across multiple benchmarks, model sizes, and metrics.
+
+### Main Quantitative Results
+
+#### Scaling Behavior: Benefits Increase with Model Size (Section 3.1)
+
+The paper's central empirical claim is that multi-token prediction is **increasingly beneficial as model size grows**, with small models actually harmed by the objective. Figure 3 and Table S7 present results for models from 0.3B to 13B trained on at least 91B tokens of code, evaluated on MBPP and HumanEval.
+
+**At 0.3B parameters:** multi-token prediction substantially underperforms the next-token baseline. On MBPP pass@1, the $n=1$ baseline achieves 1.8%, while $n=2$ gets 1.7% and $n=4$ drops to 1.0%. On HumanEval pass@1: 1.9% ($n=1$) vs. 1.5% ($n=2$) vs. 1.2% ($n=4$). The degradation is consistent across pass@10 and pass@100, with $n=4$ trailing by 9.8 percentage points on MBPP pass@100 (20.1% vs. 29.9%).
+
+**At 1.3B parameters:** the methods are roughly tied. MBPP pass@1: 6.8% ($n=1$), 7.3% ($n=2$), 7.4% ($n=4$). HumanEval pass@1: 4.6% ($n=1$), 5.4% ($n=2$), 4.8% ($n=4$).
+
+**At 6.7B parameters:** multi-token prediction pulls ahead. MBPP pass@100: 76.0% ($n=4$) vs. 74.7% ($n=1$), a gap of +1.3 points. HumanEval pass@100: 58.5% ($n=4$) vs. 51.7% ($n=1$), a gap of +6.8 points. The HumanEval advantage is more pronounced than MBPP at this scale.
+
+**At 13B parameters:** the gap widens further. MBPP pass@1: 30.5% for both $n=2$ and $n=4$ vs. 26.0% for $n=1$ — a +4.5 point absolute improvement. HumanEval pass@1: 15.8% ($n=4$) vs. 14.1% ($n=1$). MBPP pass@100: 79.2% ($n=4$) vs. 77.0% ($n=1$). HumanEval pass@100: 63.5% ($n=4$) vs. 56.0% ($n=1$) — a +7.5 point improvement.
+
+The paper's headline claim that "our 13B parameter models solves 12% more problems on HumanEval and 17% more on MBPP" (Abstract) is computed as the relative improvement on pass@1: (30.5 − 26.0)/26.0 ≈ 17.3% for MBPP, and (15.8 − 14.1)/14.1 ≈ 12.1% for HumanEval. The absolute gaps are 4.5 and 1.7 percentage points respectively.
+
+**Critical observation about $n=2$ vs $n=4$:** at 13B, $n=2$ and $n=4$ perform nearly identically on MBPP pass@1 (both 30.5%), but $n=4$ has a slight edge on HumanEval pass@100 (63.5% vs. 60.0%). At 6.7B, $n=2$ and $n=4$ are similarly close. This suggests that beyond $n=2$, additional heads provide marginal benefits at scale for code, with the optimal $n$ being data-dependent (Table 1 shows $n=4$ is best on 200B tokens of code, $n=6$ leads on APPS/Intro).
+
+#### Optimal Prediction Horizon $n$ (Section 3.4)
+
+Table 1 systematically sweeps $n \in \{1, 2, 4, 6, 8\}$ for 7B models trained on 200B tokens of code (0.8 epochs). The results establish $n=4$ as the best overall configuration:
+
+**MBPP:** $n=4$ achieves pass@1 = 33.8%, pass@10 = 55.9%, pass@100 = 76.9%. Compared to $n=1$ (30.0%, 53.8%, 73.7%), this is a +3.8, +2.1, and +3.2 percentage point improvement. $n=2$ (30.3%, 55.1%, 76.2%) is intermediate, and $n=6$ (31.9%, 53.9%, 73.1%) and $n=8$ (30.7%, 52.2%, 73.4%) show that performance degrades beyond the optimal window.
+
+**HumanEval:** $n=4$ achieves pass@1 = 24.0%, pass@10 = 40.1%, pass@100 = 66.1%. Compared to $n=1$ (22.8%, 36.4%, 62.0%): +1.2, +3.7, +4.1 points. $n=2$ (22.2%, 38.5%, 62.6%) and $n=8$ (20.0%, 36.6%, 59.6%) underperform $n=4$.
+
+**APPS/Intro:** the optimal $n$ shifts to 6, with pass@1 = 3.5%, pass@10 = 10.8%, pass@100 = 22.7%, compared to $n=1$ (2.8%, 7.8%, 17.4%). $n=4$ underperforms $n=1$ on this benchmark (1.6%, 7.1%, 19.9%), which the paper attributes to the APPS problems being longer and requiring different lookahead distances.
+
+**Byte-level models (trained on 314B bytes, ~0.5 epochs):** $n=8$ is the clear winner. MBPP pass@1: 32.3% vs. 19.3% for $n=1$ — a +13.0 point improvement (67% relative). HumanEval pass@1: 21.8% vs. 18.1%. APPS/Intro pass@1: 1.2% vs. 0.1%. Byte-level multi-token prediction also enables speculative decoding speedups of 6.4× for $n=8$ using 4 heads (Table S3). The paper notes that the "8-byte prediction model is a strong byte-based model, approaching the performance of token-based models despite having been trained on 1.7× less data" (Section 3.3) — the 32.3% MBPP pass@1 for the byte-level $n=8$ model at 314B bytes is actually higher than the token-level $n=1$ model at 200B tokens (30.0%), despite the byte-level model seeing fewer effective tokens.
+
+#### Training for Multiple Epochs (Section 3.5)
+
+When models are trained for 4 epochs (1T tokens of code), the benefit of multi-token prediction diminishes but does not vanish. Table 1 (bottom rows) shows:
+
+**MBPP:** $n=4$ achieves pass@1 = 43.1%, pass@10 = 65.9%, pass@100 = 83.7%. $n=1$: 40.7%, 65.4%, 83.4%. The gap narrows to +2.4 points on pass@1 (vs. +3.8 at 0.8 epochs). On pass@100, $n=4$ and $n=1$ are essentially tied (83.7% vs. 83.4%).
+
+**HumanEval:** pass@1 is tied (31.6% vs. 31.7%), but pass@100 shows a +3.2 point advantage for $n=4$ (86.2% vs. 83.0%). This suggests the multi-token model generates more *diverse* correct solutions even when pass@1 converges.
+
+**APPS/Intro:** $n=4$ was already not optimal with 200B tokens, and the multi-epoch training does not change this — both $n=1$ and $n=4$ achieve similar performance.
+
+The paper interprets this as evidence that "multi-token training still maintains an edge on next-token prediction when trained on multiple epochs of the same data" but acknowledges the improvements diminish, consistent with the idea that next-token prediction can eventually learn the relevant features given enough passes over the data — multi-token prediction accelerates this learning.
+
+#### Finetuning on CodeContests (Section 3.6)
+
+Figure 4 shows the results of finetuning 7B pretrained models on the CodeContests dataset, evaluated with a temperature oracle. Three configurations are compared: (1) $n=1$ pretrained, finetuned with $n'=1$ (the standard baseline); (2) $n=4$ pretrained, finetuned with $n'=4$ (multi-token throughout); (3) $n=4$ pretrained, finetuned with $n'=1$ (multi-token pretraining, standard finetuning).
+
+The key finding: both finetuning approaches on top of the 4-token pretrained model outperform the next-token baseline. At pass@1, the $n=4 \to n'=1$ configuration achieves the best performance, consistent with "the classical paradigm of pretraining with auxiliary tasks followed by task-specific finetuning." At higher $k$, the advantage is clearer — at pass@1000, both multi-token pretrained variants substantially outperform the baseline, demonstrating they produce more diverse correct solutions. The $n=4 \to n'=4$ finetuning also outperforms the baseline but is slightly behind $n=4 \to n'=1$ at low $k$, suggesting that while the multi-token pretrained representations transfer well, continuing with multi-token finetuning on new data may not be optimal — the standard next-token finetuning extracts the benefits of the pretrained representations without the potential distraction of the auxiliary heads.
+
+CodeContests is described as "the most challenging coding benchmark we evaluate in this study," making these results particularly significant — they show the benefits of multi-token pretraining persist even on tasks substantially harder than MBPP and HumanEval.
+
+#### Natural Language Results (Section 3.7)
+
+The paper's natural language experiments reveal a **sharp task-dependence** in multi-token prediction's benefits.
+
+**Standard NLP benchmarks (Figure 5, Figure S12):** the paper reports that on 6 standard multiple-choice and question-answering benchmarks, the $n=2$ model "performs on par with the next-token prediction baseline throughout training" while the $n=4$ model "suffers a performance degradation." Detailed results in Figure S12 show minimal differences across ARC Challenge, COPA, HellaSwag, Natural Questions, PIQA, SIQA, and TriviaQA — the $n=2$ line closely tracks $n=1$, while $n=4$ is slightly lower. The paper explicitly states it does "not believe that multiple-choice and likelihood-based benchmarks are suited to effectively discern generative capabilities of language models," positioning this as an expected null result rather than a failure.
+
+**Summarization (Figure 6, Tables S8–S10):** on eight abstractive summarization benchmarks, finetuning multi-token pretrained models produces consistent improvements in ROUGE scores. For models trained on 200B tokens of natural language, average ROUGE-L F1 improves from 26.23 ($n=1$) to 26.74 ($n=2$, +0.51) and 26.69 ($n=4$, +0.46). For models trained on 500B tokens, the improvements are smaller: 27.08 ($n=1$) to 27.36 ($n=2$, +0.28) and 27.39 ($n=4$, +0.31). The paper notes that the performance gap "shrink[s] with larger dataset size," consistent with the multi-epoch finding that next-token prediction eventually catches up given enough data, but multi-token prediction accelerates learning.
+
+At the individual dataset level (Table S8), the pattern is broadly consistent: 7 of 8 datasets show improvements from $n=2$ at 200B tokens, and 6 of 8 show improvements at 500B. The magnitudes are modest (typically +0.2 to +1.1 ROUGE-L points) but consistent. An interesting asymmetry appears in Table S10: at 500B tokens, $n=4$ models appear better at recall metrics while $n=2$ models appear better at precision metrics, though the differences are small.
+
+**GSM8K mathematical reasoning (Figure S13):** for models trained on 200B tokens, the $n=2$ model "clearly outperforms" the next-token baseline across pass@1, pass@10, and pass@100 at most temperatures. After 500B tokens, the pattern reverses — $n=1$ outperforms $n=2$, and $n=4$ is worse throughout. The paper interprets this similarly to the induction findings: multi-token prediction accelerates learning of chain-of-thought reasoning when data is limited (200B tokens), but once the correct circuits for autoregressive reasoning are formed (500B tokens), the auxiliary objective becomes a distraction.
+
+#### Inference Speedup Results (Section 3.2)
+
+Table S2 quantifies the self-speculative decoding speedup for a 7B 4-token prediction model:
+
+**Code (1T token model):** using all 4 heads, the speedup is **3.05×** relative to standard autoregressive decoding at batch size 42, with an average of **3.50 accepted tokens per forward pass**. Using 2 heads: 1.85×, 3 heads: 2.54×.
+
+**Wikipedia (500B token language model):** 4 heads achieve 2.74× speedup with 3.12 tokens/forward.
+
+**Books (500B token language model):** 4 heads achieve 2.67× speedup with 3.09 tokens/forward.
+
+The speedup is described as "constant across batch sizes" (Figure S10), which is important — it means the benefits are not limited to small-batch interactive settings but apply to high-throughput batch inference as well.
+
+**Byte-level models (Table S3):** an 8-token prediction model achieves 6.39× speedup using 4 heads (7.04 tokens/forward). The most extreme configuration — a 32-token prediction model using all 32 heads — achieves 10.84× speedup with 15.35 tokens per forward pass at batch size 16. This would make byte-level inference, which requires processing longer sequences than token-level, potentially *faster* than token-level inference — the paper states the 8-token prediction model with self-speculative decoding "would allow to fully compensate the cost of longer byte-level sequences at inference time and even be faster than a next-token prediction model by nearly two times" (Section 3.3).
+
+#### Synthetic Experiments: Induction and Algorithmic Reasoning (Sections 4.1–4.2)
+
+The synthetic experiments serve as controlled probes of *why* multi-token prediction helps, independent of scale.
+
+**Induction capability (Figure 7):** for models from 1M to 1B nonembedding parameters trained on children's stories, 2-token prediction dramatically improves induction accuracy (predicting the second token of a two-token name after seeing it once) for small models. At 10M parameters, next-token models achieve ~0.05 induction success (near random) while 2-token models achieve ~0.35. At 30M, the gap is ~0.15 vs. ~0.42. At 100M, the gap disappears — both achieve ~0.48. This crossover is interpreted as evidence that "once induction capability has been formed, these learned features transform induction into a task that can be solved locally at the current token and learned with next-token prediction alone."
+
+**Induction with higher-quality data (Figure S14):** when models are trained on a 9:1 mix of books and children's stories (which makes induction necessary earlier for effective language modeling), the advantage of multi-token prediction disappears for all but the smallest models. The paper argues this supports the interpretation: "feature learning converts the task into a pure next-token prediction task" once the data enforces long-range dependencies strongly enough.
+
+**Algorithmic reasoning (Figure 8):** on polynomial arithmetic in $\mathbb{F}_7[X]/(X^5)$, 100M parameter models trained with multi-token prediction substantially outperform next-token models across all difficulty levels (1–10 operations). For in-domain examples (1–5 operations), 4-token prediction achieves ~80% accuracy vs. ~55% for next-token at 5 operations. For out-of-domain generalization (6–10 operations), 4-token prediction achieves ~22% at 8 operations vs. ~8% for next-token. The absolute numbers are low for out-of-domain but the relative improvement is striking.
+
+**Comparison to scaling model size (Figure S16):** increasing model size from 30M to 100M parameters for next-token prediction improves accuracy from ~25% to ~55% at 5 operations. Switching from next-token to 4-token prediction at 30M improves accuracy from ~25% to ~72% — a larger effect than tripling model size. At 100M, 4-token prediction reaches ~80% accuracy while next-token reaches ~55%.
+
+**Pause token experiments (Figure S15):** adding pause tokens (Goyal et al., 2023) between the question and answer — which give the model additional computation before answering — does not significantly change the relative advantage of multi-token prediction. Both next-token and multi-token models improve with more pause tokens, but the gap between them remains roughly constant. This rules out the "computation-sharing hypothesis" (that multi-token prediction helps by enabling more efficient use of per-token computation): if that were the mechanism, adding explicit computation via pause tokens should reduce the multi-token advantage, but it does not.
+
+### Ablation Studies and Robustness Checks
+
+**Model scale (Figure 3, Table S7):** the direction of the multi-token effect reverses with scale — harmful below ~3B, beneficial above ~6.7B. This is the most critical robustness check, as it demonstrates that simply reporting aggregate results across all scales would have produced a misleading null result. The crossover is consistent across MBPP and HumanEval and across pass@1, pass@10, and pass@100.
+
+**Number of predicted tokens $n$ (Table 1):** benefits are not monotonic in $n$. For token-level code models, $n=4$ is optimal on MBPP and HumanEval, while $n=6$ leads on APPS/Intro. For byte-level models, $n=8$ is optimal across all code benchmarks. Values of $n$ beyond the optimum degrade performance, confirming that the lookahead window is a tunable hyperparameter that depends on data distribution.
+
+**Training data volume (Table 1, Figure 6, Figure S13):** multi-token prediction benefits diminish but persist with more training data. At 200B tokens, the gap on MBPP pass@1 is +3.8 points; at 1T tokens (4 epochs), it is +2.4 points. For summarization, the average ROUGE-L gap shrinks from +0.51 to +0.28 when going from 200B to 500B training tokens. For GSM8K, the advantage of $n=2$ at 200B tokens reverses to a disadvantage at 500B tokens. This is consistent with the interpretation that multi-token prediction accelerates acquisition of capabilities that next-token prediction can eventually learn given sufficient data, but the crossover point varies by task.
+
+**Architecture variants (Table S4):** the parallel independent-head design outperforms causal (stacked) and anticausal (reverse-stacked) architectures. At $n=4$ on 7B/200B code models: parallel achieves MBPP pass@1 33.8%, HumanEval pass@1 24.0%; causal achieves 31.9% and 20.9%; anticausal achieves 30.8% and 20.9%. Linear heads (no transformer layer, just a projection) achieve 33.6% on MBPP but only 21.9% on HumanEval — good but less consistent. Adding 3 extra layers to the causal variant (increasing total parameters) recovers performance (33.3% MBPP), confirming that the parallel architecture's advantage is at least partly an efficiency-of-parameters effect rather than a fundamental architectural superiority.
+
+**Finetuning loss compatibility (Figure 4):** multi-token pretrained models can be finetuned with either next-token ($n'=1$) or multi-token ($n'=4$) loss without losing the pretraining advantage. In fact, $n'=1$ finetuning on top of $n=4$ pretraining slightly outperforms $n'=4$ finetuning, suggesting that the auxiliary heads are most valuable during pretraining and can be safely discarded or retrained during task-specific adaptation.
+
+**Starting from a pretrained model (Table S6):** finetuning Llama 2 with 4-token prediction on 200B tokens of code "did not yield significant improvements compared to the baseline." The paper speculates that "this new loss changes the initialization too brutally and never really recovers," although there are "some improvements for example on MBPP Pass@1." This is a notable null result: multi-token prediction appears to require training from scratch to be effective; it is not a finetuning add-on for already-pretrained models.
+
+**Tokenization granularity (Table 1, byte-level vs. token-level):** multi-token prediction is effective at both token and byte levels, but with different optimal $n$ values. The byte-level $n=8$ model trained on 314B bytes (0.5 epochs) achieves MBPP pass@1 of 32.3%, which is actually higher than the token-level $n=1$ model trained on 200B tokens (30.0%), despite the byte-level model seeing fewer effective tokens and only half an epoch. This is a striking finding: multi-token prediction appears to partially compensate for the inefficiency of byte-level tokenization.
+
+**Natural language task type (Figure 5 vs. Figure 6):** multi-token prediction improves summarization (a generative task) but not multiple-choice benchmarks (discriminative tasks). This robustness check confirms that the benefits are specific to the kind of reasoning required — generative coherence benefits from lookahead, while single-token selection does not.
+
+**Speculative decoding speedup across modalities and batch sizes (Tables S2, S3, Figure S10):** the inference speedup is robust across code, Wikipedia, and books, and across batch sizes from 1 to 42. The byte-level results extend this to $n=8$, $n=16$, and $n=32$ models, showing consistent scaling of speedup with number of heads used.
+
+**Optimal temperatures (Table S12):** the oracle temperature selections reveal a systematic pattern: pass@1 favors low temperatures (0.1–0.2) while pass@100 favors high temperatures (0.8), consistent across all $n$ values and model types. This pattern is not disrupted by multi-token prediction — it affects accuracy levels but not the temperature-accuracy relationship.
+
+**Pause token interaction (Figure S15, Table S11):** the lack of interaction between multi-token prediction benefits and the presence of pause tokens is itself a robustness check: it shows the mechanism is not simply "giving the model more computation at the current token." If that were the case, pause tokens (which explicitly provide additional computation) would reduce or eliminate the multi-token advantage, but the gap persists.
+
+### Critical Assessment
+
+**Claim 1: Multi-token prediction improves sample efficiency at scale, with the 13B model solving 12% more problems on HumanEval and 17% more on MBPP.**
+
+*What the experiments actually demonstrate:* The claim is supported by Figure 3 and Table S7 for models trained on 91–210B tokens of code, but with important qualifications. The "17% more on MBPP" corresponds to pass@1 moving from 26.0% to 30.5% — a 4.5 percentage point absolute improvement. The "12% more on HumanEval" is 14.1% to 15.8% — a 1.7 point absolute improvement. These are real but modest absolute gains, and the relative framing inflates the perceived magnitude. More importantly, the claim is most strongly supported at the specific training budget of ~200B tokens. At 1T tokens (4 epochs), the gap on MBPP pass@1 shrinks from +3.8 to +2.4 points (Table 1), and on HumanEval pass@1 it disappears entirely (31.6% vs. 31.7%). So the "sample efficiency" claim is most accurate when data is genuinely limited relative to model capacity — exactly the regime where efficiency matters most, but the paper could be clearer that the advantage is not permanent and can be eroded by additional training.
+
+*What was not tested:* The paper only reports one 1T-token comparison (7B, $n=1$ vs. $n=4$). We do not know whether multi-token prediction *with a larger $n$* might maintain its advantage at 1T tokens, or whether $n=2$ would be more robust than $n=4$ in the multi-epoch regime. The paper also does not explore whether adjusting $n$ during training (e.g., annealing from large to small $n$) could preserve benefits at scale. Finally, the paper only tests up to 13B parameters — whether the scaling trend continues to larger models (70B, 175B, etc.) is untested.
+
+**Claim 2: Benefits are increasingly useful for larger model sizes, with small models harmed.**
+
+*What the experiments actually demonstrate:* This claim is well-supported by Figure 3, which shows a consistent crossover pattern across two benchmarks and three pass@k metrics. The reversal is clear: $n=4$ is worse than $n=1$ at 0.3B and 0.6B, roughly tied at 1.3B–3B, and better at 6.7B–13B. The paper's explanation (Section 4.1) — that small models lack capacity to represent both local and long-range features, so multi-token prediction distracts from the more fundamental local patterns — is plausible but speculative. The synthetic induction experiments (Figure 7) provide mechanistic evidence for crossover behavior in a controlled setting, lending credibility to the interpretation.
+
+*What was not tested:* The paper only tests 6 model sizes. The crossover point (~3B) might depend on data distribution, tokenizer, or training duration — the paper provides no evidence on whether this threshold generalizes. The paper also does not explore whether $n=2$ (which provides a milder multi-token signal) might be beneficial at smaller scales where $n=4$ is harmful. Figure 3 only shows $n=1$, $n=2$, and $n=4$, but the detailed scaling numbers (Table S7) suggest $n=2$ still underperforms $n=1$ at 0.3B (1.7% vs. 1.8% on MBPP pass@1), so even the weakest multi-token signal appears harmful at very small scales.
+
+**Claim 3: Multi-token prediction enables 3× faster inference via self-speculative decoding.**
+
+*What the experiments actually demonstrate:* Table S2 reports 3.05× speedup on code using 4 heads at batch size 42, with 3.50 tokens accepted per forward pass. This is a solid result, but three caveats are worth noting. First, the speedup is measured at batch size 42 (the maximum that fits in GPU memory); the paper states it is "constant across batch sizes" (Figure S10) but the mechanism of speculative decoding typically shows diminishing returns at very large batch sizes where memory bandwidth becomes the bottleneck rather than compute — this regime may not have been tested. Second, the speedup requires using the multi-token pretrained model; a standard next-token model cannot achieve this without finetuning additional heads (which the paper shows in Table S6 performs poorly). So the speedup is not "free" — it requires adopting the multi-token training paradigm. Third, the byte-level speedups (6.4× for $n=8$, 10.84× for $n=32$) are impressive but measured at batch size 16 on sequences of 1024 bytes; the practical throughput advantage over token-level models would need to account for the longer sequence lengths inherent to byte-level encoding.
+
+*What was not tested:* The paper does not compare self-speculative decoding with multi-token pretrained models against alternative inference acceleration methods (e.g., standard speculative decoding with a separate draft model, or Medusa with finetuned heads). It also does not measure the quality-speedup tradeoff — all results use greedy decoding, and the interaction between speculative decoding and random sampling (where verification is probabilistic rather than exact match) is unexplored.
+
+**Claim 4: Multi-token prediction fosters induction head formation and algorithmic reasoning.**
+
+*What the experiments actually demonstrate:* The synthetic experiments in Section 4 are carefully designed and provide compelling evidence that multi-token prediction changes *what* models learn, not just *how fast* they learn. The induction experiment (Figure 7) shows a qualitative difference at small scales: next-token models essentially fail to learn induction while multi-token models succeed. The algorithmic reasoning experiment (Figure 8) shows a large quantitative gap that persists across difficulty levels. The finding that multi-token prediction helps more than tripling model size (Figure S16) is particularly striking.
+
+*What was not tested:* The synthetic experiments use very small models (1M–100M nonembedding parameters) on very narrow tasks. Whether these mechanistic findings explain the behavior of 7B+ models on real code remains an extrapolation. The paper does not attempt to measure induction head formation or algorithmic reasoning capabilities in the large-scale models — we do not know whether the 13B multi-token model is better at induction than the 13B next-token model, or whether the code improvements come from a different mechanism entirely. The paper's claim that the synthetic experiments "demonstrate that multi-token prediction is favorable for the development of induction heads and algorithmic reasoning capabilities" (Abstract) is accurate about the synthetic settings but overstates the connection to the main results.
+
+**Claim 5: Natural language generative tasks (summarization) benefit, while multiple-choice benchmarks do not.**
+
+*What the experiments actually demonstrate:* Figure 6 shows consistent but small improvements in average ROUGE-L (+0.5 points at 200B tokens, +0.3 points at 500B). The individual dataset results (Table S8) are more variable — some datasets show larger gains (SAMSum: +0.90 for $n=2$ at 200B), others show small regressions (WikiSummary: −0.28 for $n=4$ at 200B). The finding that multiple-choice benchmarks don't improve (Figure 5) is clear but negative, and the paper's dismissal of these benchmarks as "not suited to effectively discern generative capabilities" is a post-hoc interpretation — it could equally be that multi-token prediction genuinely does not help for factual knowledge tasks. The GSM8K results (Figure S13) complicate the narrative: $n=2$ helps at 200B tokens but hurts at 500B, suggesting the relationship is more nuanced than "generative = good, multiple-choice = neutral."
+
+*What was not tested:* The paper does not evaluate on open-ended generation tasks (e.g., creative writing, dialogue) where human evaluation would be needed. Summarization has reference-based automatic metrics, which is convenient but may not capture all aspects of generation quality. The paper also does not explore whether the summarization improvements come from better content selection, better fluency, or better factual consistency — the ROUGE metrics conflate these dimensions.
+
+**Overarching limitations of the experimental design:**
+
+**Single family of architectures, trained from scratch.** Nearly all results use the authors' own transformer models. The one experiment that starts from an existing pretrained model (Llama 2, Table S6) shows minimal benefit, raising the possibility that multi-token prediction is effective only when integrated from the beginning of training — which would substantially limit its applicability to the broader ecosystem of models that undergo continued pretraining or finetuning from public checkpoints.
+
+**Code-heavy evaluation.** The strongest and most consistent results are on code generation benchmarks. Natural language results are weaker and more mixed. The paper's abstract emphasizes the code results heavily, and a reader focused on natural language applications might reasonably conclude that the benefits are modest and task-specific. The paper would be strengthened by more extensive natural language generative evaluations beyond summarization (e.g., instruction following, long-form QA, creative writing).
+
+**Oracle temperature selection.** All code benchmark results use post-hoc temperature optimization (Table S12), meaning the reported numbers are upper bounds that assume knowledge of the optimal temperature per model, dataset, and $k$ value. In deployment, temperature must be fixed a priori, and the gap between multi-token and next-token models might differ at the fixed temperature. The paper does not report results at a single fixed temperature, which would be more representative of practical performance.
+
+**Limited scale exploration.** The paper tests up to 13B parameters — respectable but not at the frontier of current LLMs. Whether multi-token prediction would benefit 70B, 175B, or larger models is an open question. The scaling trend in Figure 3 shows the gap widening from 6.7B to 13B, suggesting continued improvement, but this is only two data points in the beneficial regime. The training data volumes (up to 1T tokens) are similarly moderate by current standards — models like Llama 3 are trained on 15T+ tokens, and we cannot infer from these results whether multi-token prediction would maintain its advantage in the highly overtrained regime.
+
+**No direct evidence linking synthetic findings to large-scale behavior.** The paper's explanatory framework — that multi-token prediction improves induction, algorithmic reasoning, and learning at choice points — is supported by small-scale synthetic experiments but never directly validated on the large-scale models. We do not know whether the 13B 4-token prediction model actually has better induction heads or makes better decisions at code choice points, or whether some other mechanism entirely (e.g., better gradient flow, implicit regularization, reduced overfitting) explains the improvements. The synthetic experiments are suggestive but do not constitute a proof of mechanism.
+
+**Single training run per configuration.** Most large-scale experiments appear to involve a single training run per configuration. With the inherent noise in large-scale training (different random seeds can produce meaningfully different results), the absence of error bars on the main code results (beyond bootstrapping over test samples) makes it difficult to assess whether observed gaps are statistically reliable. The synthetic experiments use two runs, but these are at tiny scale.
+
+**No comparison to other auxiliary losses.** The paper frames multi-token prediction as an effective auxiliary loss, but it never compares against other auxiliary objectives that might produce similar benefits (e.g., contrastive losses, masked token prediction at the representation level, or the multi-label classification approach of Jianyu Zhang (2024) that the paper cites). Without such comparisons, we cannot assess whether multi-token prediction is uniquely effective or simply one instance of a broader class of beneficial auxiliary losses.
+
+**Speculative decoding evaluation is synthetic.** The inference speedup measurements use fixed-length prompts and completions (512 tokens each) from test datasets, with greedy decoding. Real-world serving involves variable-length inputs, batched heterogeneous requests, and often non-greedy sampling. The paper does not report end-to-end latency in a realistic serving setup, where factors like KV-cache management, request scheduling, and the overhead of verifying candidate tokens in the batch setting would affect realized speedups.
+
+**Environmental cost of difficulty estimation is unstated.** While not as severe as in the reference paper's difficulty estimation approach, the paper reports training "all models reported in the paper required around 500K GPU hours" (Impact Statement), which includes all the scaling experiments, ablations, and synthetic runs. This is substantial but amortized over the entire study. The paper commendably reports emissions (50 tCO2eq) and offsets, but does not discuss the cost of running the many negative or exploratory experiments that may have preceded the reported results.
+
+## 6. Limitations and Trade-offs
+
+### Hard Problems Remain Unsolved — Multi-Token Prediction Does Not Create Capability
+
+**The assumption or constraint.** The paper demonstrates that multi-token prediction improves sample efficiency on tasks within the model's capability range, but it does not enable models to solve problems they fundamentally cannot handle. The authors do not explicitly state this as a limitation, but the evidence across tasks reveals a consistent pattern: multi-token prediction amplifies existing capabilities rather than creating new ones. This is most visible in the APPS/Intro benchmark, where the next-token baseline achieves only 2.8% pass@1 and the best multi-token model (n=6) reaches 3.5% — a relative improvement but still near-zero absolute performance. Similarly, on the hardest algorithmic reasoning out-of-domain examples (Figure 8, 10 operations), all models achieve near-zero accuracy regardless of the training objective.
+
+**The consequence.** For deployment on genuinely difficult problems — competitive programming beyond introductory level, complex mathematical reasoning, or tasks requiring capabilities the base architecture lacks — multi-token prediction provides negligible benefit. A practitioner hoping that switching to multi-token training will unlock qualitatively new reasoning abilities will be disappointed: the method improves how efficiently the model learns what it *can* learn, not *what* it can learn. This is not a failure of the method per se — it is a fundamental bound on what any auxiliary loss operating on the same data can achieve — but it sharply limits the practical upside for the hardest deployment scenarios.
+
+**What evidence exists in the paper.** Across all code benchmarks (Table 1, Figure 3), the hardest problems show the smallest or no improvement. On APPS/Intro, n=4 underperforms n=1 (1.6% vs. 2.8% pass@1), and even the optimal n=6 reaches only 3.5% — a 0.7 percentage point gain. On the hardest difficulty bin of the algorithmic reasoning task (Figure 8, out-of-domain at 10 operations), all configurations achieve near-zero accuracy regardless of objective. The GSM8K results (Figure S13) show that at 500B training tokens, n=4 is actually *worse* than n=1, and the advantage of n=2 also disappears — suggesting that when the task is already at the boundary of the model's capability, the auxiliary objective can become a net negative.
+
+**Mitigation status.** The paper does not address this limitation directly. It frames multi-token prediction as an efficiency improvement, not a capability unlock, and the results are consistent with this framing. However, the abstract's emphasis on percentage improvements ("solves 12% more problems") could mislead readers into expecting gains on hard problems that the evidence does not support. The paper suggests (Section 7) exploring improved auxiliary losses operating in embedding spaces, which might address different capability bottlenecks, but offers no concrete path to making multi-token prediction help on problems where the base model's pass@1 is near zero.
+
+---
+
+### The Method Requires Training From Scratch — It Does Not Transfer to Pretrained Models
+
+**The assumption or constraint.** Multi-token prediction is presented as a modification to the pretraining objective, and the paper's central experiments all train models from scratch with this objective. The one experiment that tests the method as a finetuning add-on — continuing training of Llama 2 with 4-token prediction on 200B tokens of code (Appendix D, Table S6) — reveals a critical constraint:
+
+> "We tried to finetune LLama 2 with 4-token prediction but this did not yield significant improvements compared to the baseline. We suppose that this new loss changes the initialization too brutally and never really recovers."
+
+The authors speculate that the additional heads and modified loss disrupt the existing representations learned under next-token prediction, and the model cannot recover within the finetuning budget.
+
+**The consequence.** This severely limits the method's applicability to the current LLM ecosystem, where most practitioners do not train models from scratch. The dominant paradigm is to start from a publicly available pretrained model (Llama, Mistral, Qwen, etc.) and either use it directly or continue training / finetune it on domain-specific data. If multi-token prediction is effective *only* when integrated from the first training step, then adoption requires either (a) convincing model providers to adopt it during pretraining — a slow, indirect path — or (b) training custom models from scratch, which is economically infeasible for most organizations. The paper's "free lunch" framing (no training time or memory overhead) only applies to the from-scratch setting; for the vast majority of potential users, the lunch is not available at all.
+
+**What evidence exists in the paper.** Table S6 provides the direct evidence: Llama 2 finetuned with n=1 (next-token) achieves MBPP pass@1 of 39.6%, while n=4 with transformer heads achieves 38.3% and n=4 with linear heads achieves 39.3%. On HumanEval pass@1: 31.4% (n=1) vs. 27.9% (n=4 transformer) vs. 29.0% (n=4 linear). The n=4 variant with 3 extra layers (increasing total parameters) recovers to 42.5% on MBPP but still underperforms on HumanEval (28.7%). The paper acknowledges these results are not "significant improvements" and offers only a speculation about the cause.
+
+**Mitigation status.** The paper does not attempt to resolve this limitation. It acknowledges the result candidly but does not explore strategies to make multi-token prediction effective as a continued-training objective — for example, gradually increasing $n$ during training, using learning rate warmup for the new heads, or freezing the trunk during an initial adaptation phase. Future work on making multi-token prediction compatible with existing pretrained models would dramatically expand its practical relevance. The paper also does not test whether multi-token pretrained models can be effectively used as base models for *further* next-token finetuning by downstream users — the CodeContests experiment (Section 3.6) shows $n=4$ pretrained → $n'=1$ finetuning works, but this uses the authors' own pretrained models, not public checkpoints.
+
+---
+
+### The Optimal Prediction Horizon $n$ Is Task- and Data-Dependent, With No Automated Selection Method
+
+**The assumption or constraint.** The paper treats $n$ — the number of future tokens to predict — as a fixed hyperparameter that must be chosen before training. The results in Table 1 demonstrate that the optimal value varies by task and data modality: $n=4$ is best for token-level code on MBPP and HumanEval, $n=6$ leads on APPS/Intro, $n=8$ is optimal for byte-level code, and for natural language the picture is inconsistent ($n=2$ helps summarization and GSM8K at 200B tokens, but the advantage disappears or reverses at 500B tokens). The authors acknowledge this directly:
+
+> "It is very likely that the optimal window size depends on input data distribution." (Section 3.4)
+
+And in Section 7:
+
+> "In future work we would like to better understand how to automatically choose $n$ in multi-token prediction losses. One possibility to do so is to use loss scales and loss balancing."
+
+**The consequence.** A practitioner adopting multi-token prediction cannot simply set $n=4$ and expect optimal results. The wrong choice of $n$ can underperform the next-token baseline — $n=8$ on token-level code (Table 1) achieves MBPP pass@1 of 30.7% vs. 33.8% for $n=4$, and $n=4$ on APPS/Intro (1.6%) underperforms $n=1$ (2.8%). The cost of finding the optimal $n$ is a hyperparameter sweep requiring multiple full training runs — exactly the kind of expensive trial-and-error that the "free lunch" framing suggests the method eliminates. For a new data distribution or model scale, the optimal $n$ is unknown a priori, and the paper provides no guidance beyond "run experiments at multiple values of $n$."
+
+**What evidence exists in the paper.** Table 1 provides a thorough sweep of $n \in \{1, 2, 4, 6, 8\}$ for 7B code models at 200B tokens and $n \in \{1, 4\}$ at 1T tokens, plus $n \in \{1, 8, 16, 32\}$ for byte-level models. The optimal $n$ varies across all three benchmarks even within the code domain. The natural language experiments (Section 3.7) only test $n \in \{1, 2, 4\}$, and the pattern is inconsistent — $n=2$ outperforms $n=4$ on some metrics (GSM8K at 200B tokens) while $n=4$ outperforms $n=2$ on others (summarization recall at 500B tokens, Table S10). The paper does not test values of $n$ beyond 8 for token-level models or explore whether the optimal $n$ changes with model scale (the scaling experiments in Figure 3 only use $n=1, 2, 4$).
+
+**Mitigation status.** The paper acknowledges the limitation and gestures toward future work on automated $n$ selection via loss balancing, but provides no concrete method, no preliminary experiments, and no guidance on how to cheaply estimate the optimal $n$ without full training runs. The authors do not explore dynamic or adaptive $n$ — for instance, using different $n$ values at different positions in the sequence based on token predictability, or annealing $n$ during training. This is a significant gap between the paper's promise ("simple multi-token prediction architecture with no train time or memory overhead") and the practical reality of deploying it on a new task.
+
+---
+
+### Gains Are Concentrated in Code and Diminish Substantially with More Training Data
+
+**The assumption or constraint.** The paper's strongest results — the headline 12–17% improvements — come from code models trained on 200B tokens (0.8 epochs). When training continues to 1T tokens (4 epochs), the benefits shrink considerably: on MBPP pass@1, the gap between $n=4$ and $n=1$ drops from +3.8 to +2.4 points; on HumanEval pass@1, it disappears entirely (31.6% vs. 31.7%). The paper states this explicitly:
+
+> "Multi-token training still maintains an edge on next-token prediction when trained on multiple epochs of the same data. The improvements diminish but we still have a +2.4% increase on pass@1 on MBPP." (Section 3.5)
+
+For natural language summarization, the same pattern appears: at 200B tokens, the average ROUGE-L gain for $n=2$ over $n=1$ is +0.51; at 500B tokens, it shrinks to +0.28 (Figure 6). For GSM8K mathematical reasoning (Figure S13), the $n=2$ advantage at 200B tokens *reverses* to a disadvantage at 500B tokens, and $n=4$ is worse throughout.
+
+**The consequence.** The sample efficiency argument — that multi-token prediction "results in higher sample efficiency" (Abstract) — is most compelling in the low-data regime where models are not trained to convergence on their training set. In the high-data regime that characterizes modern LLM training (Llama 3 was trained on 15T+ tokens, far beyond single-epoch), the benefits are substantially smaller and, for some tasks, may vanish or reverse. This means the practical value of multi-token prediction depends critically on the training budget: if you are compute-constrained and can only afford limited training, it helps; if you are training to near-convergence on a large dataset, the marginal benefit over standard next-token prediction may not justify the additional complexity (multiple heads, speculative decoding verification overhead, fixed choice of $n$).
+
+**What evidence exists in the paper.** The 1T-token code comparison (Table 1, bottom rows) provides the key evidence: the gap narrows across all metrics. The 200B vs. 500B natural language comparisons (Figure 6, Figure S13) replicate this pattern across summarization and GSM8K. The induction experiments (Section 4.1) provide a mechanistic explanation: once the model has the capacity and data to learn induction heads from next-token prediction alone, the multi-token advantage on that capability disappears. This suggests a general principle: multi-token prediction accelerates the acquisition of certain capabilities, but does not raise the asymptotic performance ceiling. In the limit of infinite data and compute, next-token prediction would eventually catch up.
+
+**Mitigation status.** The paper is transparent about the diminishing returns and reports the 1T-token results prominently (Table 1, Section 3.5). However, the abstract and introduction emphasize the 200B-token results without qualification, which could mislead readers who skim the headline numbers. The paper does not explore whether a larger $n$ value at higher data volumes could maintain the advantage (e.g., $n=8$ at 1T tokens), or whether the optimal $n$ itself depends on the amount of training data. It also does not test the extreme multi-epoch regime (10+ epochs) where the next-token baseline might fully catch up or even overtake.
+
+---
+
+### Natural Language Generative Benefits Are Real but Modest and Inconsistently Measured
+
+**The assumption or constraint.** The paper claims that multi-token prediction improves natural language generation, supported primarily by summarization experiments (Section 3.7, Appendix H). The average ROUGE-L improvement at 200B tokens is +0.51 for $n=2$ and +0.46 for $n=4$ over a baseline of 26.23. At the individual dataset level (Table S8), the gains range from −0.28 (WikiSummary, $n=4$ at 200B) to +1.12 (ThaiSum, $n=4$ at 200B). The paper acknowledges the limitation of automatic metrics only indirectly, by noting in Section 3.7 that they wanted "to avoid the need for human annotations of generation quality or language model judges—which comes with its own pitfalls, as pointed out by Koo et al. (2023)."
+
+**The consequence.** The absolute magnitude of the summarization improvements is small. A +0.5 ROUGE-L point gain on a baseline of ~26 is approximately a 2% relative improvement — meaningful if robust, but far from transformative. Moreover, ROUGE metrics measure surface-level n-gram overlap and are known to correlate imperfectly with human judgments of summary quality, factual consistency, and coherence. The paper provides no evidence that the ROUGE improvements translate to human-perceptible quality differences. A practitioner deciding whether to adopt multi-token prediction for a natural language application faces uncertainty: the code benefits are large and clear, but the language benefits are small and might not survive a more rigorous evaluation (e.g., human A/B testing or LLM-as-judge with a strong evaluator model).
+
+**What evidence exists in the paper.** Tables S8–S10 provide comprehensive ROUGE results across eight datasets, two training budgets, and three $n$ values. The consistency of the improvement direction (7 of 8 datasets show gains for $n=2$ at 200B tokens) suggests the effect is real, but the magnitude is small and variable. The paper does not report statistical significance tests for individual dataset improvements, nor does it provide qualitative examples of summaries from multi-token vs. next-token models. The GSM8K results (Figure S13) further complicate the picture: the benefit for $n=2$ at 200B tokens reverses at 500B, suggesting that even where generative improvements exist, they may not be robust to training data scale. The multiple-choice NLP benchmark results (Figure 5, Figure S12) show no improvement, which the paper interprets as evidence that these benchmarks are unsuitable for evaluating generative capabilities — but an alternative interpretation is that multi-token prediction genuinely does not improve the kinds of factual and commonsense knowledge these benchmarks test.
+
+**Mitigation status.** The paper acknowledges the limitation of automatic metrics implicitly by choosing summarization (where ROUGE is available) over open-ended generation (where it is not). In Section 7, the authors suggest developing "improved auxiliary prediction losses that operate in embedding spaces" (LeCun, 2022), which could provide richer training signals for natural language. However, the paper does not conduct human evaluations, does not use LLM-based evaluation (which, despite its pitfalls, is increasingly standard for generative tasks), and does not evaluate on diverse generative formats beyond summarization (e.g., instruction following, dialogue, story generation). The natural language results are best viewed as suggestive rather than conclusive, and a practitioner focused on language tasks should treat the method as experimental rather than proven.
+
+---
+
+### Difficulty Estimation for Choosing $n$ Incurs Substantial Unaccounted Cost
+
+**The assumption or constraint.** The paper treats $n$ as a pre-selected hyperparameter, but the results demonstrate that the optimal value varies by task, data modality, and training budget (Table 1, Figures 6, S13). Finding the right $n$ for a new setting requires training multiple models at different $n$ values and comparing them — which means the cost of experimentation is linear in the number of $n$ values tested. The paper itself conducted exhaustive sweeps: 5 values of $n$ for token-level code models, 4 for byte-level models, 3 for natural language models, each requiring a full training run. The authors do not account for this hyperparameter search cost in any efficiency calculation or "free lunch" claim.
+
+**The consequence.** The paper's headline claim — "no overhead in training time" — refers only to the per-step cost of multi-token prediction versus next-token prediction at a fixed $n$. It does not include the cost of determining which $n$ to use. For a practitioner approaching a new domain or model scale, the total cost of adopting multi-token prediction includes running a sweep over $n \in \{2, 4, 6, 8, \dots\}$ to find the optimal value, potentially multiplying the training budget by 3–5×. This is especially problematic because the penalty for choosing the wrong $n$ can be severe: $n=8$ on token-level code degrades MBPP pass@1 from 33.8% ($n=4$) to 30.7% — worse than the next-token baseline (30.0%) in practice, since the baseline required no hyperparameter search. The paper's suggestion of automated $n$ selection via loss balancing (Section 7) acknowledges this problem but offers no solution, leaving practitioners with the expensive status quo.
+
+**What evidence exists in the paper.** Table 1 provides the evidence that optimal $n$ varies: it takes different values for MBPP/HumanEval ($n=4$) versus APPS/Intro ($n=6$) within the same code domain, and different values for byte-level ($n=8$) versus token-level code. The diminishing-returns results (Section 3.5, Figure S13) suggest the optimal $n$ might also depend on training data volume — $n=4$ is best at 200B tokens for MBPP, but at 1T tokens the gap between $n=4$ and $n=1$ is much smaller, and a different $n$ might have been optimal. The paper does not measure the cost of the $n$-selection sweep itself; Table S13 reports training durations for individual runs (e.g., 25,000 steps for 7B/200B models) but does not aggregate across the multiple $n$ values tested.
+
+**Mitigation status.** The paper acknowledges this as an open problem and gestures toward future work on "loss scales and loss balancing" (Section 7), but provides no method, no preliminary experiment, and no guidance for practitioners. One could imagine cheaper proxies — training small models to estimate the optimal $n$ before scaling up, or using validation perplexity of the auxiliary heads as an early signal — but the paper explores none of these. A dynamic approach where $n$ is adjusted during training (starting large and annealing, or adapting per-token based on predictability) is mentioned as a possibility only in passing. Until automated $n$ selection is solved, the "free lunch" claim is valid only for the narrow set of configurations the paper already tested; for new settings, the lunch comes with a substantial up-front cost that the paper does not factor into its efficiency arguments.
+
+## 7. Implications and Future Directions
+- Practical impact
+  - Training-time MTP is a low-friction modification that yields better generative models and faster inference without adding a separate draft model. It is particularly compelling for code assistants and services that rely on fast, high-quality generation.
+  - Byte-level modeling becomes viable: MTP absorbs much of the performance penalty from longer byte sequences and then recovers the inference cost with large speedups (Section 3.3), enabling universal tokenization strategies.
+
+- Research directions
+  - Adaptive or learned lookahead: Automatically choosing or scheduling `n` during training (Section 7 suggests loss balancing, e.g., learned scales as in Défossez et al., 2022).
+  - Vocabulary and tokenization co-design: Optimal vocabulary size for MTP may differ from next-token training (Section 7). Jointly tuning vocabulary and `n` could improve compute-per-byte trade-offs.
+  - Auxiliary targets in embedding space: Predicting future embeddings or compressed signals (Section 7; LeCun, 2022) might yield stronger long-horizon features with fewer parameters per head.
+  - Integration with alignment: Study how MTP interacts with instruction tuning, RLHF, and tool use; investigate whether MTP-trained models are more robust to exposure bias during long chain-of-thought generation.
+  - Mechanistic interpretability: Use the synthetic results (Section 4) as a starting point to locate and characterize “lookahead circuits,” induction heads, and choice-point detectors formed under MTP.
+
+- Conceptual takeaway
+  - Giving the model a training signal that explicitly cares about what comes next—not just the very next token—rebalances learning toward decisions that shape future text. This reduces the training–inference mismatch and leads to both better generative performance and faster decoding, especially in settings where long-range coherence and planning matter (Sections 3 and 5).

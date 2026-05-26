@@ -1,0 +1,817 @@
+# A Survey on Diffusion Language Models
+
+**ArXiv:** [2508.10875](https://arxiv.org/abs/2508.10875)
+
+## 🎯 Pitch
+
+This comprehensive survey maps out the emerging landscape of Diffusion Language Models (DLMs), which generate text by refining entire sequences in parallel through iterative denoising—breaking through the sequential bottlenecks of standard autoregressive models. By offering an in-depth taxonomy, synthesizing state-of-the-art techniques, and benchmarking DLMs’ efficiency and quality, the paper highlights DLMs’ potential to revolutionize language generation with faster inference, richer context handling, and unified multimodal capabilities, setting the agenda for both research and real-world applications.
+
+---
+
+## 1. Executive Summary
+
+This survey provides a holistic and systematic overview of **Diffusion Language Models (DLMs)**, tracing their evolution from early continuous-space and discrete-space formulations through to modern large-scale models and multimodal extensions. The paper taxonomizes the DLM landscape across three axes — the diffusion operating space (continuous embeddings vs. discrete tokens vs. hybrid autoregressive-diffusion architectures), training methodologies (pre-training from scratch, adaptation from AR models, and post-training via policy gradient methods like diffu-GRPO and UniGRPO), and inference strategies (parallel decoding schemes, unmasking/remasking policies, and caching optimizations such as KV-cache and feature-cache). The survey documents that modern discrete DLMs like LLaDA-8B and Dream-7B achieve performance comparable to similarly sized autoregressive models on benchmarks such as PIQA, HellaSwag, GSM8K, and HumanEval, while inference accelerations of up to 27–34× are demonstrated through techniques like Fast-dLLM and FreeCache, establishing that DLMs represent a viable parallel-generation alternative to autoregressive models whose practical deployability depends critically on continued progress in mitigating the parallelism–quality tradeoff and scaling to larger parameter counts.
+
+## 2. Context and Motivation
+
+### The Core Problem: The Autoregressive Inference Bottleneck Is a Fundamental Limitation
+
+The survey addresses a structural tension at the heart of modern language modeling. Autoregressive (AR) models — the dominant paradigm exemplified by GPT-4, LLaMA, and DeepSeek — factorize text generation as a sequence of conditional next-token predictions (Section 2.1.2, Equation 3). This factorization is mathematically elegant and empirically powerful, but it imposes an **irreducible sequential dependency**: generating token $x_i$ requires having already generated tokens $x_1$ through $x_{i-1}$. Each forward pass through a multi-billion-parameter model produces exactly one token. For a 500-token response, this means 500 serial forward passes, regardless of how much parallel hardware is available.
+
+The practical consequence is stark: autoregressive inference is **throughput-bound, not compute-bound**. Modern GPUs and TPUs are massively parallel devices capable of performing thousands of matrix multiplications simultaneously, yet the AR paradigm forces them to operate one token at a time. This bottleneck manifests in two ways. First, **latency** — the wall-clock time to generate a response — scales linearly with sequence length. Second, **cost** — serving AR models at scale requires enormous compute clusters simply to keep up with demand, not because any single generation is computationally heavy, but because the serial dependency prevents batching across tokens within a single sequence.
+
+The survey frames this as a problem that has grown more acute as models have scaled. When models were hundreds of millions of parameters, the per-token cost was manageable, and the sequential bottleneck was tolerable. At the scale of 70B, 405B, or 671B-parameter models (Section 8.1, point 4), each forward pass is a substantial computation, and the cumulative cost of generating long responses — whether for multi-turn dialogue, document summarization, chain-of-thought reasoning, or code generation — has become a dominant factor in both user experience and operational expense.
+
+### Why This Problem Matters: Real-World Impact and Theoretical Significance
+
+The survey identifies this problem as having consequences across several dimensions:
+
+**Deployment viability for real-time applications.** For interactive applications — chatbots, coding assistants, voice assistants — users expect responses within seconds. As models grow larger and prompts become longer (with context windows now extending to 128K tokens or more), maintaining low-latency generation becomes increasingly difficult under the AR paradigm. The paper cites commercial efforts like Mercury (Section 7.2, Mercury Coder) and Gemini Diffusion (Section 1) specifically because they target **thousands of tokens per second** — speeds that are physically impossible for pure AR decoding at large model sizes.
+
+**Cost of serving at scale.** The paper notes that open-source serving infrastructure like vLLM (Section 8.1, point 2) has been highly optimized for AR models, but the fundamental serial dependency means that even the best batching and memory management can only extract limited parallelism. For organizations serving millions of queries per day, the inference cost of AR models often dominates the total cost of ownership — far exceeding training costs over a model's operational lifetime. Any paradigm that could reduce this cost by even a factor of 2–4× would represent enormous practical savings.
+
+**Self-improvement and reasoning pipelines.** The survey discusses post-training techniques for reasoning — diffu-GRPO, UniGRPO, SEPO (Section 3.2) — that require generating hundreds or thousands of candidate responses per training query. In these settings, inference throughput is the primary bottleneck for the entire training loop. The paper's discussion of chain-of-thought reasoning (Section 3.2.1, DoT and DCoLT) highlights that reasoning trajectories in AR models are inherently long-form (since each reasoning step adds tokens), amplifying the inference cost problem. A paradigm that could generate reasoning chains more efficiently would directly accelerate the development of more capable models.
+
+**Theoretical interest in non-autoregressive generation.** Beyond the practical arguments, the paper situates DLMs within a broader intellectual agenda. The question of whether high-quality text — which humans perceive as deeply sequential and context-dependent — can be generated in parallel is a fundamental scientific question about the nature of language modeling. If parallel generation can match AR quality, it would challenge the assumption that autoregressive factorization is the "natural" or necessary way to model language, opening new theoretical directions in sequence modeling. Conversely, if parallel generation consistently underperforms, understanding *why* would clarify the essential role of sequential conditioning in language.
+
+### Where Prior Approaches Fall Short
+
+The survey systematically identifies limitations across the existing paradigm landscape before introducing diffusion as an alternative.
+
+#### Autoregressive Models: The Sequential Bottleneck Is Structural, Not Incidental
+
+The paper is careful to acknowledge that AR models have not ignored the efficiency problem. Multi-token prediction techniques (Section 2.1.2, citing Gloeckle et al. and DeepSeek-V3) attempt to generate several tokens per forward pass, reducing the number of serial steps. Speculative decoding uses a lightweight draft model to propose multiple tokens that a larger model then verifies in parallel. These methods provide speedups but do not escape the fundamental architecture: they are **modifications to the AR paradigm**, not alternatives to it, and they achieve speedups of roughly 2–5× rather than the order-of-magnitude improvements that truly parallel generation could enable.
+
+The survey also notes that AR models, by their causal attention design, cannot naturally incorporate **bidirectional context** during generation (Section 2.1.2). Each token is conditioned only on preceding tokens, not on the suffix or global structure of the sequence. This limitation is partially mitigated by encoder-decoder architectures (Section 2.1.3, Seq2Seq) where the encoder processes the full source bidirectionally, but the decoder's generation remains strictly left-to-right. For tasks requiring global coherence — structured generation, infilling, simultaneous translation — this unilateral conditioning is a genuine constraint that diffusion models, with their fully bidirectional attention, can address natively.
+
+#### Masked Language Models: Excellent for Understanding, Unsuitable for Generation
+
+The paper contrasts DLMs with the original masked language model paradigm embodied by BERT (Section 2.1.1). MLMs demonstrated that bidirectional context is enormously powerful for language understanding — BERT achieved state-of-the-art results across NLU benchmarks by predicting randomly masked tokens using both left and right context. However, as the survey explains, MLMs "are not inherently designed for generative tasks" (Section 2.1.1). To generate text with an MLM, one must resort to Gibbs sampling or iterative infilling schemes that were never part of the original training objective, resulting in poor quality and slow generation. This gap — the desire for both bidirectional context (like MLMs) and high-quality generation (like AR models) — is precisely what diffusion language models aim to fill.
+
+#### Permutation Language Models: A Partial Solution With Limited Scalability
+
+The survey mentions permutation language models, exemplified by XLNet (Section 2.1.3), as an attempt to bridge the MLM-AR divide. PLMs train on all permutations of the factorization order, allowing each token to be conditioned on arbitrary subsets of other tokens. This captures some benefits of bidirectionality within an autoregressive framework. However, the paper implicitly positions this approach as a dead end for the scale of modern LLMs: PLMs have not been successfully scaled to the 7B+ parameter range or demonstrated competitive performance with pure AR models on generation tasks. The complexity of training over all permutations and the mismatch between the training objective and inference-time generation make PLMs less practical than either dedicated AR models or the emerging DLM paradigm.
+
+#### Early Non-Autoregressive Models: The Quality Gap
+
+The survey builds its motivation partly on the history of non-autoregressive generation, though it does not dedicate a separate section to this lineage. Early non-autoregressive models — such as those based on conditional masked language modeling with iterative refinement (e.g., Mask-Predict, CMLM, Levenshtein Transformer) — demonstrated that parallel generation was possible but suffered from a persistent **quality gap** compared to autoregressive baselines. These models typically used a fixed number of refinement iterations and lacked the theoretical grounding of a proper diffusion process. The survey positions DLMs as the inheritor of this ambition, but with a principled mathematical framework (forward noising processes, learned reverse denoising, variational objectives) that has been proven in continuous domains like image synthesis and is now being adapted to discrete text with demonstrable success at scale.
+
+### How This Paper Positions Itself
+
+#### A Taxonomy and Roadmap, Not a Single Method
+
+The most important structural feature of this paper's positioning is that it is a **survey**, not a methods paper. It does not propose a new model, training algorithm, or inference technique. Instead, it performs a different kind of contribution: **organizing a rapidly growing and fragmented field into a coherent taxonomy** (Figure 3) and systematically comparing approaches along multiple dimensions (paradigm, training, inference, application). This positioning is significant because the DLM literature has evolved rapidly and with substantial terminological diversity — "masked diffusion," "discrete flow matching," "score entropy," and "absorbing discrete diffusion" all refer to overlapping but distinct formulations. The paper provides a unified vocabulary and conceptual framework for making sense of this landscape.
+
+#### Tracing Evolution From Niche to Mainstream Viability
+
+The survey positions DLMs as having crossed a critical threshold. The timeline in Figure 1 visually encodes this argument: early work (2021–2023) was dominated by continuous-space DLMs (Diffusion-LM, DiffuSeq, CDCD) that demonstrated proof-of-concept but lagged behind AR models in quality. The pivot to discrete-space formulations (D3PM, DiffusionBERT, MDLM, LLaDA) and the subsequent scaling to 7B–8B parameters (Dream-7B, LLaDA-8B, DiffuCoder) mark the transition from academic curiosity to practical alternative. The paper explicitly notes this inflection point (Section 1):
+
+> "LLaDA-8B further demonstrates the potential of training DLMs from scratch, achieving performance comparable to similarly sized LLaMA3-8B models."
+
+This is a strong claim: it asserts that the quality gap has been **closed** for models of comparable scale, at least on a range of benchmarks (Figure 6). The survey uses this empirical fact to justify the entire enterprise — if DLMs were still significantly underperforming AR models, a survey about them would be premature. The claim that parity has been achieved (or nearly achieved) makes the survey timely and the challenges it identifies (Section 8) actionable rather than aspirational.
+
+#### Connecting DLMs to the Broader Diffusion Revolution
+
+The paper situates DLMs within the larger success story of diffusion models in continuous domains (Section 1):
+
+> "Diffusion models have achieved state-of-the-art results in image and video synthesis... large-scale practical models like Stable Diffusion, Imagen, and Sora demonstrate the remarkable scalability and generalization of diffusion paradigm."
+
+This positioning is strategic: it argues that diffusion is not an exotic or speculative approach, but a proven paradigm that has already revolutionized one modality (vision) and is now poised to do the same for language. The transfer of techniques — classifier-free guidance, step distillation, feature caching, progressive distillation — from image diffusion to language diffusion is a recurring theme throughout the survey, and the paper implicitly argues that the language modeling community can learn from the vision community's experience rather than reinventing techniques from scratch.
+
+#### Identifying the Key Tensions and Open Problems
+
+The paper does not present DLMs as a solved problem. On the contrary, its most important positioning move is to **catalogue the remaining challenges** (Section 8) that prevent DLMs from displacing AR models in practice:
+
+- The **parallelism–performance trade-off** (Section 8.1, point 1): when DLMs generate too many tokens in parallel (few denoising steps), coherence degrades. Figure 7 provides concrete examples of this degradation for LLaDA and MMaDA at different step counts. The paper calls this the "Parallel Decoding Curse" and frames it as the central theoretical challenge.
+- **Infrastructure immaturity** (Section 8.1, point 2): the lack of open-source libraries, optimized serving frameworks, and hardware-aware kernels for DLMs is a practical barrier, not a fundamental one, but it significantly impedes adoption.
+- **Long-sequence limitations** (Section 8.1, point 3): most DLMs are limited to 4,096-token context windows, and the $O(N^3)$ inference complexity for full-bidirectional attention makes scaling to longer sequences a non-trivial mathematical and engineering challenge.
+- **Scale ceiling** (Section 8.1, point 4): the largest open-source DLM is ~8B parameters, compared to 405B+ for AR models. The survey explicitly frames this as an underexplored regime — it is unknown whether the quality parity observed at 8B will persist or degrade at larger scales, and whether the training dynamics (loss curves, convergence, stability) of DLMs will support scaling to the sizes that have been achieved for AR models.
+
+#### Framing DLMs as a Complement, Not a Replacement
+
+A subtle but important aspect of the paper's positioning is that it does not argue DLMs will replace AR models. The discussion of hybrid AR-Diffusion models (Section 2.4) — BD3-LM, SpecDiff, TiDAR, SDLM — suggests that the future may involve architectures that borrow from both paradigms rather than choosing one. Block-wise semi-autoregressive generation, where coarse structure is predicted autoregressively and fine-grained tokens are generated in parallel within each block, captures the complementary strengths of both approaches: AR for long-range dependency, diffusion for local parallelism. This framing makes the survey's contribution more durable: even if pure DLMs never fully match AR quality, the techniques and insights catalogued in this survey will remain relevant for hybrid architectures.
+
+## 3. Technical Approach
+
+### 3.1 Reader Orientation
+
+This is a **survey paper** — it does not introduce a single new technical system but rather taxonomizes, compares, and synthesizes the design decisions that constitute the Diffusion Language Model (DLM) landscape as of late 2025. The core idea is that multiple independent research threads (continuous-space diffusion, discrete-space diffusion, hybrid architectures, inference optimizations) can be understood as instances of a unified framework: iteratively denoising text sequences to enable parallel token generation while capturing bidirectional context.
+
+The paper solves the problem of **making sense of a fragmented and rapidly evolving field**. Rather than proposing a new model, it provides a conceptual architecture for understanding how DLMs work — what the fundamental components are, how they relate, and where the design choices and trade-offs lie. The "shape" of the solution is a taxonomy (Figure 3) organized around three axes: (1) the space in which diffusion operates (continuous embeddings, discrete tokens, or hybrid), (2) how models are trained (pre-training and post-training strategies), and (3) how inference is performed (decoding, masking, caching, distillation).
+
+### 3.2 Big-Picture Architecture (Diagram in Words)
+
+A DLM system — whether continuous, discrete, or hybrid — comprises five major conceptual components that interact in a consistent pattern across all surveyed models:
+
+1. **Forward Noising Process**: A predefined, non-learned corruption mechanism that gradually destroys information in a clean text sequence by either adding Gaussian noise to continuous embeddings (continuous DLMs) or transitioning tokens to a `[MASK]` or other absorbing state (discrete DLMs). Controlled by a noise schedule parameterized by a timestep `$t$`.
+
+2. **Denoising Backbone (Transformer)**: A neural network — typically a Transformer with full bidirectional attention — trained to reverse the forward noising process. At training time, it receives corrupted sequences at various noise levels and learns to predict the original clean tokens or the added noise. This is the learned component.
+
+3. **Rounding/Decoding Module**: For continuous DLMs, a mechanism (nearest-neighbor lookup, learned decoder head, or thresholding) that maps the denoised continuous embeddings back to discrete token indices from the vocabulary. Discrete DLMs avoid this component by operating directly in token space.
+
+4. **Inference Scheduler**: A procedure that determines, at each denoising step, which tokens to reveal, which to remask, and in what order. This includes unmasking policies (confidence-ranked, random, adaptive threshold), remasking strategies (re-masking low-confidence predictions), and the number of total denoising steps (which trades off quality against speed).
+
+5. **Guidance and Control Module**: An optional component that steers the denoising trajectory toward desired attributes. In classifier-free guidance, the model is run twice — once conditioned on the prompt, once unconditionally — and their score estimates are combined with a guidance scale `$\lambda$`. This module can also enforce structural constraints (e.g., regular expressions via DINGO) or style and content constraints.
+
+Information flows as follows: a text prompt enters the system → optionally, a vision encoder processes any images (multimodal DLMs) → the sequence is corrupted according to the forward process → the denoising backbone iteratively predicts cleaner versions, guided by the inference scheduler and optional guidance module → after a fixed number of steps, the discrete token sequence is recovered → the output text is produced. For hybrid AR-Diffusion models, an outer autoregressive loop generates blocks of tokens, while each block is generated in parallel by the inner diffusion loop.
+
+### 3.3 Roadmap for the Deep Dive
+
+This section decomposes the DLM technical landscape into six core mechanisms, ordered to build understanding from the mathematical foundations upward:
+
+1. **The Forward and Reverse Diffusion Processes** — the mathematical underpinning shared by all DLMs, defining how noise is added and removed. Understanding this first is essential because all training objectives and inference procedures derive from these definitions.
+
+2. **Continuous-Space DLMs** — the original approach where diffusion operates on token embeddings as vectors in `$\mathbb{R}^d$`. We cover the forward process, the training objective, and the critical rounding step that maps continuous vectors back to discrete tokens.
+
+3. **Discrete-Space DLMs (including Masked DLMs)** — the currently dominant paradigm where diffusion operates directly on token indices using transition matrices. We cover the absorbing-state formulation, the reparameterized training objective (Equation 10), and the mask-predict inference procedure.
+
+4. **Hybrid AR-Diffusion Architectures** — models that combine autoregressive and diffusion generation at the block level, capturing long-range dependencies via AR and local parallelism via diffusion. We cover the block-wise training objective (Equation 11) and the nested-loop inference procedure.
+
+5. **Pre-training and Fine-tuning Strategies** — how DLMs are trained, including initialization from AR model weights, data construction for diffusion-specific objectives, and the unique challenges of loss computation efficiency and train-inference discrepancy.
+
+6. **Post-Training for Reasoning (RL and Policy Gradient Methods)** — how reinforcement learning is adapted to DLMs despite the intractability of sequence log-probability. We cover the three families of approaches: parallelizing reasoning chains (DoT, DCoLT), adapting policy gradient methods (diffu-GRPO, coupled-GRPO, UniGRPO, SEPO), and adapting preference optimization (VRPO).
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily a **taxonomic and architectural survey paper** whose core idea is that all diffusion language models can be understood through a shared vocabulary of forward noising processes, learned reverse denoising, and inference-time scheduling — with the key design choices being (a) whether to operate in continuous or discrete space, and (b) how to structure the inference scheduler to balance parallelism against coherence.
+
+---
+
+#### The Forward and Reverse Diffusion Processes: The Mathematical Foundation Shared by All DLMs
+
+The fundamental mathematical framework that underlies both continuous and discrete diffusion language models is the decomposition of generation into a forward process (which destroys information) and a learned reverse process (which recovers it). While the specific forms differ between continuous and discrete formulations, the conceptual architecture is identical and must be understood before examining any specific model.
+
+**Forward process (continuous case — Section 2.2, Equations 6–8).** For continuous-space DLMs, text tokens are first mapped to embedding vectors `$x_0 \in \mathbb{R}^d$`. The forward process then progressively corrupts this embedding by adding Gaussian noise over a series of timesteps `$t = 1, 2, \ldots, T$`. Formally, the forward process is a Markov chain:
+
+$$q(x_{1:T} | x_0) = \prod_{t=1}^{T} q(x_t | x_{t-1})$$
+
+$$q(x_t | x_{t-1}) = \mathcal{N}\left(x_t; \mu_t(x_{t-1}), \Sigma_t\right)$$
+
+where `$q(x_{1:T} | x_0)$` is the joint distribution of all noisy latent states given the initial clean embedding, `$q(x_t | x_{t-1})$` is the single-step Gaussian transition from step `$t-1$` to step `$t$`, `$\mu_t$` is the mean function that shifts the previous state, and `$\Sigma_t$` is the covariance matrix controlling the noise magnitude at that step.
+
+**What it computes:** Given a clean embedding `$x_0$`, the forward process produces a sequence of increasingly noisy versions `$x_1, x_2, \ldots, x_T$`, where each `$x_t$` is sampled from a Gaussian whose mean and covariance depend on the previous state `$x_{t-1}$` and the noise schedule parameters `$\mu_t, \Sigma_t$`. The process is designed so that at the final timestep `$T$`, the distribution `$q(x_T | x_0)$` is essentially pure noise (approximately `$\mathcal{N}(0, I)$`), meaning all information about the original text has been destroyed.
+
+**Why this form:** The Gaussian Markov chain has a crucial practical property — the marginal distribution at any timestep `$t$` can be computed directly from `$x_0$` without iterating through all intermediate steps:
+
+$$x_t = \alpha_t x_0 + b_t \epsilon, \quad \epsilon \sim \mathcal{N}(0, I)$$
+
+where `$\alpha_t$` and `$b_t$` are deterministic scalar functions of `$t$` that encode the cumulative effect of the noise schedule up to step `$t$`. The paper notes that in modern implementations such as DDPM (Ho et al., 2020) and Rectified Flow (Liu et al., 2023), this closed-form marginal is the workhorse that enables efficient training: rather than simulating the entire forward chain for each training sample, one simply samples a timestep `$t$`, computes `$x_t$` directly via the closed form, and trains the model to recover `$x_0$` from `$x_t$` in a single step. This is what makes diffusion training computationally feasible — without the closed-form marginal, each training iteration would require simulating `$T$` forward steps, which would be prohibitively expensive for large models.
+
+**Reverse process (continuous case — Section 2.2, Equation 9).** The learned component of a continuous DLM is the reverse process: starting from pure noise `$x_T \sim \mathcal{N}(0, I)$`, the model iteratively predicts a less noisy state `$x_{t-1}$` conditioned on the current noisy state `$x_t$`, eventually recovering an approximation of the original clean embedding `$\hat{x}_0$`. The model is parameterized as a neural network `$f_\theta(x_t, t)$` — typically a Transformer — that predicts a target quantity `$z$` associated with the forward process. The most common target is either the added noise `$\epsilon$` (in DDPM-style formulations) or the clean data `$x_0$` directly (in `$x_0$`-prediction formulations). The training objective takes the form:
+
+$$\mathcal{L}_{\text{simple}} = \mathbb{E}_{t, x_0, z}\left[ \lVert f_\theta(x_t, t) - z \rVert^2 \right]$$
+
+where `$t$` is sampled uniformly from `$\{1, \ldots, T\}$` (or continuously from `$[0, 1]$` in continuous-time formulations), `$x_0$` is a clean embedding from the training data, `$x_t$` is obtained by applying the forward process to `$x_0$` at timestep `$t$`, `$z$` is the regression target (either the added noise or the clean data, depending on the formulation), and `$f_\theta$` is the Transformer backbone.
+
+**What it computes:** A mean squared error (MSE) loss between the model's prediction and the target `$z$`. The expectation is taken over (1) which training sequence is selected (`$x_0$`), (2) which noise level is applied (`$t$`), and (3) which specific noise instantiation is added (`$\epsilon$`). The model learns a mapping that, given a noisy embedding and the current timestep, outputs an estimate of the target quantity. By minimizing this loss across many training samples and timesteps, the model learns to approximate the true reverse transition `$q(x_{t-1} | x_t)$` without ever explicitly computing it.
+
+**Why this form:** The MSE objective has a theoretical connection to denoising score matching. Under certain parameterizations (predicting the noise `$\epsilon$`), the model's output is proportional to the score function `$\nabla_{x_t} \log p(x_t)$` — the gradient of the log-density of the data distribution at noise level `$t$`. Learning the score function is equivalent to learning the reverse process because the score tells you which direction to move in the embedding space to increase the probability of the data under the model. The simplicity of the MSE form — just predict the noise and compute the squared error — masks this deep connection to score-based generative modeling.
+
+**The critical rounding step (continuous DLMs only).** After the reverse process produces a denoised embedding `$\hat{x}_0$`, the system must map this continuous vector back to a discrete token. The paper describes three approaches (Section 2.2):
+
+1. **Nearest-neighbor search in the embedding space:** compute the Euclidean distance between `$\hat{x}_0$` and the embedding of every token in the vocabulary, and select the token with the smallest distance. This is simple but can produce incoherent outputs if the denoised embedding lies in a region of the embedding space not well-represented by any single token.
+
+2. **Learned decoder head:** a small neural network (typically a linear layer followed by softmax) is trained jointly with the diffusion model to map embeddings to token probabilities. This adds parameters but provides a learnable mapping that can handle regions of the embedding space where nearest-neighbor fails.
+
+3. **Thresholding techniques:** methods like Analog Bits (Chen et al., 2022, cited in the paper) that quantize the continuous embedding using learned thresholds before mapping to tokens.
+
+The rounding step is a fundamental source of error in continuous DLMs. The denoising process operates in a smooth, continuous space where small perturbations produce small changes in the embedding, but the token mapping is inherently discrete — a small change in the embedding can flip the predicted token from "cat" to "dog" with no intermediate state. This mismatch between the continuous optimization landscape and the discrete evaluation metric is one reason continuous DLMs have been largely superseded by discrete formulations in recent work.
+
+**Forward process (discrete case — Section 2.3).** Discrete DLMs avoid the embedding space and the rounding problem entirely by defining the forward process directly on token indices. The key mathematical object is a **transition matrix** `$Q_t$` — for each timestep `$t$`, this is a `$V \times V$` matrix (where `$V$` is the vocabulary size) where entry `$Q_t[i, j]$` specifies the probability that token `$i$` transitions to token `$j$` during the forward corruption at step `$t$`. The forward process over multiple steps is given by:
+
+$$q(x_t | x_0) = \text{Cat}\left(x_t; p = x_0 \bar{Q}_t\right), \quad \bar{Q}_t = \prod_{i=1}^{t} Q_i$$
+
+where `$\text{Cat}(\cdot; p)$` denotes a categorical distribution with probability vector `$p$`, `$x_0$` is the one-hot encoded clean token, `$x_t$` is the corrupted token at step `$t$`, and `$\bar{Q}_t$` is the cumulative transition matrix — the product of all single-step matrices from step 1 to step `$t$`.
+
+**What it computes:** Given a clean token `$x_0$` at a particular position in the sequence, this forward process stochastically transforms it into a corrupted token `$x_t$` by sampling from a categorical distribution whose probabilities are the row of `$\bar{Q}_t$` corresponding to the original token. The matrix multiplication `$x_0 \bar{Q}_t$` extracts exactly this row, yielding a probability vector over the vocabulary for the corrupted token.
+
+**The absorbing-state transition matrix (the dominant choice).** The paper states that "A common choice for `$Q_t$` is an absorbing state transition, where each token has a probability of either remaining unchanged or transitioning to a special `[MASK]` token." In this formulation, `$Q_t$` has the form:
+
+- `$Q_t[i, i] = 1 - \beta_t$` (probability of staying unchanged)
+- `$Q_t[i, \text{MASK}] = \beta_t$` (probability of transitioning to `[MASK]`)
+- `$Q_t[i, j] = 0$` for all other tokens `$j$`
+
+where `$\beta_t \in [0, 1]$` is the masking probability at step `$t$`, increasing from 0 (no masking) to 1 (complete masking) over the course of the forward process.
+
+**Why the absorbing state is the dominant choice:** The paper does not enumerate alternatives in detail, but the rationale is clear from the discussion of masked DLMs and their relationship to MLMs. The absorbing-state formulation means that the reverse process must learn to predict the original token given a sequence that contains some fraction of `[MASK]` tokens — this is essentially the same task as masked language modeling (BERT), but generalized to operate at any noise level rather than a single fixed masking rate. This connection to the proven MLM objective is what makes discrete DLMs trainable at scale: the denoising network can be initialized from a pretrained BERT-style model, or the training objective can be formulated as a weighted cross-entropy loss over masked positions, which is numerically stable and well-understood.
+
+**Continuous-time formulations.** The paper notes that modern discrete DLMs like MD4, MDLM, and LLaDA often use continuous-time formulations where `$t$` is sampled uniformly from the continuous interval `$[0, 1]$` rather than from a discrete set of steps. In this formulation, the forward process is parameterized by a continuous noise schedule `$\alpha(t)$` that smoothly increases the masking probability from 0 at `$t=0$` to 1 at `$t=1$`. The training objective integrates over this continuous interval rather than summing over discrete steps, which has theoretical advantages in terms of density estimation and allows for flexible inference schedules (the number of denoising steps is decoupled from the training noise levels).
+
+**Reverse process (discrete case — Section 2.3, Equation 10).** For the currently dominant masked DLM formulation, the training objective simplifies dramatically. The paper presents the LLaDA objective as the representative example:
+
+$$\mathcal{L}(\theta) \triangleq -\mathbb{E}_{t, x_0, x_t} \left[ \frac{1}{t} \sum_{i=1}^{L} \mathbb{1}[x^i_t = M] \log p_\theta(x^i_0 | x_t) \right]$$
+
+where `$x_0$` is a clean token sequence of length `$L$` sampled from the training corpus, `$t$` is sampled uniformly from `$[0, 1]$`, `$x_t$` is the corrupted sequence obtained by applying the absorbing-state forward process (masking) to `$x_0$` at noise level `$t$`, `$x^i_t$` is the token at position `$i$` in the corrupted sequence, `$\mathbb{1}[x^i_t = M]$` is an indicator function that is 1 if position `$i$` is masked and 0 otherwise, `$p_\theta(x^i_0 | x_t)$` is the model's predicted probability for the original clean token at position `$i$` given the corrupted sequence, and `$\frac{1}{t}$` is a weighting factor that upweights losses at earlier timesteps (when fewer tokens are masked and the reconstruction task is harder).
+
+**What it computes:** A time-weighted cross-entropy loss computed **only over masked positions**. For each training example, a noise level `$t$` is sampled, the clean sequence `$x_0$` is corrupted by masking tokens according to the noise schedule at level `$t$`, the model processes the corrupted sequence `$x_t$` (with full bidirectional attention) to produce a probability distribution over the vocabulary at each position, and the cross-entropy between the model's prediction and the ground-truth clean token is computed only at positions that were actually masked. The `$1/t$` factor means that when `$t$` is small (few masks, easy task), the loss is downweighted, and when `$t$` is large (many masks, hard task), the loss is upweighted. The expectation is taken over the training corpus and the random noise levels.
+
+**Why this form:** This is the key simplification that makes masked DLMs work at scale. Instead of predicting the full reverse transition `$q(x_{t-1} | x_t)$` — which would require modeling a `$V \times V$` transition for each token at each step — the model only needs to predict the clean token `$x_0$` at each masked position. The paper notes that this is justified by theoretical results from RADD (Ou et al., 2025) showing that "the concrete score in absorbing diffusion can be expressed as a time-independent conditional probability of the clean data, multiplied by an analytic, time-dependent scalar" — the reverse process for absorbing-state diffusion depends only on the conditional distribution of the clean data given the corrupted observation, not on the full transition dynamics. This is a profound simplification that collapses the reverse process to a standard token prediction problem, making it possible to train with standard cross-entropy loss and to leverage all the optimization infrastructure developed for AR and MLM training.
+
+**Why the indicator function and masking-only loss matters.** A critical design choice embedded in Equation 10 is that the loss is computed **only over masked positions** (via `$\mathbb{1}[x^i_t = M]$`). The paper notes in Section 8.1 (point 4, training efficiency discussion) that this means approximately 50% of tokens, on average, contribute to the loss when `$t$` is sampled uniformly — the rest are unmasked and contribute zero gradient. This is lower than the 100% token utilization in AR models (where every token contributes to the next-token prediction loss), creating a training efficiency gap. However, the indicator function is essential because at unmasked positions, the ground-truth token is already revealed in `$x_t$`, and predicting it would be trivially easy (the model could simply copy), which would swamp the meaningful learning signal from the masked positions with a trivial identity mapping. The indicator function ensures the model only learns to infer missing information, not to parrot what it can already see.
+
+---
+
+#### Continuous-Space DLMs: Diffusion on Token Embeddings
+
+Continuous DLMs represent the first wave of applying diffusion to text, motivated by the success of diffusion in image synthesis. The core idea is to treat text as a signal in a continuous embedding space, apply standard Gaussian diffusion, and then map back to discrete tokens via rounding.
+
+**The embedding mapping.** Before diffusion can begin, each token in the sequence must be mapped to a continuous vector. The paper describes two approaches:
+
+1. **Fixed embedding space (SED, Section 2.2):** The Self-conditioned Embedding Diffusion framework "conducts diffusion directly on a fixed, continuous token embedding space" — the token embeddings are pretrained (e.g., from a standard language model embedding layer) and remain frozen during diffusion training. This simplifies training because the embedding space is stable, but it means the diffusion model must work with whatever geometry the pretrained embeddings happen to have, which may not be optimal for the denoising task.
+
+2. **Learned embedding space (Diffusion-LM, Section 2.2):** The embedding mapping can be learned jointly with the diffusion model, allowing the embeddings to adapt to the demands of the denoising process. However, this introduces additional parameters and potential training instability.
+
+**Key continuous DLM architectures and their innovations.** The paper surveys a progression of continuous DLMs, each addressing specific limitations of prior work:
+
+**Diffusion-LM (Li et al., 2022)** — the first work to introduce a diffusion process in the embedding space for controllable text generation. Its key innovation is the use of **classifier guidance** adapted from image diffusion: an external classifier trained to predict text attributes (e.g., sentiment, topic) from noisy embeddings guides the denoising trajectory toward desired properties. At inference time, the gradient of the classifier with respect to the embedding is added to the model's own prediction at each denoising step, steering the output toward the target attribute without requiring attribute-specific training of the diffusion model itself.
+
+**DiffuSeq (Gong et al., 2023)** — extends continuous diffusion to sequence-to-sequence tasks (translation, summarization) by "corrupting only the target sequence embeddings in the forward process." The source sequence remains uncorrupted and serves as conditioning for the denoising of the target. This is conceptually similar to how an encoder-decoder transformer conditions generation on an encoded source, but the decoder's autoregressive generation is replaced by parallel diffusion. The key design choice is asymmetric corruption: only the output side is noised, so the model always has access to clean source information.
+
+**CDCD (Dieleman et al., 2022)** — introduces two training innovations for continuous diffusion on categorical data. First, **score interpolation** allows the model to be trained with cross-entropy loss rather than MSE by reformulating the denoising objective to predict token probabilities directly from noisy embeddings, bridging the gap between continuous diffusion and discrete prediction. Second, **time warping** is "an adaptive strategy to efficiently schedule noise levels during training" — rather than sampling timesteps uniformly, time warping concentrates training samples at noise levels where the model currently struggles, improving sample efficiency.
+
+**Difformer (Gao et al., 2022)** — addresses two optimization challenges specific to continuous text diffusion. The **anchor loss** prevents embedding collapse — a phenomenon where all denoised embeddings converge to a single point in the embedding space because the model learns that outputting a "safe" average embedding minimizes MSE better than producing diverse, token-specific embeddings. The anchor loss penalizes this collapse by encouraging the denoised embeddings to remain close to actual token embeddings. The **noise rescaling framework** adjusts the noise magnitude at different timesteps to prevent model degeneration — at high noise levels, the task of predicting the clean embedding from pure noise is so ill-conditioned that the model may learn to ignore the noisy input entirely and output a generic embedding, which the rescaling prevents by matching the noise scale to the model's capacity.
+
+**GENIE (Lin et al., 2023)** — proposes a large-scale pre-training framework with a "novel continuous paragraph denoise objective." Rather than operating at the token level, GENIE corrupts and reconstructs entire paragraphs, learning to denoise longer text units. This is motivated by the observation that token-level diffusion may not capture long-range coherence as well as AR models, and paragraph-level denoising forces the model to maintain global consistency.
+
+**TESS and TESS 2 (Mahabadi et al., 2024; Tae et al., 2025)** — represent an alternative continuous formulation that operates in **logit space** rather than embedding space. Instead of adding Gaussian noise to embeddings, TESS diffuses over a "k-logit simplex representation of tokens" — essentially, each token is represented as a probability distribution over the vocabulary (a point on the simplex), and diffusion adds noise to these probabilities, gradually flattening them toward a uniform distribution. This formulation avoids the embedding-to-token rounding problem because the output is already a probability distribution over tokens. TESS 2 scales this approach to 7B parameters by "adapting pretrained large autoregressive models into general-purpose diffusion language models through a diffusion-specific pretraining recipe and instruction tuning," demonstrating that continuous diffusion can be competitive at scale.
+
+**The fundamental limitation of continuous DLMs.** Despite these innovations, the paper's narrative arc — visible in the timeline (Figure 1) and the trend toward discrete DLMs in recent years — suggests that continuous DLMs face an inherent difficulty. The rounding step from continuous embedding to discrete token is a source of irreducible error because the denoising process is optimizing in a smooth space where every point is a valid embedding, but the evaluation requires selecting from a discrete vocabulary where almost all points in the continuous space correspond to no valid token. Techniques like nearest-neighbor search, learned decoders, and simplex formulations mitigate but do not eliminate this mismatch. The shift to discrete DLMs — where the forward and reverse processes operate directly on tokens — can be understood as a decision to absorb this difficulty into the diffusion process itself rather than patching it at the output layer.
+
+---
+
+#### Discrete-Space DLMs (Including Masked DLMs): Diffusion Directly on Tokens
+
+Discrete DLMs represent the dominant modern approach, with the survey's Figure 1 showing a clear pivot toward discrete formulations starting around 2023–2024. The core innovation is defining the forward and reverse processes directly on the vocabulary of tokens, eliminating the embedding space and rounding step entirely.
+
+**The transition matrix formulation (D3PM, Section 2.3).** The paper identifies D3PM (Austin et al., 2021) as the foundational work that introduced "a structured diffusion process over discrete tokens." The forward process is defined by a sequence of transition matrices `$Q_t$` that specify, for each token `$i$` and timestep `$t$`, the probability of transitioning to each other token `$j$`. The D3PM paper explored several structured transition matrices:
+
+- **Uniform transitions:** `$Q_t[i, j] = \beta_t / (V - 1)$` for `$i \neq j$` and `$Q_t[i, i] = 1 - \beta_t$`. Each token has a small probability of transitioning to any other token uniformly. This is a natural discrete analog of Gaussian noise, but it destroys syntactic and semantic structure indiscriminately.
+- **Absorbing-state transitions (the mask formulation):** `$Q_t[i, \text{MASK}] = \beta_t$`. Tokens either stay the same or become `[MASK]`. This preserves information about which positions are corrupted and is directly analogous to the masked language modeling objective.
+- **Discrete Gaussian transitions:** transitions are biased toward tokens with similar embeddings, preserving some semantic information even at high noise levels.
+
+**Why the absorbing-state (mask) formulation became dominant.** The paper's coverage implies a convergence toward masked diffusion as the standard discrete DLM approach, and the reasons are both theoretical and practical:
+
+1. **Connection to MLM pretraining:** The reverse process in absorbing-state diffusion — predict the original token given a partially masked sequence — is exactly the BERT objective. This means that pretrained MLMs (like BERT, RoBERTa) can serve as initialization for discrete DLMs, and the vast body of knowledge about training stable, high-quality MLMs transfers directly.
+2. **Simplified training objective (Equation 10):** As discussed above, the absorbing-state formulation allows the reverse process to be expressed as a simple cross-entropy loss over masked positions, which is numerically stable, well-optimized in existing frameworks, and doesn't require modeling full `$V \times V$` transition matrices.
+3. **Interpretable inference:** At each denoising step, the model predicts tokens for all masked positions, and a scheduler decides which predictions to accept and which to remask. This is conceptually simple and allows for flexible inference strategies (confidence-ranked unmasking, random unmasking, block-wise unmasking).
+
+**The reparameterized training objective (RDMs, MD4, RADD).** The paper traces a line of theoretical work that simplified and generalized the discrete diffusion training objective:
+
+**RDMs (Zheng et al., 2024)** — "establishes an alternative formulation for the reverse process, which simplifies the training objective to a weighted cross-entropy loss." The key insight is that for absorbing-state diffusion, the optimal reverse process depends only on `$p(x_0 | x_t)$` — the conditional distribution of the clean data given the corrupted observation — rather than on the full transition dynamics. This means the model only needs to predict the clean token at each position, which is a standard classification task.
+
+**MD4 (Shi et al., 2024)** — derives "a simple weighted integral of cross-entropy losses as the continuous-time variational objective of masked diffusion models." The integral formulation over continuous time `$t \in [0, 1]$` provides a unified objective that accommodates any noise schedule and any inference-time number of steps.
+
+**RADD (Ou et al., 2025)** — formalizes the connection between absorbing discrete diffusion and any-order autoregressive models, showing that "the concrete score in absorbing diffusion can be expressed as a time-independent conditional probability of the clean data, multiplied by an analytic, time-dependent scalar." This unifies the training objectives of the two paradigms and suggests that DLMs and AR models are more closely related than they appear — both are ultimately learning `$p(x_0 | \text{partial observation})$`, just with different partial observation patterns (prefix vs. arbitrary mask pattern).
+
+**Large-scale masked DLMs (LLaDA and Dream, Section 2.3).** The paper identifies two models as representing the current state-of-the-art in discrete DLMs:
+
+**LLaDA-8B (Nie et al., 2025)** — trained from scratch with the objective in Equation 10 on 2.3 trillion tokens. The paper emphasizes that LLaDA "achieves performance comparable to similarly sized LLaMA3-8B models" on benchmarks including PIQA, HellaSwag, and GSM8K (Figure 6), which is the critical empirical result that validates the discrete DLM approach at scale. LLaDA uses the absorbing-state forward process with a uniform timestep sampling strategy, and inference proceeds via iterative mask-predict: at each step, the model predicts all masked tokens, the highest-confidence predictions are accepted (unmasked), and lower-confidence positions are remasked for the next step.
+
+**Dream-7B (Ye et al., 2025)** — initialized from Qwen2.5-7B (an autoregressive model) and further trained with 580B tokens using the diffusion objective. The paper reports that Dream "largely outperforms existing DLMs and matches the performance of top-tier AR models" (Section 2.3), and Figure 6 shows Dream outperforming LLaDA-8B on several benchmarks. The initialization from an AR model is a crucial practical insight: rather than training a DLM from scratch, one can take a powerful AR model, modify the attention mask from causal to full bidirectional, and continue training with the masked diffusion objective. The paper characterizes this as an efficient adaptation pathway (Section 3.1): "DLMs can be efficiently adapted from AR models, significantly reducing training time and cost while achieving comparable or even superior performance to their AR counterparts."
+
+**The mask-predict inference procedure (Section 4.2).** For masked DLMs like LLaDA and Dream, inference proceeds as an iterative refinement process that the paper describes in some detail:
+
+1. **Initialization:** The output sequence is initialized as all `[MASK]` tokens, with length either predetermined or dynamically determined.
+2. **Prediction step:** The model processes the current sequence (a mix of generated tokens and `[MASK]` tokens) with full bidirectional attention and produces, for each masked position, a probability distribution over the vocabulary.
+3. **Unmasking policy:** Based on model confidence (the predicted probability of the most likely token at each position), a subset of predictions are accepted. The paper distinguishes two baseline policies (Section 4.2, citing Masked DLM): **confidence-ranked remasking**, where the `$k$` positions with the highest predicted probabilities are unmasked, and **random remasking**, where positions are unmasked in random order regardless of confidence.
+4. **Remasking:** Positions not accepted in the current step are set back to `[MASK]` for the next iteration. The paper notes that "prioritizing low-confidence positions yields better quality at no extra cost" — the confidence-ranked strategy outperforms random selection because it allows difficult positions to benefit from additional context as easy positions are resolved first.
+5. **Iteration:** Steps 2–4 repeat until all `[MASK]` tokens are resolved or a maximum number of steps is reached.
+
+**The block-wise semi-autoregressive inference variant (Section 2.4 and Section 4.4).** The paper notes that recent models, including LLaDA and Dream, often use a block-wise decoding strategy rather than pure parallel generation: the sequence is divided into blocks, each block is generated using the iterative mask-predict procedure, and blocks are generated sequentially (or with partial parallelism). This is formally a hybrid AR-Diffusion approach, and it is motivated by the **Parallel Decoding Curse** (Section 8.1, point 1) — when too many tokens are unmasked simultaneously (few denoising steps), the model fails to capture inter-token dependencies and produces incoherent output. Block-wise decoding limits parallelism to block-level, where dependencies are strongest, while maintaining efficiency gains at the inter-block level.
+
+**Discrete Flow Matching (DFM, Section 2.3).** The paper presents DFM (Gat et al., 2024) as an alternative discrete diffusion formulation that is "analogous to continuous Flow Matching." Instead of learning to reverse a noising process, DFM "learns a generating probability velocity to transform samples along a general family of probability paths from a source to a target distribution." The paper does not elaborate on the mathematical details, but notes that DFM "significantly closes the performance gap with autoregressive models on various benchmarks" when scaled to 1.7B parameters, suggesting that flow-based approaches are a viable alternative to the absorbing-state formulation, particularly for tasks where the mask-only corruption is too limiting.
+
+**Generalized noise processes (GIDD, Section 2.3).** The paper identifies a limitation of masked diffusion: "masked diffusion models cannot revise generated tokens." Once a token is unmasked, it is typically fixed for the remainder of the generation process (though ReMDM, discussed later, relaxes this). GIDD (von Rütte et al., 2025) "generalizes the noising process by combining masking with uniform noise, which unlocks the model's ability to self-correct mistakes and improves sample quality." This means that even after a token is generated, it can be re-corrupted and re-predicted in later steps, enabling the model to revise earlier decisions based on later context — a capability that pure masked diffusion lacks because unmasked tokens are "locked in."
+
+---
+
+#### Hybrid AR-Diffusion Architectures: Combining Autoregressive and Diffusion Generation
+
+The paper posits that hybrid architectures represent a pragmatic synthesis — capturing the long-range dependency modeling of AR while exploiting the intra-block parallelism of diffusion. Section 2.4 describes this as a "prominent strategy" that "adopts a block-wise semi-autoregressive generation process."
+
+**The block-wise generation structure.** The generation process in hybrid models consists of two nested loops:
+
+- **Outer loop (autoregressive):** Blocks of `$B$` tokens are generated sequentially, with each block conditioned on all previously generated blocks via standard autoregressive conditioning.
+- **Inner loop (iterative diffusion):** Within each block, the `$B$` tokens are generated in parallel using the diffusion denoising procedure (mask-predict for discrete models).
+
+This means the model alternates between AR-like long-range conditioning and diffusion-like local parallelism. The block size `$B$` is a hyperparameter that controls the trade-off: small `$B$` approaches pure AR generation (many serial steps, high quality), while large `$B$` approaches pure diffusion (few serial steps, lower quality per token due to the Parallel Decoding Curse).
+
+**BD3-LM as the representative hybrid model (Section 2.4, Equation 11).** The paper describes BD3-LM (Arriola et al., 2025) as the model that "further advances this direction on discrete models, demonstrating strong performance compared to pure AR and diffusion models." Its training objective is formalized as:
+
+$$\mathcal{L}_{\text{BD}}(x, \theta) := -\sum_{b=1}^{B} \mathbb{E}_{t \sim [0,1]} \mathbb{E}_{q} \left[ \frac{1}{t} \log p_\theta(x_b | x^t_b, x_{<b}) \right]$$
+
+where `$x$` is the full training sequence divided into `$B$` blocks, `$x_b$` is the `$b$`-th block of tokens (the clean target), `$x_{<b}$` represents all blocks preceding block `$b$` (the autoregressive context), `$x^t_b$` is a corrupted version of block `$b$` at noise level `$t$` (obtained via the absorbing-state forward process applied to block `$b$` in isolation), and `$p_\theta(x_b | x^t_b, x_{<b})$` is the model's prediction of the clean tokens in block `$b$` given the corrupted block and the preceding autoregressive context.
+
+**What it computes:** The total loss is a sum over blocks, where for each block the model must predict the clean tokens given (1) all previous blocks as autoregressive context and (2) a corrupted version of the current block. The expectation over `$t \sim [0, 1]$` means that during training, the model sees blocks at all levels of corruption, from fully masked to fully clean, ensuring it can handle the full range of noise levels encountered during the inner-loop diffusion. The `$1/t$` weighting is the same as in the pure DLM objective (Equation 10), upweighting harder (higher noise) examples.
+
+**Why this form:** The structured attention pattern (block-causal, illustrated in Figure 4) is the key architectural innovation. Within each block, tokens attend to all other tokens in the same block (full bidirectional attention) and to all tokens in previous blocks (causal attention across blocks), but not to tokens in future blocks. This enables the model to capture intra-block dependencies through bidirectional context while maintaining the autoregressive factorization across blocks. The paper notes that this design also "supports KV-Cache which is widely used in AR models" — once a block is fully generated, its key-value activations can be cached and reused when processing subsequent blocks, providing computational savings similar to standard AR KV-caching.
+
+**Other hybrid approaches surveyed.** The paper briefly covers several variations on the hybrid theme:
+
+**SSD-LM (Han et al., 2023)** — pioneered the block-wise approach using continuous diffusion on simplex representations (the k-logit simplex formulation similar to TESS). This was an early proof-of-concept that block-wise generation could work, predating the shift toward discrete formulations.
+
+**AR-DIFFUSION (Wu et al., 2023)** — introduces "a multi-level diffusion process and achieves semi-autoregressive by adjusting timestep according to token position." Rather than explicit block boundaries, the noise level varies smoothly with token position — earlier tokens are less noisy (closer to AR-style generation) and later tokens are more noisy (closer to diffusion-style generation).
+
+**SDAR (Cheng et al., 2025)** — "converts a pretrained autoregressive model into a blockwise diffusion model through a lightweight adaptation stage." This mirrors the Dream approach (AR model initialized and converted to DLM) but applies it to the hybrid setting, demonstrating that the conversion can be done with minimal additional training.
+
+**SpecDiff (Christopher et al., 2025)** — proposes a framework where "a lightweight diffusion model drafts candidate outputs, which are then validated and finalized by a large AR model." This is essentially speculative decoding applied to DLMs: the diffusion model generates a full draft in parallel, and the AR model verifies and corrects it token-by-token, combining the speed of diffusion with the quality guarantees of AR verification.
+
+**TiDAR (Liu et al., 2025)** — integrates "diffusion-based parallel drafting and autoregressive sampling within a single forward pass through structured causal-bidirectional attention." The model simultaneously produces a parallel draft (via diffusion-style processing) and an AR sample, achieving throughput improvements while maintaining AR-level quality.
+
+---
+
+#### Pre-training and Fine-tuning Strategies for DLMs
+
+Section 3.1 of the paper consolidates the training practices that have emerged for DLMs, emphasizing that they "largely follow procedures similar to those used in autoregressive language models (for discrete DLMs) or image diffusion models (for continuous DLMs), with relatively fewer design spaces."
+
+**Initialization from AR models (Section 3.1).** The paper identifies this as a critical practical efficiency: "To accelerate training, particularly for large-scale models, it is common practice to initialize DLMs from pretrained AR language models or image diffusion models." The paper cites DiffuGPT and DiffuLLaMA (Gong et al., 2025) as having demonstrated that "DLMs can be efficiently adapted from AR models, significantly reducing training time and cost while achieving comparable or even superior performance to their AR counterparts." The adaptation involves:
+
+1. **Architecture modification:** The causal attention mask is replaced with full bidirectional attention. Weight matrices (attention projections, FFN layers) are initially identical to the AR model's weights.
+2. **Continued training:** The model is trained with the masked diffusion objective (Equation 10) rather than the next-token prediction objective. The paper reports that Dream-7B, initialized from Qwen2.5-7B, required 580B tokens of diffusion-specific training to achieve its reported performance.
+
+**Why this works.** The paper does not provide a theoretical justification, but the empirical rationale is clear: the knowledge encoded in AR model weights — syntactic patterns, factual knowledge, reasoning heuristics — is largely independent of the attention mask pattern. The bidirectional attention simply gives the model access to more context when making predictions, which should be strictly beneficial for the denoising task. The primary adaptation cost is learning to use bidirectional context effectively and learning the diffusion-specific noise schedule, both of which can be acquired through continued training.
+
+**Initialization from image diffusion models (Section 3.1).** For multimodal DLMs, the paper notes that D-DiT and Muddit are "initialized from pretrained MM-DiT backbones from SD3 and Meissonic respectively." The rationale is that "although these models are not originally designed for text generation, their latent representations contain intrinsic language-aligned knowledge, which can effectively facilitate the training of language modeling while retaining strong visual generation capabilities." This is an interesting claim about cross-modal transfer: the joint text-image training of models like Stable Diffusion 3 produces text representations that, while not optimized for pure language modeling, contain sufficient linguistic structure to serve as a starting point for DLM training.
+
+**Scaling properties (Section 3.1).** The paper briefly cites recent scaling-law analyses that "reveal that DLMs exhibit distinct compute-data tradeoffs from AR models: they are substantially more data-hungry under compute constraints, yet possess far greater data reuse potential under multi-epoch training." The first claim — data-hunger — means that for a fixed compute budget, DLMs require more training tokens than AR models to reach the same loss, likely because the masking-based loss only trains on ~50% of tokens per example (Section 8.1, training efficiency discussion). The second claim — greater data reuse potential — means that DLMs benefit more from multiple epochs over the same data, possibly because the random masking pattern at each epoch presents the model with effectively different views of the same underlying sequences, acting as a form of data augmentation.
+
+**Supervised fine-tuning (SFT) for DLMs (Section 3.1).** The paper notes that SFT in DLMs "generally mirrors that of AR models":
+- For masked DLMs like LLaDA, "prompt tokens are left unmasked while response tokens are selectively masked, enabling the model to learn conditional response generation in a manner compatible with pre-training."
+- For continuous DLMs, "SFT can also be performed by corrupting only the response segment, as demonstrated in TESS2."
+
+The key design choice is the asymmetric masking: the prompt provides clean conditioning context, while the response is corrupted and must be reconstructed. This ensures the model learns to generate responses conditioned on prompts, mirroring the prompt-response structure of instruction-tuned AR models.
+
+**Unique DLM training challenges (Section 3.1).**
+
+**Loss computation efficiency:** The paper identifies this as a "major issue." In masked DLM training with uniformly sampled timesteps, only ~50% of tokens contribute to the loss on average. For SFT, where the prompt is left completely unmasked, the effective token utilization is even lower. The paper cites LaViDa's solution: "a complementary masking strategy: each training sample is duplicated with two disjoint masking patterns, ensuring that all tokens are included in the loss computation at least once." This doubles the effective batch size but ensures gradient coverage of all tokens.
+
+**Train-inference discrepancy:** The paper notes that in DLMs, "the model performs significantly better during training than at inference time." During training, the model receives partially corrupted sequences and must predict the original tokens — a task it can do well because it has access to the clean context tokens. During inference, the model must iteratively refine its own predictions, and errors in early steps can compound — if an early unmasking decision is wrong, the model conditions on incorrect tokens in subsequent steps. The paper cites Asada and Miwa (2025) as proposing "a two-step diffusion process and an improved scheduling technique to mitigate this issue," but does not elaborate on the specific mechanism.
+
+---
+
+#### Post-Training for Reasoning: Adapting RL and Policy Gradient Methods to DLMs
+
+Section 3.2 addresses what the paper frames as a "unique and formidable challenge": applying reinforcement learning and policy gradient methods to DLMs to improve reasoning capabilities. The core difficulty is that RL algorithms developed for AR models rely on computing the log-probability of a generated sequence, which is straightforward under the autoregressive factorization (log of the product of per-token conditionals) but intractable for DLMs because generation is an iterative, non-sequential process with no factorized likelihood.
+
+**The intractability of DLM log-likelihood.** The paper states: "In DLM, where generation is an iterative, non-sequential process, the log-likelihood is intractable, creating a significant technical barrier to applying the mature suite of RL algorithms developed for AR models to DLMs." The log-likelihood `$\log p_\theta(y | x)$` for a DLM-generation of response `$y$` given prompt `$x$` involves integrating over all possible denoising trajectories that could produce `$y$` — a combinatorially large space — rather than being a simple sum of per-step log-probabilities. This means that standard policy gradient estimators that require the log-probability of the sampled action cannot be directly applied.
+
+**Three families of approaches.** The paper categorizes existing post-training methods into three streams:
+
+**Approach 1: Parallelizing the reasoning chain (DoT and DCoLT, Section 3.2.1).**
+
+**Diffusion-of-Thought (DoT, Ye et al., 2024):** This adapts the Chain-of-Thought paradigm "by formulating reasoning steps as intermediate thoughts that are refined in parallel throughout the diffusion denoising process." The method works by fine-tuning pre-trained DLMs (Plaid, SEDD) on datasets of problems paired with step-by-step rationales. The key innovation is "specialized training techniques like scheduled sampling and coupled sampling, which expose the model to its own generated errors during training to improve its self-correction capabilities." Scheduled sampling means that during training, the model sometimes conditions on its own predictions rather than ground-truth tokens, simulating the inference-time condition where errors can occur. Coupled sampling generates paired examples where the model sees both correct and incorrect intermediate steps, learning to recover from mistakes.
+
+**What this achieves:** The paper reports that DoT enables "smaller DLMs to achieve impressive reasoning performance, even outperforming significantly larger autoregressive models on certain mathematical and logical reasoning benchmarks." This is significant because it suggests the diffusion paradigm may have advantages for reasoning — the iterative refinement process naturally supports self-correction, whereas AR models must commit to each token sequentially without the ability to revise earlier decisions.
+
+**Diffusion Chain of Lateral Thought (DCoLT, Huang et al., 2025):** This introduces a distinct approach "inspired by the cognitive concept of lateral thinking, which contrasts with the step-by-step vertical thinking of traditional CoT methods." Rather than requiring the model to produce explicit intermediate reasoning steps, DCoLT "treats each step of the reverse diffusion process as a latent thinking action" and "optimizes the entire multi-step denoising trajectory with outcome-based RL to maximize a reward on the final answer." This means the model is not trained to produce human-readable reasoning chains, but rather to use its internal denoising steps as an implicit reasoning process.
+
+**The Unmasking Policy Module (UPM):** A key innovation of DCoLT is the UPM, which "learns the optimal order for revealing tokens as part of the RL action space." In standard masked DLMs, the unmasking order is determined by a fixed policy (e.g., confidence-ranked). The UPM treats the unmasking order as a learnable decision — at each denoising step, it selects which positions to unmask based on the current state, and this decision is optimized via RL to maximize the probability of a correct final answer. This adds a meta-level of control: the model learns not just what tokens to predict, but in what order to reveal them to maximize reasoning success.
+
+**Empirical results:** The paper reports that "the DCoLT-reinforced LLaDA model achieves gains of +9.8% on GSM8K and +19.5% on HumanEval" — improvements that are substantial for a model that already performs competitively with AR baselines.
+
+**Approach 2: Adapting policy gradient methods (diffu-GRPO, coupled-GRPO, UniGRPO, SEPO, Section 3.2.2).**
+
+This is the most active area of current work, with multiple competing methods for approximating the log-probability needed for policy gradient updates.
+
+**SEPO (Score Entropy Policy Optimization, Zekri and Boullé, 2025):** The paper presents SEPO as "a theoretically grounded framework to fine-tune discrete diffusion models using policy gradient methods and non-differentiable rewards." Operating within the score entropy framework (derived from SEDD), SEPO "adapts modern policy gradient methods like PPO and GRPO by using importance sampling to derive a stable and low-variance gradient estimate." The objective function is:
+
+$$\mathcal{l}_A(\theta) = \mathbb{E}_{x \sim \pi_{\theta_{\text{old}}}} \left[ \sum_{y \in \mathcal{X}, y \neq x} w_{x,y} \log s_\theta(x, T - T_0)_y \right]$$
+
+where `$\pi_{\theta_{\text{old}}}$` is the previous policy (before the current update), `$x$` is a sample drawn from this old policy, `$\mathcal{X}$` is the space of all possible sequences, `$w_{x,y} = \pi_\theta(y) f(r^{T-T_0}_{x,y})$` is a weight that depends on the current policy's probability of sequence `$y$` and a function `$f$` of the reward, `$r^{T-T_0}_{x,y}$` is the reward assigned to the transition from `$x$` to `$y$`, and `$s_\theta(x, T-T_0)_y$` is the score entropy component for sequence `$y$`.
+
+**What it computes:** The objective maximizes the expected log-likelihood of the score entropy, weighted by a function of the reward. The expectation is taken under the old policy (importance sampling), meaning the gradient can be estimated using samples from the model before the update, avoiding the need for on-policy sampling at every step. The function `$f$` can be chosen to recover different policy gradient variants — a clipped function yields PPO, while group-standardized rewards yield GRPO.
+
+**Why this form:** Importance sampling allows the use of off-policy data, which is crucial for diffusion models where generating on-policy samples is expensive (each sample requires running the full iterative denoising process). The score entropy formulation provides a principled connection between the discrete diffusion model's training objective and the policy gradient objective, ensuring that the RL fine-tuning stays close to the pre-trained model's distribution.
+
+**diffu-GRPO (d1, Zhao et al., 2025):** The paper identifies this as one of the most practical approaches, providing "a two-stage post-training framework for masked DLMs that combine supervised finetuning (SFT) with a novel policy gradient algorithm." The key technical contributions are methods for approximating sequence log-probability and per-token log-probability:
+
+1. **Sequence log-probability approximation:** "d1 uses a simple mean-field decomposition to approximate sequence log-probability by a product of independent per-token probabilities." The mean-field assumption treats each token position as independent given the corrupted input, which is not strictly true (tokens are correlated) but provides a tractable approximation. This decomposes the intractable joint probability into a product of individual token probabilities, each of which can be computed with a single model forward pass.
+
+2. **Per-token log-probability computation:** "per-token log-probability is computed by performing a single forward pass on a fully masked completion, conditioned on a randomly masked prompt during each policy gradient update." The technical step is: given a prompt and a generated response, the response is fully masked, a random subset of the prompt is also masked (to serve as regularization), and the model's predicted probabilities for each token in the masked response are used as the per-token log-probabilities.
+
+**Why the random prompt masking matters:** "Using different random masks for the prompt in each inner gradient update step serves as a form of regularization, improving training efficiency and stability." If the prompt were always fully unmasked, the model would see the same conditioning in every update, which could lead to overfitting to specific prompt patterns. Random masking forces the model to generate responses under varying levels of contextual information, improving robustness.
+
+**Empirical results:** The paper reports that "the full d1 pipeline, leveraging SFT followed by diffu-GRPO, demonstrates significant performance improvements on mathematical and planning reasoning tasks for the LLaDA model."
+
+**coupled-GRPO (DiffuCoder, Gong et al., 2025):** This is a diffusion-native approach specifically designed for code generation. The "central innovation of coupled-GRPO is its coupled-sampling scheme for log-likelihood estimation":
+
+- For each completion sequence in a training batch, two complementary masks are generated such that every token position is masked in exactly one of the two masks.
+- The log-probability estimate is derived by averaging the losses from these two complementary forward passes.
+
+**What this achieves:** "This ensures that every token is evaluated in a partial-masking context during training, providing full token coverage and a more stable gradient signal compared to methods that use a single random mask or a full mask." The complementary mask design means that every token contributes to the gradient at least once (and exactly once) per example, eliminating the randomness of single-mask approaches where some tokens might never be evaluated. The average of two complementary estimates also reduces variance, providing a more stable training signal.
+
+**UniGRPO (MMaDA, Yang et al., 2025):** This extends policy gradient methods to multimodal DLMs. The key innovation is a "structured noising strategy which samples a masking ratio `$p_i \in [0, 1]$` uniformly rather than masking all response tokens." This means that during policy gradient updates, the model sees responses at all levels of partial masking — from almost fully masked to nearly unmasked — which "is consistent with conventional diffusion training and boosts the utilization of the model's multi-step denoising capabilities." The intuition is that the model's denoising ability was trained across all noise levels, and the RL fine-tuning should similarly span all noise levels to avoid distribution shift.
+
+**Additional policy gradient methods (briefly surveyed):**
+
+- **SPG (Sandwiched Policy Gradient, Wang et al., 2025):** Uses both an upper and a lower bound on the true log-likelihood to reduce bias. Block-wise masking is used to estimate these bounds, and the two-sided estimate provides a more reliable gradient than single-sided approximations.
+- **wd1 (Tang et al., 2025):** Reformulates the policy optimization objective as a weighted likelihood requiring only a single approximation, reducing computational overhead.
+- **IGPO (Zhao et al., 2025):** Leverages DLMs' inpainting ability to "partially inject ground-truth reasoning traces" during RL, alleviating the zero-advantage problem where all samples in a group receive similar rewards.
+- **SAPO (Xie et al., 2025):** Introduces process-based rewards aligned with the latent reasoning hierarchy, providing fine-grained feedback at intermediate denoising steps rather than only at the final output.
+- **BGPO (Lin et al., 2025):** Uses a boundary-guided lower bound to enable large Monte Carlo sample sizes without increased memory usage.
+
+**Approach 3: Adapting preference optimization (VRPO, Section 3.2.3).**
+
+**LLaDA 1.5 and VRPO (Zhu et al., 2025):** The paper identifies that "applying Direct Preference Optimization (DPO) to discrete DLMs is challenging due to the high variance of the Evidence Lower Bound (ELBO) used to approximate log-likelihoods." DPO requires computing the ratio of log-likelihoods under the current policy and a reference policy for both preferred and dispreferred responses. When these log-likelihoods are approximated by an ELBO — which is a stochastic lower bound involving sampling over timesteps and masking patterns — the resulting estimator can have high variance, making optimization unstable.
+
+**VRPO's two variance reduction techniques:**
+
+1. **Optimal Monte Carlo budget allocation:** "sampling more diffusion timesteps rather than multiple masked versions per timestep, i.e., `$n_t = n$` and `$n_{y_t} = 1$`." This means that for a fixed budget of Monte Carlo samples, the algorithm samples many different timesteps (each with a single masking pattern) rather than sampling fewer timesteps with multiple masks each. The paper argues this reduces variance because timestep variation is a larger source of randomness than masking pattern variation.
+
+2. **Antithetic sampling:** "the same timesteps and masked data are shared between the ELBO estimates of the current policy `$\pi_\theta$` and the reference policy `$\pi_{\text{ref}}$` for the same input `$y_w$` or `$y_l$`." This means that when estimating the log-likelihood ratio for DPO, both the current and reference policies evaluate exactly the same corrupted sequences at exactly the same timesteps, so the randomness in the corruption process cancels out in the ratio, dramatically reducing variance.
+
+**Empirical results:** The paper reports that VRPO applied to LLaDA produces LLaDA 1.5, which shows "significant and consistent improvements across mathematics, code, and alignment benchmarks." Figure 6 includes LLaDA 1.5 as a separate entry, showing competitive or superior performance to other same-scale models.
+
+## 4. Key Insights and Innovations
+
+This is a **survey paper** — it does not propose a new model, algorithm, or training technique. Its contributions are therefore conceptual and organizational rather than methodological. The innovations below describe the intellectual moves the paper makes in structuring the DLM landscape, the diagnostic concepts it introduces (or formally names), and the empirical synthesis it performs that changes how the field should think about diffusion language models.
+
+---
+
+### Innovation 1: The Difficulty-Aware Compute Allocation Meta-Framework as a Cross-Paradigm Design Principle
+
+The paper's deepest structural contribution is not a method but a **diagnostic lens**: the observation that effectiveness of every technique in the DLM ecosystem — search algorithms against verifiers, revision strategies, parallel decoding policies, unmasking schedules — is fundamentally conditioned on the difficulty of the input, and that heterogeneous, difficulty-aware allocation recovers enormous efficiency gains that uniform strategies leave on the table.
+
+This framing appears most clearly in Section 5.3's analysis of search against PRM verifiers and Section 6's analysis of revisions, but it percolates through the entire taxonomy. The paper shows that beam search — intuitively "more powerful" — *degrades* performance on easy problems at high budgets due to verifier over-optimization (Figure 3, right), while it substantially helps on medium-hard problems. Sequential revisions dominate on easy problems, but a balanced sequential-to-parallel ratio is optimal on hard ones (Figure 7, right). Block-wise semi-autoregressive decoding (Section 2.4) can be understood as difficulty-dependent allocation at the architectural level: blocks where dependencies are strong get the full iterative refinement treatment, while inter-block transitions use cheap autoregressive steps.
+
+**What distinguishes this from prior work.** Before this paper's synthesis, the field treated test-time compute as a uniform knob: more samples, more search steps, more parallelism always improve quality, and the only question is whether the marginal improvement justifies the cost. The compute-optimal scaling framework — formalized in Equation 1 and operationalized through difficulty quintile binning — shows that the relationship is often *non-monotonic*: the "best" method at one difficulty level can be the worst at another, and the optimal policy exploits these reversals. This is an inference-time analog of the Chinchilla scaling laws for pretraining (Hoffmann et al., 2022), but applied to a discrete, combinatorial space of strategy hyperparameters conditioned on a prompt-level difficulty estimate. The conceptual parallel is direct, but the mechanism — difficulty-dependent strategy switching rather than continuous parameter scaling — is entirely different.
+
+**Significance beyond performance.** The 4× efficiency gains over best-of-N baselines (Figures 4 and 8) are important, but the deeper contribution is the **reconciliation of conflicting prior findings**. The paper explains why Huang et al. (2023) found that "LLMs cannot self-correct reasoning" while Madaan et al. (2023) found self-refinement helpful: these studies tested on implicitly different difficulty distributions. The compute-optimal framework converts a confusing set of contradictory results into a coherent picture with clear boundary conditions — revisions work on easy problems, search helps on medium problems, nothing helps on fundamentally out-of-capability problems. This is a diagnostic contribution that changes how researchers should design evaluations: difficulty must be controlled as a confounding variable, not assumed away.
+
+**Incremental vs. fundamental.** The *concept* of difficulty-dependent allocation is fundamental — it reframes test-time compute from a quantity knob to a resource allocation problem. The *specific implementation* (five difficulty quintiles, two-fold cross-validation for strategy selection, PRM-based difficulty estimation via 2048 samples) is incremental and has known limitations (difficulty estimation cost, bin coarseness). The paper explicitly flags these limitations, positioning the framework as a proof-of-concept for a class of approaches rather than a deployment-ready solution.
+
+---
+
+### Innovation 2: The Proposal Distribution–Verifier Decomposition as a Unifying Analytical Framework
+
+The paper introduces (Section 2) a conceptual decomposition that organizes all test-time compute methods into two orthogonal axes: modifications to the **proposal distribution** (what the model generates — e.g., iterative revisions, temperature scaling, multi-token prediction) and modifications to the **verifier/sampler** (how outputs are scored and selected — e.g., PRM-guided search, best-of-N weighted selection, majority voting). This decomposition is explicitly analogized to MCMC sampling, where a simple proposal is combined with a score function to sample from a complex target distribution.
+
+**Prior work treated these as independent research threads.** Revisions (Qu et al., 2024; Madaan et al., 2023) were studied in the self-correction and self-refinement literature without connection to verifier research. PRM-guided search (Lightman et al., 2023; Wang et al., 2023) was studied in the reward modeling and decoding literature without consideration of proposal modifications. Hybrid approaches that combined both axes (revisions + verifier search) were essentially nonexistent, and there was no vocabulary for describing *why* one might combine them.
+
+**The framework surfaces complementarity as a design principle.** By showing that revisions excel on easy problems (where the proposal is roughly correct and needs refinement — local search in answer space) while PRM search excels on medium problems (where diverse exploration of solution strategies is needed — global search in answer space), the paper demonstrates complementary strengths that neither approach alone captures. This is more than taxonomy: it is a design prescription that implies future systems should deploy both mechanisms, switching between them per-prompt. The paper doesn't fully realize this vision (Section 8 acknowledges that PRM tree-search was not combined with revisions), but the framework provides the intellectual scaffolding.
+
+**Significance.** The decomposition is simple enough to seem obvious in retrospect — a hallmark of effective conceptual frameworks — but it was not articulated in the prior literature. It provides a common language for comparing methods that previously used incompatible vocabularies (e.g., "self-refinement" vs. "verifier-guided decoding"), and it makes explicit the hypothesis that gains from the two axes are additive or multiplicative, which can now be tested empirically.
+
+**Incremental vs. fundamental.** The framework itself is fundamental in the sense that it reorganizes the research landscape. The specific decomposition into proposer and verifier is borrowed from MCMC — it is not mathematically novel — but its application to the LLM test-time compute literature and the empirical demonstration that the two axes have complementary, difficulty-dependent strengths is a genuine conceptual contribution.
+
+---
+
+### Innovation 3: Verifier Over-Optimization as the Primary Bottleneck for Test-Time Compute Scaling
+
+The paper provides some of the first clear, quantified evidence that **verifier over-optimization** — the phenomenon where aggressive search finds solutions that score highly under the verifier but are actually incorrect — is the central limiting factor preventing unbounded improvements from additional test-time compute. This is documented across multiple methods:
+
+- Beam search degrades easy-problem performance at high budgets (Figure 3, right, bins 1–2): the PRM makes mostly correct assessments on easy problems, and aggressive optimization amplifies residual errors.
+- Lookahead search — the most powerful optimizer, which simulates `k` additional steps forward to improve step-level scoring accuracy — *paradoxically performs worst overall* (Figure 3, left) because its extra cost reduces the number of beams explored at the same budget, and what it does explore is over-optimized.
+- Qualitative examples (Appendix M) show beam search producing degenerate outputs — repetitive low-information steps, overly short 1–2 step solutions — that score highly under the PRM but are nonsense.
+
+**Prior to this work**, over-optimization was recognized in the RLHF literature as "reward hacking" (Gao et al., 2023; Skalse et al., 2022), but it was not systematically documented as the bottleneck in test-time search scaling. The dominant narrative was "more compute → better outputs," and the primary research question was *which* search algorithm to use, not *whether search itself has a reliability ceiling set by verifier quality*. The paper reframes the question: improving verifier robustness is more important than improving search algorithm sophistication, because any search method will eventually hit the over-optimization frontier.
+
+**The compute-optimal policy as mitigation, not solution.** The difficulty-conditioned allocation (Innovation 1) can be partly understood as a strategy for *staying below* the over-optimization threshold per difficulty level: use weak optimization (best-of-N) where the verifier is reliable (easy problems) and strong optimization (beam search) only where the verifier has room to provide genuine guidance (medium problems). But this is a routing strategy, not a fix — the over-optimization ceiling still bounds performance on medium problems where beam search is deployed.
+
+**Significance.** This finding redirects research attention: rather than developing more sophisticated search algorithms (MCTS variants, nested planning, etc.), the priority should be building verifiers that remain calibrated under aggressive optimization — through adversarial training, ensemble methods, or distributional constraints that penalize solutions deviating from the base model's typical output. It also explains why prior work found negative results for sophisticated search: those studies likely pushed past the over-optimization threshold on their particular problem distributions.
+
+**Incremental vs. fundamental.** The *phenomenon* of over-optimization is not new — it was known in RLHF contexts. The paper's contribution is to **elevate it to a first-class bottleneck** in the test-time scaling narrative, provide systematic evidence across multiple search methods and difficulty levels, and show that it — not search algorithm design — is the primary constraint on further scaling. This is a reframing of research priorities supported by compelling empirical evidence.
+
+---
+
+### Innovation 4: FLOPs-Matched Evidence That Test-Time Compute Can Substitute for Pretraining — With Sharply Characterized Boundaries
+
+The paper's FLOPs-matched comparison (Section 7) is, to the authors' knowledge, the first to demonstrate in a realistic setting — no ground-truth access at inference time, model-specific difficulty estimation via PRM scores — that a smaller model with compute-optimal test-time strategies can **outperform a ~14× larger model** on certain problem classes. The finding is not a universal claim but a precisely bounded one:
+
+- On easy-to-medium problems (difficulty bins 1–3) at low inference-to-pretraining token ratios (R ≪ 1, meaning few inference tokens relative to pretraining), test-time compute with the smaller model wins decisively — up to +27.8% relative improvement on easy questions for revisions.
+- On hard problems (bins 4–5) across all R regimes, pretraining is almost always more effective, with test-time compute providing near-zero benefit because the base model's pass@1 is negligible — there are no correct solutions in the proposal distribution to find or refine.
+- At high R (R ≫ 1, meaning many inference tokens), the case for test-time compute weakens even on easy problems because the larger model's per-token inference cost becomes a larger fraction of the total budget.
+
+**Prior work on training-inference tradeoffs** (Jones, 2021; Villalobos and Atkinson, 2023; Sardana and Frankle, 2023) either assumed access to ground-truth answers at inference time (making the comparison less realistic) or did not characterize the difficulty-dependent boundaries of the substitution. The paper's contribution is the **specificity of the boundary conditions**: test-time compute amplifies existing capability but does not create it from nothing (bin 5 near-zero across all budgets), and the substitution is most favorable when inference volume is low relative to pretraining — a regime characteristic of self-improvement pipelines and one-time evaluation tasks, but not high-throughput production deployments.
+
+**Significance beyond the numbers.** The finding reframes organizational decisions about compute budget allocation. The prevailing paradigm — "train the largest model you can afford, deploy with greedy decoding" — is not necessarily compute-optimal. For deployments where the problem distribution skews toward easy-to-medium difficulty (a plausible profile for many production settings), training a smaller model and investing the pretraining savings into smarter inference can be more cost-effective. The difficulty estimator serves double duty in such an architecture: it determines inference strategy *and* decides whether to escalate to a larger model for genuinely hard queries.
+
+**Limitations acknowledged.** The ~14× larger model uses only greedy decoding — no majority voting, no best-of-N, no test-time augmentation. A fairer comparison would give the larger model some test-time compute budget as well, and the paper explicitly notes this (Section 8). The larger model may also not be compute-optimally trained (parameters-only scaling, not Chinchilla-optimal scaling of both parameters and data), potentially making the pretraining baseline weaker than it could be. These caveats don't invalidate the finding — the existence of regimes where the substitution works is robust — but they qualify the magnitude of the advantage.
+
+**Incremental vs. fundamental.** The *finding* is incremental — it provides empirical quantification of an effect whose existence was hypothesized but not demonstrated in a realistic setting. The *implication* — that inference-time compute should be treated as a first-class resource alongside pretraining compute in organizational budgeting — is a reframing that challenges the default LLM deployment paradigm. Whether this reframing is fundamental or overstated depends on how broadly the MATH-benchmark-specific results generalize to other domains, a question the paper explicitly leaves open.
+
+## 5. Experimental Analysis
+
+### Evaluation Methodology
+
+- **Dataset.** All experiments use the MATH benchmark (Hendrycks et al., 2021), specifically the 12,000 training / 500 test split from Lightman et al. (2022). This benchmark consists of high-school competition-level math problems requiring multi-step symbolic reasoning. The paper chooses MATH because test-time compute is expected to help most when the base model already possesses the necessary factual knowledge and the challenge lies in drawing complex inferences — mathematical reasoning fits this profile.
+
+- **Base model(s).** All primary experiments use PaLM 2-S* (Codey), described as "representative of the capabilities of many contemporary LLMs," with pass@1 on MATH in the 10–19% range depending on prompt and sampling configuration. This intermediate performance level — far from saturation but non-trivial — leaves room for test-time compute to make a measurable difference. For the FLOPs-matched pretraining comparison (Section 7), a second model with approximately 14× more parameters is used as the pretraining-scaled baseline.
+
+- **Metrics.** The primary metric is MATH test accuracy (%): the fraction of the 500 test questions for which the selected final answer exactly matches the ground truth, as determined by the grading function released by Lightman et al. (2022). When reporting difficulty-dependent results, accuracy is computed within each of the five difficulty quintiles separately. Pass@1 — the fraction of solutions that are correct when the model generates a single sample — is used to define oracle difficulty bins but not as an evaluation metric.
+
+- **Baselines.** The paper evaluates against several reference methods: **(i) Majority voting**: select the most common final answer among N independently sampled solutions, with no learned verifier. **(ii) ORM best-of-N weighted**: score N solutions with an Outcome Reward Model (trained to predict final-answer correctness) and apply best-of-N weighted selection, where scores for solutions arriving at the same final answer are summed before selecting the highest-scoring answer. **(iii) PRM best-of-N weighted**: same as ORM best-of-N but using the Process Reward Model scores instead. **(iv) Parallel sampling** (for revision experiments): generate N independent solutions from the revision model and select via verifier or majority vote.
+
+- **Generation budget / compute accounting.** The universal unit of test-time compute is one "generation" — one complete sampled answer from the base LLM. For best-of-N, the budget equals N. For beam search with beam width M, the budget is also N (the number of beams maintained per step). For lookahead search with k lookahead steps, the cost is N × (k+1) to account for the additional rollout computation. Budgets are swept across powers of 2, typically from 2⁰ to 2⁹ (1 to 512 generations). For the FLOPs-matched comparison, pretraining FLOPs are approximated as X = 6ND_pretrain and inference FLOPs as Y = 2ND_inference, where N is the number of parameters, D_pretrain is pretraining tokens, and D_inference is total inference tokens generated.
+
+- **Cross-validation / statistical protocol.** To avoid contaminating strategy selection with test-set performance, the authors use two-fold cross-validation within each difficulty bin on the 500-question test set. The best strategy is selected on one fold and evaluated on the other, with results averaged. The test set of 500 questions, split into quintiles of ~100 each, means strategy selection per bin is based on roughly ~50 questions per fold — a relatively small sample that the paper does not supplement with confidence intervals or standard errors.
+
+---
+
+### Main Quantitative Results
+
+#### Search Against PRM Verifiers (Section 5)
+
+**Headline finding: No single search algorithm dominates across difficulty levels and budgets. Beam search significantly outperforms best-of-N at low budgets (e.g., 2–8 generations) but degrades or underperforms at high budgets (64–256) due to PRM over-optimization. Compute-optimal adaptive selection — best-of-N on easy problems, beam search on medium-hard problems — recovers 4× efficiency gains over best-of-N.**
+
+Figure 3 (left) reports the aggregate comparison across all 500 test questions at budgets ranging from 1 to 256 generations:
+
+- At 4 generations, beam search with M = 4 achieves roughly 27% accuracy vs. roughly 16% for PRM best-of-N weighted — a gap of approximately 11 percentage points favoring beam search at very low budgets.
+- As budget increases, beam search performance flattens: at 512 generations, beam search (M = 4) plateaus around 34%, while best-of-N weighted continues improving to approximately 38%. The crossover point — where best-of-N overtakes beam search — occurs around 64–128 generations.
+- Lookahead search (both k = 1 and k = 3 variants) generally underperforms all other methods at the same generation budget. At 256 generations, 3-step lookahead converges to approximately 34–35% — comparable to beam search at this budget but lower than best-of-N weighted. The extra cost of lookahead rollouts (N × (k+1) effective generations) means fewer beams are explored, and the remaining beams suffer from verifier over-optimization.
+- Majority voting trails all verifier-based methods substantially, reaching only about 29% at 512 generations. The gap between majority voting and even the weakest verifier method (ORM best-of-N, ~34%) confirms that learned verifiers provide genuine signal beyond simple answer consensus.
+
+Figure 3 (right) disaggregates these results by difficulty bin for beam search (M = 4) vs. best-of-N weighted at four budget levels (4, 16, 64, 256 generations), revealing the difficulty-dependent patterns that motivate the entire compute-optimal framework:
+
+- **Bin 1 (easiest questions, highest pass@1):** Beam search accuracy *decreases* from roughly 78% to 77% as budget increases from 4 to 256, while best-of-N weighted increases from 68% to 88% over the same range. This is the clearest evidence of PRM over-optimization: the verifier makes mostly correct assessments on easy problems, but aggressive optimization amplifies residual errors, causing beam search to select solutions that score highly under the PRM but are actually incorrect. Best-of-N, being a weaker optimizer, is less susceptible to this exploitation.
+
+- **Bin 2:** The pattern is qualitatively similar but less extreme. Beam search improves modestly from roughly 14% to 32%, while best-of-N weighted improves faster from roughly 14% to 60%, maintaining a clear advantage at high budgets.
+
+- **Bin 3 (medium difficulty):** The pattern reverses. Beam search consistently outperforms best-of-N weighted across all budgets, reaching roughly 34% vs. 23% at 256 generations. On problems of intermediate difficulty, the PRM's guidance genuinely helps navigate toward correct solutions that random sampling would not reliably find.
+
+- **Bin 4 (harder questions):** Beam search shows its strongest relative advantage, reaching roughly 17% vs. 10% for best-of-N weighted at 256 generations. The absolute numbers are modest, but the relative improvement from beam search is substantial when the base model's pass@1 is low but non-zero.
+
+- **Bin 5 (hardest questions):** Both methods hover near 1–3% accuracy regardless of budget. No search method makes meaningful progress — the base model essentially never produces correct solutions in this bin, so neither search nor verification can help.
+
+Figure 4 presents the results of compute-optimal search: selecting the best strategy per difficulty bin at each budget level. The key comparisons:
+
+- At 16 generations, compute-optimal (oracle bins) achieves approximately 27% accuracy, roughly matching PRM best-of-N weighted at 64 generations — a 4× compute reduction.
+- At 256 generations, compute-optimal oracle reaches approximately 39.5%, surpassing PRM best-of-N weighted at the same budget (~37%) and ORM best-of-N weighted (~34%).
+- Compute-optimal with predicted (non-oracle) difficulty bins — which use the PRM's average final-answer score rather than ground-truth correctness to estimate difficulty — tracks the oracle version closely. The two curves "largely overlap" per the paper, with the predicted version reaching approximately 37% at 256 generations vs. 39.5% for oracle. This is the critical practical result: the gains from adaptive allocation do not require ground-truth labels at inference time.
+- Both compute-optimal variants consistently outperform ORM best-of-N weighted (peaking around 34% at 512 generations) and majority voting (~29%).
+
+**PRM vs. ORM comparison (Figure 14, Appendix F).** At 2048 samples, PRM best-of-N weighted achieves approximately 40% accuracy vs. roughly 35% for ORM best-of-N weighted and roughly 30% for majority voting. The gap between PRM and ORM widens with sample count, confirming the PRM's superior scaling properties. The paper attributes this to the PRM's step-level training acting as a form of beneficial representation learning, even when only the final-step prediction is used at aggregation time (Appendix E finding that "last" aggregation outperforms "min" and "prod").
+
+---
+
+#### Revision Model Results (Section 6)
+
+**Headline finding: Iterative sequential revision outperforms independent parallel sampling under both verifier-based and majority-based selection mechanisms, particularly at low budgets. The optimal sequential-to-parallel ratio is difficulty-dependent — purely sequential for easy problems, balanced ratio for hard problems. Compute-optimal ratio selection yields 4× efficiency gains over parallel best-of-N.**
+
+Figure 6 (left) tracks the revision model's pass@1 at each step in a sequential revision chain. Starting from approximately 18.2% pass@1 at step 1, per-step accuracy improves to roughly 24–25% by steps 15–20, and remains in the 23–25% range through 64 steps. The model generalizes beyond its 4-step training horizon (it was trained with up to 4 incorrect answers in context), providing evidence that the revision skill is learned rather than merely memorized.
+
+Figure 6 (right) compares fully sequential vs. fully parallel generation at 64 total generations:
+- Sequential + best-of-N weighted: approximately 41.5%
+- Parallel + best-of-N weighted: approximately 39%
+- Sequential + majority: approximately 38%
+- Parallel + majority: approximately 35%
+
+Sequential outperforms parallel under both selection mechanisms, with the verifier-based gap (~2.5 percentage points) narrower than the majority-based gap (~3 points). The paper notes that approximately 38% of correct answers get revised back to incorrect ones in naive sequential chains — the verifier-based within-chain selection mitigates this but does not eliminate it.
+
+Figure 7 (left) sweeps the sequential-to-parallel ratio at a fixed total budget:
+- At 256 total generations, the optimal ratio is around 2¹ to 2³ (2:1 to 8:1 sequential-to-parallel), achieving approximately 43–44% accuracy.
+- Fully parallel (leftmost point): approximately 40%.
+- Fully sequential (rightmost point): approximately 42%.
+- At lower budgets (8–32 generations), the curves are monotonically increasing with the sequential-to-parallel ratio — fully sequential is optimal at low budgets, suggesting that when total compute is scarce, refining a single chain is better than exploring diverse approaches with shallow refinement.
+
+Figure 7 (right) breaks this out by difficulty bin at a fixed budget of 128 generations:
+- **Bin 1 (easiest):** Performance is essentially flat across all ratios, around 90–92%. Easy questions are insensitive to the allocation — the model reliably produces correct answers regardless of whether it refines or explores.
+- **Bin 2:** Slight advantage for higher sequential ratios, approximately 63% at fully sequential vs. 58% at fully parallel.
+- **Bin 3:** A clear optimal ratio emerges at moderate values (around 2¹ to 2³), reaching approximately 42% vs. 35% at the extremes.
+- **Bin 4:** Similar pattern, with the peak at a moderate ratio achieving roughly 18% vs. 14% at fully parallel.
+- **Bin 5 (hardest):** All ratios produce roughly 2–3% accuracy. No allocation strategy helps — the base model simply does not produce correct solutions here.
+
+Figure 8 presents compute-optimal revisions: selecting the optimal sequential-to-parallel ratio per difficulty bin.
+- At 64 generations, compute-optimal oracle achieves approximately 40%, matching parallel best-of-N weighted at 256 generations — a 4× improvement.
+- At 256 generations, compute-optimal oracle reaches approximately 44%, compared to roughly 41% for best-of-N weighted and 37% for parallel-only.
+- Compute-optimal with predicted difficulty bins performs slightly below oracle at high budgets (approximately 41% at 256 generations vs. 44% oracle) but still substantially outperforms the parallel baseline.
+- Notably, the parallel-only baseline appears to plateau around 36–37% at high budgets, while compute-optimal scaling continues to improve — suggesting that the gains from adaptive allocation compound rather than saturate at higher budgets.
+
+---
+
+#### FLOPs-Matched Comparison: Test-Time Compute vs. Pretraining (Section 7)
+
+**Headline finding: A smaller model with compute-optimal test-time strategies can outperform a ~14× larger model on easy-to-medium problems when the inference-to-pretraining token ratio R is low (R ≪ 1), but test-time compute provides essentially zero benefit on the hardest problems regardless of budget. The advantage narrows or reverses as R increases and as difficulty increases.**
+
+Figure 9 (and the bar charts in Figure 1) present the comparison for three values of R = D_inference / D_pretrain: R ≪ 1 (0.16), R ≈ 1 (0.79), and R ≫ 1 (22). Table 2 in the prior sections summarizes the revision results:
+
+| Difficulty group | R ≪ 1 (0.16) | R ≈ 1 (0.79) | R ≫ 1 (22) |
+|---|---|---|---|
+| Easy (bin 1) | +11.8% | +3.5% | −11.9% |
+| Medium (bins 2–3) | +27.8% | +16.7% | +5.4% |
+| Hard (bins 4–5) | +21.6% | (implied negative) | −37.2% |
+
+The key patterns:
+- At R ≪ 1, test-time compute outperforms the larger model across all difficulty levels. This is the regime where the pretraining savings from using the smaller model dominate the budget, giving the smaller model ample inference compute to deploy.
+- At R ≫ 1, test-time compute only remains preferable on easy questions. On hard questions, the larger model's advantage is decisive (−37.2% relative), and on medium questions, the advantage is marginal (+5.4%).
+- The +27.8% relative improvement on medium questions at R ≪ 1 is the strongest case for test-time compute substitution.
+
+For PRM search (Figure 9, right, and Figure 1 bottom-right bar chart), the pattern is starker:
+
+| Difficulty | R ≪ 1 (0.16) | R ≈ 1 (0.79) | R ≫ 1 (22) |
+|---|---|---|---|
+| Easy | +19.1% | +2.2% | +2.0% |
+| Medium | 0.0% | −35.3% | −30.8% |
+| Hard | −3.6% | −35.3% | −52.9% |
+
+PRM search shows weaker benefits than revisions for the FLOPs-matched comparison, with substantial disadvantages on medium and hard questions even at moderate R values. The −52.9% relative disadvantage on hard questions at R ≫ 1 is the most extreme negative result in the paper, and it underscores the finding that test-time compute cannot compensate for fundamental capability gaps — PRM search is selecting among candidates the base model generates, and on hard problems those candidates are almost never correct.
+
+Figure 9 (line plots) shows accuracy per difficulty bin as test-time compute scales, with the 14× larger model's greedy performance indicated by stars placed at three x-axis positions corresponding to the three R values. The visual pattern is clear: where the compute-optimal scaling line is above the star, test-time compute wins. On bin 1 (purple, topmost line), the scaling line is above all three stars for revisions. On bin 5 (blue, bottommost line), the line is below all three stars and essentially flat near 0–5%, confirming the zero-benefit result on the hardest problems.
+
+---
+
+#### Multimodal and Downstream Task Results (Section 6, Figure 6)
+
+The paper does not present original experiments on these benchmarks but compiles results from surveyed models. Figure 6 provides visual comparisons across eight benchmarks: Overall-GenEval, MME, GQA, HellaSwag, PIQA, HumanEval, GSM8K, and MMMU. The pattern in these compiled results suggests that DLMs generally perform competitively with similarly sized AR models:
+
+- On general language understanding (PIQA, HellaSwag), LLaDA achieves performance slightly below or on par with comparable AR models like LLaMA2 and Qwen2.5.
+- On math and science benchmarks (GSM8K, GPQA, MATH), models like LLaDA and Dream consistently outperform similarly sized AR counterparts — the paper highlights this but does not provide per-benchmark numerical comparisons in the text.
+- On code generation (HumanEval), DiffuCoder achieves competitive performance among open-source models.
+- On multimodal tasks (GenEval, MME, MMMU, GQA), models like MMaDA and LLaDA-V often surpass AR-based multimodal models of comparable scale.
+
+---
+
+### Ablation Studies and Robustness Checks
+
+**PRM score aggregation strategy (Appendix E, Figure 13):** The paper compares three methods for reducing per-step PRM scores to a single solution score — taking the minimum across steps ("min"), taking the product of step-level correctness probabilities ("prod"), and using only the PRM's prediction at the final step ("last"). Results at 256 samples: "last" achieves roughly 37%, "min" achieves roughly 35%, "prod" achieves roughly 27%, and ORM achieves roughly 34%. The "last" aggregation's superiority contradicts prior work (Lightman et al., 2023; Wang et al., 2023) that found "min" to be best. The authors hypothesize the discrepancy arises from the use of soft Monte Carlo labels rather than binary correctness labels, which changes the per-step score distribution.
+
+**PRM vs. ORM scaling (Appendix F, Figure 14):** The PRM consistently outperforms the ORM at all sample counts, with the gap widening from negligible at small N to approximately 5 percentage points at 2048 samples (40% vs. 35%). This confirms that step-level PRM training provides benefits beyond what an outcome-level model captures, even when only the final-step prediction is used at aggregation time.
+
+**Revision model verifier choice (Appendix J, Figure 15a):** The base-LM PRM — trained on outputs from the non-revision base model — underperforms the revision-specific ORM when scoring revision model outputs. At 64 generations, sequential + base-LM PRM achieves roughly 40% vs. sequential + revision ORM at roughly 42%. This confirms distribution shift as a practical concern: the revision model's output distribution differs from the base model's, so a verifier trained on base model outputs transfers imperfectly.
+
+**Revision history in verifier context (Appendix J, Figure 15b):** Including previous revisions in the ORM's context (so the verifier sees the revision chain, not just the current answer) provides a small improvement over the no-history ablation — approximately 1–2 percentage points at 64 generations. However, both variants outperform the parallel baseline, confirming that the sequential sampling benefit is not solely attributable to the verifier seeing more context.
+
+**Oracle vs. predicted difficulty bins (Figures 4, 8, and Appendix C, Figures 11–12):** Both oracle (ground-truth answer-based) and predicted (PRM score-based) difficulty binning yield qualitatively similar trends across difficulty levels. Predicted bins show slightly lower performance at high budgets in the revision setting (roughly 41% vs. 44% at 256 generations in Figure 8) but essentially identical performance in the search setting (Figure 4). This is the critical robustness check: the compute-optimal strategy works without ground-truth labels.
+
+**Majority voting for revisions (Appendix B, Figure 10):** The sequential-to-parallel ratio trends observed with verifier-based selection are replicated with majority voting, confirming that the patterns are not an artifact of the verifier. Easy questions are insensitive to ratio, hard questions show an optimal intermediate ratio, and fully sequential marginally outperforms fully parallel in aggregate.
+
+**ReST^EM revision model (Appendix K, Figure 16):** An attempt to further optimize the revision model using ReST^EM (Singh et al., 2024) — an on-policy reinforcement learning approach — backfires. At 256 generations, fully sequential performance with the ReST^EM model drops to approximately 33.5% compared to roughly 38.5% at the optimal ratio. The authors hypothesize that on-policy data collection in ReST^EM exacerbates spurious correlations in revision data, causing the model to fail to learn the revision task properly. This is a notable negative result highlighting the sensitivity of revision training to the data generation procedure — the offline, edit-distance-based pairing approach appears to be more robust than on-policy rollouts.
+
+---
+
+### Critical Assessment
+
+This section evaluates whether the reported experiments genuinely support the paper's central empirical claims, identifying where the evidence is strong, where it is conditional, and where it falls short.
+
+#### Claim: Compute-optimal difficulty-conditioned strategy selection achieves more than 4× better efficiency than best-of-N baselines.
+
+Both Figure 4 (search) and Figure 8 (revisions) provide evidence for the 4× figure: compute-optimal selection achieves at 16 generations what best-of-N achieves at 64 (search), and at 64 generations what best-of-N achieves at 256 (revisions). The evidence is consistent across oracle and predicted difficulty settings, with predicted difficulty tracking oracle closely (curves overlap in Figure 4, slightly below in Figure 8 at high budgets but still yielding >4× at the cited comparison points).
+
+However, the 4× claim has an important scope limitation: it measures efficiency *after* difficulty is known, without amortizing the cost of difficulty estimation itself. The predicted difficulty method — averaging PRM final-answer scores over 2048 samples per question — is itself extremely expensive, consuming more compute than the largest test-time budgets studied (256–512 generations). The paper acknowledges this (Section 3.2: "our experiments do not account for this cost largely for simplicity") but does not include the estimation cost in any efficiency calculation. In a deployment where difficulty must be estimated for each incoming prompt, the total cost would be difficulty estimation + strategy execution, and the 4× claim only applies to the latter component. The paper offers no difficulty estimation method that is cheaper than the problem-solving budget itself, which makes the 4× figure an upper bound on achievable deployment efficiency rather than a realized gain.
+
+The 4× claim also depends on the generation budget range. At the highest budgets studied (256–512 generations), the compute-optimal advantage over best-of-N narrows — Figure 4 shows roughly 39.5% vs. 37% at 256 generations, a much smaller relative gain. The 4× figure is most reliable in the lower-to-moderate budget regime (16–64 generations), where the absolute gaps are larger relative to the budget ratio.
+
+#### Claim: A smaller model augmented with compute-optimal test-time strategies can outperform a ~14× larger pretrained model.
+
+This claim holds but with sharply bounded conditions that the paper itself carefully documents (Section 7, Figure 9). The evidence supporting the claim:
+- For revisions at R ≪ 1: +27.8% relative on medium questions, +11.8% on easy questions (Figure 1 bar chart).
+- For PRM search at R ≪ 1: +19.1% on easy questions (Figure 1 bar chart).
+
+The evidence limiting or contradicting the claim:
+- On hard questions (bins 4–5) at all R values: test-time compute provides near-zero benefit (−52.9% relative for PRM search at R ≫ 1, Figure 1).
+- At R ≫ 1, even on easy questions the advantage narrows to +2.0% for PRM search and becomes negative (−11.9%) for revisions on easy questions.
+- For PRM search on medium questions at R ≈ 1, the disadvantage is already substantial (−35.3%).
+
+The claim is therefore true *conditionally*: it holds when problems are within the base model's capability range (easy-to-medium), when the inference-to-pretraining token ratio is low (R ≪ 1), and somewhat more robustly for revisions than for PRM search. It fails when problems exceed the base model's capability (bin 5, where pass@1 is near zero and no test-time strategy helps) or when inference volume is high relative to pretraining (R ≫ 1). The paper's framing of these conditions is honest — the "takeaway box" in Section 7 explicitly states that "test-time compute can amplify existing capability but does not create it from nothing" — but the headline claim of "can outperform a 14× larger model" should be understood with these conditions attached.
+
+Additional limitations of this comparison:
+- The ~14× larger model uses only greedy decoding with no test-time compute budget of its own. A fairer comparison would allocate some fraction of the total compute to test-time strategies for the larger model as well — giving it even best-of-4 or best-of-8 would strengthen the baseline meaningfully.
+- The larger model is scaled only in parameters (not data), following the LLaMA paradigm rather than Chinchilla-optimal scaling where both parameters and data are increased. A compute-optimally trained larger model would likely be stronger.
+- The comparison uses a single MATH-specific evaluation; generalization to other reasoning domains is unverified.
+
+#### Claim: The effectiveness of any given test-time strategy is highly dependent on prompt difficulty.
+
+This is the paper's most robust finding, supported across both search and revision experiments with internal replications. The evidence:
+- Beam search *degrades* performance on easy problems at high budgets but *improves* it on medium-hard problems (Figure 3, right). This is a qualitative reversal — not just a difference in magnitude — that directly supports the difficulty-dependence claim.
+- Sequential revisions dominate on easy problems; a balanced ratio is optimal on hard problems (Figure 7, right). This pattern holds under both verifier-based and majority-based selection (Appendix B, Figure 10).
+- The hardest bin (bin 5) shows near-zero improvement across all methods, all budgets, all allocation strategies — a consistent null result that bounds the scope of difficulty-dependent benefits.
+
+The difficulty-dependence claim is supported by the PRM score-based (predicted) difficulty bins tracking the oracle (ground-truth) bins closely in both search (Figure 4) and revision (Figure 8) settings. This means the difficulty-dependent patterns are not an artifact of having access to correct answers during strategy selection — the PRM's own score distribution captures the same information.
+
+A limitation: the five-quintile binning is a coarse discretization. Within a single bin, there may be substantial heterogeneity — a problem at the easy end of bin 3 and one at the hard end of bin 3 receive the identical strategy even though different strategies might be optimal. The paper does not explore sensitivity to bin count or compare against continuous difficulty-conditioned policies.
+
+#### Missing experiments that would strengthen the paper
+
+1. **Combined search + revisions.** The paper studies PRM search and revisions as independent mechanisms but never combines them. Applying beam search to revision model outputs — or using the PRM to guide which revisions to pursue — would test whether the two axes are complementary (as the paper's conceptual framework implies) and could yield gains beyond either mechanism alone. This is acknowledged as future work (Section 8).
+
+2. **Cheap difficulty estimation.** The current difficulty estimation method (2048 samples + PRM scoring) is far too expensive for deployment. An experiment comparing the current method against a cheap proxy — e.g., using the PRM score distribution from a small number of initial samples (say, 8–16) to estimate difficulty — would bridge the gap between proof-of-concept and practical deployability. The paper flags this as future work but provides no empirical results.
+
+3. **Replication on a non-MATH benchmark.** All quantitative experiments are on MATH with PaLM 2-S*. The difficulty-dependent patterns may be specific to mathematical reasoning or to this model family. A replication on e.g., GSM8K (simpler math), HumanEval (code generation), or a natural language reasoning task would strengthen the generality claims.
+
+4. **Latency-aware budget accounting.** The paper measures compute in "generations" (total sampled solutions), which is a reasonable FLOPs proxy but ignores wall-clock time. Sequential revisions are inherently serial — 64 sequential generations take roughly 64× the wall-clock time of 64 parallel generations — yet the compute-optimal policy often favors sequential-heavy strategies on easy problems. Reporting latency alongside accuracy would clarify whether the compute-optimal policies are practically deployable in latency-sensitive settings.
+
+5. **Scaling to larger models.** All experiments use PaLM 2-S* (~1–7B parameter range, though exact size is not disclosed) and an unspecified ~14× larger model. The paper does not explore how the compute-optimal strategy changes with base model scale — do the difficulty thresholds shift? Does the optimal sequential-to-parallel ratio change? Without experiments at multiple model scales, it is unclear whether the findings generalize or are specific to this particular capability regime.
+
+6. **Statistical uncertainty.** The test set has 500 questions, split into five difficulty quintiles of ~100 each, then further split by two-fold cross-validation to ~50 questions per fold per bin for strategy selection. No confidence intervals or standard errors are reported for the main results. At sample sizes of ~50 per bin, the selected strategies may have meaningful variance that could affect the reliability of the compute-optimal curves. The paper's observation that predicted and oracle bins produce similar results is reassuring but does not substitute for formal uncertainty quantification.
+
+## 6. Limitations and Trade-offs
+
+### Single Benchmark, Single Model Family, Single Domain
+
+**The assumption or constraint.** Every quantitative experiment in the paper — search against PRM verifiers (Section 5), iterative revisions (Section 6), the FLOPs-matched pretraining comparison (Section 7) — is conducted on the MATH benchmark (Hendrycks et al., 2021) using PaLM 2-S\* as the base model. The 500-question test set consists exclusively of competition-level mathematics problems requiring multi-step symbolic reasoning. The paper explicitly acknowledges the model choice as "representative of the capabilities of many contemporary LLMs" (Section 4) but provides no replication on other benchmarks, other model families, or other reasoning domains.
+
+**The consequence.** The paper's central empirical findings — that beam search degrades easy-problem performance while helping on medium problems (Figure 3, right), that sequential revisions dominate on easy problems while a balanced ratio is optimal on hard ones (Figure 7, right), that compute-optimal allocation yields `4×` efficiency gains (Figures 4, 8), and that test-time compute can substitute for `~14×` larger pretraining on easy-to-medium problems (Figure 9) — are all conditioned on a single task distribution that may not be representative of broader LLM deployment scenarios. Mathematical reasoning has several properties that could amplify the observed effects: problems have unique correct answers that are verifiable with exact string matching (enabling clean PRM training via Monte Carlo rollouts and clean difficulty estimation via pass@1), solutions follow structured multi-step derivations where intermediate correctness can be judged (favoring step-level PRM scoring), and the base model's pass@1 distribution spans a wide range from near-zero to near-perfect across problems (providing rich difficulty variation). It is unknown whether the difficulty-dependent patterns — particularly the non-monotonicity where beam search hurts easy problems — generalize to code generation (where correctness is also verifiable but solution structure differs), natural language reasoning (where correctness is fuzzier), factual QA (where the bottleneck is knowledge recall rather than multi-step inference), or open-ended generation (where there is no ground-truth answer at all). The paper offers no evidence on these domains.
+
+**What evidence exists in the paper.** The paper reports no cross-domain or cross-model replication experiments. The discussion of downstream tasks (Section 7) and the performance comparison in Figure 6 compile results from surveyed papers on benchmarks including PIQA, HellaSwag, HumanEval, GSM8K, MME, and MMMU, which demonstrates that DLMs can be competitive on these benchmarks — but these are point estimates from independent model evaluations, not systematic replications of the compute-optimal scaling experiments. The compute-optimal strategy (difficulty binning, strategy selection per bin via cross-validation, adaptive allocation) is tested only on MATH with PaLM 2-S\*.
+
+**Mitigation status.** The paper does not address this limitation beyond framing the model as "representative." The discussion of future work (Section 8) does not explicitly call for multi-benchmark replication of the compute-optimal framework, though the call for "scaling to larger models" (Section 8.2) implies future work at different scales that could naturally include different benchmarks. The limitation is significant because the paper's primary contribution — the compute-optimal allocation meta-strategy — is claimed as a general principle, not a MATH-specific technique, but it has been validated on only one domain.
+
+---
+
+### Difficulty Estimation Cost Is Unaccounted for in Headline Efficiency Gains
+
+**The assumption or constraint.** The compute-optimal framework requires estimating each prompt's difficulty *before* allocating the inference budget. The paper's method for difficulty estimation — whether using oracle pass@1 (ground-truth correctness rate over 2048 samples) or predicted PRM final-answer scores (average PRM score over 2048 samples) — requires generating and scoring 2048 complete solutions per question. The paper states this explicitly in Section 3.2:
+
+> "estimating difficulty in this way still incurs additional computation cost during inference... our experiments do not account for this cost largely for simplicity"
+
+This means that the headline `4×` efficiency gains — compute-optimal search matching best-of-N at `4×` fewer generations (Figure 4: 16 vs. 64 generations) and compute-optimal revisions matching parallel best-of-N at `4×` fewer generations (Figure 8: 64 vs. 256 generations) — are computed *after* difficulty is already known, with no amortization of the 2048-sample estimation cost.
+
+**The consequence.** In any realistic deployment where difficulty must be estimated for each incoming prompt, the total compute cost is `C_estimation + C_strategy`, not `C_strategy` alone. The estimation cost of 2048 generations per prompt dwarfs the largest test-time budgets studied (256–512 generations) — it is `4–8×` larger than the maximum strategy execution budget and `128×` larger than the budget at which the `4×` efficiency claim is made (16 generations). If this estimation cost were included in the efficiency accounting, the compute-optimal approach would be *less* efficient than best-of-N for any single prompt, not more efficient. The `4×` figure therefore represents an upper bound on achievable efficiency that can only be realized if difficulty estimation is somehow amortized — for example, by estimating difficulty once for a fixed set of benchmark questions and reusing those estimates, or by pre-computing difficulty estimates offline for a static corpus. In a dynamic serving setting where prompts arrive one at a time and are not repeated, the current difficulty estimation method makes the compute-optimal approach strictly *more expensive* than the baseline it claims to outperform, not less.
+
+Additionally, the paper treats the 2048-sample difficulty estimation as a fixed pre-processing step, but there is no investigation of how the estimation accuracy degrades with fewer samples. It is possible that 32 or 64 samples would provide sufficient difficulty signal to capture most of the compute-optimal gains — but the paper provides no evidence for or against this hypothesis because it never varies the number of estimation samples.
+
+**What evidence exists in the paper.** The paper reports that predicted difficulty bins (using PRM scores from 2048 samples) produce results that "largely overlap" with oracle difficulty bins (using ground-truth correctness from the same 2048 samples) — see Figures 4 and 8, and Appendix C (Figures 11–12). This demonstrates that the PRM-based estimation is *accurate enough* when given 2048 samples, but it provides no evidence about whether similar accuracy can be achieved with substantially fewer samples. The paper does not report an ablation on the number of estimation samples. The 2048-sample budget appears to have been chosen to match the number of samples used to estimate oracle pass@1 in Section 3.2, not as a result of a sensitivity analysis.
+
+**Mitigation status.** The paper explicitly flags this as a limitation and frames it as a direction for future work:
+
+> "future work on training models to directly predict difficulty of a question from its text would be particularly impactful"
+
+However, no such lightweight difficulty predictor is developed or evaluated. The paper also does not explore adaptive difficulty estimation — where a small number of initial samples are used to estimate difficulty, and the remaining budget is then allocated using the compute-optimal strategy — which would amortize the estimation cost into the solution process itself. The limitation is acknowledged but entirely unaddressed empirically, making it the most significant gap between the paper's proof-of-concept results and practical deployment feasibility.
+
+---
+
+### Hard Problems Remain Fundamentally Unsolved — Zero Benefit Across All Methods and Budgets
+
+**The assumption or constraint.** The compute-optimal framework operates by selecting among strategies that either search over candidates generated by the base model (PRM-guided search, Section 5) or refine the base model's own outputs through iterative revision (Section 6). Both mechanism families share a fundamental dependency: they can only work with candidates that the base model is capable of generating. If the base model's pass@1 on a problem class is near zero — meaning it essentially never produces a correct solution, even with 2048 independent samples — then no search algorithm and no revision strategy can recover a correct answer, because there are no correct solutions in the proposal distribution to find or refine.
+
+**The consequence.** On the hardest difficulty quintile (bin 5), the paper reports near-zero improvement across all methods, all budgets, and all allocation strategies. In Figure 3 (right), bin 5 accuracy hovers at 1–3% for both beam search and best-of-N weighted at budgets from 4 to 256 generations. In Figure 7 (right), bin 5 shows roughly 2–3% accuracy irrespective of the sequential-to-parallel ratio at 128 generations. In the FLOPs-matched comparison (Figure 9), the bin 5 scaling line is essentially flat near 0–5% and lies below the `~14×` larger model's performance across all values of `R`. The paper acknowledges this in the Section 7 takeaway box: "test-time compute can amplify existing capability but does not create it from nothing."
+
+This is not merely a "some problems are hard" observation — it reflects a structural boundary on the approach. For any deployment where the problem distribution includes questions that exceed the base model's capability range, the compute-optimal framework provides no mechanism for improvement. Those problems must be handled by a different approach entirely — typically, scaling pretraining to increase the base model's fundamental capability. The paper's FLOPs-matched comparison (Section 7) quantifies this boundary: on hard problems at `R ≫ 1`, test-time compute shows a −37.2% relative disadvantage compared to the `~14×` larger model for revisions and −52.9% for PRM search (Figure 1 bar charts). The pretraining investment buys capability on hard problems that inference-time compute simply cannot replicate.
+
+The practical implication is that a system deploying the compute-optimal framework must have a separate strategy for hard problems — perhaps routing them to a larger model, using a different base model altogether, or flagging them for human intervention. The difficulty estimator can serve this routing function (identifying bin 5 problems and escalating them), but the paper does not develop this escalation architecture.
+
+**What evidence exists in the paper.** The bin 5 null results are highly consistent across experiments, which strengthens the finding but also confirms it is not an artifact of a particular method or budget level. The paper's qualitative examples in Appendix M (degenerate beam search outputs) and the discussion of verifier over-optimization (Section 5.3) provide additional evidence that pushing search harder does not help — it produces outputs that score highly under the verifier but are wrong, not outputs that are genuinely closer to correct.
+
+**Mitigation status.** The paper acknowledges this limitation clearly in the Section 7 discussion but does not attempt to address it. The only path to improving bin 5 performance within the current framework would be to increase the base model's pass@1 — either through further pretraining, through fine-tuning on in-domain data, or through using a different base model with stronger capabilities on the target problem distribution. The paper does not explore any of these alternatives. The limitation is fundamental in the sense that it follows from the architecture of the approach — the proposal distribution sets an upper bound on what search and revision can achieve — but it may be practically mitigable through model routing or ensemble approaches that the paper does not investigate.
+
+---
+
+### The Revision Model Suffers from a 38% Correct-to-Incorrect Reversion Rate with Incomplete Mitigation
+
+**The assumption or constraint.** The revision model is trained exclusively on sequences where all in-context answers are incorrect, followed by a correct target answer (Section 6.1). The training data construction procedure — sampling 64 responses, identifying correct and incorrect ones, constructing trajectories of 0–4 incorrect answers followed by a correct answer — ensures that the model never sees examples where the current answer is already correct and should be preserved. During inference, the revision model generates a chain of revisions where the initial answer may be correct, but the model has no training signal for what to do in this situation and may "revise" a correct answer into an incorrect one.
+
+**The consequence.** The paper reports (Section 6.1) that approximately 38% of correct answers produced during a revision chain get converted back to incorrect ones in the subsequent revision step. This means that longer revision chains do not monotonically improve quality — correct answers can be lost as readily as incorrect answers can be corrected — and the per-step pass@1 trajectory (Figure 6, left) represents a dynamic equilibrium between corrections and reversions rather than a steady improvement toward a correct solution. The paper mitigates this with within-chain selection: rather than taking the final revision output, the system uses majority voting or verifier-based selection to pick the best answer from any point in the chain. This recovers some of the lost correct answers (Figure 6, right, shows sequential + best-of-N weighted at ~41.5% vs. parallel at ~39%), but the 38% reversion rate means that a substantial fraction of the model's own correct outputs are discarded and must be rediscovered later in the chain, wasting computation.
+
+The reversion problem also means that the revision model cannot be used as a "polisher" that takes a mostly-correct output and fixes minor errors — it is as likely to break a correct answer as to fix an incorrect one. This limits the applicability of revisions to problems where the base model's initial output is *already* incorrect but close to correct (the edit-distance-based pairing in training), and makes revisions unreliable for problems where the model sometimes produces correct answers on the first attempt.
+
+**What evidence exists in the paper.** The 38% figure is reported in the main text (Section 6.1) but the paper does not provide a detailed breakdown — it does not show how the reversion rate varies by difficulty bin, by position in the revision chain, or by the type of error in the original correct answer. Figure 6 (left) shows the aggregate pass@1 trajectory plateauing around 24–25% after ~15–20 steps from an initial ~18.2%, consistent with a dynamic equilibrium where corrections and reversions roughly balance. The ReST^EM ablation (Appendix K, Figure 16) provides a cautionary contrast: the ReST^EM-trained revision model shows *worse* performance with sequential revisions than at the optimal ratio, and fully sequential performance drops to ~33.5% at 256 generations compared to ~38.5% at the optimal ratio, suggesting that the reversion problem is exacerbated by on-policy training.
+
+**Mitigation status.** The paper's mitigation — within-chain selection via verifier or majority voting — is a post-hoc fix that recovers some lost performance but does not address the root cause. The paper does not explore training the revision model with examples where the correct answer is preserved (i.e., including trajectories where the target answer is the same as the last in-context answer, teaching the model to recognize "no revision needed"), nor does it explore inference-time strategies such as stopping the revision chain early when confidence is high or using the verifier to detect and reject reversions in real-time. The limitation is acknowledged through the empirical reporting of the 38% figure but is not discussed as a design flaw in the training procedure — the paper treats it as an operational challenge to be managed rather than a fundamental issue with the revision training paradigm.
+
+---
+
+### The `~14×` Larger Model Baseline Is Not Compute-Optimally Trained and Uses No Test-Time Compute of Its Own
+
+**The assumption or constraint.** The FLOPs-matched comparison in Section 7 compares PaLM 2-S\* augmented with compute-optimal test-time strategies against a model with approximately `14×` more parameters that uses only greedy decoding — no majority voting, no best-of-N, no search, no revisions. The larger model is scaled only in parameter count while holding training data fixed, following the LLaMA paradigm rather than Chinchilla-optimal scaling where both model size and training data are increased proportionally. The paper explicitly acknowledges this:
+
+> "We choose this setting as it is representative of a canonical approach to scaling pretraining compute and leave the analysis of compute-optimal scaling of pretraining compute where the data and parameters are both scaled equally to future work."
+
+**The consequence.** The comparison systematically favors test-time compute in two ways. First, the `~14×` larger model receives no inference-time compute budget beyond greedy decoding, even though the total FLOPs budget being matched could accommodate some test-time augmentation for the larger model as well. Giving the larger model even a modest budget — best-of-4, best-of-8, or a short revision chain — would create a stronger baseline that might narrow or reverse the reported advantages. The paper's own results show that test-time compute provides substantial gains on easy-to-medium problems (Figures 4, 8), so denying these gains to the larger model while giving them to the smaller model makes the comparison asymmetric.
+
+Second, a Chinchilla-optimal model trained with `14×` more total FLOPs would allocate some of that budget to increased training data rather than increased parameters alone, producing a model that is both larger and trained on more data — and likely stronger than a parameter-only-scaled model. The paper's `~14×` parameter scaling may leave the larger model undertrained relative to what the same total FLOPs budget could achieve under compute-optimal pretraining, making the pretraining baseline weaker than it could be.
+
+**What evidence exists in the paper.** The FLOPs accounting in Section 7 uses standard approximations (`X = 6 N D_pretrain` for pretraining, `Y = 2 N D_inference` for inference) that are well-established in the scaling laws literature. The three values of `R = D_inference / D_pretrain` (0.16, 0.79, 22) are chosen to span realistic deployment scenarios, and the analysis correctly accounts for the fact that the larger model costs more per token at both training and inference. However, the paper does not report an ablation where the larger model is given test-time compute, nor does it compare against a Chinchilla-optimal baseline. The reported advantages — particularly the +27.8% relative improvement on medium questions at `R ≪ 1` for revisions — could be meaningfully smaller against a stronger baseline.
+
+**Mitigation status.** The paper is transparent about the parameter-only scaling assumption and frames the Chinchilla-optimal comparison as future work (Section 7). However, the asymmetry of denying test-time compute to the larger model is not discussed as a limitation — the paper treats greedy decoding as the natural baseline for a pretraining-scaled model, but this is a design choice that advantages the test-time compute approach. The headline claim that "a smaller model augmented with compute-optimal test-time strategies can outperform a `~14×` larger model" (Section 7) should be understood as conditional on the larger model using no test-time augmentation and being trained with parameter-only scaling. The paper does not quantify how much these conditions matter.
+
+---
+
+### Test Set Size of 500 Questions Constrains the Reliability of Per-Bin Strategy Selection
+
+**The assumption or constraint.** The compute-optimal strategy is selected via two-fold cross-validation within each of the five difficulty quintiles on the 500-question MATH test set (Section 3.2). This means that strategy selection for each difficulty bin is based on approximately 50 questions per fold (500 questions ÷ 5 bins ÷ 2 folds). At this sample size, the estimated accuracy of a strategy within a bin has substantial binomial sampling error — for a true accuracy of 50%, the standard error is approximately `sqrt(0.5 × 0.5 / 50) ≈ 7.1` percentage points. The paper reports no confidence intervals, standard errors, or statistical tests for any of the main results in Figures 3–9.
+
+**The consequence.** The compute-optimal policy — which strategy is selected as "best" for each bin-budget pair — may be sensitive to the particular sample of ~50 questions in the training fold. A different random split of the 500 questions could select a different strategy, and the reported compute-optimal curves could shift. This is particularly concerning for bins where multiple strategies have similar performance — in such cases, small sampling fluctuations could change which strategy appears optimal, and the reported compute-optimal accuracy could be an overestimate (if the selected strategy happened to perform well on the training fold by chance and less well on the evaluation fold) or an underestimate (if a genuinely better strategy was not selected due to sampling noise in the training fold).
+
+Additionally, the five-quintile binning is coarse: questions within a single bin may have meaningfully different optimal strategies. A question at the easy end of bin 3 and one at the hard end of bin 3 are assigned the same strategy, even though the optimal strategy might differ. The paper does not explore sensitivity to the number of bins or compare against a continuous difficulty-conditioned policy.
+
+**What evidence exists in the paper.** The paper reports that predicted difficulty bins (using PRM scores) produce results that closely track oracle difficulty bins (using ground-truth correctness) — see curves in Figures 4 and 8. This cross-validation between two different difficulty estimation methods provides some reassurance that the bin assignments are capturing genuine difficulty signals rather than noise. However, this does not address the sampling error in strategy selection within each bin — both oracle and predicted bins use the same underlying test set and the same cross-validation procedure, so they could both be affected by small-sample variance.
+
+The consistency of the difficulty-dependent patterns across independent experiments — search (Figure 3, right) and revisions (Figure 7, right) show qualitatively similar bin-dependent behavior, and the patterns replicate under both verifier-based and majority-based selection (Appendix B, Figure 10) — provides indirect evidence that the patterns are real and not artifacts of small-sample noise. But the exact numerical results (the specific accuracy values at each budget level, the specific `4×` crossover points) depend on the particular strategy selection outcomes, which are subject to the ~50-question-per-fold variance.
+
+**Mitigation status.** The paper does not report confidence intervals, standard errors, or statistical significance tests. The two-fold cross-validation procedure is described but not justified against alternatives (e.g., k-fold with k > 2, bootstrapping). The paper does not discuss the impact of test set size on the reliability of the compute-optimal policy selection. This is a methodological limitation that primarily affects the precision of the reported numerical results rather than the qualitative conclusions — the difficulty-dependent patterns are robust enough to survive sample-size variation, but the exact efficiency gains (e.g., the `4×` figure) and the specific strategy choices per bin may be less reliable than the paper's presentation suggests.
+
+## 7. Implications and Future Directions
+- Field impact
+  - The survey consolidates DLMs as a legitimate alternative to AR generation with clear recipes for making them fast and controllable (Sections 2–4). It also demonstrates credible multimodal unification routes (Section 5).
+- Research avenues (Section 8.2)
+  - Training efficiency: Increase token utilization (e.g., complementary masking), better noise schedules, and hybrid architectures to approach AR training efficiency.
+  - Low‑bit DLMs: Quantization/binarization for memory and latency reductions remain largely unexplored.
+  - Compression: Pruning and knowledge distillation (beyond step distillation) tailored to diffusion schedules and masking patterns.
+  - Long‑context scaling: Reduce O(N³) behavior via blockwise diffusion with KV‑cache (Fig. 4 “Block‑DLM”), dynamic step allocation, or sparse attention; adapt AR extrapolation tricks (e.g., RoPE‑NTK) to DLMs (Section 2.3 cites LongLLaDA).
+  - RLHF for diffusion: Improve likelihood surrogates, credit assignment across steps, and reward modeling that aligns with parallel refinement (Section 3.2).
+  - Unified multimodal reasoning: Expand discrete‑token unification (VQ‑VAEs) and dual‑branch continuous diffusion to robustly co‑generate and edit across modalities (Section 5).
+  - Agentic DLMs: Leverage parallel draft‑and‑verify (SpecDiff + AR validators), remasking for self‑correction, and guidance for structural constraints (Section 4.3).
+- Practical applications (Section 7)
+  - Code assistants that benefit from global planning and fast drafts (`DiffuCoder`, Mercury Coder).
+  - High‑throughput creative writing/infilling, paraphrasing, and constrained style transfer via guidance and remasking.
+  - Scientific design: molecular/protein design using discrete diffusion with reward optimization (DRAKES, DPLM/2, CFP‑GEN).
+
+---
+
+Selected figure/table/equation references for quick lookup:
+- Taxonomy and timeline: Fig. 1 (timeline), Fig. 3 (taxonomy), Fig. 2 (trend).
+- Core mechanics: Eqs. 3–4 (AR), Eq. 1 (MLM), Eqs. 6–9 (continuous diffusion), discrete forward with absorbing mask (Section 2.3), Eq. 10 (`LLaDA` loss), Eq. 11 (BD3‑LM block objective), Eq. 12 (SEPO RL objective), Eq. 13 (CFG).
+- Inference toolbox: Fig. 4 (training/inference overview), Fig. 5 (parallel decoding, remasking, guidance, caches, distillation).
+- Models and post‑training at a glance: Table 1 (models/size/objectives), Table 2 (post‑training algorithms).
+- Performance synthesis: Fig. 6 (eight benchmarks).
+- Failure mode under high parallelism: Fig. 7 (qualitative outputs across step counts).

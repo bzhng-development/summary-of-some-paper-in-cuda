@@ -1,11 +1,20 @@
 import { useState, useEffect } from 'react';
-import * as FileSystem from 'expo-file-system/next';
+import { Asset } from 'expo-asset';
+import { File } from 'expo-file-system/next';
+import { PAPER_ASSETS } from '../lib/paper-asset-map';
 
-// Papers are stored in the sibling paper-graph-ui repo's content directory.
-// During dev/build we load via Metro's asset system or we include a pre-bundled
-// text asset. For the mobile build we bundle the markdown files as assets.
-// The paper bodies live under assets/papers/<category>/<slug>.md
-
+/**
+ * Load the full paper body for `<category>/<slug>` from Metro-bundled assets.
+ *
+ * Build-time pipeline:
+ *  - scripts/build-graph.mjs copies every paper-graph-ui .md into assets/papers/
+ *    and emits src/lib/paper-asset-map.ts with one `require()` per paper.
+ *  - Metro statically resolves the requires and bundles the .md files as assets
+ *    (metro.config.js adds 'md' to assetExts).
+ *
+ * Runtime: Asset.fromModule(...) gives us the bundle's local URI; we read it
+ * with expo-file-system/next. Cached by Asset across the app lifecycle.
+ */
 export function useMarkdownContent(category: string, slug: string) {
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -16,43 +25,38 @@ export function useMarkdownContent(category: string, slug: string) {
     setLoading(true);
     setError(null);
 
-    // Papers are bundled as static assets under assets/papers/
-    // Metro resolves them via require() at build time — see _layout.tsx's
-    // asset registration. Here we use the bundled require map.
-    const key = `${category}/${slug}`;
-    loadPaperContent(key)
+    loadPaperContent(`${category}/${slug}`)
       .then((text) => {
-        if (!cancelled) {
-          setContent(text);
-          setLoading(false);
-        }
+        if (cancelled) return;
+        setContent(text);
+        setLoading(false);
       })
-      .catch((err) => {
-        if (!cancelled) {
-          setError(String(err));
-          setLoading(false);
-        }
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setError(String(err));
+        setLoading(false);
       });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [category, slug]);
 
   return { content, loading, error };
 }
 
-// Asset map: built at prebuild time by scripts/build-graph.mjs which also
-// copies paper .md files into assets/papers/. Fallback: empty body.
 async function loadPaperContent(key: string): Promise<string> {
-  try {
-    // Try loading from bundled assets directory
-    const assetUri = `${FileSystem.documentDirectory}../assets/papers/${key}.md`;
-    const file = new FileSystem.File(assetUri);
-    if (await file.exists()) {
-      return await file.text();
-    }
-  } catch {
-    // pass
+  const moduleId = PAPER_ASSETS[key];
+  if (moduleId === undefined) {
+    return `# Paper not found\n\nKey: **${key}** is not in the bundled asset map.\n\nThis usually means the app was built before this paper was added. Run \`npm run build:graph\` and rebuild.`;
   }
-  // Return a placeholder if file not found
-  return `# Paper not found\n\nThe content for **${key}** could not be loaded.\n\nThis may happen if the asset bundle was not rebuilt. Run \`npm run build:graph\` and rebuild the app.`;
+  const asset = Asset.fromModule(moduleId);
+  if (!asset.localUri) {
+    await asset.downloadAsync();
+  }
+  const uri = asset.localUri ?? asset.uri;
+  if (!uri) {
+    throw new Error(`Asset for ${key} has neither localUri nor uri`);
+  }
+  return new File(uri).text();
 }

@@ -1,0 +1,1013 @@
+# Falcon-H1: A Family of Hybrid-Head Language Models Redefining Efficiency and Performance
+
+**ArXiv:** [2507.22448](https://arxiv.org/abs/2507.22448)
+
+## 🎯 Pitch
+
+Falcon-H1 introduces a novel series of large language models built on a flexible 'hybrid-head' architecture, combining Transformer attention and Mamba state-space mechanisms in parallel within each block. This design breaks free from past constraints by enabling fine-grained, independent allocation of model capacity between attention and SSM components—leading to exceptional efficiency, scalability to 256K context lengths, and unprecedented parameter-to-accuracy ratios. The result: powerful open models from 0.5B to 34B parameters that match or outperform much larger baselines across reasoning, multilingual, and code tasks, setting the stage for more accessible, faster, and versatile AI systems.
+
+---
+
+## 1. Executive Summary
+
+This report introduces **Falcon-H1**, a new family of large language models featuring a **parallel hybrid architecture** that combines Transformer-based attention with Mamba-2 State Space Models within each block—allowing independent tuning of attention-to-SSM channel ratios—to achieve both high performance and computational efficiency. The series spans base and instruction-tuned models from 0.5B to 34B parameters, evaluated across a broad suite of reasoning, mathematics, science, code, and multilingual benchmarks. Through systematic ablations on channel allocation, SSM hyperparameters, RoPE base frequency, and width–depth trade-offs—combined with a customized Maximal Update Parametrization (µP) recipe and a data strategy emphasizing rewritten, high-quality corpora over raw web data—the Falcon-H1-34B-Instruct rivals or outperforms models up to the 70B scale (Qwen3-32B, Qwen2.5-72B, Llama3.3-70B) while being approximately half the size, and the 1.5B-Deep variant delivers performance competitive with leading 7B–10B models. The hybrid architecture enables up to 8× inference throughput improvement over a comparable Transformer at long context lengths, establishing that parameter-efficient SSM-attention hybrids can match much larger dense models on knowledge-intensive tasks, particularly when training data allocates only ~15% of tokens to raw web sources.
+
+## 2. Context and Motivation
+
+### The Core Problem: The Efficiency Bottleneck in Scaling Language Models
+
+The fundamental challenge this paper tackles is the **growing tension between model capability and computational efficiency** as language models scale to larger sizes. The prevailing trajectory in open-weight LLM development—exemplified by the LLaMA (Grattafiori et al., 2024), Mistral (Jiang et al., 2023), Qwen (Yang et al., 2024a,b), and DeepSeek (Liu et al., 2024a,b) families—has been to scale parameter counts and training data volumes to achieve better performance. The Falcon-H1 team frames this as a problem at multiple levels:
+
+- **Inference cost dominates deployment economics.** For any model deployed in production, the total cost of ownership is heavily weighted toward inference rather than training. A model that requires 70B parameters to achieve a given capability level costs roughly twice as much per generated token as a 34B model achieving similar performance—and these costs multiply across millions or billions of daily queries. The paper directly quantifies this in Section 5.3, showing that at extreme context lengths, the gap can reach 8× in throughput.
+
+- **Resource accessibility is gated by model size.** Smaller research labs, startups, and organizations deploying on edge devices cannot practically run 70B+ parameter models. The paper opens by emphasizing deployment scenarios "from edge devices to large-scale systems" (Section 1). If a 1.5B model can match a 7B model's performance through architectural innovation, it fundamentally changes who can build and deploy capable AI systems.
+
+- **Training data volume is an underappreciated cost multiplier.** The dominant open models have been trained on enormous corpora—Llama 3 was reportedly trained on 15T+ tokens, and Qwen3 on 36T tokens (Table 16 comparisons). Falcon-H1 models achieve competitive or superior results with only 2.5T–18T tokens (Table 1), representing a 5–10× reduction in total training computation. In an era of growing concern about data scarcity and the environmental cost of training, this is a practical and significant advantage.
+
+### The Attention Mechanism's Quadratic Complexity Ceiling
+
+The paper situates its architectural motivation within a well-known limitation of the Transformer: **quadratic complexity with respect to sequence length**. This is stated directly in Section 1:
+
+> "A key limitation of the vanilla Transformer lies in its quadratic complexity with respect to input sequence length."
+
+While this limitation has been acknowledged since Vaswani et al. (2017), its practical impact has grown more severe as applications demand longer context windows. The paper's design explicitly targets 256K token support (Section 1), a regime where the quadratic cost of self-attention becomes prohibitive for Transformers. The throughput measurements in Figure 16 demonstrate this concretely: while a comparable Transformer (Qwen2.5-32B) has a marginal throughput advantage at short sequences, Falcon-H1-34B's hybrid SSM-attention design yields up to 4× higher prefill throughput and 8× higher generation throughput at 262K token lengths.
+
+Several approaches to mitigating this quadratic bottleneck existed prior to this work:
+
+- **Efficient attention variants** like Multi-head Latent Attention (MLA) in the DeepSeek series, which reduce the constant factor but not the fundamental complexity class. This still leaves attention as the dominant cost at extreme lengths.
+
+- **Pure SSM architectures** like Mamba (Gu & Dao, 2023), Mamba-2 (Dao & Gu, 2024), and Falcon-Mamba (Zuo et al., 2024), which achieve linear complexity but may sacrifice the precision of attention for tasks requiring exact token-level recall or long-range dependency modeling.
+
+- **Sequential hybrid designs** like Jamba (Lieber et al., 2024; Team et al., 2024), Samba (Ren et al., 2024), and Zamba (Glorioso et al., 2024), which interleave attention and SSM layers in series. These partially address efficiency but do not allow independent tuning of the attention-to-SSM ratio—each layer is either fully attention or fully SSM, making the overall balance coarse-grained and rigid.
+
+- **Parallel hybrid designs**, most notably Hymba (Dong et al., 2024), which run attention and SSM in parallel within each block. However, Hymba averages the outputs of both modules, which forces them to have identical dimensions—eliminating the ability to vary the ratio of attention to SSM channels within a layer.
+
+The Falcon-H1 design is **explicitly positioned as advancing the parallel hybrid paradigm by removing this dimensional constraint**. By concatenating rather than averaging the outputs (Figure 1), the model can independently choose how many attention heads and how many SSM heads to allocate per layer. This gives the architecture a continuous degree of freedom—the attention-to-SSM channel ratio—that was previously unavailable. The paper shows empirically that this matters: the optimal ratio heavily favors SSM channels, with only 1/8 of total channels allocated to attention (Figure 2, left), and this freedom to dial attention down to the minimum needed for precision is what enables the efficiency gains.
+
+### The Underexplored Design Space of SSMs
+
+A subtler gap the paper addresses is the **relative immaturity of SSM design knowledge** compared to Transformers. Section 2.2 opens with:
+
+> "since Mamba architecture is relatively new, their architectural hyper-parameters remain under-explored compared to well-established transformer designs."
+
+This is not a trivial observation. The Transformer architecture has been refined through thousands of research papers and production deployments over 7+ years. In contrast, Mamba-2 was introduced in 2024 (Dao & Gu, 2024), and many of its hyperparameters had never been systematically studied. The paper identifies several specific parameters that prior work either set to defaults without investigation or never ablated:
+
+- **Head dimension** (`dhead`): The paper notes that existing sources simply pick values like 64 or 128 (Dao, 2024a,b) and discusses kernel limits, but no one had reported a systematic ablation. The paper's sweep from 16 to 256 (Figure 4a) reveals that larger head dimensions provide both better accuracy and better throughput—a finding with direct practical implications.
+
+- **Depthwise convolution kernel size**: Existing papers including Pei et al. (2025) and Chao et al. (2024) simply fix this at 4. The underlying `causal_conv1d` CUDA kernel (Dao-AILab, 2023) only supported sizes 2, 3, and 4. To run the ablation (Figure 4b), the authors had to re-implement the kernel to support sizes up to 32—and their results confirmed that 4 is indeed optimal, providing the first empirical justification for a universally assumed default.
+
+- **State dimension vs. group count trade-off**: Prior work noted that larger `dstate` improves accuracy and that grouping exists, but the two-dimensional sweep over (`dstate`, `ng`) with an iso-parameter budget constraint (Figure 3) is novel. The finding that throughput peaks at `dstate` = 16 while accuracy improves monotonically with larger `dstate`—leading to a compromise choice of 256 for final models—is a concrete design insight that did not previously exist in the literature.
+
+- **SSM chunk size** under the SSD algorithm: The paper identifies that the interaction between chunk size and GPU memory hierarchy creates a performance plateau at 128–256, providing systematic explanation for a value that practitioners previously chose heuristically.
+
+### Training Instability as a Barrier to Hybrid Architecture Adoption
+
+The paper reveals an important practical obstacle that is easy to overlook: **loss spikes during training of SSM-based models**. Section 3.2.1 describes "severe loss spikes from the beginning of the training" that created two concrete problems:
+
+> "(i) Spiky loss curves distort ablation results: a variant may look inferior simply because a spike coincides with the learning-rate decay, reversing the true ordering; and (ii) continuing with such spikes would force us to choose learning rates well below the optimum, which would slow convergence."
+
+This instability had been observed but not systematically diagnosed in prior work. The paper provides a mechanistic explanation: width-related dynamics inside the SSM cause `dtt` (the time-step parameter that controls both writing to and forgetting from the hidden state) to develop antagonistic gradient signals—the model needs to both amplify the current token's contribution (increasing `dtt`) and preserve information from earlier tokens (preventing `dtt` from growing too large). These "antagonistic signals arrive at different scales and at different optimization steps," causing the parameter to overshoot and over-correct, producing characteristic loss spikes.
+
+Prior responses to this problem included batch-skipping (dropping outlier batches) and lowering learning rates, both of which the paper identifies as inadequate—batch-skipping "is largely ineffective for dynamics-induced instabilities," and lowering the learning rate sacrifices convergence speed. The paper's solution—attenuating the `dt` activation by a constant factor—is simple but required understanding the root cause, which no prior work had articulated.
+
+### The Gap in Pretraining Data Strategy
+
+The paper also addresses an underappreciated aspect of LLM development: **how to organize limited high-quality data for maximum impact**. Section 3.1.2 challenges conventional wisdom on several fronts:
+
+- **The role of raw web data**: The paper found that "while popular web datasets like FineWeb or RefinedWeb offer broad topical diversity, their knowledge density is relatively low." The final data mixtures (Table 6) are striking: web data accounts for only ~15% of tokens for the 34B model and ~12% for the 7B model, with rewritten data (raw sources processed through quality-improving transformations) making up 52–53%. This is a significant departure from the web-data-heavy mixtures typical of prior work.
+
+- **Multi-epoch training on high-quality data**: The paper found that "concerns about memorization may be overstated in large-scale regimes." By measuring the "memorization window"—the temporal span over which the model retains specific training examples (Figure 9)—they determined it was safe to repeat high-quality samples multiple times. This insight is counter to the dominant single-epoch paradigm and enables aggressive up-sampling of scarce but valuable data.
+
+- **Anti-curriculum scheduling**: Counter-intuitively, the paper found that introducing "data of all complexity levels—from simple text to advanced mathematical problems—from the very beginning of training" outperformed curriculum strategies that reserve high-quality data for later stages. The hypothesis is that "early and continuous exposure provides the model with a more effective learning trajectory to develop the internal features required to master complex tasks."
+
+These findings collectively challenge the "more data is better" philosophy underlying much of the scaling laws literature, suggesting instead that data organization, quality, and scheduling can substitute for raw volume.
+
+### How This Paper Positions Itself Relative to Existing Work
+
+The paper does not claim to propose a fundamentally new architecture—hybrid SSM-attention models existed before (Jamba, Samba, Zamba, Hymba). Nor does it claim to invent SSMs (Mamba, Mamba-2) or µTransfer (Yang et al., 2022). Instead, it positions itself as the **first comprehensive, systematically optimized instantiation** of the hybrid paradigm at competitive scales. This is evident in several design decisions:
+
+- **Against sequential hybrids**: The paper explicitly argues that parallel designs offer more flexibility in channel allocation, enabling the attention-to-SSM ratio optimization that is central to their efficiency claims. The comparison in Figure 2 (right) shows that the semi-parallel SA_M configuration outperforms both fully parallel (SAM) and fully sequential (S_A_M) arrangements, directly justifying the architectural choice.
+
+- **Against Hymba's fixed-dimensional parallel design**: By using concatenation rather than averaging, Falcon-H1 can shrink attention to the bare minimum needed for precision (1/8 of channels) while letting SSMs handle the bulk of computation—an optimization that averaging-based designs cannot express.
+
+- **Against pure Mamba models**: The paper's predecessor, Falcon-Mamba (Zuo et al., 2024), demonstrated that a 7B attention-free model could be competitive. Falcon-H1 builds on this by showing that a small amount of attention (just 2 KV heads in the 7B model, per Table 1) provides a meaningful accuracy boost over pure SSM while preserving most of the efficiency advantage.
+
+- **Against standard µP**: The paper augments standard µTransfer with a tuned "minimal set of forward multipliers" (Table 7, Table 8) that are individually optimized through a stagewise procedure (Appendix C), rather than using the default µP scalings. The insight is that at practical model sizes (the base model has `d = 1280` while the largest has `d = 5120`, only a 4× factor), the infinite-width limiting behavior that standard µP assumes may not fully apply, justifying per-layer multiplier tuning.
+
+- **Against standard training recipes**: The paper introduces the "effective learning rate" and "effective weight decay" formalism (Section 3.2.2), arguing that these composite quantities—rather than raw LR and WD—are what actually control parameter norms and noise levels. The effective power scheduler (EPS) proposed in Equation 15 scales both LR and WD as `t^{-1/4}` rather than scaling only LR as `t^{-1/2}` with WD constant, based on the observation that parameter norms should remain at their "optimal" level throughout training rather than drifting.
+
+In summary, the paper addresses not one gap but a constellation of interconnected ones: architectural (how to optimally combine attention and SSMs), training-dynamic (how to stabilize SSM training and transfer hyperparameters), data-strategic (how to maximize the value of limited high-quality data), and empirical (how to fill in the underexplored design space of SSM hyperparameters). The unifying claim is that **systematic optimization across all these axes simultaneously**—rather than any single innovation—is what enables Falcon-H1 to punch above its parameter class.
+
+## 3. Technical Approach
+
+This is primarily a **systems and empirical optimization paper** whose core idea is that a parallel hybrid architecture combining attention and Mamba-2 SSMs—with carefully tuned channel allocation, SSM hyperparameters, pretraining dynamics, and data strategy—can produce models that match the performance of pure Transformer models 2–4× their size while achieving substantially higher inference throughput at long contexts.
+
+---
+
+### 3.1 Reader Orientation
+
+The Falcon-H1 series is a family of language models where each Transformer-style "decoder block" runs a small number of standard multi-head attention heads **in parallel with** a larger number of Mamba-2 State Space Model channels, concatenating their outputs before feeding them into a shared MLP. The system is the entire pipeline—architecture design, tokenizer construction, pretraining infrastructure, data curation and scheduling, and post-training—that produces base and instruction-tuned models from 0.5B to 34B parameters. The problem it solves is that pure Transformers are computationally inefficient at long sequences, while pure SSMs can be less precise on certain in-context tasks; the solution shape is a **configurable hybrid block** where the ratio of attention to SSM channels is a free parameter that can be tuned to balance precision against efficiency, combined with training and data innovations that maximize the return on limited compute and high-quality tokens.
+
+---
+
+### 3.2 Big-Picture Architecture (Diagram in Words)
+
+The system has seven major components, viewed from the perspective of training a 34B model:
+
+1. **Tokenizer** — takes raw text in 18+ languages and converts it to token IDs using a BPE vocabulary of 32K–261K tokens (size scales with model size). Incorporates digit/punctuation splitting and special LaTeX tokens for math.
+
+2. **Hybrid Decoder Block** (×72 layers for 34B) — each block receives a residual stream `$r \in \mathbb{R}^{d \times L_{\text{seq}}}$`, applies RMSNorm, then runs **attention** and **SSM** on the same normalized input in parallel. Their outputs are summed into the residual, followed by a separate RMSNorm + MLP (the SA_M configuration). The attention module uses GQA with 20 query heads and 4 KV heads; the SSM module uses 32 heads of Mamba-2 with state dimension 256 and 2 groups.
+
+3. **Channel Allocation Knob** — within each hybrid block, the number of attention channels (`$d_{\text{attn}}$`) and SSM channels (`$d_{\text{ssm}}$`) are independently chosen. The concatenation design (unlike averaging in Hymba) means they need not be equal. The optimal ratio heavily favors SSMs: roughly 2 parts SSM, 1 part attention, 5 parts MLP.
+
+4. **µP Multiplier System** — 35 tunable constants (forward multipliers, effective learning rate multipliers, effective weight decay multipliers, and vector learning rate multipliers) that control how activations and gradients scale across layers of different types. Tuned once on a 1.2B base model and transferred to all scales via width-dependent scaling rules.
+
+5. **Pretraining Data Pipeline** — ~20T tokens sourced from web (FineWeb, processed through quality classifiers), curated corpora (Wikipedia, arXiv, books, forums), code (67 languages, file-level and repository-level), math (OpenWebMath-like pages), and synthetic data. Raw web data accounts for only ~12–15% of final mixtures; rewritten data (raw sources augmented for quality/density) makes up 52–53%.
+
+6. **Training Dynamics Controller** — a WSD (Warmup-Stable-Decay) learning rate schedule with the effective power scheduler (EPS) variant that scales both LR and weight decay as `$t^{-1/4}$`, batch size rampup with square-root LR scaling, and `dt` activation attenuation to prevent SSM-induced loss spikes.
+
+7. **Distributed Training Orchestrator** — a custom framework ("Mambatron") implementing 5D parallelism: data parallelism, tensor parallelism (with Mixer Parallelism that dedicates separate TP groups to attention vs. SSM computation), pipeline parallelism, context parallelism (RingAttention for attention chunks, state-passing for SSM chunks), and sequence parallelism.
+
+Information flows: raw text → tokenizer → token IDs → embedding layer → stack of 24–72 hybrid blocks (each: RMSNorm → parallel attention+SSM → residual add → RMSNorm → gated MLP → residual add) → final RMSNorm → LM head → token probabilities. During post-training, the base model undergoes SFT (3 GT at 16K context + 3 GT at 128K) followed by DPO (1 epoch with standard DPO loss, `$\beta = 5$`).
+
+---
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First**, the hybrid block architecture and channel allocation optimization, because this is the central architectural innovation—understanding why attention is minimized and how the SA_M configuration is chosen is prerequisite to everything else.
+- **Second**, the SSM-specific parameter ablations (state dimension, groups, head dimension, convolution kernel, chunk size), since these determine the internal configuration of the SSM module that handles most of the computation.
+- **Third**, the tokenizer design, because vocabulary construction shapes everything from multilingual support to math performance, and the paper's digit-splitting and LaTeX injection experiments provide transferable insights.
+- **Fourth**, the pretraining data strategy, since the data mixture (only ~15% raw web) is one of the most distinctive aspects and directly enables the parameter efficiency results.
+- **Fifth**, the training dynamics innovations (stability, effective LR/WD, µP with tunable multipliers, batch scaling, rampup, warmup), which are the "hidden work" that makes the architecture trainable and hyperparameters transferable.
+- **Sixth**, the distributed training infrastructure (including Mixer Parallelism and Context Parallelism), because it enables training models up to 34B with 256K context on 4,096 H100 GPUs.
+
+---
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+#### The Hybrid Block Design: Parallel Attention and SSM with Concatenation
+
+The fundamental computational unit of Falcon-H1 is a hybrid decoder block that runs two different sequence-mixing mechanisms—multi-head attention and Mamba-2 SSM—on the same input, in parallel, then fuses their outputs.
+
+**Input structure.** Each block receives a residual stream `$r_l \in \mathbb{R}^{d \times L_{\text{seq}}}$`, where `$d$` is the model's hidden dimension (ranging from 1024 for the 0.5B model to 5120 for the 34B model, per Table 1) and `$L_{\text{seq}}$` is the sequence length. The residual stream is the sum of the token embeddings and all previous blocks' outputs.
+
+**RMSNorm and mixing.** The residual first passes through RMSNorm `$\mathcal{N}_l$`. The normalized output is fed simultaneously to three sub-modules: the attention mixer, the SSM mixer, and (in the SA_M configuration) the MLP is deferred to a second stage. Specifically, the SA_M forward pass for block `$l$` is:
+
+$$r'_l = r_l + F_{\text{attn}}^l(\mathcal{N}_l(r_l)) + F_{\text{SSM}}^l(\mathcal{N}_l(r_l))$$
+
+$$r_{l+1} = r'_l + F_{\text{MLP}}^l(\mathcal{N}'_l(r'_l))$$
+
+where `$F_{\text{attn}}^l$` is the attention forward pass, `$F_{\text{SSM}}^l$` is the Mamba-2 SSM forward pass, `$F_{\text{MLP}}^l$` is the gated MLP forward pass, `$\mathcal{N}_l$` is the RMSNorm before the mixers, `$\mathcal{N}'_l$` is a separate RMSNorm before the MLP, and `$r'_l$` is an intermediate residual after the mixer contributions are added.
+
+**What this computes:** The first equation says: take the normalized residual, run both attention and SSM on it independently, add both outputs plus the original residual to form an intermediate residual. The second equation says: apply a second normalization, run the MLP on it, and add the result to form the next layer's residual. Both attention and SSM see exactly the same input representation, so they can develop complementary features—attention can capture precise token-level interactions while SSM can model longer-range dependencies efficiently.
+
+**Why this form over alternatives:**
+
+- **Why parallel rather than sequential:** Sequential designs (attention → SSM or SSM → attention) force the second mixer to operate on a representation already transformed by the first, coupling their computations. The parallel design decouples them, allowing independent optimization of channel counts and making the attention-to-SSM ratio a free parameter. The paper empirically compared three configurations: fully parallel SAM (all three modules on the same input), semi-parallel SA_M (attention and SSM in parallel, then MLP on their combined output), and fully sequential S_A_M (SSM → attention → MLP in series), finding SA_M best (Figure 2, right). The authors note they "don't have an explanation" for why, as block configuration grows more sequential, the optimal SSM fraction shifts from 3/8 to 2/8 to 1/8.
+
+- **Why concatenation rather than averaging:** Hymba (Dong et al., 2024) averages attention and SSM outputs, which requires both to have identical channel dimensions. Concatenation removes this constraint—attention can have a small number of channels (for precision) while SSM can have many (for efficiency). The output projection after concatenation combines the two streams into the residual dimension `$d$`.
+
+- **Why SA_M rather than SAM:** The fully parallel SAM configuration puts the MLP in parallel with the mixers, potentially causing the mixers and MLP to compete for the same residual representation. The SA_M configuration gives the mixers first access to the residual, then lets the MLP operate on the combined mixer output—creating a two-stage computation where mixers handle sequence interactions and the MLP handles per-token nonlinear transformation.
+
+**Attention module specifics.** The attention block (per Table 7) computes:
+
+$$F_{\text{attn}}(r) = m_{\text{attn}} W_{\text{attn}} \cdot \text{GQA}(Q, K, V)$$
+
+where `$Q = W_Q r$` (query projection), `$K = m_{\text{key}} W_K r$` (key projection with a µP multiplier), `$V = W_V r$` (value projection), and GQA denotes Grouped Query Attention. The key projection carries an explicit multiplier `$m_{\text{key}}$` because only the query-key dot product matters for attention scores—multiplying both Q and K would be redundant, so the multiplier is placed only on K. The output projection `$W_{\text{attn}} \in \mathbb{R}^{d \times d_{\text{attn}_h} n_{\text{attn}_h}}$` maps from attention head outputs back to the residual dimension `$d$`.
+
+**SSM module specifics.** The Mamba-2 SSM block (detailed in Section 2.2) operates as follows:
+
+1. **Input projection:** The input `$r$` is projected to produce `$x, z, B, C, dt$` parameters via a single weight matrix `$W_{xzBCdt} \in \mathbb{R}^{(2d_{\text{ssm}} + 2n_g d_{\text{state}} + n_h) \times d}$`, where `$d_{\text{ssm}} = d_{\text{head}} \cdot n_h$` is the total SSM channels, `$n_h$` is the number of SSM heads, `$n_g$` is the number of groups (parameters `$B, C$` are shared within each group), and `$d_{\text{state}}$` is the recurrent state dimension.
+
+2. **Causal convolution and activation:** The `$x, B, C$` components pass through a causal depthwise 1D convolution with kernel size 4, followed by SiLU activation. The `$dt$` component passes through Softplus plus a learned head-wise bias `$b \in \mathbb{R}^{n_h}$`: `$dt = \text{Softplus}(\tilde{dt} + b)$`.
+
+3. **SSM recurrence:** The core Mamba-2 sequence transformation maps input `$x_t$` to output `$y_t$` via a recurrent hidden state `$h_t \in \mathbb{R}^{d_{\text{state}}}$`:
+
+$$h_{t+1} = A_t h_t + B_t dt_t x_t$$
+
+$$y_t = C_t^\top h_t + D x_t$$
+
+where `$A_t = \exp(-e^{A_{\log}} dt_t)$` controls how much of the previous state is forgotten, `$B_t dt_t x_t$` is the information written from the current token, `$C_t$` is the readout projection, and `$D \in \mathbb{R}$` is a learned scalar providing a direct input-to-output skip connection. The parameters `$A_{\log}$` and `$D$` are static (not input-dependent), while `$B_t, C_t, dt_t$` are input-dependent, giving the SSM its selectivity.
+
+4. **Gating and output:** The SSM output is gated element-wise with a SiLU-activated gate: `$y_g = y \odot \text{SiLU}(z)$`, then passes through a grouped RMSNorm (required for tensor parallelism), and finally through an output projection `$W_{\text{SSM}} \in \mathbb{R}^{d \times d_{\text{ssm}}}$`:
+
+$$F_{\text{SSM}}(r) = m_{\text{SSM}} W_{\text{SSM}} \cdot \text{N}_{\text{SSM}}(y_g)$$
+
+**Why input-dependent `$dt, B, C$`:** Unlike early SSMs where these were static, input-dependent parameters allow the model to selectively attend to or ignore tokens based on content—for example, a token might increase `$dt_t$` when it's informative (writing more strongly into the state) and decrease it when it's a filler word. This selectivity is what makes Mamba-2 competitive with attention despite its linear complexity.
+
+**Hidden state resetting for document boundaries.** When multiple documents are packed into one training sequence, the SSM's recurrent state would otherwise leak information across document boundaries (equivalent to cross-document attention leakage in Transformers). Falcon-H1 resets the hidden state at document boundaries by injecting a large negative value (−80) into the `$A_{\log}$` parameter at boundary positions, making `$A_t \approx 0$` at those positions and thus zeroing the hidden state: `$h_{t+1} = 0 \cdot h_t + B_t dt_t x_t \approx B_t dt_t x_t$`. The paper notes this is "numerically stable: $\exp(-80) \approx 10^{-35}$ lies above the FP16/BF16 underflow threshold ($\sim 10^{-45}$) yet empirically zeros the hidden state without training instabilities."
+
+**Gated MLP.** The MLP block uses the standard gated SiLU architecture:
+
+$$y_{\text{MLP}} = \text{SiLU}(m_{\text{gate}} W_{\text{gate}} r) \odot (W_{\text{up}} r)$$
+
+$$F_{\text{MLP}}(r) = m_{\text{MLP}} W_{\text{down}} y_{\text{MLP}}$$
+
+where `$W_{\text{up}} \in \mathbb{R}^{d_{\text{MLP}} \times d}$` and `$W_{\text{gate}} \in \mathbb{R}^{d_{\text{MLP}} \times d}$` project the input to the MLP's inner dimension `$d_{\text{MLP}}$`, the gate branch applies SiLU nonlinearity and multiplies element-wise with the up-projection, and `$W_{\text{down}} \in \mathbb{R}^{d \times d_{\text{MLP}}}$` projects back to the residual dimension. The multiplier `$m_{\text{gate}}$` controls the gate's contribution scale.
+
+---
+
+#### Channel Allocation: The Central Optimization of the Hybrid Design
+
+The parallel hybrid architecture introduces a degree of freedom that no prior hybrid model had exploited: **the ratio of attention to SSM channels within each layer can be varied independently**. The paper conducted a systematic study to determine the optimal allocation across SSM, attention, and MLP channels.
+
+**Experimental setup.** The experiment discretized the total available channels into 8 equal chunks that could be freely distributed among SSM, attention, and MLP modules. Let `$d_{\text{ssm}}, d_{\text{attn}}, d_{\text{MLP}}$` be the variable inner channel dimensions. These are parameterized as:
+
+$$d_{\text{ssm}} = \alpha_S \times 4096, \quad d_{\text{attn}} = \alpha_A \times 6144, \quad d_{\text{MLP}} = \alpha_M \times 4864$$
+
+where `$\alpha_S, \alpha_A, \alpha_M$` are chunk fractions from the set `$\{1/8, 2/8, 3/8, 4/8, 5/8, 6/8\}$` with the constraint `$\alpha_S + \alpha_A + \alpha_M = 1$`. Each variable represents the fraction of the 8 total chunks allocated to that module. The base amounts per chunk—4096, 6144, 4864—follow a ratio of `$2 : 3 : 2.375$`.
+
+**Why this base ratio:** The number of matrix parameters in each block scales as `$3 d_{\text{ssm}} d$` for SSM, `$2 d_{\text{attn}} d$` for attention (only Q and output projections scale with `$d_{\text{attn}}$`; KV projections scale with the smaller KV head dimension), and `$3 d_{\text{MLP}} d$` for the MLP. A base ratio of `$2 : 3 : 2$` would equalize the parameter count across all three modules for a given chunk allocation. The ratio was then adjusted to `$2 : 3 : 2.375$` to account for the MLP's lower computational cost per parameter compared to the mixers, slightly favoring MLP channels in the allocation.
+
+**What it computes:** The three equations define the actual channel dimensions that result from a given allocation `$(\alpha_S, \alpha_A, \alpha_M)$`. For example, allocating `$\alpha_A = 1/8$` to attention means `$d_{\text{attn}} = 6144$` channels; allocating `$\alpha_S = 2/8$` means `$d_{\text{ssm}} = 8192$` channels; the remaining `$\alpha_M = 5/8$` means `$d_{\text{MLP}} = 24320$` channels.
+
+**Why this parameterization:** The 8-chunk discretization is coarse enough to make the search space manageable (21 admissible `$(\alpha_S, \alpha_A, \alpha_M)$` triplets) but fine enough to capture the meaningful variation—the paper found that loss differences between adjacent allocations were substantially larger than experimental noise, making the grid informative.
+
+**Results.** Figure 2 (left) shows the loss for all 21 allocations in the fully parallel SAM configuration. The dominant finding is stark: **having more attention channels significantly degrades performance**, while switching channels between SSM and MLP has a "noticeable but much weaker effect." Allocating `$\alpha_A = 1/8$` (the minimum possible) consistently yields the best loss, regardless of how the remaining 7/8 is split between SSM and MLP. The loss ranges from approximately 2.56 (best) to 2.64 (worst), with the worst configurations having `$\alpha_A = 6/8$`.
+
+**Physical interpretation:** This result says that attention is useful—the model performs better with some attention than with none—but only a small amount is needed. The first attention head provides a large marginal benefit (precision for token-level operations); additional heads provide rapidly diminishing returns while significantly increasing computational cost (quadratic in sequence length). The SSM can handle most of the sequence mixing work more efficiently. This is the quantitative justification for the paper's claim that "SSMs handle most of the work" while attention provides precision.
+
+**Block configuration comparison.** Figure 2 (right) compares SAM, SA_M, and S_A_M configurations at the optimal `$\alpha_A = 1/8$` while varying the SSM/MLP split. SA_M achieves the best loss, with the optimum at `$(\alpha_S, \alpha_A, \alpha_M) = (2/8, 1/8, 5/8)$`. The dependence on the SSM-MLP split is relatively flat near the optimum, meaning the exact split is not highly sensitive—a useful property for implementation flexibility.
+
+**Implementation for Falcon-H1 models.** All models adopt the SA_M configuration with channel allocations "roughly following the 2:1:5 ratio, with slight deviation for different model sizes." This means approximately 25% of mixer channels go to SSM, 12.5% to attention, and 62.5% of total block channels go to the MLP. The flatness of the loss near optimum justifies model-specific deviations without significant performance impact.
+
+---
+
+#### SSM-Specific Hyperparameter Ablations
+
+The Mamba-2 block contains several hyperparameters that had never been systematically ablated in prior work. The paper sweeps these on 300M–1.5B proxy models and reports both training loss and throughput, leading to the final configuration choices in Table 1.
+
+**State dimension vs. number of groups (`$d_{\text{state}}$` vs. `$n_g$`).** The recurrent state dimension `$d_{\text{state}}$` controls how much information the SSM can retain across time steps; the number of groups `$n_g$` controls parameter sharing—within each group, the `$B$` and `$C$` projections are shared across heads. The two are coupled because increasing either increases the model's parameter count. To isolate their effects, the paper fixes a parameter budget `$B = d_{\text{state}} \times n_g$` and sweeps across different `$(d_{\text{state}}, n_g)$` pairs with the same product.
+
+**What was swept:** Five budgets: `$B \in \{4, 16, 64, 256, 1024\}$`. For each budget, multiple `$(d_{\text{state}}, n_g)$` pairs were evaluated (e.g., for `$B = 256$`, the combinations include `$(256, 1), (64, 4), (16, 16), (4, 64), (1, 256)$`).
+
+**Results (Figure 3):** Validation accuracy rises almost exclusively with larger `$d_{\text{state}}$`; varying `$n_g$` has only marginal impact. Within any iso-parameter budget, the best configuration uses the smallest feasible number of groups and the largest possible state dimension. However, training throughput tells a different story: efficiency peaks around `$d_{\text{state}} = 16$` and declines for both smaller and larger values. The authors note:
+
+> "Because longer sequences require a larger state to retain historical information, we take $(n_g, d_{\text{state}}) = (1, 256)$ for the final models as the best compromise."
+
+**Why this trade-off:** Larger state dimensions increase the amount of information that can persist across time, which is particularly valuable at the 256K context lengths Falcon-H1 targets. The group count `$n_g$` mainly affects parameter efficiency—fewer groups means more parameters but potentially more expressive per-head `$B, C$` projections. The finding that accuracy depends almost exclusively on `$d_{\text{state}}$` rather than `$n_g$` suggests that the bottleneck is the state's representational capacity, not the expressivity of the per-token projections.
+
+**Why `$n_g = 2$` for 34B:** The 34B model uses tensor parallelism (TP) of 4 and mixer parallelism (MP). The SSM channels are split across devices, so `$n_g$` must be divisible by TP/2 = 2 for the parameter sharing to work correctly under parallelism. Hence `$n_g = 2$` for the 34B model while smaller models use `$n_g = 1$`.
+
+**Head dimension (`$d_{\text{head}}$`).** The SSM head dimension determines the size of each SSM head's channel subset. The paper sweeps `$d_{\text{head}} \in \{16, 64, 256\}$` while keeping `$d_{\text{ssm}} = d_{\text{head}} \cdot n_h$` constant (so parameter count stays roughly fixed), meaning fewer but larger heads for larger `$d_{\text{head}}$`.
+
+**Results (Figure 4a):** There is a "clear gain at larger heads," though the absolute change is small (`$\leq 10^{-2}$` in training cross-entropy). Throughput is more sensitive: `$d_{\text{head}} < 32$` reduces GPU utilization, while `$d_{\text{head}} \geq 64$` maintains optimal efficiency.
+
+**Why this matters:** The finding that larger head dimensions provide both better accuracy and better throughput (up to a point) is non-obvious—naively, one might expect a trade-off. The throughput effect likely arises because larger heads enable more efficient matrix multiplication shapes on GPU tensor cores. The paper fixes `$d_{\text{head}} = 64$` for smaller models and `$d_{\text{head}} = 128$` for larger models (7B, 34B).
+
+**Causal 1D convolution kernel size.** The Mamba-2 block applies a depthwise causal 1D convolution to the `$x, B, C$` components before the SSM recurrence. Prior work universally fixed this at kernel size 4 without ablation. The paper re-implemented the CUDA kernel to support sizes up to 32 and swept `$\{2, 4, 8, 16, 32\}$`.
+
+**Results (Figure 4b):** Kernel size 4 minimizes validation loss. Both smaller (2) and larger (8, 16, 32) filters degrade accuracy. The paper interprets this as the convolution serving a local smoothing role that benefits from a moderate receptive field but loses effectiveness when too broad.
+
+**Why this required a custom kernel:** The reference `causal_conv1d` CUDA kernel only supported sizes `$\{2, 3, 4\}$`. Ablating larger sizes required re-implementation, making this "to our knowledge, no prior work reports an ablation over the depthwise causal Conv1d kernel size."
+
+**Chunk size in SSD algorithm.** The SSD (Structured State-space Duality) algorithm processes long sequences in chunks to balance parallelism and memory. The chunk size `$cs$` determines how many tokens are processed per kernel launch.
+
+**What was swept:** The paper describes two competing constraints. Very small chunks (`$cs < 64$`) cause too many kernel launches and GPU under-utilization. Very large chunks (`$cs > 256$`) cause the cross-chunk prefix-sum kernel to exceed on-chip SRAM capacity, becoming memory-bound. A broad efficiency plateau exists at `$cs \in \{128, 256\}$`. The paper fixes `$cs = 256$`.
+
+**Why this matters:** The chunk size is a systems-level parameter that affects throughput without changing model quality. Knowing the plateau exists means practitioners don't need to tune this parameter per-model.
+
+**RoPE base frequency.** Rotary Position Embedding (RoPE) encodes position information by rotating query and key vectors. The base frequency `$b$` controls the rotation rates: dimension `$k$` within the query/key vectors rotates at frequency `$\theta_k = b^{-2k/d_{\text{head}}}$`. Conventionally, `$b = 10,000$` is used.
+
+**What was discovered:** When training 7B/34B models with the standard `$b = 10^4$` and increasing sequence length from 8,192 to 16,384 mid-training, the authors observed a "drop in the model evaluations." This was unexpected since the data mixture hadn't changed—only the sequence length increased, meaning fewer training samples were being truncated. The hypothesis was that the effective ratio `$L_{\text{seq}} / b$` matters for RoPE: when this ratio changes, the learned frequency allocation becomes suboptimal.
+
+**The sweep (Figure 5a):** Sweeping `$b$` on a 0.5B model reveals that at values below the training sequence length (dotted line), the training loss steeply depends on `$b$`, with smaller values being "extremely suboptimal." At large `$b$`, the curve flattens and slowly increases, approaching the NoPE (no positional embeddings) limit `$b \to \infty$`. The chosen value `$b = 10^{11}$` roughly corresponds to the curve's minimum.
+
+**Why such an extreme value:** Using an extremely large `$b$` during training means most RoPE frequency dimensions are effectively unassigned—the corresponding wavelengths are far longer than any sequence the model sees. This has a crucial practical benefit for sequence length extension: "no RoPE modifications are required when increasing sequence length beyond the training value, making sequence length extension for Falcon-H1 models extremely simple." In contrast, models trained with `$b \approx L_{\text{seq}}$` require techniques like Position Interpolation or NTK-aware scaling when extending context.
+
+**Open question:** The paper poses "whether such large b values are optimal only for hybrid models, where SSM part can take care of short-range dependencies, or can also work for transformer models." This is left as a research question—it's possible that pure Transformers, lacking the SSM's inherent sequence modeling, may depend more heavily on precise positional encoding and thus benefit less from extreme `$b$` values.
+
+---
+
+#### Width–Depth Trade-Offs
+
+The paper systematically explored how to allocate a fixed parameter budget between depth (number of layers `$L$`) and width (hidden dimension `$d$`), which reveals that deeper-but-narrower models can substantially outperform shallower-but-wider ones.
+
+**Experimental setup.** At a fixed 1.5B parameter budget, five architecture shapes were evaluated: `$\text{W}1536\text{L}87$`, `$\text{W}1792\text{L}63$`, `$\text{W}2048\text{L}48$`, `$\text{W}2304\text{L}37$`, and `$\text{W}2560\text{L}30$`. Learning rate was scaled inversely with width following a simple µP scaling (`$\eta \propto 1/d_{\text{model}}$`) to stabilize training dynamics across configurations.
+
+**Results (Figure 5b):** Greater depth yielded "consistently higher overall quality." The 87-layer extreme (`$\text{W}1536\text{L}87$`) clearly outperformed the wider 30-layer variant (`$\text{W}2560\text{L}30$`). The paper notes this deeper variant "even matched/outperformed 3.0B and 7.0B reference models twice to 5 times its size." The accuracy cost: training throughput dropped by 25–30%, and inference slowed by a comparable margin relative to the shallowest configuration.
+
+**Why depth helps more than width under a parameter constraint:** Depth provides sequential composition of nonlinear transformations—each additional layer can build on the representations of previous layers, enabling hierarchical feature learning and multi-step reasoning. A shallow-but-wide model must encode all processing in a single layer's computation, which requires exponentially more neurons to emulate deep composition. The paper cites Chen et al. (2024) for the theoretical argument: "depth thus increases representational power by adding layers of compositionality, while additional width increases the representational richness at each layer without increasing the number of sequential transformations."
+
+**Practical consequence:** The Falcon-H1 series offers two 1.5B variants explicitly to explore this trade-off. Falcon-H1-1.5B uses 24 layers with `$d_{\text{model}} = 2048$` (the width-balanced configuration). Falcon-H1-1.5B-Deep uses 66 layers with `$d_{\text{model}} = 1280$` (the depth-favoring configuration). The evaluation results (Table 15) confirm that the deep variant substantially outperforms the shallow one, particularly on reasoning-intensive tasks (MATH-lvl5: 24.77 vs. 20.39; MMLU-Pro: 41.07 vs. 35.53). The paper frames releasing both variants as a contribution to the community's understanding of this trade-off since "the depth–width balance remains under-explored."
+
+**Caveat:** The paper notes that the sweep used a simple `$\eta \propto 1/d_{\text{model}}$` scaling and "omitted depth-scaling at this stage for simplicity," meaning the learning rates may not have been fully optimal for each depth. A more complete study would incorporate depth-dependent µP scaling following Yang et al. (2023) or Dey et al. (2025).
+
+---
+
+#### Tokenizer Design and Empirical Studies
+
+The Falcon-H1 tokenizer design is informed by a series of controlled experiments that challenge common practices and measure the impact of design choices on downstream task performance rather than just proxy metrics like fertility score.
+
+**Vocabulary size scaling.** The paper trains separate tokenizers with vocabulary sizes of 32K, 65K, 130K, and 261K, assigned to different model scales (Table 5). The principle, citing Tao et al. (2024), is to "scale the vocabulary size in proportion to the model's overall architecture" to "prevent the embedding layer from becoming disproportionately large." For a 0.5B model with `$d_{\text{model}} = 1024$`, a 32K vocabulary means the embedding matrix has `$32,768 \times 1024 \approx 33.6\text{M}$` parameters; for a 34B model with `$d_{\text{model}} = 5120$` and a 261K vocabulary, the embedding would be `$261,120 \times 5120 \approx 1.34\text{B}$` parameters—roughly 4% of total parameters, keeping the proportion manageable.
+
+**Training data volume for tokenizers (Table 2).** The paper found a "non-monotonic" relationship between corpus size and tokenizer performance, conditioned on vocabulary size. For a 65K vocabulary, a 1GB corpus gave the best fertility score (1.435) while a 14GB corpus gave the best bytes-per-token (8.73). Performance degraded at 40GB for both metrics. For a 135K vocabulary, the 14GB corpus was optimal on both metrics. This is interpreted as showing there is "an optimal range of data that depends on the vocabulary size" rather than "more data is always better."
+
+**Splitting regex comparison (Table 3).** Three regex patterns (GPT-2, GPT-4o, LLaMA-3) were compared at a fixed 131K vocabulary. Differences were "relatively small"—fertility ranged from 1.32 to 1.35, bytes-per-token from 8.70 to 9.10. The recommendation is to "adopt a splitting regex from a well-established and up-to-date tokenizer."
+
+**Digit and punctuation splitting.** This is where proxy metrics and actual downstream performance diverge. The paper trained two tokenizers on identical data—one splitting individual digits, one not. The no-splitting tokenizer had a better fertility score (1.29 vs. 1.32) but lower downstream code performance. To demonstrate this concretely, the paper trained three 1.8B Falcon-Mamba models (predecessor architecture) on 280 GT of data, differing only in tokenizer splitting strategy: split both digits and punctuation, split digits only, or split neither.
+
+**Results (Figure 6):** The model with both digit and punctuation splitting consistently achieved the best HumanEval scores throughout training. The paper attributes this to two mechanisms: (1) digit splitting enables the model to process mathematical expressions compositionally, handling arbitrary numbers rather than memorizing specific digit sequences; (2) punctuation splitting prevents semantically incoherent merging, particularly in non-Latin scripts where punctuation marks like Chinese full-width commas can be incorrectly merged with adjacent characters (Figure 7 shows a qualitative example: without punctuation splitting, a Chinese period is merged with the preceding word; with splitting, it's correctly isolated).
+
+**LaTeX token injection.** The paper curated a set of common LaTeX commands (from Overleaf documentation) and injected them into unused vocabulary slots of the tokenizer. Two 1B models were trained on an identical math-heavy data mixture, one with and one without LaTeX tokens. Figure 8 shows consistent improvements across four math benchmarks (MATH-Hard, GSM8k, math_qa, minerva-math) for the LaTeX-augmented variant. For example, the augmented model showed approximately a 2-percentage-point advantage on MATH-Hard by the end of the decay stage. The interpretation is that representing frequent commands like `\frac` or `\sqrt` as single tokens "simplifies the prediction task for the model, reducing the sequence length and compositional complexity of mathematical expressions."
+
+**Final tokenizer implementation.** The tokenizers use BPE (Byte Pair Encoding) trained on a corpus covering 121+ languages (listed in Appendix A, Table 27). All tokenizers reserve 1,024 special tokens for downstream customization. The vocabulary sizes map to models as: 32K for 0.5B, 65K for 1.5B/3B, 130K for 7B, and 261K for 34B.
+
+---
+
+#### Pretraining Data Strategy
+
+The data strategy is one of the most distinctive aspects of Falcon-H1, departing significantly from the web-data-heavy paradigm dominant in prior work.
+
+**Data sources (Section 3.1.1).** The corpus draws from five categories:
+
+- **English web data:** Starting from FineWeb (Penedo et al., 2024a), the paper applied further quality filtering using "small language models as quality judges with carefully designed prompts," retaining approximately 11T tokens from the full FineWeb dataset.
+
+- **Multilingual data:** 17 languages beyond English, sourced from Common Crawl and curated datasets. Processing used a "heuristics-based pipeline" adapted from Penedo et al. (2023) with language-specific tuning of Gopher Quality filtering, line-wise filtering, and stop words. A "rule-based toxicity filter was applied using human-curated lists of offensive words," where native/proficient speakers rated each word on a 0–2 scale (non-toxic, context-dependent, always toxic) and documents were filtered based on cumulative toxicity scores. The multilingual web dataset totaled over 3,000 GT.
+
+- **Code data:** 67 programming languages (Appendix E.2) from GitHub repositories (up to May 2024) and Meta Kaggle Code notebooks. Processing included heuristic filtering, language labeling with a relaxed 0.15 acceptance threshold (since non-English content appears in comments), MinHash deduplication with 256 hashes and 5-grams at 0.85 Jaccard similarity, and PII redaction (emails, IP addresses replaced with placeholders). A code quality classifier based on CodeBERT (covering 19 languages, Appendix E.3) selected high-quality samples; Python additionally required passing a specialized Python scorer. Repository-level data concatenated all source files from a repository to enable cross-file comprehension, with MinHash dedup at the repo level.
+
+- **Math data:** A combination of open-source datasets (Proof-Pile-2, FineMath, InfiMM-WebMath-40B, OpenCoder FineWeb Math) and in-house data retrieved by a fastText classifier trained on OpenWebMath, iteratively refined to expand coverage of math-related domains in Common Crawl. All math data was decontaminated against popular benchmarks (GSM8K, MATH).
+
+- **Synthetic data:** A "large volume of in-house generated synthetic data" created by rewriting curated raw data—including web, code, books, Wikipedia, arXiv, and math sources—to "structure and formalize the underlying knowledge, reduce noise, and ultimately improve training stability and efficiency." The rewriting used "a diverse set of internal and external open models across various scales and architectures." Additionally, synthetic textbooks were generated using topic hierarchies extracted from Wikipedia, covering over 30K topics starting from 99 root categories (Table 41). For each topic hierarchy, the generation pipeline produced a table of contents, then structured content with explanations, examples, and exercises.
+
+**Long-context data.** To support 256K context, the paper applied "Fill-in-the-Middle (FIM), where random sections are removed from documents, and section reordering, where segments are shuffled and the model is tasked with reconstructing the original order." A small set of synthetic long-context QA pairs was also created for in-context learning and pattern retrieval.
+
+**Data strategy and mixture (Section 3.1.2).** The data mixture evolved significantly from initial experiments. The final configurations (Table 6) show a striking pattern:
+
+- For the 34B model at the end of training: raw web data = 14.60%, curated data = 15.93%, code = 10.05%, math = 2.87%. The sum of raw data sources is only 43.45%.
+- Rewritten data (raw sources processed for quality) accounts for 52.05% of tokens.
+- Fully synthetic data (not derived from rewriting) accounts for 4.50%.
+
+This means **more than half of the training tokens are rewritten or synthetic**, and raw web data—the backbone of most LLM training—constitutes only ~15%. The paper explicitly challenges the conventional view:
+
+> "While popular web datasets like FineWeb or RefinedWeb offer broad topical diversity, their knowledge density is relatively low... With highly knowledge-intensive data sources and rewritten web samples, the raw web data can be significantly reduced without impacting model generalization and knowledge diversity."
+
+**Anti-curriculum scheduling.** The paper found that introducing "data of all complexity levels—from simple text to advanced mathematical problems—from the very beginning of training" outperformed curriculum strategies that reserve high-quality data for later stages. The hypothesis: "early and continuous exposure provides the model with a more effective learning trajectory to develop the internal features required to master complex tasks." This was validated across multiple model scales.
+
+**Multi-epoch training on high-quality data.** The paper challenges the common practice of single-epoch training to avoid memorization:
+
+> "Our empirical investigation suggests that concerns about memorization may be overstated in large-scale regimes."
+
+The key evidence is Figure 9, which measures the "memorization window"—how long the model retains specific training examples. The experiment works by training a model normally, then at a certain point rolling back to a checkpoint and continuing with different data, measuring the loss on tokens seen at various points in the past. The results show that after approximately 20 GT of training, the loss on tokens seen 20 GT ago is indistinguishable from the loss on never-before-seen tokens, indicating that the model has "forgotten" those examples. This enables aggressive up-sampling of scarce but valuable data by repeating it multiple times within a training run, as long as the repetition interval exceeds the memorization window.
+
+**Why this matters for the overall system:** The data strategy directly enables the parameter efficiency claims. If Falcon-H1 were trained on the same web-data-heavy mixture as typical models, it would likely require much more data to achieve the same performance. The combination of rewritten data, anti-curriculum scheduling, and multi-epoch training on curated sources allows the model to extract more learning per parameter and per token, explaining how 2.5T–18T tokens can compete with models trained on 36T+ tokens.
+
+---
+
+#### Training Stability and the `dt` Attenuation Mechanism
+
+The paper encountered severe loss spikes early in development that threatened to invalidate all architectural ablations and force suboptimal learning rate choices. The diagnosis and solution reveal important dynamics of SSM training.
+
+**Problem manifestation.** Section 3.2.1 describes "severe loss spikes from the beginning of the training" that created two problems: (i) spiky loss curves "distort ablation results: a variant may look inferior simply because a spike coincides with the learning-rate decay, reversing the true ordering," and (ii) continuing with such spikes would "force us to choose learning rates well below the optimum, which would slow convergence."
+
+**Localizing the source.** The paper compared two pure Mamba-2 variants: a "wide" model (larger hidden dimension, more SSM heads, fewer layers) and a "deep" model (smaller hidden dimension, more layers). The wide model exhibited pronounced loss spikes while the deep model trained smoothly, "implicating width-related dynamics inside the SSM—specifically the larger number of heads—as a primary driver."
+
+**Mechanistic diagnosis.** The root cause lies in the `$dt_t$` (time-step) parameter of the SSM recurrence. Recall the SSM update:
+
+$$h_{t+1} = A_t h_t + B_t dt_t x_t$$
+
+where `$A_t = \exp(-e^{A_{\log}} dt_t)$`. The parameter `$dt_t = \text{Softplus}(\tilde{dt}_t + b)$` controls both writing intensity (through `$B_t dt_t x_t$`) and forgetting intensity (through `$A_t = \exp(-e^{A_{\log}} dt_t)$`). A large positive `$\tilde{dt}_t$` produces a large `$dt_t$`, which has two antagonistic effects: it linearly amplifies the current token's contribution to the hidden state while exponentially suppressing information from previous tokens (since `$A_t$` approaches zero as `$dt_t$` increases).
+
+The paper's key insight:
+
+> "Whenever the modeling objective requires both the recent token and its long-range context, gradient descent is pulled in opposite directions: (i) increase `$\tilde{dt}_s$` so that `$dt_s$` increases and amplifies the contribution of token `$s$`; (ii) keep `$\prod_{j=s'}^s A_j$` with `$s' < s$` from collapsing so that earlier information still reaches position `$t$` and propagates further. Because these antagonistic signals arrive at different scales and at different optimization steps, the parameter overshoots and then over-corrects, producing the characteristic loss spikes."
+
+**What this means in plain terms:** The optimizer gets conflicting instructions about `$\tilde{dt}$`. One part of the loss says "pay more attention to this token" (increase `$dt$`). Another part says "don't forget what came before" (don't increase `$dt$` too much). Since these signals arrive at different times during training and have different magnitudes, `$\tilde{dt}$` oscillates wildly—spiking up when the local signal dominates, crashing down when the long-range signal catches up—causing the loss to spike.
+
+**Mitigations tested.** Three interventions were tried:
+
+- **Clip `$A_{\log}$`:** No effect. This controls how strongly `$dt$` affects forgetting, but clipping it doesn't prevent the `$\tilde{dt}_t$` from growing large.
+- **Clip negative `$dt$`:** No effect. The problem is positive `$dt$` excursions, not negative ones.
+- **Clip positive `$dt$`:** Completely removed spikes. This confirms the writing-to-hidden-state hypothesis: preventing `$dt$` from exceeding a threshold eliminates the instability.
+
+**The chosen solution:** Rather than hard clipping, which "may restrict expressiveness," the paper uses "a softer alternative: multiply the `dt` activation by a constant `$0 < \alpha < 1$`." This attenuation "preserves the full parameter range while preventing early excursions into the unstable regime." The attenuation factor `$\alpha$` is treated as a µP forward multiplier and tuned alongside the other 34 multipliers.
+
+**Result:** "With attenuation enabled we can train Falcon-H1 at relatively high learning rates without observing any loss spikes."
+
+**Why this is significant beyond Falcon-H1:** The mechanistic explanation of SSM training instability as arising from antagonistic gradient signals on `$dt$` is novel. Prior work observed similar spikes (Falcon2, Falcon-Mamba, Jamba, YuLan) but attributed them to different causes (depth, exploding residuals, layer-norm statistics, attention scores). The paper's finding that width (number of SSM heads) rather than depth is the primary trigger, combined with the `dt`-attenuation fix, provides a general diagnostic and remedy for SSM-based models.
+
+---
+
+#### Effective Learning Rate, Effective Weight Decay, and the Power Scheduler
+
+The paper introduces a formalism that reframes the roles of learning rate `$\eta$` and weight decay `$\lambda$` in AdamW, leading to a modified training schedule that better preserves optimal parameter norms throughout long training runs.
+
+**Parameter norm scaling.** The empirical starting point is Figure 10 (left): parameter norms of matrix layers grow indefinitely with no weight decay (`$\lambda = 0$`) but stabilize at a constant level when `$\lambda > 0$`. The stable value depends on both `$\eta$` and `$\lambda$`. Through a 2D sweep (Figure 10, right), the paper establishes that the dependence is well described by:
+
+$$||W|| \propto \sqrt{\frac{\eta}{\lambda}}$$
+
+where `$||W||$` is the Frobenius-like mean-squared norm of the weight matrix `$W$`.
+
+**What this says:** The parameter norm—how "large" the learned weights are—is controlled not by weight decay alone (as one might naively expect) but by the ratio of learning rate to weight decay. Doubling the learning rate has the same effect on norms as halving the weight decay. This is counterintuitive: a larger learning rate makes larger weight updates, which weight decay then partially cancels; the equilibrium depends on their relative strengths.
+
+**Toy model justification (Appendix B).** The paper models a single parameter `$x$` evolving under AdamW as:
+
+$$x_{t+1} = x_t - \eta A_t - \eta \lambda x_t$$
+
+where `$A_t = h(x_t - x^*) + \xi_t$` combines a drift toward the optimum `$x^*$` (with steepness `$h$`) and i.i.d. noise `$\xi_t$` with variance `$\sigma^2$`. Solving for the stationary second moment `$x_{\infty,2} = \mathbb{E}[x^2]$` yields:
+
+$$x_{\infty,2} \approx \frac{1}{2} \frac{\eta}{\lambda} \left[ \sigma^2 + 2(h x^*)^2 \eta \lambda \right]$$
+
+Under the assumption `$\eta \lambda \ll 1$` (true for typical LLM training values `$\eta \lesssim 10^{-3}$`, `$\lambda \approx 0.1$`), the dominant term is `$\frac{1}{2} \sigma^2 \frac{\eta}{\lambda}$`, which is exactly the `$\sqrt{\eta/\lambda}$` scaling observed empirically. The physical interpretation: "the noise plays the dominant role in the dynamics of the matrix layers" rather than attraction to optimal parameter values.
+
+**Effective Learning Rate and Effective Weight Decay.** Based on the norm scaling, the paper defines two composite quantities:
+
+$$\eta_{\text{eff}} = \sqrt{\eta \lambda}, \quad \lambda_{\text{eff}} = \sqrt{\frac{\lambda}{\eta}}$$
+
+**What `$\eta_{\text{eff}}$` represents:** It's the "meaningful" measure of update strength relative to parameter norms. The intuition: if `$||W|| \propto \sqrt{\eta/\lambda}$`, then the relative update magnitude `$\eta / ||W|| \propto \eta / \sqrt{\eta/\lambda} = \sqrt{\eta \lambda} = \eta_{\text{eff}}$`. So `$\eta_{\text{eff}}$` controls how much the parameters change relative to their current scale.
+
+**What `$\lambda_{\text{eff}}$` represents:** Since `$||W|| \propto \sqrt{\eta/\lambda} = 1/\sqrt{\lambda/\eta} = 1/\lambda_{\text{eff}}$`, the effective weight decay `$\lambda_{\text{eff}}$` directly controls the stabilized parameter norms. Larger `$\lambda_{\text{eff}}$` means smaller weights; smaller `$\lambda_{\text{eff}}$` means larger weights.
+
+**Empirical validation (Figure 11).** The paper verifies these interpretations:
+- Figure 11 (left) shows that changing `$\lambda$` has a similar effect on the loss curve as changing `$\eta$`—both shift the curve up or down. This means the raw LR and WD aren't disentangled in their effects.
+- Figure 11 (right) shows that the "noise level" (measured as the difference between loss before and after learning rate decay, `$\mathcal{L}_{\text{noise}} = \mathcal{L}_{\text{before LRD}} - \mathcal{L}_{\text{after LRD}}$`) depends almost exclusively on `$\eta_{\text{eff}}$` and is nearly independent of `$\lambda_{\text{eff}}$`.
+
+**Why this matters for hyperparameter sweeps:** The paper introduces the concept of "log-scale orthogonality"—on a log-scaled grid `$(\log \eta, \log \lambda)$`, the gradients of `$\eta_{\text{eff}}$` and `$\lambda_{\text{eff}}$` are orthogonal: `$\nabla_{(\log)} \eta_{\text{eff}} \cdot \nabla_{(\log)} \lambda_{\text{eff}} = 0$`. This means a sweep over `$\eta_{\text{eff}}$` (changing both `$\eta$` and `$\lambda$` proportionally) independently controls noise level, while a sweep over `$\lambda_{\text{eff}}$` (changing `$\eta$` and `$\lambda$` inversely) independently controls parameter norms. This decomposition makes hyperparameter tuning more efficient and interpretable.
+
+**Effective Power Scheduler (EPS).** Recent work (Shen et al., 2024; Bjorck et al., 2025) showed that optimal learning rates for longer training durations scale as `$\eta_{\text{opt}} \propto T^{-b}$` with `$b \in [0.3, 0.5]$`. The "power scheduler" (PS) implements this during the stable stage of WSD as `$\eta(t) = \eta_0 \sqrt{\min(1, t_0/t)}$`. Under PS, weight decay is kept constant, giving:
+
+$$\eta(t) \propto t^{-1/2}, \quad \lambda(t) \propto \text{const} \implies \eta_{\text{eff}}(t) \propto t^{-1/4}, \quad \lambda_{\text{eff}}(t) \propto t^{1/4}$$
+
+This means parameter norms drift over training (`$\lambda_{\text{eff}}$` increases, so `$||W||$` shrinks). The paper argues this is suboptimal:
+
+> "if we would like to keep parameter norms at the 'optimal' level throughout the whole training, we should not scale EWD, which controls the parameter norms."
+
+The proposed Effective Power Scheduler (EPS) scales both `$\eta$` and `$\lambda$`:
+
+$$\eta_{\text{eff}}(t) \propto t^{-1/4}, \quad \lambda_{\text{eff}}(t) \propto \text{const} \implies \eta(t) \propto t^{-1/4}, \quad \lambda(t) \propto t^{-1/4}$$
+
+**What changes:** Both learning rate and weight decay decrease at the same `$t^{-1/4}$` rate, keeping their ratio constant and thus keeping `$\lambda_{\text{eff}}$` and parameter norms constant throughout the stable training stage. The noise level still decreases (through `$\eta_{\text{eff}} \propto t^{-1/4}$`), allowing the model to settle into a minimum, but the parameter norms don't drift.
+
+**Caveat:** The paper notes that this "rests on the assumption that parameter norms should not be scaled during long training runs, which is not guaranteed to be the optimal choice," and calls for a "systematic study" in future work. The empirical improvement of EPS over PS was observed but not exhaustively validated.
+
+---
+
+#### Maximal Update Parametrization (µP) with Tunable Multipliers
+
+The paper develops a customized µP strategy that differs from standard practice in several important ways.
+
+**Standard µP background.** Maximal Update Parametrization (Yang & Hu, 2022; Yang et al., 2022) provides scaling rules for how architectural hyperparameters (initialization variance, learning rate, weight decay) should change as model width `$d$` increases, to ensure "nontrivial feature learning" in the infinite-width limit. The standard prescription for a hidden layer under AdamW is:
+
+$$m = m_0 d^0, \quad \sigma = \sigma_0 d^{-1/2}, \quad \eta = \eta_0 d^{-1}, \quad \lambda = \lambda_0 d^1$$
+
+where `$m$` is a forward multiplier on `$y = m W x$`, `$\sigma$` is initialization standard deviation, `$\eta$` is learning rate, and `$\lambda$` is weight decay. The practical benefit is "µTransfer": optimal hyperparameters found at a small reference model size can be transferred to larger sizes using these scaling rules.
+
+**Relocating scaling to forward multipliers.** Falcon-H1 departs from standard µP in two ways:
+
+1. **Symmetry-based relocation:** There exists an exact symmetry transformation `$(m \to p^{-1}m, \sigma \to p\sigma, \eta \to p\eta, \lambda \to p^{-1}\lambda)$` that leaves both the forward pass and AdamW update unchanged (when `$\epsilon = 0$`). This means one degree of freedom is redundant—the scaling can be moved between learning rate/weight decay and forward multipliers. The paper moves all scaling from LR/WD to forward multipliers (e.g., the hidden layer scaling becomes `$m \propto d^1, \sigma \propto d^{-1/2}, \eta \propto d^0, \lambda \propto d^0$`). The practical motivation: "all the models in the series can be fine-tuned or continuously pretrained with the same learning rate and weight decay parameters."
+
+2. **Tuned multipliers at base model size rather than Standard Parametrization:** Standard µP uses no forward multipliers (`$m = 1$`) and global LR/WD at the base model size, then applies scaling rules for larger models. The paper argues this is contradictory: "it uses specialized HPs at target size `$d > d_{\text{ref}}$` that respect the limiting `$d \to \infty$` feature learning scaling, while using global HPs for the base model as if `$d_{\text{ref}}$` were tiny." Since the base model (`$d_{\text{ref}} = 1280$`) is only 4× smaller than the largest model (`$d = 5120$`), the paper instead individually tunes all layer-specific multipliers at the base size, then scales them via width-dependent µP rules for larger models.
+
+**The multiplier system.** Table 7 defines the complete set of µP multipliers for the Falcon-H1 architecture, organized by where they appear in the forward pass:
+
+- **Forward multipliers** (12 total): `$m_{\text{emb}}$` on token embeddings, `$m_{\text{unemb}}$` on LM head, `$m_{\text{MLP}}$` on MLP output, `$m_{\text{attn}}$` on attention output, `$m_{\text{SSM}}$` on SSM output, `$m_{\text{gate}}$` on MLP gate activation, `$m_{\text{key}}$` on attention key projection, `$m_x, m_z, m_B, m_C, m_{dt}$` on various SSM internal projections.
+- **Matrix ELR multipliers** (7 total): one per matrix layer type (embedding, unembedding, input projection, output projection, MLP up, gate, down), controlling effective learning rate relative to global LR.
+- **Matrix EWD multipliers** (7 total): same layers, controlling effective weight decay.
+- **Vector LR multipliers** (7 total): for bias-like and vector parameters (RMS norms `$\mathcal{N}^f, \mathcal{N}^{\text{Mixer}}, \mathcal{N}^{\text{MLP}}, \mathcal{N}^{\text{SSM}}$`, conv1d weights/biases, `$b_{dt}$`, `$A_{\log}$`, `$D$`).
+
+**The minimal set principle.** The paper is careful to avoid redundant multipliers. For example: "having both key and query multipliers `$K \to m_K K$` and `$Q \to m_Q Q$` is redundant because only their scalar product `$Q^\top K \to m_Q m_K Q^\top K$` is used in attention and having only `$m_K$` is sufficient to cover all possible scalings of attention scores." This reduces the tuning space from potentially 50+ parameters to exactly 35.
+
+**Tuning procedure (Appendix C).** The multipliers are tuned jointly on a 1.2B proxy model over multiple stages:
+
+1. Start with an initial multiplier set `$\mathcal{M}_n$` and measure baseline loss `$\mathcal{L}_n$`.
+2. For each multiplier `$i$` in turn, run two micro-sweeps: one with the multiplier increased by factor `$p$` (loss `$\mathcal{L}^{(i)}_{n,+}$`), one with it decreased by factor `$p^{-1}$` (loss `$\mathcal{L}^{(i)}_{n,-}$`). The scaling factor `$p$` starts at 2 for coarse exploration and reduces to `$\sqrt{2}$` for fine-tuning.
+3. Manually inspect `$(\mathcal{L}^{(i)}_{n,-}, \mathcal{L}_n, \mathcal{L}^{(i)}_{n,+})$` to pick the next stage's multiplier value, usually as the argmin but sometimes interpolating for better exploration.
+4. Construct `$\mathcal{M}_{n+1}$` and repeat.
+
+**Why manual inspection rather than automated optimization:** The paper notes that the manual approach was "important to build an intuition behind the roles of different multipliers in the training process, as we were also checking the whole training curve for spikes, the noise level, and any possible anomalies in the training." The procedure is coordinate-ascent style—optimize one multiplier at a time—which converges to a local optimum but may miss interactions between multipliers.
+
+**Sensitivity analysis (Figure 12).** After tuning, the paper fits a quadratic `$\mathcal{L}(m) \approx \frac{a}{2}(\log m - \log m^*)^2 + \mathcal{L}^*$` around the optimum for each multiplier, extracting the sensitivity `$a = \frac{\partial^2}{(\partial \log m)^2} \mathcal{L}$`. The sensitivities reveal a clear hierarchy:
+- **ELR multipliers** have the strongest impact on loss.
+- **Forward multipliers** have the next strongest impact.
+- **EWD multipliers** have weaker but non-negligible impact.
+- **Vector LR multipliers** have the weakest individual impact, but their optimal values differ substantially from matrix-layer values, so separating them still yields "significant performance improvement."
+
+**ELR/EWD parametrization for matrix layers.** For matrix layers, instead of tuning raw LR and WD multipliers `$(\eta^{(j)}/\eta, \lambda^{(j)}/\lambda)$` separately (which are strongly coupled via the effective quantities), the paper directly tunes ELR and EWD multipliers. The ELR micro-sweep changes both LR and WD proportionally: `$(\eta^{(j)}, \lambda^{(j)}) \to (p \eta^{(j)}, p \lambda^{(j)})$`. The EWD micro-sweep changes them inversely: `$(\eta^{(j)}, \lambda^{(j)}) \to (p \eta^{(j)}, p^{-1} \lambda^{(j)})$`. This exploits the log-scale orthogonality property to make the coordinate-aligned sweeps more independent.
+
+**Base model values (Table 8).** The tuned multipliers for the 1.2B base model (`$L = 66, d = 1280$`) show substantial variation across layers—for example, the embedding forward multiplier is `$2^{2.5} \approx 5.66$` while the unembedding multiplier is `$2^{-5} = 1/32$`. This variation is what the tuning captures: different layers benefit from different activation scales, and global hyperparameters (the Standard Parametrization) would miss this heterogeneity.
+
+**Transfer to larger models.** Once tuned at the base model, multipliers are transferred via width-dependent µP scaling rules (Table 7, rightmost column). For example, the embedding multiplier scales as `$m_{\text{emb}} \propto 1$` (constant), while the unembedding multiplier scales as `$m_{\text{unemb}} \propto d^{-1}$` (decreases with width). The paper did not use depth-dependent µP scaling "for simplicity and due to time constraints" but notes it "can be directly applied following recent work."
+
+---
+
+#### Batch Scaling, Rampup, and Warmup
+
+Several smaller training dynamics innovations round out the pretraining recipe.
+
+**Batch scaling.** When batch size changes (e.g., during rampup or when adjusting for hardware configuration), the learning rate is scaled as:
+
+$$\eta(b) = \eta_{\text{ref}} \sqrt{\frac{b}{b_{\text{ref}}}}$$
+
+**Why square-root:** This follows the scaling appropriate for Adam (Malladi et al., 2022), which uses adaptive per-parameter learning rates. The paper notes that this "better preserves optimal learning than no batch scaling at all" but acknowledges that "more careful studies are required for robust transfer of HPs with batch size, taking into account, for example, scaling of parameter norms with batch size."
+
+**Rampup.** Batch size is linearly increased from a small initial value to the target over approximately 50 GT of training (duration varies by model size). Three strategies were compared (Figure 13):
+- No rampup: worst loss, amplifies training instabilities.
+- Rampup without batch scaling: produces loss jumps at batch size increase points (attributed to decreased noise level).
+- Rampup with batch scaling: initially worse than no-batch-scaling after the rampup period (Figure 13, top right), but eventually outperforms it at longer training durations (Figure 13, bottom left).
+
+**Why rampup with batch scaling wins in the long run:** The paper speculates that "batch scaling during rampup directs the training trajectory to a better region of parameter space, and the model continues to learn in this region for a very long time." This is an intriguing finding—the initial trajectory shape matters for final convergence even when later training uses identical hyperparameters.
+
+**Warmup.** Learning rate is linearly increased from zero to the target value over a short initial period. The paper swept warmup durations from 0.025 GT to 2 GT (Figure 13, bottom right) and found that the optimal duration has a "long-lasting impact on the loss," with "a relatively short optimal duration of 0.1 GT." At early training stages (`$\lesssim 16$` GT), shorter warmup appears better simply because more high-LR steps occurred early; but at later stages, the 0.1 GT warmup converges to the best final loss. The interpretation is that the initial learning rate trajectory—like the rampup trajectory—influences which basin of attraction the optimizer settles into, with effects persisting for the remainder of training.
+
+---
+
+#### Distributed Training Infrastructure
+
+The Falcon-H1 series was trained on 4,096 NVIDIA H100 GPUs using a custom framework ("Mambatron") that extends standard 3D parallelism (data, tensor, pipeline) with two additional dimensions: Mixer Parallelism and Context Parallelism.
+
+**5D parallelism configurations (Table 9).** Each model size uses a specific combination of parallelism dimensions. For example, the 34B model at 256K context length uses DP = 24, TP = 4, PP = 2, CP = 16, and MP enabled. The total parallelism product is `$24 \times 4 \times 2 \times 16 = 3072$` GPUs for this configuration.
+
+**Data parallelism scaling dynamics (Section 3.3.1).** The paper models throughput as:
+
+$$\text{Throughput}(N_{\text{DP}}) \approx \frac{B_g}{\frac{B_g}{N_{\text{DP}} B_\mu} \cdot t_\mu + t_{\text{sync}}(N_{\text{DP}})}$$
+
+where `$B_g$` is global batch size, `$B_\mu$` is micro-batch size per GPU, `$t_\mu$` is micro-batch forward-backward time, and `$t_{\text{sync}}$` is gradient all-reduce latency. As `$N_{\text{DP}}$` increases with fixed `$B_g$`, the computation term shrinks but the communication term `$t_{\text{sync}}$` doesn't, causing throughput to plateau. The paper's strategy: "cap the DP size at a value where communication overhead remains manageable, and increase the global batch size only up to a critical point that balances high throughput with stable model convergence."
+
+**Mixer Parallelism (MP) (Section 3.3.2).** This is a novel parallelism dimension specifically for hybrid architectures. Within a tensor parallelism group of size 4, two GPUs are dedicated to Mamba operations and two to attention operations. The computations run concurrently, followed by an all-reduce to synchronize outputs.
+
+Two variants exist (Figure 14):
+- **Naive MP:** Fixed assignment—certain GPUs always handle attention, others always handle Mamba.
+- **Interleaved MP:** Alternates assignments per layer—GPU 0 does attention on layer 1 and Mamba on layer 2, achieving better load balancing.
+
+**Training throughput (Table 10):** On a 2B model with DP = 4, TP = 4, sequence length 2,048: baseline (no MP) = 0.2339 Gtok/hr, naive MP = 0.2640 (1.13× speedup), interleaved MP = 0.3343 (1.43× speedup).
+
+**Inference throughput (Figure 15):** MP significantly accelerates inference at small batch sizes and short generated sequences but "this advantage diminishes and reverses for larger batches and longer generation sequences." This is consistent across model sizes. The implementation is available in a custom vLLM fork.
+
+**Context Parallelism (CP) (Section 3.3.3).** For long sequences, each sequence is sharded across `$J$` GPUs (the CP world), with each GPU holding a contiguous chunk of length `$Q$`.
+
+- **Attention chunks:** Use RingAttention (Liu et al., 2023a)—each rank holds its local Q/K/V slice and circulates K/V tensors around the ring, computing attention scores without ever materializing the full sequence on one GPU. Memory is `$\mathcal{O}(Q)$` per rank rather than `$\mathcal{O}(T)$` for full length `$T$`.
+
+- **SSM chunks:** Use chunk-wise state-passing (Section 8.2 of Mamba-2, Dao & Gu, 2024). Rank `$j$` waits for the final hidden state `$h_j$` from rank `$j-1$`, runs the SSM kernel on its chunk using that state as initialization, produces output tokens `$y_j$` and the next state `$h_{j+1}$`, and sends `$h_{j+1}$` to rank `$j+1$`. The only communication is a single tensor of shape `$[B \times H \times d_{\text{state}}]$` per boundary. In the 34B model, `$d_{\text{state}} = 256$`, so this is approximately `$32 \times 32 \times 256 \times 2 \text{ bytes} \approx 0.5$` MB per boundary—negligible bandwidth.
+
+- **CausalConv1D chunks:** Each rank receives the last `$k-1$` timesteps from its left neighbor, performs local depthwise convolution, and forwards the `$k-1$` boundary activations to the next rank. With kernel size `$k = 4$`, this is 3 timesteps of context per head.
+
+**Integration with Hugging Face and ecosystem (Section 6).** All models are released on Hugging Face Hub with integration into transformers, PEFT, and TRL. Fine-tuning support includes Llama-Factory, Axolotl, Unsloth, and OUMI. Local deployment supports llama.cpp, LM Studio, Ollama, and Apple MLX. Quantization support is provided through AutoGPTQ. The paper notes that over 30 model checkpoints are available, including base, instruct, and quantized variants.
+
+---
+
+#### Post-Training: SFT and DPO
+
+The post-training pipeline is relatively standard but includes several empirical findings that influenced the final model quality.
+
+**SFT data strategy (Section 4.2).** The SFT data mixture emphasizes mathematical problem-solving (inspired by OpenMathInstruct-2 and AceMath), scientific problem-solving, conversational ability, and instruction following. The data comes from both open datasets (OpenMathInstruct-2, Tulu3, Smoltalk, hermes-function-calling-v1) and proprietary sources. The paper finds that "data quality and structure have a much greater impact on post-training performance than data volume alone."
+
+**SFT hyperparameters (Table 11).** The SFT uses:
+- Two stages: 16K context for 3 GT, then 128K context for 3 GT (except 0.5B, which skips the 128K stage).
+- WSD schedule: 50 MT warmup, 1.5 GT stable, 1.5 GT exponential decay reducing LR by 8× to `$\eta_{\text{min}} = \eta/8$`.
+- Base learning rate `$\eta = 128 \times 10^{-6}$`, batch size 1 MT, AdamW with `$\beta_1 = 0.9, \beta_2 = 0.95$`, no weight decay.
+- The long-context stage uses constant learning rate `$\eta_{\text{min}}$`.
+- Different model sizes use different batch sizes (0.25 MT to 4 MT) with square-root LR scaling.
+
+**Data repetition:** The most repeated source (Tulu3) was repeated ~3.5 epochs over the SFT duration; other sources were repeated fewer than 2 epochs.
+
+**DPO (Section 4.3).** The DPO stage uses:
+- Data mixture built on Tulu3, supplemented with other open and proprietary preference datasets.
+- Standard DPO loss (`dpo_norm`).
+- Hyperparameters (Table 12): batch size 256, LR = `$5 \times 10^{-6}$`, linear decay to zero over 2 epochs with 0.1 warmup ratio, `$\beta = 5$`, AdamW with PyTorch defaults.
+- Critical stopping criterion finding: "stopping at approximately one epoch yielded superior results" compared to completing the full two-epoch schedule or using a linear scheduler terminating after one epoch. This was "empirically determined to be more effective."
+
+**Why the early stopping insight matters:** It suggests that DPO overfitting occurs relatively quickly on the preference data mixture used. Training for the full scheduled duration likely causes the model to overfit to preference patterns at the expense of general capabilities, a known risk in preference optimization that the paper addresses through empirical stopping rather than regularization.
+
+## 4. Key Insights and Innovations
+
+### Innovation 1: The Attention-to-SSM Ratio as a First-Class Architectural Degree of Freedom
+
+The dominant paradigm in hybrid SSM-attention models prior to this work—whether sequential (Jamba, Samba, Zamba) or parallel (Hymba)—treated the mix of attention and SSM as a fixed architectural commitment: attention layers and SSM layers were either interleaved in series or run in parallel **with identical dimensions**. The conceptual move that distinguishes Falcon-H1 is recognizing that **channel allocation between attention and SSM is a continuous design variable that can and should be optimized**, not a binary or fixed design choice.
+
+This matters because it reframes the hybrid architecture problem. Before, the question was "how many attention layers vs. SSM layers?"—a coarse-grained control that forces discrete trade-offs (e.g., 1 attention layer for every 7 SSM layers). After Falcon-H1, the question becomes "what fraction of total computation should attention handle, and what fraction should SSM handle, within every layer?" This is a fundamentally different optimization because it allows attention to be dialed down to the minimum needed for precision (1/8 of mixer channels, per Figure 2) while SSMs handle the rest—a configuration that sequential hybrids cannot express and that averaging-based parallel hybrids (Hymba) cannot express because averaging requires equal dimensions.
+
+The empirical finding that validates the significance of this reframing is the stark monotonic relationship in Figure 2 (left): **more attention channels consistently and substantially degrade performance**, with the worst configurations (6/8 attention) showing ~0.08 higher loss than the best (1/8 attention). This is not an incremental improvement—it's the difference between a workable model and one that's substantially worse, and it's a finding that would have been invisible under any prior hybrid design paradigm.
+
+The practical consequence is that Falcon-H1's 34B model uses only 4 KV heads for attention versus 32 heads for SSM (Table 1), yet the attention component is still valuable—pure Mamba models (Falcon-Mamba, Zuo et al., 2024) showed that attention-free architectures are viable, and Falcon-H1 demonstrates that adding back a minimal amount of attention provides a meaningful accuracy boost over pure SSM while preserving most of the efficiency. This establishes a **scaling principle for hybrid architectures**: attention should be treated as a precision supplement, not the primary sequence mixer, and its allocation should shrink relative to SSM as models scale.
+
+### Innovation 2: Systematic Demystification of the SSM Design Space
+
+When Falcon-H1 was developed, Mamba-2 had existed for less than a year (Dao & Gu, 2024), and many of its hyperparameters had never been systematically studied. The field's knowledge of SSM design was largely inherited from Transformer conventions (head dimensions of 64 or 128) or fixed by the limitations of reference implementations (conv1d kernel sizes restricted to {2, 3, 4} by the available CUDA kernel).
+
+The paper's contribution here is not any single finding but the **systematic ablation methodology and the specific empirical baselines it establishes**. Several of the results are important precisely because they validate existing defaults that had been chosen without evidence:
+
+- **Head dimension**: The finding that larger `d_head` improves both accuracy and throughput (Figure 4a) means that prior choices of 64 or 128 were well-motivated but for the wrong reasons—practitioners chose them because they matched Transformer conventions, not because anyone had measured the trade-off curve.
+- **Conv1d kernel size**: The re-implementation of the CUDA kernel to support sizes up to 32, and the confirmation that 4 is indeed optimal (Figure 4b), converts an untested assumption into an empirically grounded design rule—and simultaneously opens the door for future architectures where a different kernel size might be optimal.
+- **State dimension vs. groups**: The two-dimensional iso-parameter sweep (Figure 3) reveals that accuracy depends almost entirely on `d_state`, not `n_g`, leading to the design rule: "use the smallest feasible `n_g` and the largest possible `d_state`." This is a concrete, transferable insight that no prior work had established.
+
+Perhaps the most practically significant finding is the **throughput peak at `d_state = 16`** in Figure 3(b), which establishes that the accuracy-efficiency frontier for SSMs has a genuine trade-off rather than a monotonic relationship. This is the kind of finding that changes how practitioners design models: if you're building a latency-constrained system, you want `d_state ≈ 16`; if you're building a long-context model where throughput at extreme lengths matters less than retaining information, you want `d_state = 256` (as Falcon-H1 uses). This is an **engineering design principle** that emerges from systematic measurement rather than theoretical analysis.
+
+### Innovation 3: The Effective Learning Rate / Effective Weight Decay Formalism
+
+The relationship between learning rate and weight decay in AdamW is typically treated as an empirical tuning problem—you sweep both, pick the combination that works best, and move on. The Falcon-H1 paper makes a **conceptual contribution** by identifying that the quantities that actually control training dynamics are not the raw hyperparameters but composite quantities: `η_eff = √(ηλ)` controls noise level, and `λ_eff = √(λ/η)` controls parameter norms.
+
+This reframing has several consequences that go beyond Falcon-H1:
+
+**First, it explains a confusing empirical observation**—that changing weight decay has a similar effect on the loss curve as changing learning rate (Figure 11, left). Under the standard intuition (LR controls speed, WD controls regularization), this shouldn't happen. Under the effective formalism, it's natural: both affect `η_eff`, which controls noise level, and noise level is what primarily determines the loss gap before and after learning rate decay (Figure 11, right).
+
+**Second, it provides a principled basis for hyperparameter sweeps.** The "log-scale orthogonality" property—that `η_eff` and `λ_eff` gradients are orthogonal on a `(log η, log λ)` grid—means that sweeping along `η_eff` (changing both LR and WD proportionally) independently controls noise level, while sweeping along `λ_eff` (changing them inversely) independently controls parameter norms. This is not just a convenience; it means that hyperparameter tuning can be done with far fewer runs by exploiting this decomposition. The paper doesn't fully develop this into a tuning methodology, but the framework is there.
+
+**Third, it leads to the Effective Power Scheduler (EPS),** which scales both LR and WD as `t^{-1/4}` rather than the conventional PS which scales only LR as `t^{-1/2}` while keeping WD constant. The motivation is clear: if parameter norms should stay at their optimal level throughout training (controlled by `λ_eff`), then `λ_eff` should remain constant, which requires scaling both LR and WD at the same rate. The PS approach of scaling only LR causes `λ_eff` to drift as `t^{1/4}`, systematically changing parameter norms over the course of training. This is a **diagnostic insight**—it identifies a previously unrecognized way that standard training schedules may be suboptimal—even if the empirical validation of EPS over PS is preliminary.
+
+The toy model in Appendix B provides theoretical grounding: under the assumption that gradient noise dominates the dynamics (validated by the `||W|| ∝ √(η/λ)` scaling observed empirically), the second moment of parameters converges to a form where `η/λ` is the controlling ratio. The fact that this simple stochastic model captures the behavior of a billion-parameter training run is itself noteworthy—it suggests that the dynamics of large-scale AdamW training may be simpler and more universal than commonly assumed.
+
+### Innovation 4: Diagnosis and Mitigation of SSM Training Instability via the `dt` Parameter
+
+Loss spikes during SSM training had been observed in prior work (Falcon2, Falcon-Mamba, Jamba, YuLan) but attributed to various causes—depth, exploding residuals, layer-norm statistics, extreme attention scores—without a clear mechanistic understanding or reliable fix. The standard response was batch-skipping (dropping outlier batches) or lowering the learning rate, both of which the paper identifies as inadequate.
+
+The Falcon-H1 team's contribution is **the first mechanistic diagnosis of SSM training instability**, identifying the `dt` parameter as the root cause and providing both a theoretical explanation and a practical solution.
+
+The diagnosis is elegant: the `dt` parameter controls both writing intensity (`B_t dt_t x_t`) and forgetting intensity (`A_t = exp(-e^{A_log} dt_t)`) in a single scalar. When the model needs to both amplify the current token's contribution and preserve long-range context, gradient signals pull in opposite directions—increase `dt` for writing, decrease `dt` for retention—and because these signals arrive at different times and scales, `dt` overshoots and over-corrects, producing characteristic loss spikes.
+
+What makes this contribution significant beyond Falcon-H1 is that it **identifies width (number of SSM heads), not depth, as the primary trigger**—the wide model spiked while the deep model trained smoothly, contrary to prior work that blamed depth. This is a falsifiable claim that can guide future SSM architecture design: if you're seeing training instability, look at the number of heads and the `dt` dynamics before investigating other causes.
+
+The solution—attenuating `dt` by a constant factor `0 < α < 1`—is simple enough to be immediately adopted by other SSM-based models, and the paper's empirical demonstration that hard clipping also works (confirming the mechanism) while soft attenuation preserves expressiveness provides a clear prescription. This is a rare case where a practical training obstacle is **both correctly diagnosed and cleanly resolved**, advancing the field's ability to train SSM-based models at scale.
+
+### Innovation 5: Rewriting the Data Playbook—Quality Density Over Volume
+
+The Falcon-H1 data strategy represents a fundamental departure from the prevailing "more tokens is better" philosophy of LLM pretraining. The paper makes an **empirical argument, validated at scale**, that the composition and quality of training data matters far more than raw volume, and that conventional wisdom about web data, memorization, and curriculum learning needs substantial revision.
+
+The headline finding—that only ~15% of training tokens come from raw web data, with over 50% coming from rewritten/augmented sources (Table 6)—is not just an implementation detail. It's a **refutation of the implicit assumption** underlying much of the scaling laws literature: that web-scale data, despite its noise, provides sufficient knowledge diversity that curating beyond basic filtering isn't worth the effort. Falcon-H1's results suggest the opposite: aggressively rewriting raw data to increase knowledge density, combined with heavy up-sampling of curated sources, can substitute for 5–10× more tokens of web-heavy data.
+
+Three subsidiary findings support this reframing:
+
+- **The memorization window experiment (Figure 9)** provides direct evidence that multi-epoch training on high-quality data is safe at large scale—the model "forgets" specific examples after approximately 20 GT of intervening training. This challenges the single-epoch orthodoxy that has been a constraint on data strategy in prior work.
+
+- **The anti-curriculum finding**—that introducing complex data from the beginning outperforms reserving it for later stages—runs counter to the intuitive curriculum learning approach used in many training pipelines. The hypothesis that early exposure to difficulty helps the model develop better internal features is speculative but testable and has practical implications for how data should be scheduled.
+
+- **The rewritten data approach itself**—using a fleet of models to enhance writing style, increase knowledge density, filter redundant tokens, and apply iterative quality control—is a **methodological contribution** that other teams can adopt. The paper shows that this approach works not just for small-scale experiments but for producing a 34B model that competes with 70B+ alternatives.
+
+The significance of this innovation is that it **shifts the bottleneck from data quantity to data engineering sophistication**. If Falcon-H1's results generalize, the competitive advantage in LLM development may increasingly come from how well an organization can curate, rewrite, and schedule its training data rather than how many tokens it can scrape. This is a strategic insight for the field, not just a recipe for Falcon-H1.
+
+## 5. Experimental Analysis
+
+### Evaluation Methodology
+
+- **Dataset.** The primary evaluation is conducted across a broad suite of benchmarks spanning general reasoning, mathematics, science, code, instruction following, and multilingual tasks. The benchmarks are drawn from established open-source evaluation frameworks: for base models, the core set includes BBH, ARC-C, HellaSwag, Winogrande, MMLU, GSM8k, MATH lvl5, GPQA, MMLU-Pro, MMLU-stem, HumanEval, HumanEval+, MBPP, and MBPP+, plus multilingual extensions (Multi-Hellaswag, MGSM, Multi-MMLU); for instruction-tuned models, the set is expanded to include TruthfulQA, MATH-500, AMC-23, AIME-24, AIME-25, GPQA_Diamond, LiveCodeBench, CRUXEval, IFEval, Alpaca-Eval, MTBench, LiveBench, and the HELMET long-context suite (Table 13 and Table 19). The pretraining data itself comprises a corpus of over 20 Teratokens drawn from web data (FineWeb, further filtered), curated corpora (Wikipedia, arXiv, books, forums), code (67 languages), math, and synthetic data (Section 3.1.1).
+
+- **Base model(s).** The Falcon-H1 family includes base and instruction-tuned models at 0.5B, 1.5B, 1.5B-deep, 3B, 7B, and 34B parameter scales, all featuring the novel parallel hybrid architecture combining Transformer attention and Mamba-2 SSM (Table 1). The models are chosen to demonstrate the scaling behavior of the hybrid design from edge-device sizes to datacenter-scale deployments. The specific architectural configurations—layers, hidden dimension, head counts, state dimension—are detailed in Table 1, with the central design choice being the semi-parallel SA_M block arrangement and an attention-to-SSM channel ratio heavily favoring SSMs (roughly 2:1:5 for SSM:attention:MLP).
+
+- **Metrics.** For base models, evaluations use log-probability-based metrics (accuracy for multiple-choice tasks like MMLU, BBH, ARC-C, HellaSwag) and generation-based metrics (strict match for GSM8k, pass@1 for code benchmarks, math-verify for MATH lvl5). For instruction-tuned models, metrics expand to include average accuracy over multiple repetitions for competition math (AMC-23, AIME-24, AIME-25), win rates (Alpaca-Eval LC), and task-specific scores (IFEval instruction/prompt average, MTBench turn average, LiveBench global average, HELMET RAG/Recall/longQA scores). Multilingual evaluations use the same metrics applied to non-English language subsets.
+
+- **Baselines.** The paper benchmarks against a comprehensive set of leading open-weight models at comparable scales. For the 0.5B–1.6B class, baselines include Qwen3-0.6B, Qwen2.5-0.5B, Gemma3-1B, Llama3.2-1.2B, and Falcon3-1.6B. For the 1.5B–2B class: Qwen3-1.7B, Qwen2.5-1.5B, Gemma3-1B, Llama3.2-1.2B, Falcon3-1.6B. For 3B–4B: Qwen3-4B, Qwen2.5-3B, Gemma3-4B, Llama3.2-3B, Falcon3-3B. For 7B–12B: Qwen3-8B, Qwen2.5-7B, Gemma3-12B, Llama3.1-8B, Falcon3-7B, Falcon3-10B. For 34B–72B: Qwen3-32B, Qwen2.5-72B, Qwen2.5-32B, Gemma3-27B, Llama3.3-70B, Llama3.1-70B, Llama4-Scout-17B (MoE, 109B total). For the Qwen3 series, "thinking mode" was disabled on all benchmarks to align the inference process.
+
+- **Generation budget / compute accounting.** The paper does not use a unified "generation budget" for test-time compute as in the reference example; instead, the key efficiency metric is total training tokens consumed (Table 1: 2.5T for 0.5B/3B, 3T for 1.5B variants, ~12T for 7B, ~18T for 34B) compared against competitor models trained on substantially larger corpora (e.g., Qwen3 reportedly trained on 36T tokens). For inference efficiency, throughput is measured in generated tokens per second on H100 GPUs using vLLM, with separate prefill throughput (varying input length from 2K to 262K tokens at fixed output of 2,048 tokens, batch size 32) and generation throughput (fixed input of 4,096 tokens, varying output length from 2K to 262K tokens, batch size 32), compared against Qwen2.5-32B (Section 5.3, Figure 16).
+
+- **Cross-validation / statistical protocol.** The paper does not employ cross-validation in the evaluation phase. All evaluations are conducted on standard benchmark test sets using fixed settings (few-shot prompting, specific framework versions pinned to commit hashes) within a standardized Docker environment. For the math benchmarks within the evalchemy framework, 16 generation turns are used and results are post-processed with Math-Verify to ensure consistent answer verification. Reproducibility is addressed by pinning framework versions (e.g., evalchemy commit f735e77) and using identical system prompts across all models.
+
+### Main Quantitative Results
+
+#### Base Model Performance at the 0.5B Scale
+
+The Falcon-H1-0.5B-Base model establishes a new performance baseline for sub-1B parameter models, leading on every Math, Science, and Code benchmark against comparably sized competitors (Table 14).
+
+- On GSM8k, Falcon-H1-0.5B achieves 60.20% versus 50.04% for Qwen3-0.6B (the next best) and 34.80% for Qwen2.5-0.5B—a 10+ percentage point gap that is particularly notable at this scale where absolute scores on math reasoning are typically low.
+- On MATH lvl5, the model scores 15.18% versus 9.29% for Qwen3-0.6B and 3.40% for Falcon3-1.6B, a margin of 5.89 points over the closest competitor.
+- On BBH, it achieves 40.22% (next best: Qwen3-0.6B at 36.07%).
+- On MMLU, it reaches 55.04% compared to 52.64% for Qwen3-0.6B and 45.14% for the 1.6B Falcon3—outperforming a model over 3× its size.
+- On HumanEval, it scores 35.98% pass@1 whereas Qwen3-0.6B achieves 31.71% and Falcon3-1.6B achieves only 10.37%.
+- On GPQA, it leads with 29.70% (Qwen3-0.6B: 29.11%, Qwen2.5-0.5B: 27.94%).
+
+The model is not uniformly dominant: on commonsense benchmarks, larger models hold an advantage. HellaSwag scores 56.30% versus 62.94% for Gemma3-1B and 65.73% for Llama3.2-1.2B. Winogrande scores 59.43% versus 62.59% for Gemma3-1B and 62.75% for Llama3.2-1.2B. This pattern—deep reasoning advantage, commonsense disadvantage relative to larger models—is consistent with a design that prioritizes multi-step inference capability over broad world knowledge at this scale.
+
+#### Base Model Performance at the 1.5B Scale: The Deep Architecture Advantage
+
+The comparison between Falcon-H1-1.5B-Base (24 layers, `d_model = 2048`) and Falcon-H1-1.5B-Deep-Base (66 layers, `d_model = 1280`) in Table 15 quantifies the benefit of depth under a fixed parameter budget, with the deep variant establishing "clear state-of-the-art" in its class and performance "often rivaling that of current leading 7B to 10B models."
+
+The deep variant outperforms the shallow one on every benchmark category:
+- General: BBH 52.37% vs. 46.57% (+5.80 points), MMLU 66.29% vs. 61.81% (+4.48).
+- Math: GSM8k 68.69% vs. 52.01% (+16.68 points), MATH lvl5 24.77% vs. 20.39% (+4.38).
+- Science: MMLU-Pro 41.07% vs. 35.53% (+5.54), GPQA 32.80% vs. 29.11% (+3.69).
+- Code: HumanEval 52.44% vs. 50.00%, MBPP 70.90% vs. 65.08%.
+- Multilingual: Multi-Hellaswag 50.36 vs. 46.62, MGSM 60.33 vs. 50.80.
+
+Against the strongest competitor at this scale, Qwen3-1.7B, the deep variant leads on BBH (52.37% vs. 43.05%), MMLU (66.29% vs. 62.46%), MATH lvl5 (24.77% vs. 16.39%), GPQA (32.80% vs. 29.45%), MMLU-Pro (41.07% vs. 33.81%), MBPP (70.90% vs. 67.72%), and all multilingual benchmarks. Qwen3-1.7B leads on GSM8k (70.74% vs. 68.69%) and HumanEval (67.68% vs. 52.44%)—two specific tasks where it holds an edge despite its overall weaker profile.
+
+The paper explicitly notes that this level of performance makes the 1.5B-Deep model "competitive with current state-of-the-art 7B models, like Qwen3-8B, Qwen2.5-7B," a claim substantiated by cross-referencing Table 15 (1.5B-Deep) against Table 17 (7B-class models). For example, Falcon-H1-1.5B-Deep's MATH lvl5 score of 24.77% exceeds Qwen2.5-7B's 22.58% and approaches Falcon3-10B's 25.38%. MMLU of 66.29% approaches Llama3.1-8B's 65.17%.
+
+#### Base Model Performance at the 3B Scale
+
+Falcon-H1-3B, trained on only 2.5T tokens (an order of magnitude less than the 36T reportedly used for Qwen3-4B), achieves a "highly competitive performance profile" (Table 16). The model leads on MATH lvl5 (25.83% vs. 24.47% for Qwen3-4B) and MGSM (64.00%), demonstrating specialized strength in advanced mathematical reasoning and multilingual math despite its relative data disadvantage. On most other benchmarks, Qwen3-4B holds a lead: MMLU 72.92% vs. 68.39%, GSM8k 81.65% vs. 68.31%, HumanEval 74.39% vs. 59.15%, MMLU-Pro 46.18% vs. 40.58%.
+
+The paper notes that Falcon-H1-3B's "performance had not yet plateaued at the conclusion of training, suggesting that its already strong results represent a conservative estimate of its full potential." This is a key caveat: the headroom implies that with additional training tokens, the gap to Qwen3-4B might close substantially, but the paper does not test this empirically.
+
+#### Base Model Performance at the 7B Scale
+
+At the 7B–12B scale, Falcon-H1-7B "establishes a new state-of-the-art benchmark, particularly in complex, knowledge-intensive domains" (Table 17). The model leads on:
+- MMLU: 77.38% (next: Qwen3-8B 76.63%, Gemma3-12B 74.23%)
+- MATH lvl5: 34.67% (next: Qwen3-8B 28.85%, Qwen2.5-7B 22.58%)
+- GPQA: 36.58% (next: Qwen3-8B 35.65%, Gemma3-12B 34.56%)
+- MBPP: 78.57% / MBPP+: 67.20%
+- MGSM: 74.53% (next: Qwen2.5-7B 71.07%)
+- BBH: 60.61% (next: Falcon3-10B 59.30%, Qwen3-8B 58.44%)
+
+However, Qwen3-8B demonstrates a strong coding advantage on HumanEval (87.80% vs. 67.68%) and HumanEval+ (82.32% vs. 63.41%), and leads on GSM8k (83.02% vs. 73.46%). Gemma3-12B, despite having ~60% more parameters, only leads on commonsense tasks (HellaSwag 84.22% vs. 81.26%, Winogrande 79.79% vs. 79.01%).
+
+The paper interprets this distribution as demonstrating that "while larger models may show advantages in general commonsense tasks, the architectural and data choices of Falcon-H1-7B make it a superior model for high-value, reasoning-focused applications in science, math, and code." This is a nuanced claim—not that Falcon-H1-7B dominates uniformly, but that its strength profile aligns with complex reasoning tasks that are typically more valuable in deployment.
+
+#### Base Model Performance at the 34B Scale
+
+The flagship Falcon-H1-34B is evaluated against models up to the 70B scale and the Llama4-Scout-17B MoE (109B total parameters), with Qwen3-32B excluded because no base model checkpoint was released (Table 18). The model demonstrates "state-of-the-art, parameter-efficient performance" with leadership on:
+
+- BBH: 69.36% (Qwen2.5-72B: 67.77%, Qwen2.5-32B: 67.45%)
+- MATH lvl5: 40.71% (Qwen2.5-72B: 38.14%, Qwen2.5-32B: 36.40%)
+- GPQA: 42.70% (Qwen2.5-72B: 42.28%, Qwen2.5-32B: 39.68%)
+- All code benchmarks: HumanEval 70.12%, HumanEval+ 64.63%, MBPP 83.33%, MBPP+ 70.37%
+- MGSM: 82.40% (Qwen2.5-72B: 82.20%)
+
+On general knowledge tasks, the larger models hold advantages: Qwen2.5-72B leads MMLU (85.96% vs. 83.46%), ARC-C (72.44% vs. 71.25%), and HellaSwag (87.57% vs. 85.68%). Llama3.1-70B leads Winogrande (85.32% vs. 82.72%). The paper frames this as "increased scale can confer advantages on broad-knowledge tasks" while Falcon-H1-34B's specialized architecture and data strategy deliver "superior, parameter-efficient performance on complex reasoning and code generation tasks."
+
+#### Instruction-Tuned Model Performance: The 0.5B Scale
+
+Falcon-H1-0.5B-Instruct "sets a new state-of-the-art benchmark" at the sub-1B scale, with "a clear and consistent advantage in complex, reasoning-intensive domains" (Table 20). The headline numbers:
+- GSM8k: 68.39% (next best: Llama3.2-1.2B at 44.28%, Qwen3-0.6B at 42.61%)
+- MATH-500: 58.40% (next: Qwen3-0.6B at 46.00%, Gemma3-1B at 45.40%)
+- AMC-23: 33.13% (next: Qwen3-0.6B at 27.97%)
+- IFEval: 72.07% (next: Qwen3-0.6B at 62.16%, Gemma3-1B at 61.48%)
+- HumanEval: 51.83% (next: Qwen3-0.6B at 41.46%, Gemma3-1B at 40.85%)
+- MMLU-Pro: 31.03% (next: Falcon3-1.6B at 18.49%, Qwen2.5-0.5B at 18.73%)
+
+The model does not dominate uniformly: Gemma3-1B leads on MBPP (57.67% vs. 42.59%), LiveCodeBench (5.09% vs. 7.05%—the paper's score is lower here), Alpaca-Eval (17.87% vs. 10.79%), and LiveBench (18.79% vs. 20.80%—the paper trails). On commonsense tasks, larger models hold an advantage (HellaSwag: 51.93% vs. 58.53% for Falcon3-1.6B; ARC-C: 37.80% vs. 43.09% for Falcon3-1.6B).
+
+#### Instruction-Tuned Model Performance: The 1.5B Scale
+
+Both Falcon-H1-1.5B-Instruct variants establish dominance at their scale, with the deep variant "achieving comprehensive leadership across nearly all evaluated domains" and "reaching a level of performance competitive with current state-of-the-art 7B models" (Table 21).
+
+The deep variant leads across the board:
+- GSM8k: 82.34% (Qwen3-1.7B: 69.83%, Qwen2.5-1.5B: 57.47%)
+- MATH-500: 77.80% (Qwen3-1.7B: 73.00%, Qwen2.5-1.5B: 48.40%)
+- AMC-23: 56.56% (Qwen3-1.7B: 43.59%)
+- AIME-24: 14.37% (Qwen3-1.7B: 11.25%)
+- AIME-25: 11.04% (Qwen3-1.7B: 8.12%)
+- MMLU: 66.11% (Qwen3-1.7B: 57.04%)
+- HumanEval: 73.78% (Qwen3-1.7B: 67.68%)
+- CRUXEval: 52.32% (next: Falcon-H1-1.5B at 39.57%, Qwen2.5-1.5B at 34.76%)
+- IFEval: 83.50% (Qwen3-1.7B: 70.77%)
+- All multilingual benchmarks
+
+To substantiate the claim of 7B-class competitiveness: the deep variant's GSM8k score of 82.34% surpasses Qwen3-8B-Instruct's 78.92% (Table 23), and its MATH-500 score of 77.80% compares favorably with Falcon3-10B-Instruct's 68.60%. The shallower Falcon-H1-1.5B-Instruct consistently secures second-best scores across most benchmarks, often outperforming the larger Qwen3-1.7B.
+
+#### Instruction-Tuned Model Performance: The 3B Scale
+
+Falcon-H1-3B-Instruct "emerges as a top-performing and highly versatile model, demonstrating clear strengths in reasoning, science, and instruction following" (Table 22). The model leads on:
+- BBH: 53.69% (Qwen3-4B: 51.07%)
+- MMLU: 68.30% (Qwen3-4B: 67.01%)
+- GPQA: 33.89% (Qwen3-4B: 28.02%)
+- MMLU-Pro: 43.69% (Qwen3-4B: 29.75%)
+- MMLU-stem: 69.93% (Qwen3-4B: 67.46%)
+- IFEval: 85.05% (Qwen3-4B: 84.01%)
+- MTBench: 8.72 (Qwen3-4B: 8.45)
+- Multi-Hellaswag: 58.34 (Qwen3-4B: 43.12)
+- Multi-MMLU: 54.90 (Qwen3-4B: 50.70)
+
+Qwen3-4B leads on math benchmarks (MATH-500: 85.00% vs. 74.20%; AMC-23: 66.88% vs. 55.63%; AIME-24: 22.29% vs. 11.88%), and on several code and preference metrics (HumanEval, LiveCodeBench, CRUXEval, Alpaca-Eval, LiveBench). The paper characterizes this as a "balanced and powerful performance across many different domains," highlighting that Falcon-H1-3B's strengths lie in knowledge application (MMLU, GPQA, MMLU-Pro) and instruction execution (IFEval, MTBench) rather than raw mathematical competition performance.
+
+#### Instruction-Tuned Model Performance: The 7B Scale
+
+Falcon-H1-7B-Instruct "demonstrates a highly competitive and well-rounded performance profile, outperforming the larger Gemma3-12B model on a majority of benchmarks" (Table 23). The model leads on:
+- Science: GPQA 36.33% (Qwen3-8B: 25.84%), GPQA_Diamond 56.90% (Qwen3-8B: 43.10%), MMLU-Pro 51.75% (Qwen3-8B: 34.64%), MMLU-stem 77.61% (Qwen3-8B: 66.89%)
+- General reasoning: MMLU 76.83% (Qwen3-8B: 71.56%), ARC-C 59.98% (Qwen3-8B: 42.06%)
+- Code: HumanEval 86.59% (Qwen3-8B: 84.75%), HumanEval+ 81.10% (Qwen3-8B: 79.27%)
+- Multilingual: all three benchmarks
+- IFEval: 85.35% (Qwen3-8B: 83.43%)
+
+Qwen3-8B leads on several math benchmarks (MATH-500: 83.80% vs. 73.40%, AMC-23: 70.78% vs. 56.72%, AIME-24: 28.33% vs. 16.04%), Code benchmarks (MBPP, LiveCodeBench, CRUXEval), and preference metrics (Alpaca-Eval: 46.13% vs. 40.23%, LiveBench: 56.19% vs. 45.74%). Gemma3-12B leads on MATH-500 (86.20%) and certain code tasks.
+
+#### Instruction-Tuned Model Performance: The 34B Scale
+
+Falcon-H1-34B-Instruct "demonstrates that exceptional performance does not require massive parameter counts," consistently competing with and often outperforming models twice its size (Table 24). The model leads on:
+- Science: GPQA 41.53% (Llama3.3-70B: 31.99%, Qwen3-32B: 30.20%), MMLU-stem 83.57% (Qwen3-32B: 81.64%), MMLU-Pro 58.73% (Llama3.3-70B: 53.29%)
+- HellaSwag: 81.94% (Qwen3-32B: 68.89%, Qwen2.5-72B: 68.79%)
+- MTBench: 9.20 (Qwen2.5-72B: 9.16, Qwen3-32B: 9.05)
+- Multilingual: Multi-Hellaswag 74.55 (Qwen3-32B: 58.39), Multi-MMLU 77.76 (Qwen2.5-72B: 78.26—the paper is second)
+
+Larger models hold substantial advantages in mathematics: Gemma3-27B leads MATH-500 at 90.00% (Falcon-H1-34B: 83.80%), Llama3.3-70B leads GSM8k at 93.71% (Falcon-H1-34B: 83.62%), and Llama4-Scout-17B leads AIME-24 at 27.92% (Falcon-H1-34B: 23.75%). On code, Qwen models have the edge: Qwen3-32B leads HumanEval (90.85% vs. 87.20%), Qwen2.5-72B leads MBPP (89.68% vs. 83.86%). The paper frames this as Falcon-H1-34B being "a powerful and cost-effective choice for knowledge-intensive applications" while acknowledging that larger Transformer models "leverage their scale to gain an edge in mathematics and some coding benchmarks."
+
+#### Long-Context Performance (HELMET)
+
+The HELMET evaluation (Table 25, with per-task breakdowns in Appendix D.3, Tables 36–40) evaluates Falcon-H1-34B-Instruct against Qwen2.5-72B-Instruct, Qwen3-32B, and Llama-3.3-70B-Instruct at five sequence lengths from 8K to 131K tokens.
+
+The key finding is Falcon-H1-34B's leadership on RAG at the longest context:
+- HELMET-RAG at 131K: Falcon-H1-34B scores 62.21, versus 57.08 for Qwen3-32B, 55.38 for Llama-3.3-70B, and 42.33 for Qwen2.5-72B—a substantial margin over all competitors despite being the smallest model tested at this scale.
+
+At shorter contexts, Falcon-H1-34B is competitive but not dominant on RAG: at 8K it scores 72.17 (Llama-3.3-70B: 74.29), at 16K 81.46 (Llama-3.3-70B: 82.33), at 32K 67.96 (Llama-3.3-70B: 70.21).
+
+On HELMET-Recall (needle-in-a-haystack tasks), Falcon-H1-34B shows a clear drop-off at extreme lengths:
+- At 8K–16K: perfect 100.00 across all models.
+- At 32K: 97.50 (worst: Qwen2.5-72B at 98.38; others at 99.63–100.00).
+- At 65K: 80.69 (Qwen3-32B: 96.50, Llama-3.3-70B: 98.81, Qwen2.5-72B: 71.75).
+- At 131K: 56.63 (Qwen3-32B: 86.13, Llama-3.3-70B: 82.19, Qwen2.5-72B: 38.81).
+
+On HELMET-longQA, Falcon-H1-34B is consistently behind Llama-3.3-70B and Qwen3-32B at all sequence lengths above 8K, with the gap widening at extreme contexts: at 131K, Falcon-H1-34B scores 33.81 versus 53.52 for Qwen3-32B and 46.06 for Llama-3.3-70B.
+
+The paper attributes the recall and longQA gaps "not to architectural limitations but to our training data composition, which indicates substantial room for improvement with more curated long-context data." This is a self-aware caveat: the architecture supports 256K context efficiently (as demonstrated by the throughput measurements), but the model's actual performance at those lengths on certain tasks is limited by the training data rather than the architecture.
+
+#### Inference Efficiency Comparison
+
+Figure 16 compares Falcon-H1-34B against Qwen2.5-32B on prefill and generation throughput across sequence lengths from 2K to 262K tokens, using vLLM with TP=2 on H100 GPUs.
+
+For prefill throughput (varying input length, fixed 2,048 output tokens, batch size 32):
+- At 2K context: Qwen2.5-32B has a marginal advantage (exact numbers not provided in text, visible only in Figure 16).
+- At 262K context: Falcon-H1-34B achieves approximately 4× higher prefill throughput than Qwen2.5-32B.
+
+For generation throughput (fixed 4,096 input tokens, varying output length, batch size 32):
+- At short generation lengths, Qwen2.5-32B has an advantage.
+- At 262K output tokens: Falcon-H1-34B achieves approximately 8× higher generation throughput.
+
+The crossover point where Falcon-H1-34B becomes more efficient occurs at moderate context lengths (visible in Figure 16 but not precisely specified in the text). The paper attributes Qwen2.5-32B's short-context advantage to "the highly mature optimizations of attention mechanisms within modern inference frameworks compared to current State-Space Model (SSM) implementations," framing this as a gap that "highlights a promising direction for future work" and inviting the community "to contribute to optimizing SSM implementations."
+
+### Ablation Studies and Robustness Checks
+
+The paper conducts an unusually large number of ablations, most of which are described in the Technical Approach section (Section 3) because they informed architectural decisions. Here we catalog the key ablations, their locations, and their findings:
+
+**Channel allocation (Figure 2, Section 2.1):** A full sweep over 21 `(α_S, α_A, α_M)` triplets on a 1.2B proxy model with 60 layers and `d = 1280`, measuring loss after 70 GT of training. Finding: attention fraction has the dominant effect, with `α_A = 1/8` (minimum) consistently best; SSM/MLP switching has a weaker effect. Block arrangement sweep (SAM vs. SA_M vs. S_A_M) finds SA_M optimal at `(α_S, α_A, α_M) = (2/8, 1/8, 5/8)` with flat loss near the optimum.
+
+**State dimension vs. number of groups (Figure 3, Section 2.2):** Two-dimensional grid search over `(d_state, n_g)` at five iso-parameter budgets `B = d_state × n_g ∈ {4, 16, 64, 256, 1024}` on proxy models at sequence length 2048. Finding: validation accuracy rises almost exclusively with larger `d_state`; `n_g` has marginal impact. Throughput peaks at `d_state = 16`. Final compromise choice: `(n_g, d_state) = (1, 256)` for most models, `(2, 256)` for 34B (due to TP/MP divisibility constraints).
+
+**Head dimension (Figure 4a, Section 2.2):** Sweep over `d_head ∈ {16, 64, 256}` keeping `d_ssm = d_head × n_h` constant. Finding: larger heads provide better accuracy (≤10^{-2} loss reduction) and better throughput (`d_head < 32` reduces GPU utilization, ≥64 maintains optimal efficiency). Final choice: 64 for small models, 128 for 7B/34B.
+
+**Depthwise causal Conv1d kernel size (Figure 4b, Section 2.2):** Sweep over `{2, 4, 8, 16, 32}` after re-implementing the CUDA kernel to support sizes beyond the default {2, 3, 4}. Finding: kernel size 4 minimizes validation loss; both smaller and larger filters degrade accuracy. Final choice: kernel_size = 4.
+
+**Chunk size (Section 2.2):** Analysis of SSD kernel chunk size `cs`. Finding: efficiency plateaus at `cs ∈ {128, 256}`; below 64 causes launch overhead, above 256 causes memory pressure from cross-chunk prefix-sum. Final choice: `cs = 256`.
+
+**RoPE base frequency (Figure 5a, Section 2.3.1):** Sweep from `b = 10^5` to `10^{17}` on 0.5B model, measuring loss at 20 GT and 450 GT. Finding: loss steeply depends on `b` below the training sequence length, flattens above. Optimum at `b ≈ 10^{11}`. Consistent ordering between early (20 GT) and late (450 GT) measurements.
+
+**Width–depth trade-off (Figure 5b, Section 2.3.2):** Sweep over five architecture shapes at fixed 1.5B parameters: W1536L87, W1792L63, W2048L48, W2304L37, W2560L30. Finding: greater depth yields consistently higher quality; the deepest variant (W1536L87) outperforms the widest (W2560L30) but with 25–30% training throughput reduction and comparable inference slowdown.
+
+**Tokenizer training data volume (Table 2, Section 2.4.1):** Sweep over corpus sizes (1GB, 14GB, 40GB) and vocabulary sizes (65k, 135k) for English tokenizer training. Finding: relationship is non-monotonic—for 65k vocabulary, 1GB corpus is best for fertility, 14GB best for bytes-per-token; for 135k vocabulary, 14GB best on both metrics. Conclusion: "simply increasing the training data volume does not guarantee a better tokenizer."
+
+**Tokenizer splitting regex (Table 3, Section 2.4.1):** Comparison of GPT-2, GPT-4o, and LLaMA-3 regex patterns at 131k vocabulary. Finding: differences are "relatively small" (fertility: 1.32–1.35, bytes-per-token: 8.70–9.10). Recommendation: adopt a well-established, up-to-date regex.
+
+**Digit and punctuation splitting (Figure 6, Section 2.4.1):** Three 1.8B Falcon-Mamba models trained on 280 GT with different splitting strategies (both digits and punctuation, digits only, neither). Finding: splitting both digits and punctuation consistently yields superior code generation performance (HumanEval). Qualitative analysis (Figure 7) shows punctuation splitting prevents incorrect merging in Chinese text.
+
+**LaTeX token injection (Figure 8, Section 2.4.1):** Two 1B Falcon-Mamba models trained on math-heavy data, one with LaTeX tokens injected into unused vocabulary slots. Finding: consistent improvement across four math benchmarks (MATH-Hard, GSM8k, math_qa, minerva-math) throughout training.
+
+**`dt` activation attenuation (Section 3.2.1):** Comparison of three interventions for SSM-induced loss spikes: clipping `A_log` (no effect), clipping negative `dt` (no effect), clipping positive `dt` (completely removes spikes). Soft alternative: constant attenuation factor `0 < α < 1` on `dt` activation, preserving expressiveness while preventing instability.
+
+**Effective LR/WD sweeps (Figure 10, Figure 11, Section 3.2.2):** Two-dimensional sweeps over `(η, λ)` on 300M and 1B pure Mamba-2 models. Finding: parameter norms scale as `||W|| ∝ √(η/λ)`; noise level (loss gap before/after LR decay) depends on `η_eff = √(ηλ)`; raw LR and WD sweeps produce qualitatively similar loss curves, supporting the effective parametrization.
+
+**Batch size rampup strategies (Figure 13, Section 3.2.4):** Comparison of no rampup, rampup without batch scaling, rampup with batch scaling on 1.5B model. Finding: rampup with batch scaling initially worse but eventually outperforms at longer durations; the paper speculates it "directs the training trajectory to a better region of parameter space."
+
+**Warmup duration (Figure 13, Section 3.2.4):** Sweep from 0.025 GT to 2 GT on 1.5B model. Finding: optimal warmup duration of 0.1 GT has long-lasting impact on final loss. Early-stage measurements favor shorter warmup (more high-LR steps early), but the ordering stabilizes by ~16 GT with 0.1 GT being optimal.
+
+**Mixer Parallelism variants (Table 10, Section 3.3.2):** Comparison of baseline (no MP), naive MP, and interleaved MP on 2B model. Finding: interleaved MP achieves 1.43× training throughput speedup over baseline, 1.27× over naive MP. Inference throughput evaluation (Figure 15) on 3B and 7B shows MP accelerates inference at small batch sizes and short sequences but advantage diminishes or reverses at large batch sizes and long sequences.
+
+**DPO stopping criterion (Section 4.3):** Comparison of stopping at 1 epoch versus completing the full 2-epoch schedule versus using a linear scheduler terminating at 1 epoch. Finding: stopping at approximately 1 epoch "yielded superior results" to either alternative, attributed to avoiding overfitting to preference patterns.
+
+### Critical Assessment
+
+**Claim: Falcon-H1 models "set new performance benchmarks through exceptional parameter and training efficiency."**
+
+The evidence for training efficiency is strong and well-quantified. Every results table (Tables 14–24) includes both the Falcon-H1 model and competitor models, with training token counts provided in Table 1 (2.5T–18T) and compared against known competitor budgets (Qwen3: ~36T, Llama 3: 15T+). The parameter-efficiency claim—that Falcon-H1 models match or outperform 2× larger models—is supported across multiple scales: the 0.5B competes with 1.6B models (Table 14), the 1.5B-Deep approaches 7B performance (Tables 15, 17), the 7B leads many benchmarks against 12B models (Table 17), and the 34B leads on key reasoning benchmarks against 70B+ models (Table 18).
+
+However, there is an important asymmetry in what the paper measures. The training efficiency claim is based on total tokens consumed, which is a valid metric. But the paper does not report the **computational cost of producing the rewritten and synthetic data** that constitutes 52–57% of the training corpus (Table 6). If generating those tokens required running a fleet of large models—the paper mentions using "a diverse set of internal and external open models across various scales"—then the effective training cost may be substantially higher than the 2.5T–18T token count suggests. This is not an error—the paper is transparent about using rewritten data—but it means the "training efficiency" claim is about tokens fed to the model being trained, not about total end-to-end computational cost including data preparation. A more complete accounting would amortize the data generation cost across training runs.
+
+Additionally, the paper notes that performance "had not yet plateaued at the conclusion of pretraining" for several models (3B, and implicitly others). This means the final checkpoints are not trained to convergence, so the reported numbers may underestimate the models' capabilities. This is framed as a positive ("significant headroom for future gains") but also means the comparison against fully-converged competitor models may slightly disadvantage Falcon-H1 at some scales. The paper does not quantify how much additional training would be needed to reach convergence or what the converged performance would be.
+
+**Claim: "Falcon-H1-34B-Instruct rivals or outperforms leading models up to the 70B scale... despite being approximately half the size."**
+
+This claim is supported by Table 24 but requires important qualifications that the paper largely provides. Falcon-H1-34B-Instruct does lead on Science benchmarks (GPQA: 41.53 vs. 31.99 for Llama-3.3-70B, MMLU-stem: 83.57 vs. 74.88 for Llama-3.3-70B, MMLU-Pro: 58.73 vs. 53.29 for Llama-3.3-70B), on HellaSwag (81.94 vs. 70.24 for Llama-3.3-70B), and on MTBench (9.20 vs. 8.98 for Llama-3.3-70B). It also leads on code generation against the same 70B model (HumanEval: 87.20 vs. 83.53).
+
+But it trails substantially on mathematics: Llama-3.3-70B leads GSM8k (93.71 vs. 83.62), Gemma3-27B leads MATH-500 (90.00 vs. 83.80), and both Llama-3.3-70B and Gemma3-27B lead on AIME benchmarks. On long-context recall and QA, the gap is large and systematic at 131K context (Recall: 56.63 vs. 82.19 for Llama-3.3-70B; longQA: 33.81 vs. 46.06 for Llama-3.3-70B). The paper is transparent about these gaps, attributing the long-context deficiencies to training data composition rather than architecture.
+
+The claim "rivals or outperforms" is accurate for the specific benchmarks where Falcon-H1-34B excels (science, reasoning, code, multilingual), but the model does not "rival or outperform" across the board. A practitioner choosing between Falcon-H1-34B and Llama-3.3-70B would face a genuine trade-off: better science and coding at half the parameter cost, but substantially worse mathematics and long-context recall. The paper's abstract language is somewhat stronger than what the full results justify—it would be more precise to say the model "outperforms on knowledge-intensive and reasoning tasks while being competitive on general knowledge and trailing on competition mathematics and long-context recall."
+
+**Claim: "Falcon-H1-1.5B-Deep achieves performance competitive with state-of-the-art 7B–10B models."**
+
+This claim is partially supported but is easier to verify for some benchmarks than others. Comparing Table 15 (1.5B-Deep-Base) against Table 17 (7B-class Base models): the deep variant's MATH lvl5 of 24.77% exceeds Qwen2.5-7B's 22.58%, its MMLU of 66.29% approaches Llama3.1-8B's 65.17%, and its GPQA of 32.80% exceeds Gemma3-12B's GPQA score (not directly shown but cross-referencing tables suggests competitiveness). However, the 1.5B-Deep's GSM8k of 68.69% is substantially below Qwen2.5-7B's 83.09% and Falcon3-7B's 76.95%.
+
+For instruction-tuned models (Table 21 vs. Table 23): the deep variant's GSM8k of 82.34% actually exceeds Qwen3-8B-Instruct's 78.92% and Qwen2.5-7B's 71.95%. Its MATH-500 of 77.80% exceeds Qwen2.5-7B's 75.80% and Falcon3-7B's 69.00%. Its HumanEval of 73.78% approaches Qwen2.5-7B's 82.32%. So the "competitive with 7B" claim holds for these specific reasoning benchmarks but not uniformly—the 7B models still lead on many tasks, and the 1.5B-Deep's advantage is concentrated in math and code at the instruction-tuned stage.
+
+A significant caveat is that the paper does not report instruction-tuned performance for the Qwen2.5-7B model on many benchmarks (Table 23 shows Qwen2.5-7B-Instruct numbers, but these are not directly compared to the 1.5B-Deep in the text). The cross-model comparison is complicated by the fact that instruction tuning quality varies independently of base model capability.
+
+**Claim: "Falcon-H1-0.5B delivers performance on par with typical 7B models from 2024."**
+
+This is the strongest claim in the paper and the least thoroughly supported. The comparison is between the 0.5B-Base (Table 14) and the 7B-class Base models (Table 17). The 0.5B scores 60.20% on GSM8k, 15.18% on MATH lvl5, 55.04% on MMLU, and 35.98% on HumanEval. A "typical 7B model from 2024" would be Qwen2.5-7B (Table 17): GSM8k 83.09%, MATH lvl5 22.58%, MMLU 74.17%, HumanEval 57.32%. The 0.5B actually exceeds the 7B on MATH lvl5 (15.18 vs. 22.58—no, the 7B is higher; both 15.18 and 22.58 are the wrong comparison; let me correct: 0.5B MATH lvl5 = 15.18, Qwen2.5-7B MATH lvl5 = 22.58, so the 7B is higher) and on HumanEval (35.98 vs. 57.32—again the 7B is higher). Actually, looking more carefully, the 0.5B is not competitive with Qwen2.5-7B on most benchmarks. It does beat Llama3.1-8B on MATH lvl5 (15.18 vs. 6.57) and approaches it on GPQA (29.70 vs. 31.46). But on GSM8k, MMLU, and code, the gap is large—the 0.5B is not "on par with typical 7B models" in any general sense.
+
+The paper likely intends a more specific comparison: the 0.5B-Instruct (Table 20) achieves GSM8k 68.39%, which is competitive with some 7B base models (Llama3.1-8B base: 49.51%, from Table 17) but not with instruction-tuned 7B models (Table 23 shows Qwen2.5-7B-Instruct at 71.95%, Qwen3-8B-Instruct at 78.92%). The 0.5B-Instruct's MATH-500 of 58.40% compares with Falcon3-7B-Instruct's 69.00% and Falcon3-10B-Instruct's 68.60%. The claim appears to be comparing the 0.5B instruct model against base models of larger size, which is a weaker comparison than the paper's language suggests. The phrase "on par with typical 7B models from 2024" is likely an overstatement when applied to the full evaluation suite.
+
+**Missing experiments and baselines:**
+
+- **No pure Mamba-2 baseline at the 7B or 34B scale.** The paper's predecessor Falcon-Mamba (Zuo et al., 2024) was a 7B attention-free model. A direct comparison between Falcon-H1-7B and Falcon-Mamba-7B on the same benchmarks would quantify the marginal benefit of adding 2 KV attention heads to an otherwise similar architecture. This comparison is absent.
+
+- **No pure Transformer baseline from the same training pipeline.** The paper compares against external Transformer models (Qwen, Llama, etc.) that were trained with different data, different hyperparameters, and different compute budgets. While this is standard practice, it means the architectural advantage is confounded with data strategy and training recipe differences. A controlled comparison training a pure Transformer with the same data mixture, same µP tuning, and same compute budget would more cleanly isolate the architectural contribution. This would be expensive but is the gold standard for architectural ablation at scale.
+
+- **No Qwen3-32B Base model comparison.** The paper notes this is because "no base model checkpoint was released" (Section 5.1), but it means the 34B base model comparison is against older checkpoints (Qwen2.5-32B, Qwen2.5-72B). The instruct model comparison does include Qwen3-32B (Table 24). This asymmetry makes it harder to assess whether Falcon-H1-34B's base model advantage would persist against Qwen3-32B-Base.
+
+- **Limited reporting on the 3B model's training.** The paper states the 3B model "had not yet plateaued" but doesn't quantify how far from convergence it was or report any extrapolated performance estimates. The 3B's results should therefore be interpreted as lower bounds, but the paper doesn't help readers calibrate how conservative those bounds are.
+
+- **No ablation on the anti-curriculum strategy.** The paper claims that introducing all complexity levels from the start outperforms curriculum learning, but this finding is described without a supporting figure or table that directly compares anti-curriculum against curriculum at a specific model scale. The claim appears to be based on internal experiments that are not presented in detail. Given the counterintuitive nature of this finding (curriculum learning is widely used), the absence of a direct comparison is a gap.
+
+- **The long-context evaluation is limited to a single model (34B-Instruct).** The 7B and 3B models are advertised with 128K–256K context support, but long-context evaluations are reported only for the 34B-Instruct (Table 25, Appendix D.3). Verifying that the efficiency benefits of the hybrid architecture translate to actual long-context performance at smaller scales would strengthen the paper's claims about edge deployment suitability.
+
+- **The rewritten data recipe is not ablated.** Rewritten data constitutes over 50% of training tokens, and the paper attributes substantial performance gains to this strategy. However, there is no controlled experiment showing what fraction of the performance improvement comes from rewritten data versus the base architecture versus other training innovations. A model trained on the same architecture but with a more conventional web-heavy data mixture would quantify the data strategy's contribution—this experiment is not reported.
+
+**Statistical significance and reproducibility concerns:**
+
+- All evaluations are single-run results on standard test sets. The paper doesn't report confidence intervals, standard deviations across multiple evaluation runs, or statistical tests comparing models. For benchmarks with small test sets (e.g., HumanEval: 164 problems, MATH-500: 500 problems), differences of a few percentage points may not be statistically significant.
+- The instruction-tuned model evaluations on competition math (AIME-24, AIME-25) use 16 repetitions and report average accuracy, which provides some measure of stability, but this practice is not extended to other benchmarks.
+- The paper pins evaluation framework versions and uses standardized Docker environments, which is good practice for reproducibility. However, the exact prompts used for each benchmark are not provided, which is a common challenge in LLM evaluation but limits exact reproduction.
+
+**Overall assessment:** The experimental section is comprehensive in scope and transparent about limitations. The central claims about parameter efficiency and competitive performance against larger models are well-supported for the specific benchmarks where Falcon-H1 excels (science, reasoning, code generation), with appropriate caveats about where it trails (competition mathematics, long-context recall, some commonsense tasks). The paper's language in the abstract and introduction is somewhat more sweeping than the detailed results fully justify, particularly regarding the 0.5B model's comparison to 7B models and the uniformity of the 34B model's advantage over 70B-class alternatives. The most significant gaps are the absence of a controlled same-data-pipeline Transformer baseline, the lack of quantification for the rewritten data's marginal contribution, and the limited reporting of long-context evaluations at smaller model scales. These gaps are understandable given the computational cost of large-scale controlled experiments but represent genuine limitations on how strongly the architectural advantage can be isolated from the data strategy and training recipe.
+
+## 6. Limitations and Trade-offs
+
+### 6.1 The Rewritten Data Strategy's Computational Cost Is Unaccounted For
+
+**The assumption or constraint.** The paper's headline efficiency claims—that Falcon-H1 models achieve competitive performance with only 2.5T–18T training tokens versus 36T+ for competitors—are based solely on tokens fed to the model being trained. However, over 50% of those tokens are "rewritten data" generated by processing raw sources through "a diverse set of internal and external open models across various scales and architectures" (Section 3.1.1). The inference cost to produce these rewritten tokens—which may have involved running models comparable in size to the ones being trained—is not included in any efficiency accounting. The paper acknowledges using rewriting to "structure and formalize the underlying knowledge, reduce noise, and ultimately improve training stability and efficiency" but does not report the computational budget consumed by this preprocessing.
+
+**The consequence.** The true end-to-end computational cost of producing Falcon-H1 models—including data generation—may be substantially higher than the 2.5T–18T token count implies. If rewriting required, say, 5× the tokens of inference compute relative to the raw data processed, then the total FLOPs could approach or exceed that of training a larger model on raw web data directly. This matters for two practical reasons: (1) organizations evaluating whether to adopt the Falcon-H1 recipe need to budget for the rewriting pipeline, not just the final training run; and (2) the paper's central claim that training efficiency can substitute for model scale becomes less compelling if the "efficiency" is achieved by shifting computation from training to data preprocessing rather than eliminating it. A more complete accounting would amortize the rewriting cost across training runs that share the same rewritten corpus, but the paper provides no basis for estimating this amortization.
+
+**What evidence exists in the paper.** The data mixtures in Table 6 show that rewritten data accounts for 52.05% of the 34B model's end-of-training tokens (31.69% code and math + 20.36% web and curated) and 53.04% for the 7B model. For the smaller models (3B, 1.5B, 0.5B), rewritten data is 56.80%, 69.80%, and 75.50% respectively—the proportion increases as model size decreases. The paper states that rewriting used "a diverse set of internal and external open models across various scales" but neither identifies which models were used, at what scale, nor at what inference cost. The total volume of raw data processed to produce the rewritten corpus is not reported, so the rewriting compute multiplier is unquantifiable from the paper alone.
+
+**Mitigation status.** Not addressed. The paper frames rewritten data as a quality improvement strategy and does not discuss its computational cost. The authors acknowledge that the training efficiency gains are measured relative to tokens consumed by the model being trained, not relative to total end-to-end computation. This limitation is structural—it is not acknowledged as a limitation at all, which means practitioners reading the paper may overestimate how much total computation was saved by the Falcon-H1 approach relative to training larger models on simpler data pipelines. A future version of this work should report the inference FLOPs consumed during data rewriting and amortize this cost across the training run, or provide an estimate of how many training runs the rewritten corpus is expected to support.
+
+---
+
+### 6.2 The Difficulty Estimation Cost Is Not Amortized in Training Efficiency
+
+**The assumption or constraint.** The paper's data strategy relies on extensive empirical validation of data quality: "we systematically train 0.5B models from scratch using either individual data sources or well-studied combinations of them" to "isolate extra factors and examine multiple dimensions: absolute data quality, relative quality in comparison to existing datasets, interactions and correlations between different data sources and formats, and their respective impacts on various domain-specific tasks" (Section 3.1.2). Each such validation run consumes nontrivial compute—a full 0.5B model trained from scratch on a meaningful token budget (the paper uses 2.5T tokens for the final 0.5B model per Table 1, though validation runs presumably use less). The paper also conducted "frequent vibe checks on intermediate model checkpoints" and "frequent checkpoint evaluations over diverse domain tasks throughout the pretraining stage" when adjusting data mixtures.
+
+**The consequence.** The cost of data validation—training multiple proxy models, running frequent evaluations, and iterating on data mixtures—represents a research and development overhead that is not captured by the final training token counts. The 2.5T–18T tokens reported for each model size (Table 1) represent only the final production training run, not the cumulative computation invested in data strategy development. This is analogous to the difficulty estimation problem in the reference paper on test-time compute scaling: the reported efficiency gains are computed *after* an expensive optimization process, and a practitioner attempting to replicate the Falcon-H1 approach on a new data corpus would need to budget for similar validation overhead. Without guidance on how much validation compute is needed or whether the validated data mixture transfers to different model scales or architectures, the replicability of the data strategy is uncertain.
+
+**What evidence exists in the paper.** The paper describes the validation methodology in Section 3.1.2 but provides no accounting of how many validation runs were performed, how many tokens each consumed, or how the validated mixture was adjusted during the training of larger models. The statement that "once the data is validated at the 0.5B scale, it will be passed to the models at medium and large model scales, being retained or adjusted based on the observed improvements in model performance" implies that additional validation occurs at each scale, but the scope of this additional validation is not quantified. Table 6 shows that data mixtures differ substantially between the 7B/34B models (which use a dynamic mixture that changes from start to end) and the 3B/1.5B/0.5B models (which use a static mixture), suggesting that mixture optimization was performed separately for different size classes.
+
+**Mitigation status.** Not addressed. The paper treats data strategy as an output of the research process rather than a cost that should be amortized in efficiency claims. For the purpose of reporting final model results, this is standard practice—the same could be said of any architectural ablation or hyperparameter tuning cost. However, given that the rewritten data strategy is presented as one of the key innovations enabling parameter efficiency, the absence of any guidance on the cost to develop such a strategy for a new domain or language is a practical gap. A discussion of whether the validated mixtures transfer across model scales (the paper reports using "well-studied combinations" validated at 0.5B for larger models, but also "retained or adjusted based on the observed improvements") would help practitioners estimate the effort required to adopt the approach.
+
+---
+
+### 6.3 Hard Mathematics and Long-Context Recall Performance Remain Substantially Behind Larger Transformer Models
+
+**The assumption or constraint.** The Falcon-H1 architecture is explicitly designed around the efficiency advantages of SSMs for long sequences, yet the paper reveals systematic performance gaps on two capability dimensions where larger Transformer models maintain clear superiority: competition-level mathematics and long-context recall. While the paper frames these as acceptable trade-offs given the parameter efficiency gains, they represent genuine capability boundaries that may disqualify Falcon-H1 for certain applications regardless of its efficiency advantages.
+
+**The consequence.** For mathematics, the gap between Falcon-H1-34B-Instruct and the strongest Transformer models is substantial and consistent. On AIME-24, Falcon-H1-34B scores 23.75% versus 27.92% for Llama4-Scout-17B and 27.71% for Qwen3-32B (Table 24). On AIME-25, it scores 16.67% versus 22.71% for Gemma3-27B and 19.79% for Qwen3-32B. On GSM8k, the gap is even larger: 83.62% versus 93.71% for Llama3.3-70B and 90.37% for Gemma3-27B. These are not small differences—they represent 10–30% relative performance deficits on benchmarks that are increasingly used as indicators of general reasoning capability. For long-context recall, the gap is severe at the longest tested length: HELMET-Recall at 131K drops to 56.63 for Falcon-H1-34B versus 86.13 for Qwen3-32B and 82.19 for Llama-3.3-70B (Table 25). This is not a marginal difference—it is the difference between a system that can reliably find information in long documents and one that cannot.
+
+These deficits matter because they constrain where Falcon-H1 can be deployed. An organization building a system for mathematical reasoning (e.g., automated theorem proving, competition math tutoring) or long-document analysis (e.g., legal document review, scientific literature synthesis) would need to weigh Falcon-H1's parameter efficiency against its absolute capability deficit on these tasks. The paper's framing—that "larger Transformer models leverage their scale to gain an edge in mathematics" (Section 5.2)—is accurate but understates the practical implication: for the specific high-value use cases of mathematical reasoning and long-context retrieval, Falcon-H1-34B is substantially behind models that are readily available, even if those models are larger and more expensive to serve.
+
+**What evidence exists in the paper.** Across the instruction-tuned evaluation tables (Tables 20–24), a consistent pattern emerges: Falcon-H1 models lead on science, general reasoning, and code but trail on the hardest math benchmarks. At the 7B scale (Table 23), Qwen3-8B leads Falcon-H1-7B on MATH-500 (83.80 vs. 73.40), AMC-23 (70.78 vs. 56.72), AIME-24 (28.33 vs. 16.04), and AIME-25 (19.17 vs. 13.96). At the 34B scale (Table 24), Llama3.3-70B leads GSM8k by 10.09 points and Gemma3-27B leads MATH-500 by 6.20 points. The long-context evaluation (Table 25, Appendix D.3) is even more definitive: Falcon-H1-34B's recall drops from perfect at short contexts to effectively random at 131K, while Transformer models retain ~80%+ recall. The paper attributes this to "training data composition, which indicates substantial room for improvement with more curated long-context data" (Section 5.2)—but this attribution is speculative without experiments varying the long-context data composition.
+
+**Mitigation status.** Partially addressed. The paper is transparent about these gaps and does not claim leadership on mathematics or long-context recall. However, the paper does not investigate whether the gaps are architectural (do SSMs fundamentally struggle with the precise token-level retrieval needed for recall and the multi-step symbolic manipulation needed for competition math?) or data-driven (would more math data and long-context data close the gap?). The attribution to data composition is plausible but unproven, since no experiment varies the data composition while holding the architecture constant at the 7B or 34B scale. The paper's suggestion that "more curated long-context data" would help is a reasonable hypothesis, but until validated, the limitation should be treated as potentially architectural rather than purely data-driven.
+
+---
+
+### 6.4 The Memorization Window Analysis Is Performed Only at Small Scale and Lacks Formal Generalization Guarantees
+
+**The assumption or constraint.** The paper's justification for aggressive multi-epoch training on high-quality data rests on an empirical measurement of the "memorization window"—the temporal span over which the model retains specific training examples. Figure 9 shows this analysis for a model (size unspecified in the figure, but the context suggests a proxy model) at rollback distances of 20 GT, 100 GT, 500 GT, and 1 TT. The conclusion is that after approximately 20 GT of intervening training, tokens seen at that distance are "indistinguishable from never-before-seen tokens," implying it is safe to repeat high-quality data on cycles longer than this window.
+
+**The consequence.** The memorization window analysis is used to justify a fundamental departure from the standard single-epoch pretraining paradigm—the paper up-samples high-quality data by repeating it multiple times, with the most repeated data source (Tulu3 during SFT) undergoing ~3.5 epochs (Section 4.2). If the memorization window lengthens with model scale, data repetition frequency, or specific data characteristics, then the analysis performed on a (likely) small proxy model may not accurately predict memorization behavior at 7B or 34B scale. Overestimating the window risks actual memorization and potential benchmark contamination; underestimating it means leaving potential learning on the table. Furthermore, the analysis only measures loss on previously seen tokens—it does not test whether the model can *regenerate* those tokens (verbatim memorization) or whether training set membership can be inferred (privacy risk). Loss-based memorization assessment may be too coarse: a model that has "forgotten" a training example in the sense of not showing lower loss on it may still carry extractable knowledge of its content.
+
+This matters practically because the multi-epoch strategy is central to Falcon-H1's data efficiency. If the memorization window does not scale as assumed, the recipe may not generalize to larger models or longer training runs without inducing overfitting. Additionally, for applications where training data must be provably non-memorized (e.g., training on copyrighted or licensed data with contractual restrictions, or compliance with privacy regulations), the loss-based analysis does not provide the necessary guarantees.
+
+**What evidence exists in the paper.** Figure 9 presents four loss trajectory comparisons at different "rollback" distances. The experiment design is: train a model normally, at time `t` roll back to a checkpoint from `t - Δt` and continue with different data, then compare the loss on tokens seen at `t - Δt` (which the rolled-back model has not seen recently) against the loss on those same tokens in the continuing model (which saw them `Δt` ago) and against never-seen tokens. The paper interprets the convergence of the "Token seen at `x - Δt`" curve with the "Unseen tokens" curve as evidence of forgetting. The key detail: this analysis appears to be performed on a single model (likely at the 1B–1.5B scale based on context, though the exact model size is not stated in the relevant section), at a single training duration, using a single data distribution. The paper does not report whether the memorization window changes with model scale, data repetition frequency, or training stage.
+
+**Mitigation status.** Not addressed as a limitation. The paper presents the memorization window analysis as evidence supporting the data strategy without discussing its limitations in scale, scope, or measurement methodology. The statement that "concerns about memorization may be overstated in large-scale regimes" (Section 3.1.2) is supported by this analysis but the leap from a small-scale measurement to a claim about "large-scale regimes" is not validated. Future work should extend the analysis to larger models, validate it with extraction-based memorization tests rather than loss-based ones, and characterize how the window depends on model scale, training duration, and data repetition frequency.
+
+---
+
+### 6.5 No Pure Transformer or Pure Mamba Baseline Trained Under the Same Pipeline
+
+**The assumption or constraint.** The paper's central architectural claim—that the parallel hybrid design combining attention and SSM is responsible for Falcon-H1's parameter efficiency—is evaluated by comparing against external models (Qwen, Llama, Gemma) trained with different data, different hyperparameters, different tokenizers, and different compute budgets. These are valid benchmarks for establishing state-of-the-art performance, but they do not isolate the contribution of the hybrid architecture from the contributions of the rewritten data strategy, the µP multiplier tuning, the effective power scheduler, the `dt` attenuation fix, the anti-curriculum scheduling, or any of the other innovations introduced simultaneously.
+
+**The consequence.** It is impossible to determine from the paper's results what fraction of Falcon-H1's performance advantage over, say, Qwen2.5-7B comes from the hybrid architecture versus the rewritten data strategy (which the paper itself identifies as critical, allocating over 50% of training tokens to rewritten sources). It is also impossible to determine whether a pure Mamba-2 model (like Falcon-Mamba) trained with the same rewritten data, same µP tuning, and same training dynamics would achieve substantially similar performance, making the attention heads unnecessary. Conversely, a pure Transformer trained with the same pipeline might outperform the hybrid if given the same compute budget, suggesting the hybrid design is not actually responsible for the gains. Without these controlled comparisons, the paper's architectural claims are correlational rather than causal.
+
+This is not a minor gap—it is the standard for establishing that an architectural innovation is responsible for observed performance. The paper's predecessor, Falcon-Mamba (Zuo et al., 2024), demonstrated that a 7B pure Mamba-2 model could be competitive with Transformers. Falcon-H1 adds "a small share of attention heads for precision while SSMs handle most of the work" (Section 2). But how much does that small share of attention contribute? The paper cannot answer this without a Falcon-Mamba-7B or equivalent trained under the identical Falcon-H1 pipeline (same data, same µP, same schedule). The paper's earlier 1.8B Falcon-Mamba experiments (Figure 6, Figure 8) use the predecessor architecture and training pipeline, not the Falcon-H1 pipeline, making them imperfect comparisons.
+
+**What evidence exists in the paper.** The paper provides extensive ablations *within* the hybrid architecture space (channel allocation in Figure 2, SSM hyperparameters in Figures 3–4, width-depth in Figure 5b) that establish how to optimally configure the hybrid design. These ablations convincingly show that, *given* a hybrid architecture, the chosen configuration is near-optimal. But they do not test the architectural choice itself. The comparison between the "deep" and "shallow" 1.5B variants (Table 15) quantifies the benefit of depth within the hybrid design. The comparison between the 1.5B-Deep and external 7B models (Tables 15 vs. 17) establishes that the hybrid can match larger Transformers, but cannot attribute this to the hybrid nature specifically. The paper also does not report results for a pure Mamba-2 model trained with the Falcon-H1 tokenizer, data, µP, and schedule—Falcon-Mamba used a different tokenizer and training recipe.
+
+**Mitigation status.** Not addressed. The paper does not identify the absence of controlled baselines as a limitation. The cost of training a 7B pure Transformer and 7B pure Mamba-2 under the full Falcon-H1 pipeline would be substantial (essentially tripling the 7B training cost), which is a legitimate reason for not performing these experiments. However, acknowledging this as a limitation would strengthen the paper's credibility by distinguishing between what has been demonstrated (Falcon-H1 as a complete system achieves state-of-the-art parameter efficiency) and what has been proven (the hybrid architecture specifically causes this efficiency). Smaller-scale controlled experiments—e.g., a 0.5B pure Transformer, pure Mamba-2, and hybrid all trained under the same pipeline—would partially address this gap at manageable cost and should be prioritized in future work.
+
+---
+
+### 6.6 Long-Context Evaluations Are Reported Only for the 34B Model Despite Smaller Models Having 128K–256K Context Support
+
+**The assumption or constraint.** The Falcon-H1 series is marketed with extensive long-context capabilities: 256K for 7B and 34B, 128K for 1.5B and 3B, 16K for 0.5B (Table 1). The architecture's efficiency advantage over Transformers is specifically motivated by the quadratic complexity of attention at long sequences, with throughput measurements (Figure 16) showing up to 8× generation speedup at extreme lengths. However, **actual long-context task performance evaluations are reported only for the 34B-Instruct model** (Table 25 and Appendix D.3). None of the smaller instruction-tuned models (0.5B through 7B) are evaluated on HELMET or any other long-context benchmark.
+
+**The consequence.** The paper's central narrative—that the hybrid architecture enables efficient long-context processing—is supported by throughput measurements for the 34B (and the 3B/7B in Figure 15, but those throughput measurements are for inference efficiency, not long-context task accuracy). However, throughput is only half the story; a model that can process 256K tokens efficiently but cannot perform useful tasks at that length (as the 34B's HELMET-Recall drop to 56.63 at 131K demonstrates) is not practically useful. The absence of long-context task evaluations for smaller models leaves several critical questions unanswered:
+
+- Does the 7B model, which also supports 256K context, exhibit the same recall degradation at extreme lengths as the 34B? Better? Worse? The answer determines whether Falcon-H1-7B is viable for long-document applications or whether the long-context capability is effectively theoretical.
+- Do the 1.5B and 3B models, which support 128K context, maintain usable performance at that length? If they degrade similarly to the 34B at 131K, then their long-context support is not practically deployable.
+- Is the recall degradation at extreme contexts architectural (SSMs losing state fidelity) or data-driven (insufficient long-context training data)? If it appears consistently across all model sizes, it suggests an architectural limitation; if it varies, data composition is the more likely explanation.
+
+For practitioners evaluating Falcon-H1 for long-context applications—exactly the use case the architecture is designed for—knowing whether the smaller models can actually perform at their rated context lengths is essential. The paper's abstract and introduction prominently advertise "256K context support" and "extended context windows of up to 256K tokens" as key features applying to the entire series, but the evaluation evidence for this claim is limited to a single model size.
+
+**What evidence exists in the paper.** The pretraining description (Section 3.1.2) states that "for Falcon-H1-34B and Falcon-H1-7B, we applied 60GT at both 32K and 128K context, and 25GT at 256K context. For Falcon-H1-3B and Falcon-H1-1.5B, the same token counts were used for both the 32K and 128K context stages." This confirms that all models received long-context training, so the absence of evaluation is an evaluation gap, not a training gap. The SFT description (Section 4.2) confirms a 128K long-context SFT stage for all models except the 0.5B. Table 25 shows the 34B-Instruct HELMET results; Appendix D.3 provides per-task breakdowns at each sequence length (Tables 36–40). Table 9 shows that the 7B, 3B, and 1.5B models do use context parallelism at long sequence lengths during training, confirming the infrastructure supports it. But there are no corresponding evaluation results for any model except the 34B.
+
+**Mitigation status.** Not addressed. The paper does not explain why long-context evaluations are limited to the 34B model. Possible practical explanations include: (1) the evaluation framework (HELMET) may not have been run on all model sizes due to compute constraints; (2) the smaller models' long-context performance may have been evaluated internally and found to be insufficient, leading to selective reporting; or (3) the evaluation was simply descoped. Regardless of the reason, the absence of these evaluations is a significant gap in the empirical support for one of the paper's major claims. Future work should evaluate all long-context-capable models in the series on standardized long-context benchmarks to establish whether the architectural efficiency benefits translate to usable long-context capabilities across the full model size range.
+
+## 7. Implications and Future Directions
+- Field impact:
+  - Falcon‑H1 demonstrates that hybrid SSM‑attention models can be first‑class citizens for general LLM use, not just niche long‑context specialists. The design (parallel concatenation + flexible channel allocation) and tooling (`dt` control, `ELR/EWD`, µP multipliers, MP/CP) provide a recipe for training robust hybrids at scale.
+- Follow‑up research enabled/suggested:
+  - Data for long‑QA/Recall at extreme lengths: targeted corpora and objectives to close the remaining long‑context gaps (Table 25).
+  - Deeper study of `ELR/EWD` and `EPS`: formalizing when the approximations hold and extending to other optimizers and architectures (§3.2.2).
+  - Automated µP multiplier tuning and interpretability of sensitivities (Fig. 12), including depth‑scaling rules (§3.2.3 and App. C).
+  - Exploring attention–SSM ratios per layer or curriculum over training, given Fig. 2’s flatness near the optimum for SSM/MLP.
+  - Kernel and systems work for SSMs to remove Transformers’ short‑context edge (Fig. 16).
+- Practical applications:
+  - Memory‑ and cost‑efficient long‑context RAG, multi‑document QA, repo‑level code understanding (repository‑level code data §3.1.1).
+  - Edge and on‑prem deployments with small/deep models (e.g., `1.5B‑Deep` rivaling 7–10B; Table 15; §7 Conclusion).
+  - Multilingual assistants and STEM/mathematics tutors with tokenizer and post‑training choices tuned for math/code (§2.4; §4).
+
+> “Falcon‑H1‑34B‑Instruct rivals or outperforms leading models up to the 70B scale” while being “approximately half the size” and trained on fewer tokens (Abstract; Tables 18 and 24).
+
+> “Mixer Parallelism… achieves a substantial 1.43× speedup” in training over baseline on a 2B proxy; and improves low‑latency inference throughput (Table 10; Fig. 15).
+
+> “Using extremely large RoPE base frequency (b≈10^11)… avoids performance drops when increasing sequence length” and removes the need for RoPE interpolation tricks (Fig. 5a; §2.3.1).
+
+Overall, Falcon‑H1 combines an effective architectural template (parallel hybrid) with a carefully engineered training stack, delivering models that are both fast at long contexts and competitive or superior in accuracy per parameter across a wide range of tasks.

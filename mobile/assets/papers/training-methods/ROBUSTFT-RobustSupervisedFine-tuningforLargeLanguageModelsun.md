@@ -1,0 +1,678 @@
+# ROBUSTFT: Robust Supervised Fine-tuning for Large Language Models under Noisy Response
+
+**ArXiv:** [2412.14922](https://arxiv.org/abs/2412.14922)
+
+## 🎯 Pitch
+
+ROBUSTFT introduces a novel supervised fine-tuning framework that robustly adapts large language models (LLMs) using real-world datasets contaminated with noisy responses, by combining multi-expert collaborative noise detection, context-enhanced relabeling, and entropy-based data selection. This innovation enables LLMs to maintain high performance even as noise levels soar—significantly outperforming standard methods—making domain adaptation with imperfect data practical and reliable for critical applications like healthcare, finance, and beyond.
+
+---
+
+## 1. Executive Summary
+
+This paper introduces **ROBUSTFT**, a noise-robust supervised fine-tuning framework that performs noise detection and relabeling on downstream task data to prevent performance degradation when training LLMs on corrupted labels. Evaluated across five datasets (MMLU, ARC, PubMedQA, Drop, FPB) with Llama-3.1 8B, Llama-3.2 3B, and Gemma2 9B at noise rates of 30%, 50%, and 70%, ROBUSTFT employs a multi-expert collaborative system with reasoning-enhanced models for noise detection (a Checker mechanism that cross-validates original labels against base-model and reasoning-model predictions) and a context-enhanced relabeling strategy with entropy-based data selection for denoising (retrieving similar clean samples as in-context references, then filtering low-confidence relabeled outputs). The framework achieves up to 129% relative improvement over standard SFT at 70% noise on PubMedQA and 4.4% absolute improvement over the vanilla (non-fine-tuned) baseline on MMLU at 30% noise, establishing that noise-robust fine-tuning is effective primarily when the framework can discriminate clean from corrupted samples through multi-model consensus—on the hardest problems outside the base model's capability range, even denoising provides limited recovery.
+
+## 2. Context and Motivation
+
+### The Core Problem: Real-World SFT Data Is Inevitably Noisy
+
+The fundamental problem this paper addresses is deceptively simple: **when you fine-tune an LLM on downstream task data, that data almost always contains label noise, and this noise catastrophically degrades model performance.** This is not a hypothetical concern — it's an empirical reality the paper documents concretely in Figure 1: introducing just 30% noise into MMLU training data drops the fine-tuned Llama-3.1 8B's accuracy from 65.3% (vanilla, no fine-tuning) to 59.5% (standard SFT on noisy data), an 8.9% degradation. At 50% noise, performance collapses to 47.5%, and at 70% noise, it falls to 37.3% — meaning that fine-tuning on mostly-wrong labels is *worse than not fine-tuning at all*.
+
+This matters for a specific, practical reason that the paper lays out in Section 2.1: the sources of downstream task data are inherently noisy. The paper identifies three contamination pathways:
+
+- **Human annotation errors**: when domain experts or crowd workers label training examples, mistakes are inevitable — especially for tasks requiring specialized knowledge (biomedical reasoning, legal analysis, financial classification) where annotators may disagree or lack sufficient expertise.
+- **Data processing and collection inconsistencies**: real-world datasets scraped from the web or assembled from heterogeneous sources contain systematic errors from pipeline bugs, format mismatches, and provenance issues.
+- **Model hallucinations during self-labeling**: a growing paradigm for creating SFT data is to have LLMs generate their own labels (self-instruction, distillation from larger models), but these model-generated labels inherently contain the generating model's hallucinations and biases (Farquhar et al., 2024).
+
+The paper explicitly frames this as a *real-world challenge* (Section 2.1), contrasting it with the idealized setting most SFT research assumes: clean, curated datasets with verified labels. In production deployments, organizations collect training data from whatever sources are available — logging user interactions, scraping domain-specific corpora, auto-labeling with weaker models — and this data *will* contain noise. The alternative (paying expert annotators to manually verify thousands of examples) is often prohibitively expensive.
+
+### Why Existing Solutions Fall Short
+
+Prior work on noisy label learning is substantial, but the paper identifies a specific gap that makes those solutions inadequate for LLM fine-tuning. Section 5.1 provides the critical analysis:
+
+**Traditional noisy label learning operates in a fundamentally different regime.** The established literature (Yuan et al., 2024; Kim et al., 2024; Sun et al., 2023) has developed three families of approaches:
+
+1. **Sample selection methods** that identify clean samples using fixed confidence thresholds (Qiao et al., 2022). These assume you can compute a reliable confidence score for each training example — usually from a classifier's output probabilities over a small, discrete label space.
+2. **Label correction techniques** that rectify noisy labels based on model predictions (Sohn et al., 2020; Zhang et al., 2021). These also assume a finite label space where "correction" means mapping an incorrect class label to the right one.
+3. **Consistency regularization** that leverages prediction stability under perturbations as a signal for label quality (Zhuang et al., 2023; Northcutt et al., 2021).
+
+The paper's key insight about why these fail for LLM SFT is subtle but crucial: **they are designed for classification tasks with finite, discrete label spaces.** When the "label" is a multi-sentence open-ended text response — as it is in SFT for question answering, reasoning, summarization, or instruction following — there is no well-defined label space to enumerate. You cannot compute "classifier confidence over labels" because the output space is the entire vocabulary. You cannot "correct" a label by simply remapping to another class because the error might be a subtle factual mistake, a logical flaw, or a stylistic issue embedded in a paragraph of text.
+
+The paper states this limitation directly in Section 5.1:
+
+> "These conventional methods are primarily designed for well-defined scenarios, with finite discrete label spaces, making them less effective for open-ended generation problems."
+
+This is not a minor scaling issue — it's a fundamental mismatch. The existing noisy-label toolkit was built for text classification (sentiment analysis, topic categorization, NER) and extends poorly to the generative setting that dominates modern LLM use cases.
+
+**LLMs' own noise detection is unreliable.** A natural question is: why not simply ask the LLM itself to identify which training examples are mislabeled? Section 4.2.1 provides the empirical answer:
+
+> "SelfSelect's inferior performance compared to SFT indicates that LLMs cannot effectively identify noise."
+
+The authors tested exactly this approach (the `SelfSelect` baseline, which has the model score its own training data for quality) and found it *underperformed standard SFT on noisy data*. This is consistent with broader findings about LLM calibration: models are poorly calibrated on their own outputs, tending toward overconfidence on incorrect answers and underconfidence on correct ones. They hallucinate both in generation *and* in self-evaluation, making them unreliable noise detectors when acting in isolation.
+
+**Enhanced SFT approaches don't solve the noise problem.** The paper tests two models that were specifically designed for improved instruction following through better training data and procedures: Hermes-3 (Teknium et al., 2024) and Tulu-3 (Lambert et al., 2024). These represent the state-of-the-art in curated, high-quality SFT data. If the problem were simply that standard SFT uses suboptimal data, these models should outperform the vanilla baseline. Instead, Table 1 shows:
+
+- **Hermes-3**: On MMLU, accuracy is essentially flat at 65.5% (vs. 65.3% vanilla). On ARC, performance *drops* to 68.7% (vs. 82.7% vanilla) — a catastrophic degradation on a reasoning benchmark where the enhanced model performs worse than doing nothing.
+- **Tulu-3**: Similarly inconsistent — 55.7% on MMLU (worse than vanilla), and drops of 9.4% and 21% on ARC and FPB respectively relative to vanilla.
+
+The point is that these models were trained on *different* data, not on the specific downstream noisy data the user has. When fine-tuned on the user's noisy downstream data, their pre-existing knowledge is overwritten by the noise, and their enhanced general capabilities don't translate to noise resistance. This motivates the paper's central research question (Section 1):
+
+> "Can LLMs detect inevitable noise and enhance data quality, to improve its performance on target tasks?"
+
+**Existing denoising approaches show inconsistent results.** The strongest baselines in Table 1 are NoiseAL (Yuan et al., 2024) and various self-labeling/self-enhancement methods. NoiseAL — the state-of-the-art in noise-robust learning — performs well on some settings: it achieves 66.3% on MMLU at 30% noise, close to the vanilla 65.3% (meaning it mostly recovers from the noise degradation). But it shows mixed results: on PubMedQA at 70% noise, it achieves only 71.8% versus 75.0% for ROBUSTFT, and on FPB at 70% noise, it drops to 72.8% — substantial degradation from the 75.5% vanilla baseline.
+
+The inconsistency is the key takeaway: existing methods provide *partial* protection against noise, but their effectiveness varies unpredictably across datasets, noise levels, and model architectures. There is no single method that reliably performs noise detection and denoising in the generative SFT setting.
+
+### How This Paper Positions Itself
+
+ROBUSTFT frames itself as addressing the *gap between traditional noisy-label learning (classification-centric) and modern LLM fine-tuning (generation-centric)*. The paper's positioning has several dimensions:
+
+**Against the noisy-label literature**: ROBUSTFT operates on open-ended text responses, not discrete class labels. It performs both detection *and* relabeling, where relabeling means generating a new open-ended response — not mapping to a different class index. This is a fundamentally harder problem that requires the model to understand the semantic content of the noisy label, reason about what might be wrong, and produce a corrected version.
+
+**Against LLM self-evolution methods**: Recent work on self-improvement (Wang et al., 2023b; Tu et al., 2024; Luo et al., 2024) focuses on generating new training data from scratch using model self-play or self-instruction. ROBUSTFT takes a different approach:
+
+> "ROBUSTFT takes a distinct approach by leveraging noisy real-world data for model self-training to enhance downstream performance" (Section 5.3)
+
+Rather than discarding noisy data and synthesizing replacements, ROBUSTFT attempts to *repair* the noisy data — detecting which examples are corrupted and then relabeling those specific examples using context from the clean portion of the dataset. This is more data-efficient because it preserves the information in the queries themselves (which are assumed correct — only the labels are noisy) and uses the clean subset as in-context anchors.
+
+**Against toxicity/attack defense methods**: A related literature (Section 5.2) addresses adversarial attacks where training data is deliberately poisoned with harmful content. These approaches use distance-based regularization (Mukhoti et al., 2023), alignment data mixing (Bianchi et al., 2023), and prompt engineering (Lyu et al., 2024) to preserve model safety. ROBUSTFT explicitly distinguishes itself:
+
+> "ROBUSTFT takes a different approach by emphasizing detection and relabeling mechanisms to prevent performance degradation caused by noisy data introduction, rather than specifically defending against toxic content."
+
+The problem is noise-induced performance loss, not safety violations. The mechanisms are detection and correction, not regularization or training-data curation strategies.
+
+**The "self-contained" design principle**: A deliberate architectural choice the paper emphasizes is that ROBUSTFT operates entirely within the capabilities of the base LLM being fine-tuned:
+
+> "We design a self-contained framework to leverage the intrinsic interactions between models and data for effective noise detection and denoising, eliminating dependencies on external models or resources." (Section 1, Contributions)
+
+This matters practically — you don't need a stronger teacher model (e.g., GPT-4) to clean your training data. The base LLM, augmented with reasoning prompts and multi-expert collaboration, serves as its own noise detector and relabeler. This is both philosophically elegant (self-improvement from within) and practically valuable (no API costs, no dependency on proprietary models).
+
+### The Two Specific Challenges ROBUSTFT Must Solve
+
+Section 1 crystallizes the problem into two technical challenges that any noise-robust SFT framework must address:
+
+**Challenge 1: Direct noise detection through LLM predictions is unreliable.** The paper validates this empirically (Section 4.2.1 shows SelfSelect fails) and attributes it to model hallucinations and overconfidence. This means a naive approach — ask the model "is this label correct?" — won't work. Some form of cross-validation, consensus, or external signal is needed to break the model's tendency to confidently confirm its own errors.
+
+**Challenge 2: Existing relabeling strategies don't leverage information in noisy responses.** Traditional approaches discard noisy examples entirely or replace labels with model predictions, but they don't extract whatever partial signal might still be present in the noisy label. A noisy response might be mostly correct with a factual error in one sentence, or it might contain the right answer phrased incorrectly. ROBUSTFT's context-enhanced relabeling attempts to use the clean subset of the dataset as a retrieval corpus to provide additional grounding when relabeling noisy examples, implicitly leveraging the structure of the task to inform corrections.
+
+## 3. Technical Approach
+
+### 3.1 Reader Orientation
+
+ROBUSTFT is a **data-cleaning pipeline** that sits between you and your noisy downstream training data, automatically detecting which examples have wrong answers and then fixing those answers before fine-tuning your LLM. The system solves the problem that standard SFT blindly trusts all training labels — even when many are wrong — by instead playing the role of a skeptical editor who cross-checks every label against multiple "expert" opinions and rewrites suspicious ones using evidence from the clean examples.
+
+### 3.2 Big-Picture Architecture (Diagram in Words)
+
+The system has four major components arranged in a sequential pipeline:
+
+1. **Noise Detector (Section 3.2)** — takes the raw downstream dataset and flags each example as "clean" or "potentially noisy" by comparing three different "opinions" about what the answer should be: the original label, the base model's prediction, and a reasoning-enhanced model's prediction. A `Checker` function votes on consistency; any example where these opinions disagree is marked as noisy.
+
+2. **Context-Enhanced Relabeler (Section 3.3)** — takes the flagged noisy subset and generates corrected labels for each example by (a) retrieving the k most similar clean examples from the clean subset to use as in-context references, (b) generating a new answer conditioned on those references, and (c) combining that context-enhanced answer with the reasoning-enhanced answer via a `Review Agent` that synthesizes a final corrected label.
+
+3. **Entropy-Based Selector (Section 3.4)** — takes the relabeled noisy subset and filters out low-confidence corrections by computing the per-token prediction entropy of the context-enhanced generation, ranking all corrected examples by this entropy, and keeping only the top-β fraction (most confident). This prevents the model from training on relabeled examples it was uncertain about.
+
+4. **Dataset Assembler (Section 3.5)** — concatenates the original clean subset with the selected, relabeled subset to form the final fine-tuning dataset `D_ft`, then runs standard SFT on this cleaned dataset.
+
+Information flows linearly: raw noisy dataset → Checker splits into clean/potentially-noisy → noisy subset gets relabeled via context retrieval → entropy filter selects high-confidence corrections → clean + selected-relabeled merged → fine-tune base LLM. There is no feedback loop or iterative refinement — it's a single forward pass of detection followed by denoising followed by training.
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First**, the Noise Detection mechanism (the `Checker`), since identifying *which* examples are corrupted is the gating step — denoising can't help if you don't know what's broken. This includes the reasoning-enhanced LLM and the consistency metric.
+- **Second**, Context-Enhanced Relabeling, which depends on having a clean subset from the detection step and explains how similarity retrieval and the `Review Agent` generate corrected labels.
+- **Third**, the Entropy-Based Selection filter, since this determines which corrections are trustworthy enough to train on, and the formula (Equation 7) is the primary mathematical contribution.
+- **Fourth**, the end-to-end algorithm (Algorithm 1), which ties everything together into a procedural specification.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily a **systems-building paper** whose core idea is that a multi-expert LLM collaborative system can serve as its own noise detector and relabeler for SFT training data, replacing the need for external supervision or clean validation sets.
+
+---
+
+#### Noise Detection via Multi-Expert Consensus
+
+The noise detection component solves the problem that a single LLM cannot reliably identify its own errors — it hallucinates and is overconfident. The solution is to create *disagreement*: if the original training label, the base model's prediction, and a reasoning-enhanced prediction all say the same thing, the label is probably correct. If they diverge, something is probably wrong.
+
+**Step 1: Base model prediction.** For every example in the downstream dataset `D_task = {(q_i, y_i)}_{i=1}^N` (where `q_i` is the query and `y_i` is the training label), the base LLM `M` generates a prediction:
+
+$$\hat{y}_i = M(q_i)$$
+
+where `$M$` is the un-fine-tuned base LLM (e.g., Llama-3.1 8B before any training on downstream data), `$q_i$` is the query text, and `$\hat{y}_i$` is the model's raw generated answer.
+
+**What it computes:** a straightforward forward pass of the query through the base model, producing a single answer. This is the model's "first opinion" — what it thinks the answer is without any special prompting, chain-of-thought, or external context.
+
+**Why this form:** generating a direct prediction from the unaugmented base model provides a baseline signal that reflects the model's pre-existing knowledge. If the base model's prediction already matches the training label, that's weak evidence the label is correct (or at least consistent with what the model "knows"). The single-prediction approach keeps the noise detection cost modest — this is just one generation per training example.
+
+**Step 2: Reasoning-enhanced prediction.** The paper introduces a more sophisticated prediction using iterative reasoning and reflection:
+
+$$\hat{y}_i^{\text{reas}} = M_{\text{Reas}}(q_i, M_{\text{Refl}}(M_{\text{Reas}}(q_i, \cdots)))$$
+
+where `$M_{\text{Reas}}$` is the reasoning LLM (prompted to produce step-by-step reasoning), `$M_{\text{Refl}}$` is the reflection LLM (prompted to evaluate and critique the reasoning output), and the ellipsis `$\cdots$` indicates that this process is iterative — the reflection output feeds back into another round of reasoning. The notation `$M_{\text{Refl}}(M_{\text{Reas}}(q_i, \cdots))$` means that the reflection model takes as input both the original query and the reasoning model's output, produces a critique, and that critique is then provided to a subsequent reasoning pass.
+
+**What it computes:** a chain of alternating reasoning and reflection steps. First, the reasoning model produces a step-by-step answer. Then, the reflection model evaluates that reasoning path — identifying potential errors, gaps, or alternative interpretations. The reasoning model then re-generates its answer conditioned on the reflection feedback. This loop continues for a fixed number of iterations (the paper does not specify the exact count, but the description implies multiple rounds). The final output `$\hat{y}_i^{\text{reas}}$` is the answer after the last reasoning step, incorporating the accumulated critique.
+
+**Why this form:** the iterative reasoning-reflection loop is designed to catch errors that a single-pass prediction would miss. The key insight is that LLMs are better at *critiquing* outputs than *generating* correct ones (a phenomenon documented in the self-critique literature). By chaining generation → critique → refined generation, the model gets multiple opportunities to spot its own mistakes. This is the paper's approach to mitigating the "model can't detect its own errors" problem — it doesn't ask the model to judge its own output directly; it asks a *different prompt configuration* (the reflection prompt) to evaluate the reasoning prompt's output, creating a form of internal adversarial collaboration.
+
+The distinction between `$M_{\text{Reas}}$` and `$M_{\text{Refl}}$` is crucial: these are the *same underlying model weights* but prompted with different instructions. The reasoning model gets a prompt like "Solve this question step by step," while the reflection model gets a prompt like "Examine the following reasoning for errors and provide a critique." This is a form of self-play where the model argues with itself through different roles.
+
+**Step 3: The Checker consistency mechanism.** With three "opinions" in hand — the original label `$y_i$`, the base prediction `$\hat{y}_i$`, and the reasoning prediction `$\hat{y}_i^{\text{reas}}$` — the system evaluates agreement:
+
+$$r_i = \text{Checker}(y_i, \hat{y}_i, \hat{y}_i^{\text{reas}}) \in \{0, 1\}$$
+
+where `$r_i = 1$` means "the three sources are consistent — this sample is likely clean" and `$r_i = 0$` means "there is disagreement — this sample is potentially noisy."
+
+**What it computes:** a binary classification of each training example based on the agreement pattern among the three signals. The paper does not provide the exact implementation of the `Checker` function, but the natural interpretation (consistent with the ablation naming "w/o Checker" in Table 3 and the problem framing) is: `Checker` returns 1 if all three answers are semantically equivalent (or at minimum, the original label agrees with at least one model prediction), and 0 otherwise.
+
+**Why this form:** three-way voting exploits the fact that different generation strategies have different error modes. The base model might make a factual error; the reasoning model might overthink a simple question; the original label might contain a human annotation mistake. When all three *agree*, the probability that they all made the same error is low — this is the core intuition behind ensemble disagreement-based noise detection (a technique with roots in confident learning; Northcutt et al., 2021). When they disagree, at least one source is wrong, and the conservative approach is to flag the example for relabeling.
+
+The paper's ablation study (Table 3) validates this design: removing the Checker component drops MMLU accuracy from 68.2% to 65.3% at 30% noise (essentially back to the vanilla baseline), confirming that the multi-expert consistency signal is the primary mechanism driving noise detection effectiveness.
+
+**Dataset partition.** Based on the consistency labels, the system splits the training data:
+
+$$D_{\text{clean}} = \{(q_i, y_i) \mid r_i = 1\}$$
+$$D_{\text{noise}} = \{(q_i, y_i) \mid r_i = 0\}$$
+
+where `$D_{\text{clean}}$` is the subset the system trusts and leaves untouched, and `$D_{\text{noise}}$` is the subset that will undergo relabeling. Note that both subsets preserve the original queries — only the labels are suspect.
+
+**Design choice: no iterative re-detection.** The noise detection is performed once, creating a static split. There is no mechanism to re-evaluate after relabeling or to adjust the decision boundary based on the relabeling outcomes. This is a deliberate simplification: the system treats noise detection as a pre-processing step, not an adaptive process.
+
+---
+
+#### Context-Enhanced Relabeling
+
+Once the noisy subset `$D_{\text{noise}}$` is identified, the system attempts to generate corrected labels for these examples. The core insight is that the clean subset `$D_{\text{clean}}$` contains useful information — examples with (likely) correct labels that are similar to the noisy ones — and that this information can be injected as in-context references during relabeling.
+
+**Step 1: Shared latent space encoding.** Both clean and noisy queries are encoded into a shared vector space:
+
+$$h_i = \text{Encoder}(q_i) \in \mathbb{R}^d$$
+
+where `$\text{Encoder}$` is a text embedding model (the paper does not specify which — likely the base LLM's own embedding layer or a dedicated sentence encoder), `$q_i$` is the query text, and `$h_i$` is a d-dimensional vector representation.
+
+**What it computes:** a fixed-dimensional embedding vector for each query that captures its semantic content. This enables similarity-based retrieval — queries about similar topics or requiring similar reasoning will have nearby embeddings.
+
+**Why this form:** encoding into a shared space is the standard retrieval-augmented generation (RAG) pattern. The key design choice is *what* corpus to retrieve from: `$D_{\text{clean}}$`, the subset the noise detector trusts. This means the retrieved context is expected to contain correct labels, providing reliable grounding. The alternative — retrieving from the full dataset — would risk retrieving other noisy examples and compounding errors.
+
+**Step 2: Context-enhanced prediction.** For each noisy example, the system retrieves the k most similar clean examples and conditions generation on them:
+
+$$\hat{y}_i^{\text{cont}} = M\big(q_i \mid \{(q_j, y_j)\}_{j \in \mathcal{N}_k(q_i, D_{\text{clean}})}\big)$$
+
+where `$\mathcal{N}_k(q_i, D_{\text{clean}})$` returns the indices of the k clean examples whose query embeddings `$h_j$` are closest to `$h_i$` (by cosine similarity or Euclidean distance — the paper doesn't specify), and `$\mid$` denotes that the retrieved examples are prepended as in-context demonstrations to the model input. The model sees k examples of the form "Query: [similar question] \n Answer: [known clean label]" followed by "Query: [current noisy question] \n Answer:" and generates a completion.
+
+**What it computes:** a new answer for the noisy query, generated by the base LLM with access to k reference examples of what correct answers look like for similar questions. The retrieved examples serve as few-shot demonstrations, implicitly teaching the model the expected format, style, and domain knowledge.
+
+**Why this form:** this is in-context learning applied to data cleaning. Rather than fine-tuning a separate correction model or relying on the model's parametric knowledge, the system provides *specific, verified examples* as grounding. The assumption is that a noisy query's nearest neighbors in embedding space will be semantically similar questions, and that the correct labels for those similar questions provide strong cues for what the noisy label *should* say. For example, if the noisy query is a biomedical question about drug interactions, and its nearest clean neighbors are other biomedical questions about pharmacology, the model can infer domain-specific terminology and reasoning patterns from the demonstrations.
+
+The parameter k is a design choice. The sensitivity analysis in Figure 3 shows performance peaks at k = 3–5, with diminishing returns beyond that. The paper's default is not explicitly stated in a single place, but the sensitivity analysis context and the "n = 4" mention in Section 4.1.3 suggest k = 4 (or a nearby value) as the default.
+
+**Step 3: Review Agent synthesis.** The system now has two alternative labels for each noisy example: the context-enhanced prediction `$\hat{y}_i^{\text{cont}}$` and the reasoning-enhanced prediction `$\hat{y}_i^{\text{reas}}$` (from the noise detection step). These are combined by a Review Agent:
+
+$$\tilde{y}_i = \text{Review}(q_i, \hat{y}_i^{\text{cont}}, \hat{y}_i^{\text{reas}})$$
+
+where `$\text{Review}$` is another prompted invocation of the base LLM, and `$\tilde{y}_i$` is the final relabeled answer.
+
+**What it computes:** the Review Agent is prompted with the original query, the context-enhanced answer, and the reasoning-enhanced answer, and instructed to examine both, synthesize their strengths, and produce a final corrected answer. This is essentially asking the model: "Here are two attempts at answering this question, each produced by a different method. Examine both, and produce the best answer you can."
+
+**Why this form:** combining two independent predictions provides error correction through redundancy. If the context-enhanced answer is correct but the reasoning-enhanced answer contains an error, the Review Agent can (in principle) identify the discrepancy and prefer the correct one. If both predictions agree, the Review Agent can have higher confidence. If both disagree with the original noisy label, that's strong evidence the original label was indeed wrong. The Review Agent acts as a meta-judge that has access to more information than either individual prediction method.
+
+The ablation study (Table 3) shows that removing the Reviewer has a modest but consistent negative impact: on MMLU at 30% noise, accuracy drops from 68.2% to 68.0%. The small magnitude suggests the Reviewer adds incremental value on top of the already-strong context-enhanced prediction, perhaps catching edge cases where the two sources disagree significantly.
+
+**Output.** After this process, each example in `$D_{\text{noise}}$` receives a new label `$\tilde{y}_i$`, forming the denoised dataset:
+
+$$D_{\text{denoise}} = \{(q_i, \tilde{y}_i) \mid (q_i, y_i) \in D_{\text{noise}}\}$$
+
+This dataset has the same size as `$D_{\text{noise}}$` but with model-generated labels replacing the original (potentially corrupted) ones.
+
+---
+
+#### Entropy-Based Data Selection
+
+The relabeling process generates corrected labels, but the system recognizes that these model-generated corrections are themselves imperfect — the base LLM may hallucinate, be uncertain, or produce low-quality relabelings for some examples. Training on bad corrections would compound errors rather than fix them. The solution is to filter the denoised dataset, keeping only the corrections the model was most confident about.
+
+**Entropy computation.** For each context-enhanced response `$\hat{y}_i^{\text{cont}}$` (not the Review Agent output — the paper specifically uses the context-enhanced prediction as the confidence signal), the system computes the average per-token log probability as a measure of uncertainty:
+
+$$H(\hat{y}_i^{\text{cont}}) = -\frac{1}{N} \sum_{j=1}^{N} \log p(y_{ij} \mid q_i, y_{i,<j})$$
+
+where `$N$` is the total number of tokens in the generated response `$\hat{y}_i^{\text{cont}}$`, `$y_{ij}$` is the j-th token of that response, `$y_{i,<j}$` represents all tokens before position j, and `$p(y_{ij} \mid q_i, y_{i,<j})$` is the model's predicted probability for token `$y_{ij}$` conditioned on the query `$q_i$` and the preceding tokens `$y_{i,<j}$`.
+
+**What it computes:** the token-level negative log-likelihood averaged over the sequence length. For each position in the generated answer, the model assigns a probability to the token it actually produced. The log of this probability is taken (always negative or zero, since probabilities are between 0 and 1), negated to make it positive, and then averaged. Lower values of `$H$` mean the model assigned high probabilities to its own generated tokens — it was "confident" in its output. Higher values mean the model was uncertain, spreading probability mass across many possible tokens.
+
+**Why this form:** sequence-level log-probability averaging is the standard approach to measuring model confidence in autoregressive generation. It has the property that frequent tokens (high probability) contribute low values to the sum, while surprising tokens (low probability) contribute high values. Crucially, it is computed from the *generating model's own probabilities* — no external confidence estimator is needed. The entropy captures both lexical uncertainty (the model is unsure which word comes next) and semantic uncertainty (the model's probability distribution reflects genuine ambiguity about the content).
+
+An alternative would be to compute the probability of the full sequence `$p(\hat{y}_i^{\text{cont}} \mid q_i)$` directly, but averaging per-token avoids length bias — longer sequences would naturally have lower joint probabilities simply because more terms are multiplied, making cross-sequence comparison unfair.
+
+**Why the context-enhanced prediction specifically?** The paper computes entropy on `$\hat{y}_i^{\text{cont}}$` rather than on the Review Agent output `$\tilde{y}_i$` or the reasoning-enhanced prediction `$\hat{y}_i^{\text{reas}}$`. This is because `$\hat{y}_i^{\text{cont}}$` is a single forward generation for which token-level probabilities are naturally available. The Review Agent's synthesis process may not expose clean per-token probabilities, and the reasoning-enhanced prediction involves iterative refinement that complicates probability computation.
+
+**Selection by ranking.** Based on the entropy scores, the system ranks all denoised examples and keeps the most confident fraction:
+
+$$D_{\text{select}} = \{(q_i, \tilde{y}_i) \mid \text{rank}(H(\hat{y}_i^{\text{cont}})) \leq \beta |D_{\text{denoise}}|\}$$
+
+where `$\beta \in [0, 1]$` is the selection ratio controlling what fraction of the denoised dataset to retain, `$\text{rank}(\cdot)$` sorts examples from lowest entropy (most confident) to highest entropy (least confident), and `$|D_{\text{denoise}}|$` is the total number of denoised examples.
+
+**What it computes:** a thresholded subset of the denoised dataset. If `$\beta = 0.5$` and there are 1,000 denoised examples, the 500 examples with the lowest entropy scores are kept and the other 500 are discarded. The discarded examples are permanently removed — they do not appear in the final fine-tuning dataset.
+
+**Why this form:** the rank-then-threshold pattern is common in data selection for LLM training (e.g., Bhatt et al., 2024; Xia et al., 2024). It makes the trade-off explicit: higher `$\beta$` retains more data (better coverage) but risks including low-quality corrections; lower `$\beta$` is safer but may discard useful training examples. The ranking ensures that the "best" corrections — those the model was most sure about — are preferentially retained, regardless of the absolute entropy values.
+
+The paper sets `$\beta = 0.5$` as default (Section 4.1.3: "θ = 50%" — note the variable naming is inconsistent; the text calls the selection ratio `$\beta$` in Equation 8 but `$\theta$` in Section 4.1.3). The sensitivity analysis in Figure 3 validates this choice: performance peaks at `$\beta = 0.4$`–`$0.5$` and degrades significantly beyond that range:
+
+> "model performance peaking at β = 40−50%, with performance degrading significantly beyond this range due to the inclusion of excessive noisy samples."
+
+This is direct evidence that the entropy filter is doing real work — without it (β = 100%), performance drops substantially, as confirmed by the ablation (Table 3, "w/o Selection"): removing the selection component drops MMLU accuracy from 68.2% to 65.7% at 30% noise, a 2.5 percentage point degradation.
+
+**Design choice: why not use the entropy to weight examples instead of discarding them?** The paper could have used entropy as a continuous weight in the training loss (down-weighting high-entropy examples rather than removing them entirely). The hard threshold approach is simpler to implement and creates a cleaner signal — no hyperparameter tuning for the weighting function. However, it does discard potentially useful information in the low-confidence corrections, which could matter in low-data regimes.
+
+---
+
+#### End-to-End Algorithm: Dataset Assembly and Fine-Tuning
+
+The final step combines the trusted clean examples with the selected relabeled examples:
+
+$$D_{\text{ft}} = D_{\text{clean}} \cup D_{\text{select}}$$
+
+and then performs standard supervised fine-tuning on this cleaned dataset:
+
+$$M' = \arg\min_{M} \mathbb{E}_{(q,y) \sim D_{\text{ft}}} [-\log p_M(y \mid q)]$$
+
+where `$M'$` is the fine-tuned model, `$p_M(y \mid q)$` is the model's autoregressive probability of generating response `$y$` given query `$q$`, and the expectation is over the cleaned training dataset.
+
+**What it computes:** the standard next-token prediction loss (cross-entropy) on the cleaned dataset. The model is trained to maximize the likelihood of the cleaned responses — which are a mix of original labels (for examples where the Checker found consensus) and model-relabeled answers (for examples that were flagged as noisy and then passed the entropy filter).
+
+**Why this form:** this is identical to standard SFT — there is no special loss function, no regularization against the original noisy labels, no confidence-weighted loss. The innovation is entirely in *what data the model trains on*, not in *how it trains*. This is a deliberate design choice that makes ROBUSTFT a drop-in preprocessing step: you can use any SFT implementation (LoRA, full fine-tuning, whatever) unchanged, simply by replacing the training data with the cleaned version.
+
+**Algorithm 1 specification** (reproduced from the paper):
+
+```
+1. Generate base predictions ŷᵢ using M
+2. Generate reasoning-enhanced predictions ŷᵢ^reas via iterative reasoning-reflection
+3. Use Checker to identify reliable samples
+4. Split data into D_clean and D_noise
+5. for each sample in D_noise do
+6.     Generate context-enhanced prediction ŷᵢ^cont
+7.     Use Review to generate denoised label ỹᵢ
+8. end for
+9. Calculate entropy scores for denoised samples
+10. Select top-β confident samples to form D_select
+11. Fine-tune M on D_ft = D_clean ∪ D_select to obtain M'
+```
+
+**Computational cost analysis.** The algorithm requires multiple forward passes through the base LLM per training example:
+
+- **Noise detection**: one generation for base prediction (Equation 1) + multiple generations for the iterative reasoning-reflection loop (Equation 2). The exact number of iterations is not specified, but the description of alternating reasoning and reflection implies at least 2–4 generations per example for this step alone.
+- **Context-enhanced relabeling**: one generation per noisy example (Equation 5).
+- **Review Agent**: one additional generation per noisy example (Equation 6).
+- **Entropy computation**: no additional generations — the token probabilities are extracted from the already-computed context-enhanced generation.
+
+If we assume the Checker flags approximately the noise rate fraction of examples as noisy (e.g., 50% at 50% noise), and the reasoning-reflection loop runs 3 iterations, then the total generation cost per training example is approximately: 1 (base) + 3 (reasoning-reflection) + 0.5 × (1 + 1) (context + review for noisy fraction) ≈ 5 generations per example. For a dataset of 10,000 training examples, that's 50,000 generations — a substantial but not prohibitive inference cost, especially since these generations can be run offline before any fine-tuning begins.
+
+The paper does not provide explicit runtime measurements or cost comparisons against baselines. The primary efficiency consideration is that this is a one-time preprocessing cost amortized over the fine-tuning run — the cleaned dataset can be cached and reused for multiple fine-tuning experiments (hyperparameter sweeps, different model sizes, etc.).
+
+**Key implementation details** (from Section 4.1.3):
+- Fine-tuning uses Low-Rank Adaptation (LoRA) implemented through Llama-factory (Zheng et al., 2024), a standard open-source SFT framework.
+- Training runs for 2 epochs.
+- The selection ratio is set to `β = 50%`.
+- The context retrieval length is `k = 4` (implied from "n = 4" in Section 4.1.3).
+- All experiments use open-source models (Llama-3.1 8B, Llama-3.2 3B, Gemma2 9B).
+
+## 4. Key Insights and Innovations
+
+### Innovation 1: Recasting Noisy Label Learning as a Multi-Expert Consensus Problem Rather Than a Single-Model Calibration Problem
+
+The dominant assumption in noisy label learning — both in traditional classification and in early LLM self-detection attempts — is that you can estimate the reliability of a label by examining the model's own confidence or prediction. The field's default approaches (confident learning, SelfSelect, self-consistency checks) all operate on variations of "ask the model to evaluate its own output and trust high-confidence predictions." Section 5.1 documents that these methods are built for discrete label spaces where confidence scores have well-defined meanings, and Section 4.2.1 empirically demonstrates that LLMs cannot effectively identify noise through self-evaluation — `SelfSelect` actually underperforms standard SFT on noisy data.
+
+ROBUSTFT's conceptual departure is to **replace the question "how confident is the model?" with the question "do multiple independent decision procedures agree?"** The `Checker` mechanism (Section 3.2) doesn't ask any single model to evaluate its own reliability — it triangulates three distinct generation strategies (original label, base prediction, reasoning-enhanced prediction) and flags disagreement as the noise signal. This reframes noise detection as a **consensus problem** rather than a **calibration problem**.
+
+Why this matters beyond performance: calibration-based approaches are fundamentally limited by the fact that LLMs are poorly calibrated on their own outputs — they exhibit overconfidence on errors and underconfidence on correct answers in ways that vary unpredictably across domains, model sizes, and prompt formats. No amount of calibration improvement fully solves this, because the model's confidence estimates are generated by the same weights that produced the error. Consensus-based detection sidesteps this entirely by introducing **procedural diversity**: the three "experts" differ not in their weights but in their generation protocols (direct answer, reasoning-reflection, and original label), creating quasi-independent error modes. When all three agree despite different generation paths, the probability of shared error is low — not because the model is calibrated, but because the agreement is causally unlikely under error independence.
+
+This is a **fundamental reframing** rather than an incremental improvement. It opens a design space — what other generation strategies could serve as additional experts? — that the field hadn't systematically explored because the attention was on improving single-model reliability rather than engineering productive disagreement. The ablation results (Table 3) validate the intuition: removing the `Checker` (i.e., collapsing back to single-source evaluation) drops MMLU accuracy from 68.2% to 65.3% at 30% noise, eliminating essentially all the framework's benefit over the vanilla baseline. The consensus mechanism is not an accessory — it is the primary source of noise detection signal.
+
+### Innovation 2: Using the Clean Subset as an In-Context Retrieval Corpus — Turning the Noise Detection Output into a Self-Supervised Relabeling Resource
+
+Prior work on label correction (Sohn et al., 2020; Zhang et al., 2021) treats the relabeling step as a prediction problem: given a noisy example, ask the model to predict what the correct label should be based on its parametric knowledge and the noisy label as input. This "correction by prediction" paradigm discards a valuable resource that ROBUSTFT identifies: **the clean subset itself contains verified examples that can serve as in-context demonstrations for relabeling noisy ones.**
+
+The conceptual move is to treat `D_clean` — the output of the noise detection step — not just as data to preserve, but as a **retrieval corpus** that provides task-specific, domain-grounded few-shot examples for each relabeling operation. When a biomedical question is flagged as noisy, the system retrieves the k nearest clean biomedical questions and uses their verified answers as in-context demonstrations (Equation 5). This is not a generic "the model knows medicine" — it's a specific, instance-level injection of verified domain knowledge derived from the dataset itself.
+
+The novelty here is the **closed-loop relationship between detection and relabeling**. Noise detection produces the clean subset; the clean subset serves as the retrieval corpus; the retrieval corpus enables high-quality relabeling of the noisy subset. This creates a virtuous cycle where the system's own decisions about what's clean become the evidence base for fixing what's noisy. The approach is self-contained — no external knowledge base, no teacher model, no human annotators — yet it leverages the structure of the data distribution (similar queries tend to have similar answers) to bootstrap corrections.
+
+This is an **incremental but practically significant** advance over prior work. The individual components (retrieval-augmented generation, few-shot in-context learning) are well-established. What's new is the composition: using the system's own noise detection output as the retrieval source for its relabeling step. The ablation (Table 3, "w/o CER") shows that removing context-enhanced relabeling drops MMLU accuracy from 68.2% to 67.7% at 30% noise — a modest but consistent contribution that matters most at higher noise rates where the clean subset is smaller and each clean example's retrieval value increases.
+
+### Innovation 3: Entropy-Based Confidence Filtering as a Quality Gate for Self-Generated Labels — and a Diagnostic That Reveals Why Naïve Self-Training Fails
+
+The paper's entropy-based selection mechanism (Section 3.4, Equation 7) is conceptually straightforward — rank relabeled examples by model confidence and keep the top half — but its significance lies in what it **diagnoses about self-training pipelines** rather than in the filtering mechanism itself. The ablation study (Table 3, "w/o Selection") shows that removing the entropy filter drops performance substantially (MMLU: 68.2% → 65.7% at 30% noise), and the sensitivity analysis (Figure 3) reveals that performance degrades rapidly as the selection ratio β increases beyond ~50%. This is direct evidence that **the model's own relabelings contain a substantial fraction of low-quality outputs that would poison training if included.**
+
+This is a **negative diagnostic result with positive implications**. The field of LLM self-improvement (Wang et al., 2023b; Tu et al., 2024; Luo et al., 2024) generally operates on the assumption that model-generated labels, when produced with appropriate prompting, are good enough to serve as training targets. ROBUSTFT's entropy analysis shows that this assumption fails in a systematic way: even with context-enhanced and reasoning-enhanced generation, the model produces a long tail of low-confidence corrections that actively degrade performance when trained on. The per-token log-probability distribution (Equation 7) serves as an effective discriminator because it captures the model's own uncertainty — the model "knows when it doesn't know," at least probabilistically, even when its verbal output is fluent and plausible.
+
+This insight is **fundamental rather than incremental** because it provides a principled criterion for when self-generated labels are trustworthy. Prior selection methods used external verifiers, fixed thresholds on heuristic scores, or oracle access to clean validation data. The paper demonstrates that the generating model's own token-level probabilities — computed during generation with no additional inference cost — contain sufficient signal to filter out harmful corrections. The perplexity analysis in Figure 4 provides complementary evidence: ROBUSTFT's models exhibit more concentrated, lower-variance perplexity distributions compared to standard SFT models, indicating that the entropy filter successfully removes the uncertain predictions that cause SFT's dispersed, high-perplexity behavior.
+
+### Innovation 4: Systematic Empirical Evidence That Noise Robustness Is Not a Property of Model Scale — and That Denoising Is Disproportionately Valuable for Smaller Models
+
+The multi-architecture experiments in Table 2 (Llama-3.2 3B, Llama-3.1 8B, Gemma2 9B) produce a counterintuitive result that the paper explicitly flags:
+
+> "Larger models are not inherently more robust. Contrary to common intuition, increased parameter count does not correlate with better noise resistance."
+
+This finding challenges the implicit assumption — common in the scaling literature — that larger models are more robust to distribution shift, label noise, and other training imperfections by virtue of their greater capacity and stronger priors. The data shows the opposite pattern: standard SFT on noisy data degrades all model sizes, and the relative improvement from ROBUSTFT is often **largest for the smallest model**. At 70% noise on PubMedQA, Llama-3.2 3B with ROBUSTFT achieves 67.9% versus 37.5% for SFT (an 81% relative improvement), while the larger Llama-3.1 8B achieves 75.0% versus 32.8% (129% relative improvement). The absolute gaps are substantial across all sizes, but the fact that the 3B model sees comparable or larger proportional gains is notable — you'd expect larger models to be better at "ignoring" noise through their stronger inductive biases.
+
+The conceptual significance is that **noise robustness is a function of the data cleaning pipeline, not the model architecture**. This reframes the problem: rather than searching for noise-resistant architectures or training procedures, invest in preprocessing. The paper doesn't claim this is a theoretical result — it's an empirical regularity that shifts practical priorities. If a 3B model with good denoising can approach or exceed an 8B model with standard SFT on noisy data (as the results suggest for some dataset-noise combinations), the marginal value of additional parameters for downstream adaptation may be lower than previously thought when data quality is controlled.
+
+This is an **incremental empirical contribution** — it doesn't introduce a new concept but provides systematic evidence that challenges a prevailing assumption. The finding is strengthened by the three-model sweep (3B, 8B, 9B across three different model families), which reduces the likelihood that the result is an artifact of a particular architecture or training recipe.
+
+### Innovation 5: The Self-Contained Design Principle — Eliminating External Dependencies for Noise-Robust SFT
+
+Section 1 of the paper explicitly claims ROBUSTFT is "self-contained" — no external models, no human annotators, no clean validation set. This is not an incidental property; it's a deliberate architectural constraint that differentiates the framework from prior work in several dimensions:
+
+- **Against teacher-model approaches**: Many data cleaning pipelines for LLMs use a stronger model (GPT-4) as a judge or labeler. ROBUSTFT uses only the base model being fine-tuned, in different prompted configurations. This matters for organizations that cannot or will not depend on proprietary APIs for data processing.
+- **Against clean-validation-set approaches**: Some noise detection methods require a curated set of verified-clean examples to calibrate thresholds or train detectors. ROBUSTFT's consensus-based detection requires no external ground truth — only the model's own predictions under different generation strategies.
+- **Against human-in-the-loop approaches**: Active learning methods like NoiseAL (Yuan et al., 2024) — the strongest baseline in Table 1 — involve collaborative human-model relabeling. ROBUSTFT automates the entire pipeline.
+
+The practical implication is that ROBUSTFT can be deployed in settings where the only available resource is the noisy downstream dataset and the base LLM. This is the **deployment scenario the paper's motivation emphasizes** (Section 2.1): real-world data collection produces noise, and the organization has no clean reference data to fix it. By demonstrating that the base model itself can serve as both detector and corrector through multi-expert prompting and retrieval from its own clean-labeled outputs, the paper establishes that external supervision is not strictly necessary for effective noise mitigation in SFT.
+
+This contribution is **conceptual but not yet fully validated**. The paper's "predicted difficulty" analogue would be a setting where even the clean subset's labels are uncertain — ROBUSTFT's virtuous cycle (clean subset → retrieval corpus → better labels) depends on the Checker's consensus mechanism being reliable enough that `D_clean` is genuinely mostly clean. If the base model's predictions are systematically wrong on some category of questions (e.g., it has a consistent blind spot reinforced by the reasoning-reflection loop), the consensus check would incorrectly certify those noisy labels as clean, poisoning the retrieval corpus. The paper does not analyze this failure mode, making the "self-contained" claim optimistic in the limit of very high noise or systematically correlated errors. Nevertheless, as a design principle that shifts the field's defaults away from external-signal dependence, it is a meaningful intellectual contribution.
+
+## 5. Experimental Analysis
+
+### Evaluation Methodology
+
+- **Dataset.** The paper evaluates on five diverse benchmarks: **MMLU** (Hendrycks et al., 2020) — massive multitask language understanding across 57 academic subjects; **ARC** (Clark et al., 2018) — the AI2 Reasoning Challenge for science question answering; **PubMedQA** (Jin et al., 2019) — biomedical reasoning with yes/no/maybe answers; **Drop** — numerical reasoning and reading comprehension; and **FPB** (Malo et al., 2014) — Financial PhraseBank for sentiment analysis in financial text. These span general knowledge (MMLU, ARC), domain-specific reasoning (PubMedQA, FPB), and reading comprehension (Drop), enabling evaluation across multiple task types. Each dataset is partitioned into training and test sets (sizes not specified in the main text), with noise artificially introduced at three rates — 30%, 50%, and 70% — by randomly corrupting a fraction of training labels. The paper does not describe the exact noise injection procedure (e.g., whether labels are replaced with random answers, shuffled, or adversarially corrupted), which is a notable omission for reproducibility.
+
+- **Base model(s).** Three open-source model families at different scales: **Llama-3.2-3B** (3 billion parameters), **Llama-3.1-8B** (8 billion parameters), and **Gemma2-9B** (9 billion parameters). The inclusion of multiple architectures (Meta's Llama vs. Google's Gemma) and parameter counts (3B, 8B, 9B) enables the cross-architecture robustness analysis in Section 4.2.2. The models span a ~3× parameter range, though notably all are in the single-digit billions — there are no experiments with smaller models (<1B) or larger models (70B+) that would test whether the findings scale across orders of magnitude.
+
+- **Metrics.** The primary metric throughout is **accuracy** (%) — the fraction of test questions for which the model's generated answer matches the ground-truth answer. The paper uses exact-match grading appropriate for the multiple-choice and extractive QA formats of the chosen benchmarks. For open-ended generation tasks, this requires the model's output to be parsed and compared against a reference answer; the paper does not specify the parsing/grading procedure. In addition, Section 4.3.3 reports **perplexity** (token-level negative log-likelihood) as a diagnostic metric for analyzing the confidence and uncertainty characteristics of fine-tuned models, and Figure 6 reports mean accuracy with **standard deviation** bars across five independent instruction-rephrasing runs for stability analysis.
+
+- **Baselines.** The paper implements seven baseline approaches:
+  1. **Vanilla**: direct inference with the base pre-trained LLM, no fine-tuning whatsoever. This provides the floor — any method that degrades below vanilla is actively harmful.
+  2. **SFT**: standard supervised fine-tuning on the noisy training data, with no noise detection or correction. This represents the naive deployment scenario the paper argues against.
+  3. **Hermes-3** (Teknium et al., 2024): an instruction-tuned variant of Llama-3.1-8B with enhanced general capabilities from curated training data, representing the "better base model" approach.
+  4. **Tulu-3** (Lambert et al., 2024): another enhanced instruction-tuned model, representing state-of-the-art open-source SFT data curation.
+  5. **NoiseAL** (Yuan et al., 2024): a state-of-the-art noise-robust collaborative active learning method that uses LLMs for noise detection and human-model collaborative relabeling. This is the strongest denoising baseline.
+  6. **SelfRAG** (Lewis et al., 2020): retrieval-augmented generation that augments inference with relevant training examples as context. Tests whether simply providing context at inference time can mitigate noise effects.
+  7. **SelfSelect**: an LLM-based approach where the model itself scores training data quality and selects which examples to train on — a self-detection baseline testing whether single-model confidence can identify noise.
+  8. **SelfLabel**: the model generates its own labels for training data, representing a naive self-training approach without the multi-expert detection or context-enhanced relabeling of ROBUSTFT.
+
+  The baselines span three conceptual families: better base models (Hermes-3, Tulu-3), external denoising (NoiseAL), and LLM self-enhancement (SelfRAG, SelfSelect, SelfLabel). Notably missing is a simple data augmentation baseline (e.g., training on clean + perturbed clean data to assess whether diversity alone helps) and a clean-SFT upper bound (training on 0%-noise data to show the maximum achievable performance).
+
+- **Generation budget / compute accounting.** The paper does not report total FLOPs, wall-clock time, or inference cost for any method. The implicit unit of "compute" is the number of LLM generations required per training example during the denoising pipeline: roughly 1 (base prediction) + iterative reasoning-reflection generations (count unspecified) + up to 2 per noisy example (context-enhanced + Review Agent). This cost is incurred once as preprocessing and is not compared against baselines. The fine-tuning itself uses LoRA (Hu et al., 2021) with consistent hyperparameters across all methods — 2 epochs, implemented through Llama-factory (Zheng et al., 2024). The paper makes no attempt to normalize for total compute across methods, meaning that ROBUSTFT's preprocessing cost is "free" in the comparison — a potentially significant advantage over baselines like NoiseAL that may also incur labeling costs.
+
+- **Cross-validation / statistical protocol.** The paper reports mean accuracy with standard deviation for the stability analysis (Section 4.3.5, Figure 6), where GPT-4o is used to rephrase evaluation instructions across five independent runs. For the main results, no cross-validation, statistical significance testing, or confidence intervals are reported. Results are presented as point estimates in Tables 1–3. The sensitivity analysis (Section 4.3.2, Figure 3) sweeps hyperparameters β and k across ranges but reports only mean performance. The test set sizes are not specified, making it impossible to assess whether observed differences (e.g., 68.2% vs. 68.0% in the "w/o Reviewer" ablation) are statistically meaningful given the variance.
+
+---
+
+### Main Quantitative Results
+
+#### Comparison Against Baselines at Varying Noise Levels
+
+The central experimental result is Table 1, showing Llama-3.1-8B performance across five datasets and three noise levels. The headline finding is that **ROBUSTFT consistently achieves the highest accuracy in 14 out of 15 dataset-noise combinations** (all except FPB at 70% noise, where it ties with NoiseAL at 76.2%).
+
+**At 30% noise**, the paper's most realistic scenario:
+- **MMLU**: ROBUSTFT achieves 68.2% vs. 65.3% vanilla, a 4.4% relative improvement over no fine-tuning. This is the key demonstration that the framework actually *improves* over the base model despite noisy training data. By contrast, standard SFT degrades to 59.5% (-8.9% vs. vanilla), meaning ROBUSTFT recovers 8.7 percentage points of the 14.6% relative degradation. The best competing method is NoiseAL at 66.3% — 1.9 points below ROBUSTFT.
+- **ARC**: ROBUSTFT achieves 84.9% vs. 82.7% vanilla (+2.7% relative). SFT drops to 70.7% (-14.5% relative), and NoiseAL reaches 84.0%. The margin over baselines is smaller here (0.9 points over NoiseAL), reflecting that ARC's multiple-choice format with discrete answers makes noise easier for all methods to handle.
+- **PubMedQA**: ROBUSTFT achieves 75.8% vs. 72.0% vanilla (+5.3% relative). This is the strongest absolute improvement over vanilla among all datasets, suggesting biomedical reasoning benefits particularly from the context-enhanced relabeling (which retrieves similar medical questions as in-context demonstrations). NoiseAL reaches 74.2%, 1.6 points lower.
+- **Drop**: ROBUSTFT achieves 90.3% vs. 87.2% vanilla (+3.6% relative). The high vanilla performance leaves limited headroom, yet ROBUSTFT still improves while SFT degrades (85.3%).
+- **FPB**: ROBUSTFT achieves 84.4% vs. 75.5% vanilla (+11.8% relative). This is the largest relative improvement over vanilla at 30% noise, suggesting financial sentiment analysis is a domain where the base model benefits substantially from even moderately cleaned fine-tuning data. NoiseAL reaches 81.1%.
+
+**At 50% and 70% noise**, the relative improvement over SFT becomes dramatic because SFT on half or mostly-wrong labels is catastrophic:
+- On **MMLU at 50% noise**: ROBUSTFT achieves 68.0% (essentially flat from 68.2% at 30%, remarkable stability) while SFT collapses to 47.5%. The relative improvement over SFT is 43.2%.
+- On **MMLU at 70% noise**: ROBUSTFT achieves 67.6% — only 0.6 points below the 30%-noise performance — while SFT drops to 37.3%. The relative improvement over SFT is 81.2%. This near-flat performance across the 30%-70% noise range is the strongest evidence that the denoising pipeline effectively neutralizes noise.
+- On **PubMedQA at 70% noise**: ROBUSTFT achieves 75.0% vs. SFT's 32.8%, a 129% relative improvement — the largest reported anywhere in the paper. The consistency with which ROBUSTFT maintains 75-76% accuracy on PubMedQA from 30% to 70% noise (75.8%, 75.6%, 75.0%) while SFT degrades from 66.4% to 32.8% is striking evidence of effective noise handling.
+
+**Key baseline comparisons**:
+- **NoiseAL** is consistently the second-best method but shows dataset-dependent fragility: on Drop at 70% noise, it achieves 82.1% vs. ROBUSTFT's 87.9% (a 5.8-point gap), and on FPB at 50% noise, it achieves 78.5% vs. ROBUSTFT's 80.5%. This suggests that NoiseAL's active learning framework, while strong, is less robust to domain shift than ROBUSTFT's retrieval-based relabeling.
+- **Hermes-3 and Tulu-3** perform *worse than vanilla* on several datasets: Hermes-3 achieves 68.7% on ARC vs. vanilla's 82.7%, and Tulu-3 achieves 54.5% on FPB vs. vanilla's 75.5%. This is the paper's key evidence that enhanced base models trained on different data distributions do not confer noise resistance — and in fact their different knowledge priors may make them more susceptible to catastrophic forgetting when fine-tuned on noisy downstream data.
+- **SelfSelect** consistently underperforms even standard SFT (e.g., 44.0% vs. 37.3% on MMLU at 70% noise), demonstrating that single-model self-detection of noise is fundamentally unreliable — the model confidently identifies clean examples that are actually noisy and vice versa.
+- **SelfRAG** shows modest improvements over SFT on some datasets (84.0% vs. 70.7% on ARC at 30% noise) but degradation on others (57.0% vs. 66.4% at 70% noise on PubMedQA). Providing noisy training data as inference context does not systematically help — and can hurt when the retrieved context itself contains errors.
+
+The last two rows of Table 1 quantify the "↑" (relative improvement over vanilla and SFT respectively), and the consistent positive values for ROBUSTFT against vanilla (ranging from +0.8% on Drop at 70% noise to +11.8% on FPB at 30% noise) demonstrate that the framework never degrades below the no-fine-tuning baseline — a property none of the baselines achieve across all settings.
+
+#### Cross-Architecture and Cross-Scale Results
+
+Table 2 extends the evaluation to three model families and scales, with the key finding that **ROBUSTFT's effectiveness is architecture-independent and scale-agnostic**.
+
+**Llama-3.2-3B** (3 billion parameters): At 70% noise, ROBUSTFT achieves 67.9% on PubMedQA vs. SFT's 37.5% — an 81% relative improvement, and on FPB, 46.8% vs. 31.3% — a 50% relative improvement. The absolute performance of the 3B model with ROBUSTFT (57.9% on MMLU at 70% noise) approaches the 8B model's *vanilla* performance (65.3%), suggesting that effective denoising can partially compensate for ~2.7× fewer parameters.
+
+**Llama-3.1-8B**: Reproduces Table 1 results. At 70% noise, ROBUSTFT maintains 67.6% on MMLU vs. SFT's 37.3%, and 75.0% on PubMedQA vs. SFT's 32.8%.
+
+**Gemma2-9B**: At 70% noise, ROBUSTFT achieves 66.8% on PubMedQA vs. SFT's 30.4% — a 120% relative improvement. Notably, on FPB at 70% noise, ROBUSTFT achieves 87.7% while SFT achieves 35.6% — a 146% relative improvement (not explicitly computed in the paper but derivable from the table). The Gemma2 results are particularly interesting because the model shows strong domain-specific recovery: on FPB, Gemma2 with ROBUSTFT at 70% noise (87.7%) outperforms vanilla Gemma2 (83.1%), indicating the model is learning domain expertise from the cleaned data that exceeds its pre-existing knowledge.
+
+**Cross-model patterns**: The paper emphasizes that "larger models are not inherently more robust" (Section 4.2.2). Looking at SFT at 70% noise: Llama-3.2-3B drops to 38.3% on MMLU, Llama-3.1-8B drops to 37.3%, and Gemma2-9B drops to 40.3%. The degradation is proportionally similar across scales (~40-50% relative drop from vanilla), supporting the claim that parameter count does not confer noise immunity. The ROBUSTFT recovery is also proportionally similar — all three models achieve 67-73% of their vanilla accuracy at 70% noise with ROBUSTFT, suggesting the denoising pipeline's effectiveness is relatively independent of model scale over this 3-9B range.
+
+#### Perplexity Analysis
+
+Figure 4 presents kernel density estimates of model perplexity on MMLU and ARC at varying noise levels, comparing Llama-3.1-8B vanilla, SFT, and ROBUSTFT. Three findings emerge:
+
+1. **Noise inflates perplexity**: SFT models trained on noisy data exhibit broader, more dispersed perplexity distributions with heavier right tails compared to ROBUSTFT models at the same noise level. For example, on MMLU at 70% noise, SFT's distribution extends to ~1.5 with substantial density above 1.3, while ROBUSTFT's distribution is concentrated below ~1.2 with a sharp peak around 1.0-1.1.
+
+2. **ROBUSTFT's entropy filter sharpens the distribution**: The lower perplexity and tighter variance of ROBUSTFT models directly reflects the entropy-based selection (Section 3.4) — low-confidence, high-perplexity relabeled examples were excluded from training, resulting in a model that is more consistently confident in its predictions.
+
+3. **The effect holds across datasets**: Both MMLU and ARC show the same pattern of sharper, lower-mean perplexity distributions for ROBUSTFT, with the effect becoming more pronounced at higher noise rates. This is consistent with the accuracy results showing ROBUSTFT maintains flat performance while SFT degrades.
+
+A subtle pattern visible in the ARC distributions: at 70% noise, the ROBUSTFT distribution shows a slight bimodal tendency (a small secondary mode around 1.3-1.4), suggesting that even with denoising, some examples remain in a high-uncertainty regime that the entropy filter cannot fully eliminate.
+
+#### Category-Wise Performance (MMLU Breakdown)
+
+Figure 5 presents a radar plot of MMLU accuracy across 14 subject categories (biology, business, chemistry, computer science, economics, engineering, health, history, law, math, other, philosophy, physics, psychology), comparing SFT vs. ROBUSTFT at 30%, 50%, and 70% noise with Llama-3.1-8B.
+
+The key pattern: **noise impact is category-dependent, and ROBUSTFT provides balanced recovery**. The paper notes that "knowledge-intensive categories such as History, Healthcare, and Law experience more severe performance degradation under noisy conditions." Looking at the SFT curves across noise levels, some categories (health, law, history) show visible shrinkage as noise increases from 30% to 70%, while others (math, computer science) are more resilient. ROBUSTFT's radar plot is described as "smooth and expanded" — the denoised model maintains roughly consistent performance across categories regardless of noise level, suggesting the context-enhanced relabeling is particularly effective for the knowledge-intensive subjects where retrieving similar clean examples provides strong corrective signal.
+
+The paper does not provide the numerical values underlying the radar plot, making precise category-level comparisons impossible. This is a limitation — the visual pattern is suggestive but not quantifiable.
+
+#### Stability Analysis
+
+Figure 6 shows mean accuracy with standard deviation bars across five independent runs where evaluation instructions were rephrased by GPT-4o, testing ROBUSTFT on MMLU and ARC at noise levels from 30% to 70%. The results show:
+
+- **MMLU**: Accuracy ranges from ~67% to ~69% across all noise levels with small error bars (roughly ±0.5-1% based on visual inspection), demonstrating that ROBUSTFT's performance is stable under instruction perturbation — the model isn't exploiting brittle prompt-specific patterns.
+- **ARC**: Accuracy ranges from ~84% to ~85% with similarly small error bars. The stability is notable because ARC is a reasoning benchmark where prompt wording can significantly affect chain-of-thought quality.
+- **No trend with noise level**: The flat lines across 30%-70% noise corroborate the main result that ROBUSTFT effectively neutralizes noise — the remaining variance is from instruction rephrasing, not from residual label noise.
+
+The paper does not report stability results for the baselines (e.g., SFT variance across rephrasings), so we cannot assess whether ROBUSTFT is *more stable* than alternatives or simply stable in absolute terms.
+
+---
+
+### Ablation Studies and Robustness Checks
+
+Table 3 presents the ablation study on MMLU and ARC with Llama-3.1-8B at 30%, 50%, and 70% noise, removing one component at a time from the full ROBUSTFT pipeline.
+
+**Selection (entropy filtering) removal**: The largest single degradation across all settings. At 30% noise on MMLU, removing selection drops accuracy from 68.2% to 65.7% — a 2.5 percentage point decline. At 70% noise, the drop is from 67.6% to 64.6% (3.0 points). This is consistent across ARC: 84.9% → 83.2% at 30% noise, 84.1% → 82.8% at 70% noise. The entropy filter is the most important single component, validating the paper's claim that self-generated labels contain a substantial fraction of low-quality corrections that must be filtered.
+
+**Checker (multi-expert consensus) removal**: Eliminates the core noise detection mechanism — without it, the system cannot distinguish clean from noisy examples. At 30% noise on MMLU, accuracy drops from 68.2% to 65.3% — essentially back to the vanilla baseline (65.3%), meaning the entire ROBUSTFT benefit vanishes. On ARC at 30%, the drop is from 84.9% to 82.7% — exactly the vanilla baseline. This is the paper's strongest evidence that consensus-based detection is the primary driver of the framework's effectiveness: without it, the system has no way to identify which examples need relabeling, reducing to the equivalent of training on randomly selected data (which, at 30% noise, performs no better than not training at all).
+
+**Reviewer (synthesis agent) removal**: The smallest degradation. At 30% noise on MMLU, accuracy drops from 68.2% to 68.0% — only 0.2 points. This suggests the Review Agent adds marginal value on top of context-enhanced relabeling, perhaps resolving edge cases where the context-enhanced and reasoning-enhanced predictions conflict significantly. The consistent but tiny effect across all noise levels and datasets (0.2-0.5 points) indicates the Review Agent is a refinement mechanism, not a core component.
+
+**Context-Enhanced Relabeling (CER) removal**: Removing the retrieval of similar clean examples and the in-context conditioning drops MMLU accuracy from 68.2% to 67.7% at 30% noise, and from 67.6% to 67.0% at 70% noise. On ARC, the drops are smaller: 84.9% → 84.6% at 30%. The effect is modest but grows with noise rate (0.5 → 0.6 → 0.6 points on MMLU from 30% → 50% → 70%), consistent with the retrieval corpus becoming more valuable as the noise rate increases — each clean retrieved example carries more weight when noise is pervasive.
+
+**Reasoning-Enhanced LLM (REL) removal**: Removing the iterative reasoning-reflection loop (Equation 2) drops MMLU accuracy from 68.2% to 67.4% at 30% noise and from 67.6% to 66.9% at 70%. The degradation is slightly larger than CER removal (0.8 vs. 0.5 points at 30%), and increases with noise (0.7 points at 70%), suggesting the reasoning-enhanced prediction provides complementary signal to the context-enhanced prediction — the two mechanisms contribute different information to the relabeling process.
+
+Notable patterns in the ablation matrix:
+- **No single component accounts for all the benefit**: Even removing the strongest single component (Selection) leaves accuracy substantially above SFT (65.7% vs. 59.5% at 30% noise on MMLU). The remaining components still provide partial denoising — the Checker still identifies some clean data correctly, and even unfiltered relabeling is better than the original noisy labels.
+- **Interactions between components**: The Checker and Selection show a dependent relationship: without the Checker, there's no clean subset to retrieve from, crippling CER and REL. The ablation "w/o Checker" therefore disables more than just the detection step — it eliminates the entire denoising infrastructure's data foundation.
+- **Dataset-specific sensitivity**: ARC shows smaller degradation from component removal than MMLU. Removing Selection on ARC at 30% noise drops accuracy by 1.7 points vs. 2.5 points on MMLU. This may reflect ARC's multiple-choice format making individual labels less informative (the model can recover from some noise through reasoning), whereas MMLU's broader subject coverage makes clean training examples more critical.
+
+#### Sensitivity Analysis (Hyperparameter Sweeps)
+
+Figure 3 presents the impact of selection ratio β (30%-70% range) and context length k (1-5 range) on MMLU at 30%, 50%, and 70% noise.
+
+**Selection ratio β**: Performance peaks at β = 40-50% and declines on both sides — more sharply above 50% than below 40%. At 30% noise, the curve rises from ~66.5% at β = 30% to ~68.5% at β = 40%, then drops to ~67% at β = 60%. At 50% noise, the pattern is similar but the peak is slightly broader (38-52%). At 70% noise, the peak narrows to ~48-52%, with sharper drop-off above 55%. The key implication: retaining more than ~50% of relabeled examples includes harmful corrections that outweigh the benefit of additional training data. The optimal β is roughly constant across noise levels (40-50%), which simplifies deployment — the same threshold works for unknown noise rates.
+
+**Context length k**: Performance improves from k = 1 to k = 3, plateaus from k = 3 to k = 5. At 30% noise: ~67.2% at k = 1, ~68.2% at k = 3, ~68.3% at k = 5. At 70% noise: ~66.8% at k = 1, ~67.5% at k = 3, ~67.6% at k = 5. The diminishing returns after k = 3 suggest that 3-4 similar examples provide sufficient in-context signal for the model to infer the correct answer format and content; additional examples are redundant. This validates the paper's default of k = 4 (mentioned as "n = 4" in Section 4.1.3).
+
+A limitation of the sensitivity analysis: β and k are swept independently rather than jointly. The paper does not explore interactions (e.g., whether optimal β depends on k), which could matter if longer context makes the model's relabelings more confident and shifts the optimal selection threshold.
+
+#### Perplexity Distribution Analysis (Figure 4)
+
+Already described in the main results; this serves as a robustness check confirming that the entropy-based selection produces models with more concentrated, lower-variance perplexity distributions than SFT, consistent with the mechanism's intended function.
+
+---
+
+### Critical Assessment
+
+**Does ROBUSTFT actually solve the noise-robust SFT problem as claimed?**
+
+The paper's central claim is that ROBUSTFT "performs noise detection and relabeling on downstream task data" to enable robust fine-tuning under label noise. The evidence strongly supports that the framework *improves over standard SFT* under noise. However, the claim requires careful examination against what was actually tested.
+
+**What the experiments demonstrate**: ROBUSTFT consistently outperforms all tested baselines across five datasets, three noise levels, and three model architectures. The framework maintains near-flat accuracy from 30% to 70% noise on most datasets (e.g., MMLU: 68.2% → 67.6%), while SFT degrades catastrophically (59.5% → 37.3%). The ablation study confirms each component contributes, with the Checker and Selection mechanisms providing the largest benefits. This is a robust, well-replicated empirical result.
+
+**What the experiments do NOT demonstrate**:
+
+1. **Effectiveness at noise rates below 30%**. The lowest tested noise rate is 30%, meaning we don't know whether ROBUSTFT helps or hurts when noise is modest (5-15%). If the Checker has a non-zero false positive rate — flagging clean examples as noisy — then at low noise rates, the framework might *damage* clean data through unnecessary relabeling. The paper never evaluates this edge case.
+
+2. **Performance relative to a clean-data upper bound**. The paper never reports model performance when fine-tuned on the 0%-noise version of the same downstream data. Without this, we cannot assess the "efficiency" of ROBUSTFT: does it recover 80% of the clean-data performance? 95%? The absolute numbers are reported but not contextualized against what's achievable.
+
+3. **Generalization to other noise types**. The paper injects noise by corrupting labels, but the noise model is not specified. Random replacement? Systematic errors? Adversarial corruption? The framework's consensus-based detection assumes independent error modes among the three experts, which holds for random label noise but may fail for systematic noise where all experts share a common bias (e.g., a base model blind spot reinforced by reasoning-reflection). The real-world noise sources the paper motivates with (human annotation errors, collection inconsistencies, model hallucinations) are not random — they are often systematic and correlated.
+
+4. **The "self-contained" claim in extreme noise regimes**. At 70% noise, the Checker flags ~70% of examples as potentially noisy, leaving only 30% in `D_clean`. The context-enhanced relabeling for the 70% noisy subset retrieves from this small, possibly contaminated clean pool. If the Checker's false positive rate is non-trivial, `D_clean` contains mislabeled examples that poison the retrieval corpus. The paper does not analyze the purity of `D_clean` at different noise levels — a critical omission for validating the self-contained design principle.
+
+5. **Statistical significance of the results**. No confidence intervals, standard errors, or significance tests are reported for the main results (Tables 1-3). With benchmark test sets that may contain only hundreds of examples (e.g., MMLU's standard test set is ~14,000 questions, but the paper's split is unspecified), observed differences of 0.5-2 percentage points could be within sampling noise. The stability analysis (Figure 6) provides some reassurance for MMLU and ARC, but the remaining datasets (PubMedQA, Drop, FPB) have no reported variance estimates.
+
+**Genuine weaknesses in the experimental design**:
+
+- **The preprocessing cost is not accounted for in any comparison**. ROBUSTFT requires ~5 LLM generations per training example (1 base + iterative reasoning + up to 2 for relabeling per noisy example). For a 10,000-example training set, that's 50,000 generations *before fine-tuning begins*. Baselines like SFT train directly on the noisy data with zero preprocessing; NoiseAL uses active learning that also incurs labeling cost but the paper doesn't compare costs. The paper claims ROBUSTFT is "practical" but never measures its computational overhead relative to baselines.
+
+- **Missing upper-bound baselines**: The paper never reports (a) performance when trained on clean data only, (b) performance when the test set itself is used to select the best model checkpoint, or (c) an oracle that knows exactly which labels are noisy and removes them. Without (a), we cannot assess how close ROBUSTFT gets to the ideal; without (c), we cannot assess how well the Checker approximates perfect noise detection.
+
+- **The noise injection procedure is not specified**. Section 4.1.1 mentions "varying degrees of noise perturbation in the training data" but never describes *how* labels are corrupted — random replacement with other dataset labels? With model-generated wrong answers? With semantically plausible distractors? This matters enormously for interpreting results. Random replacement with arbitrary wrong labels is the easiest case for consensus-based detection (the three experts will all disagree with an obviously wrong label); adversarial corruption that exploits model biases would be much harder and more realistic.
+
+- **No experiments on genuinely open-ended generation tasks**. The paper's motivation (Section 2.1) emphasizes that existing noise-robust methods fail because they assume "finite discrete label spaces" while LLM SFT requires "contextual and open-ended text generation." However, the evaluated benchmarks (MMLU, ARC, PubMedQA, FPB) are **all multiple-choice or classification tasks** with discrete answer spaces. Drop involves numerical answers, which are extractive rather than generative. None of the datasets require multi-sentence, open-ended text generation of the type the motivation claims existing methods cannot handle. The paper critiques prior work for being classification-only, then evaluates on classification tasks.
+
+- **The 70% noise regime may not be realistic**. The paper reports dramatic improvements over SFT at 70% noise (81% relative on MMLU, 129% on PubMedQA), but this is a scenario where 7 out of 10 training labels are wrong. While this demonstrates robustness, it's unclear whether real-world SFT data ever reaches 70% noise rates without being recognized as unusable. The 30% noise results are more practically relevant and show more modest improvements (4.4% over vanilla on MMLU).
+
+**Experiments that would have strengthened the paper**:
+
+- Testing on a genuinely open-ended generation benchmark (e.g., AlpacaEval, MT-Bench, or a summarization task) to validate the claim that ROBUSTFT handles the "open-ended text generation" challenge that traditional methods cannot.
+- Reporting `D_clean` purity at each noise level (what fraction of examples flagged as clean are actually clean?) to validate the Checker's accuracy.
+- Adding a "clean SFT" baseline (0% noise) to establish how much performance is lost due to residual noise after ROBUSTFT processing.
+- Comparing total FLOPs or wall-clock time to baselines, including preprocessing overhead.
+- Sweeping noise rates continuously from 0% to 80% to identify thresholds where ROBUSTFT begins to fail.
+- Varying the noise *type* (random vs. systematic vs. adversarial) to test robustness.
+- Replicating on a different base model family beyond Llama/Gemma (e.g., Mistral, Qwen) to strengthen the "architecture-independent" claim.
+- Including larger-scale models (70B) to test whether the "larger models aren't more robust" claim holds at scale.
+
+**Conditional claims**: The paper's strongest results hold under specific conditions that should be made explicit: (1) the noise is random and uncorrelated, not systematic; (2) the base model has non-trivial capability on the task (so its predictions provide useful consensus signal); (3) the dataset contains sufficient semantic structure that similar queries have similar correct answers (enabling retrieval-based relabeling); and (4) the task has a well-defined correctness criterion (multiple-choice or extractive QA) that enables the Checker's binary consistent/inconsistent decision. The paper does not explicitly state these conditions, but the experimental design implicitly assumes them.
+
+## 6. Limitations and Trade-offs
+
+### 1. The Preprocessing Cost Is Substantial and Unaccounted For
+
+**The assumption or constraint.** ROBUSTFT requires multiple LLM generations per training example before fine-tuning begins: one base prediction (Equation 1), an unspecified number of iterations for the reasoning-reflection loop (Equation 2, described as alternating reasoning and reflection "iteratively"), one context-enhanced prediction per noisy example (Equation 5), and one Review Agent synthesis per noisy example (Equation 6). For a dataset with `N` examples and noise fraction `γ`, the generation count is approximately `N × (1 + K_reasoning + γ × 2)` where `K_reasoning` is the number of reasoning-reflection iterations. At 50% noise with `K_reasoning = 3`, this yields ~5.5N generations — for N=10,000 training examples, that is ~55,000 generations of preprocessing overhead.
+
+The paper never quantifies this cost. Section 4.1.3 mentions that "the implementation code is available" but reports no FLOP counts, wall-clock times, or cost comparisons. All accuracy comparisons in Tables 1–3 treat this preprocessing as free — the baselines (SFT, NoiseAL, SelfRAG) incur their own costs that are never measured or normalized.
+
+**The consequence.** In any practical deployment, the preprocessing cost is a first-order consideration. If generating 55,000 responses costs $X in API credits or Y GPU-hours, that cost must be amortized against the accuracy improvement. At low noise rates (e.g., 10–20%, a regime the paper does not evaluate), the preprocessing cost might dominate any benefit — the model could simply be fine-tuned on the noisy data with minimal degradation. The paper's headline claim that ROBUSTFT "eliminates dependencies on external models or resources" (Section 1) is technically true but misleading: it replaces external dependency with substantial internal computation.
+
+A related unexamined cost: difficulty estimation for real-world deployment. The Checker requires the base model to generate predictions for every training example, and the reasoning-reflection loop multiplies this cost. In a production pipeline with millions of training examples, this preprocessing could be more expensive than the fine-tuning itself, potentially making the approach infeasible for very large datasets or latency-sensitive applications where the cleaned dataset cannot be precomputed offline.
+
+**What evidence exists in the paper.** None. The paper contains zero cost measurements — no FLOP counts, no GPU-hours, no inference latency, no comparison of total compute across methods. Section 4.1.3 specifies that fine-tuning runs for 2 epochs with LoRA, but the preprocessing cost is entirely undocumented. The sensitivity analysis (Figure 3) sweeps `β` and `k` but never analyzes how varying these parameters affects preprocessing cost (e.g., smaller `k` reduces retrieval cost; larger `β` retains more data but requires no additional generations). The framework's computational footprint relative to baselines is unknown.
+
+**Mitigation status.** The paper does not acknowledge this limitation, propose any cost-reduction strategies, or suggest that future work should perform cost-normalized comparisons. This is a significant omission, particularly since the paper claims practical value for "real-world scenarios where noise is inevitable" (Section 1). Real-world deployment decisions are cost-sensitive, and the absence of any cost accounting makes the paper's practical guidance incomplete.
+
+---
+
+### 2. The Approach Is Evaluated Only on Classification Tasks Despite Claiming to Solve Open-Ended Generation Noise
+
+**The assumption or constraint.** The paper's central motivation (Section 2.1, Section 5.1) explicitly argues that traditional noisy-label learning methods fail for LLM SFT because they are "primarily designed for well-defined scenarios, with finite discrete label spaces, making them less effective for open-ended generation problems." The problem ROBUSTFT claims to solve is noise in "contextual and open-ended text generation" (Section 1).
+
+However, **every benchmark evaluated is a classification or extractive QA task with discrete answer spaces**:
+- **MMLU**: four-way multiple choice across 57 subjects.
+- **ARC**: four-way multiple choice for science questions.
+- **PubMedQA**: yes/no/maybe classification for biomedical questions.
+- **Drop**: numerical answer extraction from passages (answers are numbers or dates).
+- **FPB**: three-way sentiment classification (positive/negative/neutral).
+
+None of these datasets require multi-sentence, open-ended text generation of the type described in the motivation. The "labels" are discrete class indices or short numerical strings — exactly the "finite discrete label spaces" the paper claims prior work is limited to. The Checker's consistency evaluation (Equation 3) depends on comparing three predictions for semantic equivalence, which is straightforward for multiple-choice answers (did they pick the same option?) but fundamentally harder for paragraph-length open-ended responses where "agreement" is a graded, subjective judgment.
+
+**The consequence.** The paper provides no evidence that ROBUSTFT works for genuinely open-ended generation tasks — summarization, instruction following, dialogue, creative writing, code generation — where the output space is the entire vocabulary and labels are multi-sentence texts. The Checker's binary consistent/inconsistent decision (Equation 3) becomes ill-defined when there is no discrete "correct answer" to compare against. Two valid responses to an open-ended query can be semantically equivalent but lexically different, and evaluating their consistency requires a judge model or metric (e.g., BERTScore, GPT-4 evaluation) that the paper does not specify or validate.
+
+The entropy-based selection (Equation 7) also assumes a well-defined correctness criterion — it filters based on the model's confidence in its generation, but for open-ended tasks, low entropy might reflect the model producing a generic, safe response rather than a genuinely correct one. A model could be "confident" (low entropy) while generating a response that is factually wrong or insufficiently detailed.
+
+**What evidence exists in the paper.** The gap is evident from the dataset descriptions in Section 4.1.1 and the results in Tables 1–2. All reported accuracy numbers are classification accuracy (% of exactly-correct multiple-choice selections or numerical extractions). The paper never reports results on established open-ended generation benchmarks (e.g., AlpacaEval, MT-Bench, Vicuna Benchmark, or a summarization dataset like CNN/DailyMail). The perplexity analysis (Figure 4) applies to any text generation but is used only as a diagnostic, not as a task performance metric.
+
+**Mitigation status.** The paper does not acknowledge this gap between its motivation (open-ended generation) and its evaluation (classification). Section 8 (Conclusion) does not mention extending to open-ended tasks as future work. The "self-contained framework" claim is therefore validated only for tasks where correctness is a discrete, verifiable property — a much narrower scope than the paper's framing suggests.
+
+---
+
+### 3. Noise Detection Depends Critically on Uncorrelated Expert Errors — Which Systematic Noise Would Violate
+
+**The assumption or constraint.** The `Checker` mechanism (Section 3.2, Equation 3) flags an example as noisy when the original label, base model prediction, and reasoning-enhanced prediction disagree. This works only if the three "experts" have **independent error modes** — the base model and the reasoning-enhanced model must make different mistakes than each other and different from the original noisy label. If all three sources share a common error (e.g., all three produce the same wrong answer), the Checker certifies the example as clean, poisoning `D_clean` and, consequently, the retrieval corpus used for context-enhanced relabeling (Equation 5).
+
+The paper's noise injection procedure is not described (Section 4.1.1 mentions only "introducing varying degrees of noise perturbation"), but if noise is injected by random label corruption, the three error modes are largely independent by construction. In real-world scenarios — which the paper motivates with — noise sources are often **systematic and correlated**:
+
+- **Model hallucinations during self-labeling** (Farquhar et al., 2024, cited in Section 1): if a dataset is produced by having an LLM generate answers, and that LLM has a systematic blind spot (e.g., it consistently confuses two medical conditions), the resulting noisy labels will match both the base model's predictions and the reasoning-enhanced predictions — all three will agree on the same wrong answer. The Checker would incorrectly certify these examples as clean.
+- **Human annotation errors from shared misconceptions**: if annotators share a common misunderstanding of a domain (e.g., consistently misclassifying a type of financial instrument), the base model — trained on similar internet text reflecting the same misconception — may agree with the wrong label. Again, consensus is achieved on an error.
+
+**The consequence.** The self-contained virtuous cycle (noise detection → clean subset → retrieval corpus → relabeling) breaks under systematic noise. If the Checker certifies systematically wrong labels as clean, those errors propagate: they appear in the retrieval corpus, they influence context-enhanced relabeling of genuinely noisy examples, and they are included in the final fine-tuning dataset `D_ft`. The framework not only fails to detect these errors but actively reinforces them by using them as retrieval anchors.
+
+This is a fundamental limitation of any consensus-based detection method: consensus indicates reliability only if errors are independent, which is an assumption about the noise model, not a property of the data. The paper's motivation (Section 2.1) lists "annotation errors, data processing inconsistencies, and model hallucinations" as noise sources — all of which can be systematic — but does not address the independence assumption.
+
+**What evidence exists in the paper.** None directly. The ablation study (Table 3) shows that removing the Checker drops performance to vanilla baseline levels, confirming the Checker is the primary noise detection mechanism. But the paper never analyzes Checker accuracy — what fraction of flagged examples are actually noisy (precision), what fraction of truly noisy examples are flagged (recall), and critically, whether the Checker's errors are random or systematic. Figure 5 (category-wise analysis) shows that ROBUSTFT provides "balanced and expanded performance across all categories," but this is aggregate accuracy, not a breakdown of where the Checker fails. A category-level analysis of Checker precision/recall would reveal whether certain subjects (e.g., those requiring specialized knowledge the base model lacks) exhibit correlated errors that the consensus mechanism misses.
+
+**Mitigation status.** The paper does not acknowledge the independence assumption, does not test robustness to systematic noise, and does not propose mechanisms for detecting or mitigating correlated errors among the three experts. Section 8 (Conclusion) makes no mention of noise model assumptions or the need for validation under realistic noise patterns. This is a significant concern for practitioners whose real-world noise is unlikely to be purely random — the paper provides no guidance on whether ROBUSTFT helps or hurts when errors are correlated.
+
+---
+
+### 4. No Clean-Data Upper Bound — The Recovery Efficiency Cannot Be Assessed
+
+**The assumption or constraint.** The paper does not report fine-tuning performance on **0%-noise data** for any dataset-model combination. The "Vanilla" baseline represents the pre-trained model with no fine-tuning, not a model fine-tuned on clean downstream data. The relevant upper bound for ROBUSTFT is: "how well would the model perform if fine-tuned on the same downstream data with zero label noise?" This tells us how much of the achievable gain ROBUSTFT recovers.
+
+Without this, we cannot answer the central practical question: is ROBUSTFT recovering 50% of the clean-data performance? 90%? 99%? A 4.4% improvement over vanilla (MMLU at 30% noise, Table 1) means something very different if clean SFT achieves +15% versus +5%. The paper's absolute numbers (68.2% at 30% noise on MMLU) are floating without this anchor.
+
+**The consequence.** Several interpretations of the results are ambiguous without the clean-data baseline:
+
+- **Is ROBUSTFT "solving" noise or just mitigating it?** If clean SFT achieves 75% on MMLU, ROBUSTFT's 68.2% represents a 6.8-point gap — substantial residual degradation. If clean SFT achieves 69%, the 0.8-point gap suggests near-complete recovery. The paper provides no basis to distinguish these scenarios.
+- **Is the diminishing return at high noise rates due to residual noise or fundamental task difficulty?** ROBUSTFT achieves 67.6% at 70% noise vs. 68.2% at 30% noise on MMLU — essentially flat. This could mean the denoising is perfect (all noise removed) or that the model's performance ceiling on MMLU with this fine-tuning setup is ~68% regardless of data quality. Without clean SFT, we cannot tell.
+- **How does ROBUSTFT compare to simply using a smaller, cleaner dataset?** A practitioner might prefer to manually verify a small subset of data rather than run ROBUSTFT's expensive preprocessing on a large noisy dataset. If clean SFT on 30% of the data (the fraction ROBUSTFT keeps via selection, roughly) achieves similar performance to ROBUSTFT on the full dataset, the framework adds no value. The paper provides no data to evaluate this tradeoff.
+
+**What evidence exists in the paper.** None. Tables 1–3 report Vanilla (no fine-tuning) and SFT (fine-tuning on noisy data) but never clean SFT (fine-tuning on the original, uncorrupted labels). Section 4.1.1 describes datasets as "constructed experiments with different noise rates" but never mentions a 0%-noise condition.
+
+**Mitigation status.** Not addressed. The paper does not acknowledge the missing baseline, does not discuss the interpretability gap it creates, and does not suggest that future work should establish clean-data upper bounds. This is a straightforward experimental omission that weakens the practical interpretation of all reported results.
+
+---
+
+### 5. The Framework Is Validated on a Narrow Range of Model Scales (3B–9B) — "Larger Models Are Not More Robust" Claim Is Untested Beyond This Range
+
+**The assumption or constraint.** Section 4.2.2 states:
+
+> "Larger models are not inherently more robust. Contrary to common intuition, increased parameter count does not correlate with better noise resistance."
+
+This claim is based on experiments with three models spanning 3B to 9B parameters — a ~3× range within the single-digit billions. The paper presents this as a general finding about model scale and noise robustness, but the tested range covers less than one order of magnitude and entirely excludes the large-model regime (70B, 405B) where scaling laws suggest qualitative changes in model behavior (emergent capabilities, different calibration properties, stronger in-context learning).
+
+**The consequence.** The claim may not generalize. Larger models (70B+) exhibit behaviors — stronger priors, better calibration on certain task types, more robust in-context learning — that could make them either more or less susceptible to label noise. They might be more robust because their stronger pre-trained knowledge resists being overwritten by noisy fine-tuning labels, or they might be less robust because their greater capacity allows them to memorize noisy labels more precisely. The paper provides no evidence either way.
+
+Additionally, the preprocessing cost (Limitation 1) scales with model size — generating 55,000 responses from a 70B model is vastly more expensive than from an 8B model. The cost-benefit calculus for ROBUSTFT changes dramatically at scale: if a 70B model requires $500 in API credits to preprocess a dataset that an 8B model processes for $50, the framework may be economically infeasible for large models even if it is technically effective.
+
+**What evidence exists in the paper.** Table 2 reports Llama-3.2-3B, Llama-3.1-8B, and Gemma2-9B. All are single-digit-billion parameter models. The SFT degradation at 70% noise is proportionally similar across these three (MMLU: 38.3% → 37.3% → 40.3%), supporting the claim within this range, but this is a narrow range. No experiments use models above 10B or below 1B parameters.
+
+**Mitigation status.** The paper does not qualify its claim with the tested range, does not discuss whether the finding might extend to larger models, and does not suggest future work on scaling the framework to 70B+ models. The statement "increased parameter count does not correlate with better noise resistance" is presented as a general truth based on a ~3× parameter variation — a significant overclaim given the evidence.
+
+---
+
+### 6. The Framework Has No Mechanism for Handling Noise in the Queries — Only the Labels Are Assumed Noisy
+
+**The assumption or constraint.** The problem formulation in Section 2.2 and the entire technical design (Section 3) assume that noise exists only in the labels `y_i`, while the queries `q_i` are clean:
+
+> "the training data contains both correctly and incorrectly labeled data pairs"
+
+The noise detection (Section 3.2) compares model predictions against the *original label* — the query is never questioned. The context-enhanced relabeling (Section 3.3) retrieves similar examples based on query embeddings (Equation 4), assuming query similarity is a reliable signal for answer similarity. If queries themselves are corrupted (e.g., contain typos, missing context, ambiguous wording, or factual errors in the question), the entire pipeline degrades:
+
+- The Checker may flag an example as noisy because the model cannot answer the corrupted query, even though the label is correct for the intended (clean) query.
+- Retrieval based on corrupted query embeddings (Equation 5) will retrieve wrong or irrelevant examples, poisoning the in-context signal.
+- The entropy filter (Equation 7) will flag high-confidence wrong answers to corrupted queries as trustworthy.
+
+**The consequence.** In real-world data collection, query noise is common: user-submitted questions contain typos and grammatical errors, web-scraped QA pairs may have truncated or malformed questions, and data processing pipelines can introduce artifacts (e.g., encoding errors, incorrect parsing of multi-turn conversations). ROBUSTFT provides no mechanism to detect or repair query corruption — it treats all queries as ground truth and focuses exclusively on label noise.
+
+This is particularly problematic for the self-labeling noise source the paper motivates with (Section 1: "model-based self-labeling"). If an LLM generates both questions and answers for a synthetic dataset, and the LLM hallucinates in the question (e.g., asking about a non-existent entity or stating a false premise), the label may be "correct" relative to the hallucinated question but the entire example is poisoned. ROBUSTFT's Checker would see the original label, the base model's answer, and the reasoning model's answer all agreeing (since they all accept the false premise) and certify the example as clean.
+
+**What evidence exists in the paper.** None directly, but the architecture reveals the assumption. The noise detection only evaluates `y_i`, `ŷ_i`, and `ŷ_i^reas` — there is no query-level analysis. The encoding step `h_i = Encoder(q_i)` treats `q_i` as trustworthy. The datasets evaluated (MMLU, ARC, etc.) are professionally curated with clean queries, so query noise is absent from the experimental design by construction — the paper's experiments do not test the scenario where queries are corrupted.
+
+**Mitigation status.** Not addressed. The paper does not mention query noise as a limitation, does not propose extensions to handle corrupted queries, and does not discuss whether the framework's mechanisms (e.g., query embedding for retrieval) are robust to query perturbations. A practitioner deploying ROBUSTFT on user-generated or web-scraped data — exactly the "real-world" scenario the paper motivates with — would need to separately address query quality, with no guidance from this work.
+
+## 7. Implications and Future Directions
+- Impact on practice:
+  - The paper provides an actionable recipe for organizations to fine‑tune LLMs on imperfect real‑world corpora. A drop‑in pre‑SFT curation step—agreement‑based detection, retrieval‑guided relabeling, entropy filtering—can stabilize and often improve over the vanilla model under heavy noise.
+
+- Research directions:
+  - Stronger agreement models: replace the binary `Checker` with calibrated uncertainty estimation, semantic‑equivalence scoring, or multiple heterogeneous LLMs with learned weights.
+  - Better relabeling governance: incorporate verifier models or lightweight human spot‑checks for high‑impact samples; add contradiction tests between `ŷ_i^cont` and `ŷ_i^reas`.
+  - Beyond entropy: combine entropy with semantic confidence (e.g., entailment scores, self‑consistency voting, or edit distance to retrieved exemplars).
+  - Noise typology studies: evaluate under adversarial and systematically biased noises; analyze cross‑lingual and code‑generation settings.
+  - Integration with other post‑training methods: apply ROBUSTFT as a data curation front‑end for preference optimization and RLHF, where misplaced preferences are common.
+
+- Applications:
+  - Domain adaptation with weak supervision (medical Q&A, finance analysis, legal reasoning).
+  - Bootstrapping specialized assistants from mixed‑quality logs or scraped data.
+  - Continual learning where on‑the‑fly relabeling and selection counter drift and accumulation of errors.
+
+Overall, ROBUSTFT reframes noisy SFT as a detect‑then‑repair problem using multi‑expert agreement and context‑aware relabeling, then enforces quality with entropy‑based selection. The combination is simple, self‑contained, and empirically effective across diverse tasks and models (Tables 1–2; Figures 3–6), making it a practical baseline for noise‑robust LLM adaptation.

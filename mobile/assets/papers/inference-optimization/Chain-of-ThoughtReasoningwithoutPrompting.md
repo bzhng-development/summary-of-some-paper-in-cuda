@@ -1,0 +1,717 @@
+# Chain-of-Thought Reasoning without Prompting
+
+**ArXiv:** [2402.10200](https://arxiv.org/abs/2402.10200)
+
+## 🎯 Pitch
+
+This paper introduces 'CoT-decoding', a simple yet powerful decoding strategy that enables large language models (LLMs) to perform step-by-step reasoning—known as chain-of-thought (CoT)—without any special prompts or instruction tuning. By inspecting multiple top initial tokens and leveraging answer confidence, the method surfaces latent reasoning paths that standard greedy decoding misses, boosting accuracy on math and commonsense tasks and unlocking a more truthful measurement of LLMs’ intrinsic reasoning abilities. This innovation shifts the focus from prompt engineering to model decoding, lowering deployment barriers and clarifying what pretrained models can accomplish on their own.
+
+---
+
+## 1. Executive Summary
+
+This paper analyzes whether pre-trained LLMs can produce chain-of-thought reasoning without any prompting, simply by altering the decoding process to explore top-𝑘 alternative tokens at the first decoding step rather than relying on greedy decoding. The study examines PaLM-2, Mistral-7B, and Gemma-7B models on GSM8K, MultiArith, and year parity benchmarks, introducing **CoT-decoding** — a method that selects among alternative decoding paths by measuring the model's answer confidence (the probability gap between top-1 and top-2 tokens for answer spans, which correlates strongly with the presence of a CoT path in that decoding trajectory). The approach improves GSM8K accuracy from 9.9% to 25.1% on Mistral-7B and from 34.8% to 63.2% on PaLM-2 Large — more than doubling performance without any supervised data — while establishing that pre-trained models inherently possess reasoning capabilities that are obscured by greedy decoding, and that existing prompting techniques predominantly serve to bring these latent reasoning paths forward rather than teaching the model to reason from scratch.
+
+## 2. Context and Motivation
+
+### The Core Problem: We Don't Know What LLMs Can Do Without Hand-Holding
+
+The central question this paper asks is deceptively simple: **If you take a pre-trained language model and ask it a reasoning question without any special prompting — just the question in standard Q&A format — can it reason?** The prevailing answer in the literature has been "no, or at least not very well." This paper argues that answer is wrong, and that the apparent failure is an artifact of how we decode these models, not a reflection of their underlying capabilities.
+
+The problem matters for three reasons the authors develop throughout the paper:
+
+**First, it's about scientific truth.** If we only ever study LLMs through the lens of carefully engineered prompts, we cannot distinguish between what the model *knows* from pre-training and what the prompt *teaches* it at inference time. As the authors put it in Section 1:
+
+> "Prompting techniques, while effective, often encode task-specific human priors, thereby making it difficult to assess a language model's intrinsic reasoning abilities."
+
+This is a measurement problem of fundamental importance: we're trying to understand the capabilities of these models, but our primary tool for studying them — prompting — contaminates the very capabilities we want to measure. If a model succeeds on GSM8K only with a specific few-shot CoT prompt, is the reasoning coming from the model's pre-training, or from the prompt showing it exactly how to structure the solution? The paper doesn't answer this definitively, but it provides a tool for starting to disentangle these factors.
+
+**Second, it challenges the dominant paradigm for engineering LLM systems.** The field has settled into a routine: to get good reasoning performance, you either (a) craft better prompts (few-shot CoT, zero-shot CoT, tree-of-thought, etc.) or (b) fine-tune the model on CoT-annotated data. Both are expensive in different ways. Prompt engineering requires human expertise, is task-specific, and needs iterative refinement. Fine-tuning requires supervised data and compute. If it turns out that pre-trained models *already* contain the reasoning paths and we just need a better way to surface them, that changes the engineering calculus substantially — we could potentially recover much of the benefit of these expensive approaches through decoding changes alone, which require no additional training data or human intervention.
+
+**Third, it opens up a new axis for model improvement.** Most research on improving LLM reasoning operates in one of two modes: change the input (prompting) or change the weights (fine-tuning). This paper suggests a third mode: change the *decoding strategy*. If the model already has diverse reasoning paths latent in its next-token distribution, then inference-time search through that distribution becomes a powerful, previously underexplored lever for improving performance. This is conceptually analogous to how Monte Carlo Tree Search unlocked new capabilities in game-playing systems without changing the underlying policy network — the policy already contained the knowledge, and search made it accessible.
+
+The paper explicitly frames this in the opening of Section 2.1:
+
+> "We investigate whether pre-trained language models inherently possess reasoning capabilities, without explicit prompts or human intervention."
+
+The operative word is "inherently." This isn't about teaching the model anything new. It's about revealing what's already there.
+
+### Conflicting Signals in Prior Work
+
+The paper is motivated by several observations from the literature that suggest the standard picture — "LLMs need prompting to reason" — is incomplete.
+
+**Observation 1: Prompt sensitivity is a red flag.** A well-known finding in the prompting literature (which the paper cites in Section 4) is that the effectiveness of prompting techniques varies significantly depending on the choice of prompts (Wang et al., 2022; Ye and Durrett, 2022; Zhou et al., 2023b). If the same model can go from failing to succeeding on the same problem just by rewording the prompt, that suggests the capability exists somewhere in the model — it's an *access* problem, not a *competence* problem. The paper builds on this intuition: if simple prompt changes can toggle reasoning on and off, maybe no prompt at all can also work, if we access the model's distribution differently.
+
+**Observation 2: Sampling helps under CoT prompting, but not without it.** Self-consistency (Wang et al., 2023a) showed that sampling multiple reasoning paths under a CoT prompt and taking the majority vote improves accuracy over greedy decoding. That makes sense — diversity helps when you're already in the right ballpark. But what happens when you sample *without* a CoT prompt? The paper tests this explicitly (Table 3) and finds it largely fails: on Mistral-7B, self-consistency without a CoT prompt achieves only 12.9% on GSM8K, barely above greedy (9.9%). The model's default behavior under sampling is still to generate direct answers, not reasoning chains. This negative result is actually *crucial* to the paper's thesis: it shows that naive diversity isn't enough. You need to *force* diversity at a specific point — the first token — where it can redirect the entire trajectory from direct-answer mode to reasoning mode. The paper returns to this point when explaining why branching at later steps doesn't work as well (Figure 2):
+
+> "early branching, e.g., at the first decoding step, significantly enhances the diversity of potential paths. Conversely, later-stage branching is significantly influenced by previously generated tokens. For instance, initiating with the token '5' greatly decreases the likelihood of rectifying an erroneous path."
+
+This is a subtle mechanistic insight: the first token acts as a "mode selector" for the model. If the model starts with a number (direct answer mode), it rarely recovers into a reasoning path later. If it starts with a reasoning token ("I", "We", "Let"), a full CoT trajectory often follows. The adjacency of these different modes in the top-𝑘 distribution at position one is what makes the paper's approach viable.
+
+**Observation 3: Models can self-correct in some contexts.** The paper references work showing that LLMs can improve their own outputs through self-critique and revision (implicitly citing the broader self-improvement literature in Section 4). This suggests models have some capacity to recognize and fix their own errors — a form of reasoning that doesn't require external prompts. But the conditions under which this works are not well understood. This paper doesn't study self-correction directly, but it shares the motivating intuition that models may be more capable than they appear under default decoding.
+
+**Observation 4: Instruction-tuned models still sometimes fail to generate CoT paths.** Section 3.1 reports a revealing finding: even after instruction-tuning with abundant CoT data, models occasionally persist in attempting to directly answer questions rather than reasoning step by step. The authors observe this in specific examples and note:
+
+> "CoT-decoding can enhance the exploration of alternative paths by triggering a CoT first, consequently leading to more accurate answers."
+
+This is significant because it shows the problem isn't just about pre-trained models — even models explicitly trained to reason sometimes suppress their reasoning behavior in favor of a quick answer, and forcing diversity at the first token can recover the reasoning paths that the model *has been trained to produce but isn't deploying*.
+
+### Where Prior Approaches Fall Short
+
+The paper identifies specific limitations in existing methods:
+
+**Prompt engineering is expensive and brittle.** The rich literature on CoT prompting (Wei et al., 2022; Kojima et al., 2022; Zhou et al., 2023a; Yao et al., 2023; Yasunaga et al., 2023) has produced impressive results, but at a cost. Each new task requires new prompt design. The effectiveness of a prompt varies with the specific wording and exemplars chosen. The process is manual, iterative, and requires domain expertise to design demonstrations that teach the right problem-solving strategy. Most critically for the paper's thesis, prompts introduce a confound — we cannot tell whether the model is reasoning from its own understanding or simply pattern-matching the structure demonstrated in the prompt. The paper explicitly states this in the introduction:
+
+> "the employment of intricate prompting techniques often introduces various human priors, making it difficult to distinguish between the extent of 'human teaching' and the degree to which LLMs can reason independently."
+
+**Instruction tuning requires expensive data.** The alternative to prompting — fine-tuning on CoT-annotated data (Chung et al., 2022; Cobbe et al., 2021b; Nye et al., 2021) — faces a different bottleneck. Generating high-quality chain-of-thought annotations at scale requires either human effort or bootstrapping from already-capable models, and the resulting models are tied to the distribution of tasks they were fine-tuned on. The paper positions CoT-decoding as a middle ground: no supervised data needed, no human prompt design needed, yet significant reasoning improvements over the untuned base model.
+
+**Standard decoding methods are designed for fluency, not reasoning.** Section 4 surveys the decoding literature and makes an important observation: existing decoding algorithms (greedy, temperature sampling, top-𝑘, nucleus, beam search, diverse beam search) are optimized for properties like fluency, coherence, diversity, and avoidance of repetition. None of them are designed to surface *reasoning* specifically. Greedy decoding takes the most probable token at every step, which on reasoning tasks tends to produce direct, incorrect answers. Beam search optimizes for high-probability sequences, which are typically short, direct responses. Top-𝑝 and nucleus sampling introduce diversity but without any mechanism to steer that diversity toward reasoning paths. Temperature sampling can help but — as the paper shows in Table 4 — achieves only 7.5% on GSM8K with Mistral-7B, actually *worse* than greedy decoding (9.9%).
+
+The paper's specific empirical comparison in Table 4 is worth examining carefully:
+
+| Method | GSM8K Accuracy (Mistral-7B) |
+|---|---|
+| Top-𝑘 sampling (𝑘=10) | 4.9% |
+| Nucleus sampling (𝑝=0.9) | 6.4% |
+| Beam search (𝑏=10) | 6.7% |
+| Temperature sampling (𝑇=0.7) | 7.5% |
+| Greedy decoding | 9.9% |
+| Self-consistency w/o CoT prompt | 12.9% |
+| **CoT-decoding (𝑘=10)** | **25.1%** |
+
+Every standard decoding method performs *worse* than greedy on this task, and even the sampling-only approach (self-consistency without prompting) barely improves over greedy. Only CoT-decoding — which explicitly searches for paths where the model is confident in its answer — makes a substantial difference. This is a strong empirical case that the decoding algorithm needs to be reasoning-aware, not just diversity-seeking or probability-maximizing.
+
+**No prior work systematically explored top-𝑘 branching for reasoning.** While the idea of considering alternative tokens at a given position is not new (beam search does this, and diverse beam search explicitly encourages divergence), the paper argues — and demonstrates — that no prior work applied this idea specifically to elicit chain-of-thought reasoning *without prompting*. The key innovations are: (1) identifying the *first* token as the critical branching point where direct-answer and reasoning modes diverge, (2) recognizing that a confidence metric (the probability gap at answer tokens) can distinguish reasoning paths from non-reasoning paths without needing to parse the content, and (3) showing that this simple procedure works across models, scales, and task types without any task-specific engineering.
+
+### How This Paper Positions Itself
+
+The paper frames its contribution through a clear conceptual shift: **from prompt-centric to decoding-centric** analysis of LLM reasoning capabilities. The target of investigation is not "how should we prompt these models to make them reason?" but rather "do these models already contain reasoning capabilities, and if so, how can we access them without imposing external structure?"
+
+This reframing has several implications for how the paper positions itself relative to prior work:
+
+**As a measurement tool, not just a performance booster.** The authors are careful to present CoT-decoding as a way to *assess* intrinsic reasoning, not just as a new method for getting higher accuracy. Section 3.2 is devoted entirely to using CoT-decoding to probe what models can and cannot do on their own:
+
+> "This modification enables a more truthful assessment of a language model's intrinsic reasoning capabilities."
+
+The experiments on synthetic tasks of varying difficulty (Table 6) are designed to answer questions like: at what level of problem complexity do models inherently have correct reasoning paths, and at what level do they break down? The findings — that models can handle 1-2 step knowledge manipulation but struggle with 3+ steps — provide a window into the limits of pre-trained reasoning that would be obscured if the model were always evaluated with prompts that teach it how to structure multi-step solutions.
+
+**As a reconciliation of conflicting narratives.** The paper implicitly reconciles two competing narratives in the LLM reasoning literature. One narrative says "LLMs are terrible at reasoning without prompting" — supported by the fact that greedy decoding on direct-QA format produces near-chance performance on many tasks. The other narrative says "LLMs can self-improve and exhibit emergent reasoning" — supported by the self-correction and prompting literature. This paper shows both can be true simultaneously: the model's *greedy path* is terrible at reasoning, but the model's *distribution* contains high-quality reasoning paths. The apparent contradiction is an artifact of only looking at the mode of the distribution.
+
+**As orthogonal to existing approaches.** The paper is careful to position CoT-decoding as complementary to both prompting and fine-tuning, not as a replacement. Section 3.3 shows that CoT-decoding can be *combined* with zero-shot CoT prompting for additional gains (Table 7):
+
+- Zero-shot CoT prompting (greedy): 75.1% on GSM8K with PaLM-2 L
+- With self-consistency (10 paths): 85.3%
+- With CoT-decoding + aggregation: 87.0%
+
+The improvement is modest (1.7 percentage points over self-consistency) but consistent, suggesting that even when the model is already prompted to reason, explicit diversity at the first token can find reasoning paths that sampling alone misses. This is important for the paper's narrative: it's not arguing that prompting is obsolete, but rather that there's an entire dimension of capability (decoding-time search) that has been underexplored relative to the enormous attention given to prompt design.
+
+**As an unsupervised alternative to instruction tuning.** One of the paper's most striking results is shown in Figure 4 (left): on PaLM-2 Large, CoT-decoding on the pre-trained model achieves 63.2% on GSM8K, close to the instruction-tuned version of the same model at 67.8%. The paper frames this as evidence that a substantial fraction of what instruction tuning provides can be recovered through smarter decoding alone:
+
+> "The results demonstrate that instruction-tuning with sufficient CoT data... can be partially achieved by modifying the decoding procedure within pre-trained models."
+
+The word "partially" is important — there's still a gap — but closing roughly two-thirds of the gap between pre-trained and instruction-tuned performance without any additional training is a compelling demonstration that current training procedures may be solving a decoding problem rather than (or in addition to) a knowledge problem.
+
+### The Deeper Implication: What "Reasoning Capability" Actually Means
+
+Running through the entire motivation is a deeper conceptual question that the paper engages with but doesn't fully resolve: **what does it mean for a model to "possess" a reasoning capability?** If a model can produce a correct chain-of-thought when you force it to start with "Let's" instead of "5," does it know how to solve the problem, or does it just happen to have that sequence in its distribution alongside the wrong direct answer?
+
+The paper's answer, implicit in its design, is that the capability is "inherent" if it exists in the model's next-token distribution at all — regardless of whether it's the most probable path. This is a specific and debatable position, but it has practical force: if the capability exists *anywhere* in the distribution, then inference-time search can recover it, and we should think of the model as having that capability in a latent form. The paper's framing in Section 1 is explicit:
+
+> "Our findings reveal that, intriguingly, CoT reasoning paths can be elicited from pre-trained LLMs by simply altering the decoding process."
+
+The key phrase is "can be elicited" — not "can be taught" or "can be prompted." The capability is posited to exist a priori, and the decoding change merely surfaces it. Whether this is the right way to think about it (versus the decoding change *constructing* the reasoning path through its interaction with the model's distribution) is a philosophical question the paper doesn't settle, but the practical result — that you can get substantial reasoning improvements without any prompt engineering — stands regardless.
+
+## 3. Technical Approach
+
+### 3.1 Reader Orientation
+
+The system described in this paper is not a new model or a training procedure — it is a **decoding algorithm** that extracts chain-of-thought reasoning paths from a frozen, pre-trained language model by exploring alternative first-token choices and selecting the path where the model exhibits highest confidence in its final answer. The problem it solves is: given a pre-trained LLM that produces incorrect direct answers under standard greedy decoding, how can we reliably surface the correct reasoning trajectories that already exist in the model's next-token distribution but are ranked below the top-1 prediction? The shape of the solution is a three-stage process: (1) force diversity at the critical first decoding step by branching on top-𝑘 tokens, (2) continue each branch with greedy decoding to produce complete candidate paths, and (3) score each path using a novel confidence metric — the average probability gap between the top two tokens at each answer-span position — which empirically identifies paths containing genuine chain-of-thought reasoning.
+
+### 3.2 Big-Picture Architecture (Diagram in Words)
+
+The system has four major components that operate sequentially at inference time:
+
+1. **Input Formatter** — takes a reasoning question and wraps it in the minimal standard QA format `"Q: [question]\nA:"`. No instructions, no exemplars, no "think step by step." This bare format is necessary only to signal to a pre-trained model that it should answer rather than continue the question text, and it represents the most basic formatting used in existing work.
+
+2. **First-Step Branching Module** — at the very first decoding position (immediately after `"A:"`), the model computes its full vocabulary distribution. Instead of taking only the single most probable token (greedy), the system extracts the top-𝑘 tokens by probability, creating 𝑘 distinct decoding trajectories that diverge from the very first generated token. Critically, branching occurs *only* at this first step — all 𝑘 branches are then completed independently using standard greedy decoding (always taking the single most probable token at every subsequent position). The paper uses `$k=10$` as the default.
+
+3. **Answer Span Identifier** — for each of the 𝑘 completed decoding paths, the system must identify which subsequence of tokens constitutes "the answer" in order to compute confidence. The paper uses two approaches: for public models evaluated following standard protocols, it extracts the last numerical value or final option; alternatively, it appends the prompt `"So the answer is"` to the model's output, re-feeds the combined sequence, and identifies the continuation tokens as the answer span, aligning them back to positions in the original decoding path.
+
+4. **Confidence Scorer and Path Selector (the CoT-decoding core)** — for each path, the system computes `$\Delta_{k,\text{answer}}$`, the average probability gap between the top-1 and top-2 tokens across all answer-span positions. Paths are ranked by this confidence score, with higher `$\Delta$` values empirically indicating the presence of a CoT reasoning path. The system selects the path with the maximum `$\Delta$` (CoT-decoding max-path), or optionally aggregates answers across multiple paths weighted by their `$\Delta$` values (CoT-decoding agg-path).
+
+Information flows strictly forward: question → format → branch first token → greedy-complete each branch → identify answer spans → compute confidence → select/aggregate answers. There is no feedback loop, no iterative refinement, and no interaction with the model beyond the initial generation of the 𝑘 paths.
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First**, the **input formulation and why it matters** — the minimal QA format `"Q: [question]\nA:"` and what it does to the model's distribution, since this is the substrate that makes branching possible.
+- **Second**, the **first-step branching mechanism** — why only the first token, why `$k=10$`, and what phenomena emerge in the top-𝑘 distribution that make CoT paths accessible.
+- **Third**, the **confidence metric `$\Delta$`** — its definition, the intuition connecting confidence to reasoning, and the empirical validation that high-`$\Delta$` paths overwhelmingly contain CoT reasoning (88% on GSM8K).
+- **Fourth**, the **answer span identification** procedure and its two variants, since computing `$\Delta$` requires knowing which tokens constitute the answer.
+- **Fifth**, the **path aggregation algorithm** — how answers from multiple high-confidence paths are combined and why this outperforms simple majority voting.
+- **Sixth**, the **key hyperparameters and computational cost** — the choice of `$k$`, the branching point, and the cost scaling relative to greedy decoding.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily a **methodological and empirical analysis paper** whose core idea is that pre-trained LLMs already contain chain-of-thought reasoning capabilities that can be surfaced without any prompting or fine-tuning, simply by: (a) branching on alternative top-𝑘 tokens at the first decoding step to escape the model's default direct-answer mode, and (b) selecting among the resulting paths using a confidence metric that correlates strongly with the presence of genuine reasoning.
+
+---
+
+#### The Input Formulation: Why `"Q: [question]\nA:"` and Nothing Else
+
+The paper uses the minimal possible input format for all experiments: `"Q: [question]\nA:"`, where `[question]` is replaced with the actual task question. This choice is deliberate and carries several implications that are not always spelled out explicitly but are crucial to understanding the method.
+
+**Why any format at all?** Pre-trained language models are trained to continue text, not to answer questions. If you feed a pre-trained model a question like "I have 3 apples, my dad has 2 more apples than me, how many apples do we have in total?" without any formatting, the model will, by default, continue the text in whatever way was common in its training distribution — which could mean adding another sentence to the story, repeating the question, or producing a response — but there is no reliable signal that the model should produce an *answer*. The `"Q: ... \nA:"` format is the simplest possible convention for signalling "this is a question-answer pair, now produce the answer." The paper explicitly notes this in a footnote (Section 1):
+
+> "The QA format is only needed because without it a pre-trained language model will continue the question instead of answering. It is also the most basic formatting employed in existing works for pre-trained models."
+
+This is an important subtlety: the paper is *not* claiming the model works with literally no structure — there is always some minimal formatting convention. But this format is the least informative possible: it contains no task description, no instructions, no examples, no reasoning hints. It tells the model only that an answer is expected, not what kind of answer or how to produce it.
+
+**What the format does to the model's distribution.** When the model encounters `"Q: [some math problem]\nA:"`, the next token distribution reflects the model's learned prior over how questions are typically answered in its training data. The paper's central observation is that this distribution is *bimodal* in a specific sense: the most probable continuation tends to be a direct answer (a number, a short phrase), but lower-probability continuations often begin with tokens that initiate explanatory reasoning ("I", "We", "Let", "First", "To solve"). The `"Q: ... \nA:"` format creates a fork in the model's behavior where both modes — direct answering and reasoning — are available as high-probability alternatives at the very first token.
+
+**Why not a more informative format?** The entire point of the paper is to study what the model can do *without* being told how to reason. Adding "Let's think step by step" (zero-shot CoT) or providing worked examples (few-shot CoT) would contaminate this measurement. The minimal QA format is the control condition that isolates the model's intrinsic behavior.
+
+---
+
+#### First-Step Branching: Why Only the First Token Matters
+
+The core mechanism of CoT-decoding is branching on the top-𝑘 tokens at the first decoding step only, then completing each branch with standard greedy decoding. This design is not arbitrary — it reflects a specific empirical finding about where the direct-answer vs. reasoning divergence occurs in the model's autoregressive generation.
+
+**The phenomenon at position zero.** When the model processes `"Q: [question]\nA:"`, it must predict the very first token of the response. The paper's key discovery (illustrated in Figure 1 and Table 1) is that at this position, the model's top-𝑘 distribution contains tokens that lead to qualitatively different types of completions:
+
+- **Top-1 tokens often initiate direct answers.** In the running example "I have 3 apples..." (Figure 1), the top-1 token is `"5"`, which leads to the greedy path `"5 apples"` — a confident wrong answer with no reasoning. This is the model's default mode: when asked a question, produce the answer immediately.
+- **Top-2 through top-𝑘 tokens often initiate reasoning.** In the same example, the top-2 token is `"I"`, which leads to `"I have 3 apples, my dad has 2 more apples than me, so he has 5 apples. 3+5=8. We have 8 apples in total."` — a complete and correct CoT path. The top-3 token `"We"` initiates a similar path. The top-5 token `"The"` leads to another direct answer attempt.
+
+The adjacency of these fundamentally different modes at the same decoding position is what makes CoT-decoding viable. If the reasoning tokens were ranked at position 50 or position 100, finding them would require an impractical amount of search. But because they cluster at position zero — the very first decision the model makes — exploring only 10 alternatives is often sufficient.
+
+**Why later-stage branching fails.** Section 2.2 addresses this explicitly with Figure 2 and the accompanying analysis. The figure shows two examples (a math problem and a year parity question) where the model's alternative decoding paths are explored at different steps:
+
+- **Branching at step 0** (the first token after `"A:"`) produces diverse paths that include both direct answers and full reasoning chains. For the math problem, the alternatives from the top-1 token `"5"` start with a number and lead to different direct answers; alternatives from reasoning-initiating tokens produce full CoT solutions.
+- **Branching at step 1** (after the model has already generated `"5"`) shows dramatically reduced diversity. Starting from `"5"`, the model's completions are variants on `"5 apples"`, `"5."`, `"5\n"` — all direct answers, none recovering into a reasoning path. As the paper states: "initiating with the token '5' greatly decreases the likelihood of rectifying an erroneous path."
+
+This path-dependence is a fundamental property of autoregressive generation: once the model commits to a direct-answer frame at the first token, the entire subsequent distribution is conditioned on that frame, and the probability of spontaneously switching to a reasoning frame mid-generation is near zero. The first token acts as a **commitment point** that determines the mode of the entire response.
+
+**An exception: task-dependent optimal branching points.** The paper notes that while first-step branching works well generally, "the optimal branching point may vary with the task; in the year parity task, for instance, mid-path branching can effectively yield correct CoT paths." The year parity example in Figure 2 shows that at step 0, the alternatives are `"Nicolas"`, `"Even"`, `"Odd"`, `"1"`, and `"He"` — some of which (like `"Odd"`) are direct answers. But at a later step (step 𝑘, after the model has generated some context), branching from `"Nicolas Cage was born in"` yields `"1964, an even year."` — a correct CoT path that recovers the birth year before determining parity. This suggests that for some tasks, the model's knowledge retrieval (looking up a birth year) and reasoning (determining parity) happen at different steps, and branching at the knowledge-retrieval point is more effective. However, the paper defaults to first-step branching for simplicity and generality, leaving task-adaptive branching as future work.
+
+**The choice of `$k$`.** The paper uses `$k=10$` as the default number of alternative first tokens to explore. Figure 5 shows that accuracy generally increases with `$k$` for pre-trained models, but with diminishing returns. For instruction-tuned models, the effect of `$k$` is less pronounced because instruction tuning already brings CoT paths to the top few positions. The computational cost scales linearly with `$k$`, since each branch requires a full greedy decoding pass. The choice of `$k=10$` represents a practical tradeoff between coverage (finding the CoT paths) and cost (running 10× more decoding passes than greedy).
+
+---
+
+#### The Confidence Metric `$\Delta$`: Why Answer Confidence Reveals Reasoning
+
+The second core component of CoT-decoding is the method for selecting which of the 𝑘 decoding paths to trust. The paper's insight is that the model's own confidence in its final answer — operationalized as the probability gap between the top-1 and top-2 tokens at each answer-span position — serves as a reliable proxy for whether the path contains genuine chain-of-thought reasoning.
+
+**Formal definition.** The confidence metric for the `$k$`-th decoding path is:
+
+$$\Delta_{k,\text{answer}} = \frac{1}{|\text{answer}|} \sum_{x_t \in \text{answer}} \left( p(x^1_t | x_{<t}) - p(x^2_t | x_{<t}) \right)$$
+
+where:
+- `$x_t$` iterates over each token position within the identified answer span in the `$k$`-th decoding path,
+- `$|\text{answer}|$` is the number of tokens in that answer span (used for averaging),
+- `$x^1_t$` is the token with the highest post-softmax probability at position `$t$` (the token the model actually selected under greedy decoding, since each branch uses greedy after the first step),
+- `$x^2_t$` is the token with the second-highest post-softmax probability at position `$t$`,
+- `$p(x^1_t | x_{<t})$` and `$p(x^2_t | x_{<t})$` are the model's predicted probabilities for those two tokens given all preceding context,
+- `$x_{<t}$` denotes all tokens generated before position `$t$` in this decoding path.
+
+**What it computes in operational terms.** At each position within the answer span, the model has a probability distribution over the entire vocabulary for what token comes next. The metric extracts the difference between the highest and second-highest probabilities at that position, then averages this gap across all tokens in the answer. For instance, if the answer is the number `"60"` (two tokens), the system computes `$(p(\text{"6"}) - p(\text{second-most-likely-at-that-position}))$` for the first answer token position and `$(p(\text{"0"}) - p(\text{second-most-likely-at-that-position}))$` for the second, then averages the two differences. A path where the model puts very high probability on the answer tokens and very low probability on alternatives will have a high `$\Delta$`; a path where the model is uncertain (the probability is spread across many alternatives) will have a low `$\Delta$`.
+
+**An example from the paper.** In Table 1's GSM8K example, the greedy path (`$k=0$`) produces the answer `"$60.00"` with a `$\Delta$` of 0.029 — the model is highly uncertain about this answer (the probability gap between "60" and whatever the second choice was is only 0.029). In contrast, the CoT path at `$k=9$` produces the answer `"$64$"` with a `$\Delta$` of 0.994 — the model is virtually certain about this answer. The path at `$k=1$` produces `"60"` with `$\Delta = 0.058$`, still very uncertain. The quantitative pattern is stark: paths with explicit reasoning steps have `$\Delta$` values near 1.0, while paths with direct answers have `$\Delta$` values near 0.0.
+
+**Why this form and not alternatives.** The paper's choice of the probability *gap* (difference between top-1 and top-2) rather than the raw probability or entropy is justified empirically and conceptually:
+
+1. **Raw probability (`$p(x^1_t | x_{<t})$` only) performs worse.** The paper notes (Section 2.2 footnote) that using only the model's probability on the selected token — without comparing it to alternatives — "performs slightly worse compared to the min-margin approach." This makes sense: a model might assign high probability to a token even when there's a close competitor, which would indicate genuine uncertainty that the raw probability alone would obscure. The gap explicitly measures how much the model *prefers* one answer over others.
+
+2. **Entropy is unreliable with vocabulary truncation.** The paper notes that "an entropy estimate is not accurate due to the large vocabulary size in LLMs and the common use of vocabulary truncation." Modern LLMs typically do not compute the full softmax over the entire vocabulary (which can be 30,000-250,000 tokens) but instead use truncated or sampled softmaxes for efficiency. Computing entropy reliably would require access to the full distribution, which may not be available. The gap between the top two tokens is robust to truncation because only the relative ordering of the very top of the distribution matters.
+
+3. **Length-normalized probability doesn't capture the reasoning signal.** Table 2 compares CoT-decoding against an alternative where paths are ranked by their length-normalized log-probability. The intuition might be that CoT paths are longer (they contain reasoning steps) and length normalization corrects for the inherent bias against longer sequences. However, this approach achieves only 51% on GSM8K (top-100) compared to 72% for CoT-decoding, and performs identically to greedy on Year Parity (57%). Length normalization fails because: (a) not all CoT paths are longer than direct-answer paths (some direct answers contain verbose hedging), and (b) length normalization is designed to correct for a different problem (the tendency of models to assign lower total probability to longer sequences simply because they multiply more probabilities) and does not specifically amplify the reasoning signal.
+
+**The empirical connection between `$\Delta$` and reasoning.** Section 2.2 provides a specific quantitative validation of the `$\Delta$`-reasoning link:
+
+> "we manually examined the first 100 questions in GSM8K, and among those, if we take the decoding path with the highest answer confidence among the top-10 decoding paths, 88% of them contain CoT paths."
+
+This 88% correlation is the empirical foundation of the method. It means that when `$\Delta$` is high, the path almost certainly contains step-by-step reasoning; when `$\Delta$` is low, the path is almost certainly a direct guess. The relationship is not perfect (12% of high-`$\Delta$` paths are not CoT), but it is strong enough that selecting by `$\Delta$` reliably surfaces the reasoning paths without needing to parse or understand the content of the generation.
+
+**The conceptual explanation.** Why does reasoning produce higher answer confidence? The paper does not dive deeply into the mechanism, but the intuition is clear from examples: when a model produces a reasoning chain, each intermediate step constrains and reinforces the final answer, making the model more certain of the answer tokens. The mathematical derivation "3+5=8" directly determines that "8" is the answer, and the model's probabilities reflect this deterministic relationship. In contrast, when the model produces a direct answer "5," there is no supporting context — the model is essentially guessing, and the probability distribution over answer tokens reflects this uncertainty with a smaller gap between competing alternatives.
+
+**The connection to prior uncertainty estimation work.** The paper explicitly connects `$\Delta$` to the minimum-margin approach from Jiang and Gupta (2019). In active learning, the minimum margin — the difference between the probabilities of the two most likely class labels — measures the classifier's uncertainty, with small margins indicating ambiguous cases. CoT-decoding repurposes this idea for token-level generation: each answer token position is treated as a mini-classification problem where the "classes" are vocabulary tokens, and the margin between the top two indicates how decisively the model is committing to its answer.
+
+---
+
+#### Answer Span Identification
+
+Computing `$\Delta$` requires knowing which tokens in the generated path constitute "the answer." This is non-trivial because CoT-decoding operates without any formatting constraints — the model can produce answers embedded in natural language, standalone numbers, or reasoning chains that happen to contain numbers before the final answer. The paper uses two approaches depending on the setting.
+
+**Approach 1: Heuristic extraction for public models.** Following the Tülu evaluation protocol (Ivison et al., 2023; Liu et al., 2024; Wang et al., 2023b), the system extracts the **last numerical value** for math reasoning tasks, or the **final option** (e.g., "even" or "odd") for set-based reasoning tasks. This is the standard evaluation practice for open-weight models and requires no additional model calls. The rationale is that, even without explicit formatting, the model's answer tends to appear near the end of its response, and taking the last number or option is a simple, robust heuristic.
+
+**Approach 2: Prompt-based alignment for PaLM-2 models.** For the PaLM-2 model family, the paper uses a different approach: after the model generates its response, the system appends the prompt `"So the answer is"` to the output and re-feeds the combined sequence to the model. The model's continuation after this prompt is identified as the answer, and the system aligns these continuation tokens back to positions in the original decoding path. This is described in Section 2.2:
+
+> "similarly to the method used in Kojima et al. (2022), we can also extend the model's output with the prompt 'So the answer is', and then align these continuations with spans in the model's decoding path as the answer."
+
+**Why two different approaches?** The paper uses the heuristic extraction for Mistral and Gemma models because those are evaluated under standard public-model protocols where answer extraction conventions are well-established. The prompt-based alignment is used for PaLM-2 models where the evaluation setup differs. In both cases, the key point is that `$\Delta$` is computed only over a focused, identified answer span, not over the entire generated text. Computing `$\Delta$` over the full generation would dilute the signal — most tokens in a CoT path are reasoning steps where the model might legitimately have competing alternatives (e.g., multiple valid ways to phrase a step), and only the final answer tokens reflect the concentrated confidence that distinguishes reasoning from guessing.
+
+**Handling edge cases.** The paper describes several edge cases in Appendix D:
+
+1. **Missing answer span.** If the continuation after `"So the answer is"` is not found in the original decoding path (meaning the model generated something completely different when prompted for the answer than what appeared in its original response), the path is ignored for math reasoning tasks.
+
+2. **Open-ended answers.** For tasks where answers don't have a fixed format, the system computes `$\Delta$` over the continuation tokens themselves, averaging across all tokens in the answer prompt's continuation. This handles cases where the answer might be a phrase or a sentence rather than a number or binary choice.
+
+3. **Fixed-option answers (yes/no, even/odd).** For symbolic reasoning tasks with fixed answer choices, the system computes the difference between probability masses for the valid options (e.g., `$p(\text{"yes"}) - p(\text{"no"})$` or `$p(\text{"even"}) - p(\text{"odd"})$`). The paper notes this is "slightly more accurate than computing `$\Delta$` over the continuation directly, since sometimes the model might output invalid options like 'We don't know' with high confidence."
+
+---
+
+#### Path Aggregation: Weighted Voting Across Decoding Paths
+
+CoT-decoding can operate in two modes: selecting the single path with the highest `$\Delta$` (max-path), or aggregating answers across multiple paths weighted by their `$\Delta$` values (agg-path). The aggregation mode is designed to improve robustness when the highest-`$\Delta$` path is not uniquely correct or when the `$\Delta$` differences between top paths are small.
+
+**The aggregation formula.** For each possible answer `$a$`, the system computes the aggregated confidence:
+
+$$\tilde{\Delta}_a = \sum_{k} \Delta_{k, a}$$
+
+where:
+- `$k$` indexes the decoding paths,
+- `$\Delta_{k, a}$` is the confidence score for the `$k$`-th path, but **only if** that path's identified answer equals `$a$`; paths with answer `$a' \neq a$` contribute zero to `$\tilde{\Delta}_a$`.
+
+The system then selects the answer `$a$` that maximizes `$\tilde{\Delta}_a$`.
+
+**What this computes operationally.** For each unique answer that appears in the top-𝑘 paths, sum up the `$\Delta$` values of all paths that produced that answer. The answer with the highest total confidence-weighted support is selected. This is a form of confidence-weighted voting: each path's vote is weighted by how certain the model was about that answer, with high-`$\Delta$` (reasoning) paths receiving much more weight than low-`$\Delta$` (guessing) paths.
+
+**A concrete example.** Table 9 (Appendix A) provides a detailed illustration. For the GSM8K problem "Janet's ducks lay 16 eggs per day...", the top-10 paths produce several answers:
+
+- Answer "18" appears in 4 paths with `$\Delta$` values of 0.994 (`$k=0$`), 0.911 (`$k=6$`), 0.584 (`$k=8$`), and 0.999 (`$k=9$`), giving `$\tilde{\Delta}_{18} = 0.994 + 0.911 + 0.584 + 0.999 = 3.488$`.
+- Answer "14" appears in paths with `$\Delta$` values of 0.095, 0.064, and 0.083, giving `$\tilde{\Delta}_{14} \approx 0.242$`.
+- Answer "20" gets `$\Delta = 0.561$` from one path.
+- Answer "10" gets `$\Delta = 0.424$` from one path.
+
+The weighted vote overwhelmingly favors "18" (the correct answer), even though "14" appears as the majority answer by raw count (3 paths). Simple majority voting — the approach used in self-consistency (Wang et al., 2023a) — would incorrectly select "14" as the answer. The `$\Delta$`-weighting correctly identifies that the paths leading to "18" are the reasoning paths (high confidence) while the paths leading to "14" are guesses (low confidence).
+
+**Why weighted aggregation rather than majority voting.** The paper explicitly addresses this in Section 2.2:
+
+> "The examples in Table 1 show that the majority answer is unlikely to be the correct one."
+
+This is a critical difference from the standard self-consistency setup. Under CoT prompting, the model generates multiple reasoning paths, and the *reasoning* tends to converge on the correct answer, making majority voting effective. Without prompting, the model generates a mixture of direct guesses (which can cluster on popular wrong answers) and occasional reasoning paths (which tend to produce the correct answer but are in the minority). Majority voting fails because it treats all paths equally, while `$\Delta$`-weighted aggregation succeeds because it up-weights the reasoning paths through their associated high confidence.
+
+**The stability benefit.** Section 2.2 notes that aggregation "enhances the stability of the results" compared to max-path selection. The rationale is that when two reasoning paths have very similar `$\Delta$` values (e.g., 0.994 vs. 0.991), the difference between them might be driven by small fluctuations in the model's logits that don't reflect genuine differences in reasoning quality. Aggregating across all high-confidence paths smooths out this noise.
+
+---
+
+#### Key Hyperparameters and Their Justifications
+
+The paper's method has relatively few hyperparameters, which is a deliberate design choice — the goal is a simple, task-agnostic procedure that works without per-task tuning.
+
+**`$k=10$` (number of alternative first tokens).** This is the primary hyperparameter controlling the breadth of the search. Figure 5 shows that accuracy generally increases with `$k$`, with the slope depending on model scale and task difficulty. For pre-trained models, larger `$k$` consistently helps, particularly on harder tasks where the correct CoT path is ranked lower in the model's distribution. For instruction-tuned models, the benefit of larger `$k$` plateaus quickly because instruction tuning already elevates CoT paths to the very top of the distribution. The choice of 10 represents a practical default that captures most of the available gain without excessive cost.
+
+**Branching at the first token only (with task-dependent exceptions noted).** The paper defaults to first-token branching because it is where the direct-answer vs. reasoning mode divergence is most pronounced, and it keeps the search space manageable. Branching at every step (full tree search) would be exponentially expensive and is explicitly left to future work:
+
+> "for future work one can explore branching at any token and searching for the best possible paths during the decoding phase. The computational cost will be substantially higher though" (Section 5).
+
+**Greedy decoding for all subsequent steps.** Once the first token is chosen for each branch, the paper uses temperature-0 greedy decoding (always selecting the single highest-probability token) to complete the path. This is important because it keeps each path deterministic given its first token, making the `$\Delta$` computation straightforward (the top-1 token is always the one selected). Introducing temperature or sampling after the first step would complicate the relationship between the first-token choice and the final path, potentially washing out the confidence signal.
+
+**No minimum path length filter, no content-based filter.** The method does not attempt to classify whether a path "looks like" CoT based on its content — no keyphrase detection, no step-counting heuristic, no length threshold. The `$\Delta$` metric alone is the filter. This is both a strength (the method is fully unsupervised and task-agnostic) and a limitation (the method cannot distinguish between high-confidence wrong reasoning and high-confidence correct reasoning, as discussed in the limitations around synthetic tasks where models confidently produce flawed reasoning).
+
+**Ill-formed response filtering.** Appendix D describes simple heuristics for removing obviously broken responses before applying CoT-decoding: responses with zero length (empty generations), responses that hit the maximum decoding length (suggesting unfinished and likely repetitive output), responses ending in a question mark (suggesting the model repeated the input), and for Mistral models, responses that resemble training data rather than answers. These are basic sanity filters, not core to the method.
+
+---
+
+#### Computational Cost Model
+
+The computational cost of CoT-decoding scales linearly with `$k$`. Each of the `$k$` decoding paths requires one full greedy decoding pass (generating the complete response token by token). The paper reports this as `$O(k)$` in Table 7, comparing it to `$O(1)$` for greedy decoding and `$O(k)$` for self-consistency with `$k$` sampled paths.
+
+The cost is strictly at inference time — there is no training, no fine-tuning, and no additional model required. The only additional computation beyond standard generation is: (a) computing the top-𝑘 tokens at the first position (which is already done internally by the model's softmax), (b) identifying answer spans (which involves string matching or one additional short model call for the prompt-based approach), and (c) computing `$\Delta$` (which requires accessing the log probabilities at answer-span positions, information that is available from the generation process). All of these are negligible compared to the cost of generating the `$k$` paths.
+
+For the paper's default `$k=10$`, CoT-decoding costs approximately 10× more FLOPs than greedy decoding for the generation component. This is comparable to self-consistency with 10 samples, beam search with beam width 10, or any other method that explores multiple decoding paths. The paper's claim is not that CoT-decoding is cheaper than these alternatives (it isn't), but that it is *more effective* at extracting reasoning without needing any prompt engineering or fine-tuning.
+
+**The efficiency tradeoff in context.** The paper frames the cost as acceptable because: (a) it requires zero human effort (no prompt engineering, no annotation), (b) it requires zero training compute, and (c) it partially closes the gap to instruction-tuned models, which require substantial supervised data and training. For applications where inference cost is the dominant constraint, CoT-decoding at `$k=10$` may be expensive. For applications where human effort or training data is the bottleneck, it represents a very cheap way to improve reasoning performance. The paper does not provide detailed cost comparisons in FLOPs or wall-clock time against the alternatives (prompting, instruction tuning), which is a limitation acknowledged implicitly in the discussion of additional computational costs (Section 5).
+
+## 4. Key Insights and Innovations
+
+### Innovation 1: The First Token as a Mode-Switch Between Direct-Answering and Reasoning
+
+The paper's most conceptually distinctive contribution is the discovery that a pre-trained language model's first generated token after a question functions as a **mode selector** — the point where the model commits either to producing a direct answer or to engaging in step-by-step reasoning, with both modes coexisting as high-probability alternatives in the same next-token distribution. This is not an incremental discovery about decoding algorithms; it is a fundamental observation about the structure of knowledge in autoregressive language models that changes how we should think about probing their capabilities.
+
+**What was the prior consensus?** The dominant assumption in the reasoning literature — encoded in the universal use of explicit CoT prompts — was that models need to be *instructed* to reason. The implicit model was: (a) the model knows the answer, (b) the prompt tells it to show its work, and (c) showing work increases accuracy by forcing systematic computation. This paper refutes the "needs to be told" assumption. The reasoning capability is demonstrably present without instructions — it simply resides at a slightly lower probability than the direct-answer impulse. The prompt's function is not to *enable* reasoning but to *re-rank* the model's existing alternatives so that the reasoning token overtakes the direct-answer token as the top-1 prediction. As the paper states in Section 3.2:
+
+> "existing prompting approaches mostly serve the role of bringing those inherent reasoning paths forward as the top decoding paths."
+
+This reframing has substantial implications. It suggests that prompt engineering — the dominant research program for improving LLM reasoning — is fundamentally a *decoding intervention*, not a *teaching intervention*. The model already possesses the reasoning trajectory; prompts just change which trajectory gets selected. If this holds broadly, then investment in decoding-aware model design (training models so that reasoning paths are more easily accessible at inference time) may be more impactful than investment in ever-more-sophisticated prompt templates.
+
+**The evidence for the mode-switch claim.** Figure 1, Table 1, and the Mistral-7B example in Table 10 provide consistent qualitative evidence: the top-1 token at position zero is almost always a direct-answer token (`"5"`, `"$60.00"`, `"Nicolas Cage was born in an odd year."`), while tokens ranked 2 through 9 frequently initiate full reasoning chains (`"I have 3 apples, my dad has 2 more..."`, `"If Kylar buys 16 glasses..."`, `"Cage was born in 1964, an even year."`). This pattern holds across GSM8K math problems, year parity queries, and across three different model families (PaLM-2, Mistral, Gemma). The bimodality is not a quirk of one model or one task — it appears to be a general property of how pre-trained language models organize their response strategies.
+
+**Why is this more than a decoding trick?** The paper could have been written as "we found a new decoding method that improves accuracy." What makes it more significant is that the finding is *diagnostic* — it reveals something about the model's internal organization that was previously invisible. The adjacency of direct-answer and reasoning modes at the same decision point implies that the model has learned two distinct strategies for handling questions during pre-training, and it defaults to the faster, less accurate one under greedy decoding. This is not a failure of capability but a failure of *selection*, and the paper gives us a tool for diagnosing how pervasive this selection problem is across tasks and model scales.
+
+---
+
+### Innovation 2: Answer Confidence as an Unsupervised Proxy for Reasoning-Quality Detection
+
+The second conceptual contribution is the operationalization of **answer confidence** — specifically, the probability gap between the top-1 and top-2 tokens averaged over answer-span positions, denoted `$\Delta$` — as a lightweight, content-agnostic signal that reliably distinguishes chain-of-thought reasoning paths from direct-guess paths, without requiring any parsing of intermediate reasoning steps.
+
+**The problem this solves.** Selecting among multiple candidate outputs from a language model typically requires either (a) an external verifier or reward model (as in RLHF and process-reward-model approaches), (b) a ground-truth answer for comparison (which defeats the purpose), or (c) a heuristic based on the output content (e.g., "does it contain the word 'because'?"). All of these require either supervision or task-specific engineering. The `$\Delta$` metric requires neither — it uses only information already present in the model's logits at answer-token positions, computed during the same forward passes that generated the text. It is fully unsupervised, model-internal, and task-agnostic.
+
+**Why this is intellectually distinctive.** The standard approach to detecting whether a model is reasoning would be to *look at the reasoning* — parse the output, check for logical steps, verify intermediate conclusions. This paper inverts that approach: don't look at the reasoning at all; instead, look at *how the model produces the answer*. The intuition — that a model which has just walked through a reasoning chain will be more decisive about its final answer than a model that is guessing — is simple in retrospect but had not been operationalized as a selection criterion for decoding paths. The paper explicitly connects this to the minimum-margin uncertainty concept from active learning (Jiang and Gupta, 2019), repurposing a classification uncertainty metric for autoregressive token generation. Each answer-token position is treated as a mini-classification problem where the margin between the top two vocabulary-item probabilities measures the model's decisiveness.
+
+**The 88% correlation is the anchor.** Section 2.2 reports that among the top-10 decoding paths for the first 100 GSM8K questions, 88% of the highest-`$\Delta$` paths contain CoT reasoning. This is a striking empirical regularity. It means that `$\Delta$` — a number computed without any semantic understanding of the generated text — is almost as good at identifying reasoning paths as a human annotator reading the outputs. The 12% error rate (high-`$\Delta$` paths that are not actually CoT) suggests the signal is strong but imperfect, which the aggregation mechanism partially addresses.
+
+**Where this insight generalizes and where it might not.** The `$\Delta$` metric works because pre-trained models exhibit a specific behavioral signature: direct guesses are low-confidence, while reasoned conclusions are high-confidence. This signature depends on the model having been trained on a distribution where reasoning chains typically lead to deterministic, single-correct-answer conclusions. For open-ended generation tasks (creative writing, dialogue, subjective analysis), the relationship between reasoning and answer-token confidence may break down because there is no unique correct answer to converge on. The paper acknowledges this in Section 5: "in cases where the answers are more open-ended, utilizing the probability differences of the top two tokens as an indicator of how models prefer one answer over another could be less precise." This does not diminish the contribution but bounds its applicability.
+
+**Why this is not just a clever engineering hack.** The `$\Delta$` metric is a diagnostic instrument as much as a selection mechanism. It lets us ask questions like: at what model scale does the confidence gap between reasoning and guessing become detectable? Do instruction-tuned models show a different `$\Delta$` distribution than pre-trained models? Does the `$\Delta$` of a reasoning path degrade as the task becomes more synthetic, even when the model is producing formally correct reasoning? These are questions about the *phenomenology* of LLM reasoning that could not be asked before without labor-intensive human annotation of individual paths. The paper doesn't explore all of these, but it provides the instrument and the initial calibration.
+
+---
+
+### Innovation 3: Pre-Trained Reasoning as a Latent Capability — Evidence and Boundary Conditions
+
+The paper's third contribution is a systematic empirical characterization of **when pre-trained language models do and do not possess latent reasoning capabilities**, using CoT-decoding as a measurement tool to separate intrinsic competence from prompting artifacts.
+
+**The measurement problem.** Prior work on LLM reasoning capabilities is confounded by the tools used to study them. Few-shot CoT prompting teaches the model a reasoning strategy through exemplars. Zero-shot CoT prompting gives an explicit instruction ("Let's think step by step"). Instruction tuning bakes reasoning patterns into the model weights through supervised training. In all three cases, when the model succeeds, we cannot cleanly attribute the success to pre-existing knowledge versus external guidance. When the model fails, we cannot distinguish "the model lacks the capability" from "the model has the capability but the prompt failed to elicit it." CoT-decoding, by eliminating prompts entirely, provides the cleanest measurement to date of what pre-trained models can do on their own.
+
+**The positive finding: reasoning is surprisingly present.** The results across math and commonsense tasks (Figure 3, Figure 4) are striking: pre-trained models consistently contain correct CoT paths in their top-𝑘 distribution, and these paths can be surfaced by a simple, task-agnostic decoding change. On PaLM-2 Large, CoT-decoding achieves 63.2% on GSM8K without any supervision — roughly comparable to the instruction-tuned version of the same model (67.8%). On Mistral-7B, CoT-decoding more than doubles GSM8K accuracy (9.9% → 25.1%, Table 5). On the year parity task, where greedy decoding is stuck at chance-level accuracy (~50%) even as models scale up (Figure 4, right), CoT-decoding achieves near-perfect accuracy (95%+) at the largest scale by recovering the path where the model first retrieves the birth year and then determines parity — exactly the reasoning strategy that prompt-based approaches attempt to teach.
+
+**The boundary condition: reasoning degrades on synthetic, multi-step tasks.** Table 6 provides the crucial negative result that prevents the paper from overclaiming. On synthetic reasoning tasks with increasing difficulty — Coin Flip with 2, 3, 4 rounds; Web of Lies with 3, 4, 5 statements; Multi-step Arithmetic with various depth and length parameters — CoT-decoding provides modest improvements at low difficulty but the gains shrink or vanish as complexity increases. On Multi-step Arithmetic with parameters `$d=2, l=4$` (high difficulty), greedy decoding achieves 0% and CoT-decoding reaches only 16%. On Coin Flip with 4 rounds, greedy achieves 48% and CoT-decoding 55% — a small gain. The paper explicitly interprets this as evidence that "the correct CoT-paths become harder to find when the task becomes more synthetic," connecting to McCoy et al. (2023)'s finding that language models are highly influenced by their pre-training distribution.
+
+This difficulty gradient is diagnostically important. It tells us that pre-trained reasoning is not a binary property (present/absent) but a continuous one that degrades as tasks diverge from the natural distribution the model was trained on. The model "knows how to reason" about grade-school math because its training data contained abundant examples of people explaining math problems. It does not know how to reason about multi-step coin-flip state tracking because that task structure rarely appears outside of carefully constructed benchmarks. This distinction matters for deployment: CoT-decoding is most valuable for tasks that resemble natural reasoning, and less valuable for highly synthetic, multi-step manipulation tasks where the model's pre-training provides no foundation.
+
+**The instruction-tuning connection as a diagnostic insight.** The finding that CoT-decoding on a pre-trained model approaches instruction-tuned performance (Figure 4) is not just a benchmark number — it is evidence that instruction tuning partially solves a decoding problem. If instruction tuning with CoT data primarily teaches the model to *always* initiate its responses with reasoning tokens rather than direct-answer tokens, then much of the benefit of instruction tuning can be understood as permanently re-ranking the model's own latent distribution. The paper does not claim that instruction tuning provides *only* this benefit — instruction tuning also teaches the model to produce more accurate reasoning when it does reason — but the decoding-recovery result suggests the re-ranking component is substantial.
+
+---
+
+### Innovation 4: Decoding as a First-Class Axis for Reasoning Improvement, Orthogonal to Prompting and Training
+
+The paper establishes **decoding strategy** — specifically, the method by which tokens are selected from the model's output distribution — as a distinct and underexplored dimension of reasoning performance, separate from prompt design and model training.
+
+**The prevailing two-axis view.** Prior to this paper, the field implicitly operated on a two-axis model of reasoning improvement: change the input (better prompts) or change the weights (fine-tuning, instruction tuning, RLHF). Decoding was treated as a solved problem — use greedy for deterministic responses, use temperature sampling for diversity, use beam search when you want to optimize for probability. The paper's Table 4 is a direct empirical refutation of this view: every standard decoding method *worsens* reasoning performance compared to greedy decoding on Mistral-7B's GSM8K performance (greedy: 9.9%, temperature sampling: 7.5%, beam search: 6.7%, top-𝑘 sampling: 4.9%). The standard decoding toolkit was designed for fluency and diversity, not reasoning, and it actively harms reasoning when applied naively.
+
+**What makes CoT-decoding a genuinely different class of decoding method.** Prior decoding methods optimize for either probability (greedy, beam search) or diversity (temperature, top-𝑝, nucleus). CoT-decoding optimizes for a third objective: **answer confidence**, which the paper shows to be a proxy for reasoning quality. This is a different optimization target, and it requires a different search strategy — specifically, forcing diversity at the critical first token rather than across the full generation, and scoring paths by their decisiveness at the answer span rather than by their sequence probability.
+
+This reframing matters because it opens up a design space that was not previously visible. If answer confidence can identify reasoning paths, then other, more sophisticated search strategies become possible: confidence-guided beam search (branching not at the first token but at every step, pruning paths with low intermediate confidence), confidence-weighted finetuning (training the model to maximize `$\Delta$` on correct reasoning paths), or dynamic branching strategies that adaptively choose branching points based on the model's uncertainty at each step. The paper explicitly points toward this in Section 5: "for future work one can explore branching at any token and searching for the best possible paths during the decoding phase." CoT-decoding is presented as the simplest instance of a broader class of *reasoning-aware decoding algorithms*.
+
+**The combination result as evidence of orthogonality.** Section 3.3 (Table 7) demonstrates that CoT-decoding can be combined with zero-shot CoT prompting for additional gains over self-consistency, the previous best method for leveraging multiple decoding paths under CoT prompting. On PaLM-2 Large with zero-shot CoT prompting, self-consistency achieves 85.3% and CoT-decoding + aggregation achieves 87.0%. The gain is modest in absolute terms (1.7 percentage points) but conceptually important: it shows that CoT-decoding captures a source of variation that prompting alone doesn't address. Even when the model is already instructed to reason, its default first token can still lock it into suboptimal paths, and exploring alternatives at that point can recover better chains that sampling alone misses. This is evidence that the decoding axis is genuinely independent of the prompting axis — improvements in one do not subsume the other.
+
+**Why "decoding as a research axis" is more than a framing trick.** This innovation is not a specific technique but a *reorientation of attention*. The enormous intellectual energy invested in prompt engineering (thousands of papers on CoT variants, automatic prompt optimization, task-specific prompt templates, etc.) reflects an implicit assumption that the model's output distribution is relatively fixed and the intervention must happen at the input. This paper demonstrates that the intervention can happen at the output — the model's distribution already contains the desired behavior, and the right decoding algorithm can surface it without any input modification. If this reorientation takes hold, it could shift research priorities away from prompt optimization and toward decoding-aware training (training models so that desirable behaviors are not just present in the distribution but are reliably selectable at inference time) and toward developing better confidence metrics for guiding search. This would represent a significant shift in how the field allocates its research effort — a shift that this paper, by providing the initial evidence and a simple, replicable method, enables.
+
+## 5. Experimental Analysis
+
+### Evaluation Methodology
+
+- **Dataset.** The paper evaluates on three reasoning benchmarks: **GSM8K** (Cobbe et al., 2021a) — grade-school math word problems, the full test set of 1,319 questions; **MultiArith** (Roy and Roth, 2015) — multi-step arithmetic problems; and the **year parity** task from Allen-Zhu and Li (2023), which queries the model with "Was [person] born in an even or odd year?" for a curated list of 100 celebrity names from Berglund et al. (2023). Additionally, Section 3.2 uses synthetic reasoning tasks from **Big-Bench-Hard** (Suzgun et al., 2022; bench authors, 2023): Coin Flip (2, 3, 4 rounds; 100 examples per difficulty level), Web of Lies (3, 4, 5 truth/lie statements; 100 examples per level except level 5 which uses the existing dataset), Multi-step Arithmetic with varying depth `$d$` and length `$l$` (100 examples per configuration), and two natural-language synthetic tasks — Sports Understanding and Object Counting (from Big-Bench).
+
+- **Base model(s).** The paper uses three pre-trained model families: **PaLM-2** (Anil et al., 2023) at four scales — X-Small, Small, Medium, and Large — plus an instruction-tuned variant (denoted "inst-tuned" or "IT"); **Mistral-7B** (Jiang et al., 2023), both pre-trained and instruction-tuned versions (`Mistral-7B-v0.1` and `Mistral-7B-Instruct-v0.1`); and **Gemma-7B** (Team et al., 2024), pre-trained only. The multi-scale PaLM-2 experiments (Figure 4) are essential for testing whether the method's benefits are consistent across model capacity. The authors present PaLM-2 as "representative of the capabilities of many contemporary LLMs" (Section 4), though this claim is not independently verified across other model families beyond the three tested.
+
+- **Metrics.** The primary metric is **accuracy** — the fraction of questions for which the model produces the correct final answer under the specified decoding strategy. For math tasks, answer extraction follows the standard protocol: the last numerical value in the model's response is taken as the predicted answer (for public models like Mistral and Gemma), or the continuation after the appended prompt "So the answer is" is aligned with the original decoding path to identify answer tokens (for PaLM-2). For year parity, the answer is the option "even" or "odd." For symbolic reasoning tasks with yes/no answers, the system computes the difference between probability masses for valid options. The `$\Delta$` confidence metric itself is not a performance metric but rather the internal scoring mechanism used for path selection, described fully in Section 3.
+
+- **Baselines.** The paper compares CoT-decoding against a comprehensive set of decoding strategies, all applied to the same pre-trained models without any CoT prompting:
+    - **Greedy decoding**: standard single-path selection of the most probable token at each step.
+    - **Top-𝑘 sampling** (Fan et al., 2018; Holtzman et al., 2018; Radford et al., 2019): sampling from the top `$k=10$` tokens at each step.
+    - **Nucleus sampling** (Holtzman et al., 2020): sampling from the smallest set of tokens whose cumulative probability exceeds `$p=0.9$`.
+    - **Beam search**: maintaining `$b=10$` beams, selecting the highest-probability complete sequence.
+    - **Temperature sampling** (Ackley et al., 1985; Ficler and Goldberg, 2017): sampling with temperature `$T=0.7$`.
+    - **Self-consistency without CoT prompt** (Wang et al., 2023a): generating 10 paths via standard temperature sampling (no first-step branching) and taking the majority-vote answer.
+    - **Decoding paths ranked by model's highest raw log-probability**: selecting the single path with the maximum sequence probability among 10 decoded paths.
+    - **Decoding paths ranked by length-normalized log-probability**: selecting the single path with the maximum length-normalized probability among 10 paths.
+    For prompted baselines (Section 3.3, Table 7), the paper includes **zero-shot CoT prompting** ("Let's think step by step"; Kojima et al., 2022) with greedy decoding, and **self-consistency with zero-shot CoT prompt** (10 sampled paths with majority voting). For the FLOPs-matched comparison in the prior analysis example, instruction-tuned models serve as an upper bound.
+
+- **Generation budget / compute accounting.** Compute is measured in terms of the number of complete decoding paths generated. Greedy decoding costs `$O(1)$` — one complete forward pass. CoT-decoding costs `$O(k)$` where `$k=10$` by default — it generates exactly `$k$` complete paths, each differentiated only by the first token (all subsequent steps use greedy decoding within each branch). Self-consistency costs `$O(k)$` for `$k$` sampled paths. Beam search with beam width `$b$` costs approximately `$O(b)$` in terms of sequences explored. The paper reports these cost factors in Table 7 (final column). For all CoT-decoding experiments, the input sequence length is 256 tokens and maximum decoding length is 128 tokens for PaLM-2 direct-QA format; for few-shot/zero-shot CoT prompting, input length extends to 1024 tokens and output to 256 tokens due to longer exemplars and responses. For Mistral models, math tasks generate 200 new tokens (pre-trained) or 400 new tokens (instruction-tuned); year parity generates 50 (pre-trained) or 100 (instruction-tuned). All generation costs scale linearly with the number of new tokens per path times the number of paths. The difficulty estimation step (described in Section 3 of the prior analysis) does not apply here, since CoT-decoding does not pre-compute per-question difficulty — it explores `$k$` paths uniformly for every question.
+
+- **Cross-validation / statistical protocol.** The paper does not employ cross-validation or statistical significance testing. The primary experiments report accuracy on the full GSM8K test set (1,319 questions) and the full year parity set (100 celebrities). For the manual analysis validating the `$\Delta$`-reasoning correlation, the authors examined the first 100 questions in GSM8K (Section 2.2) — this subset analysis serves as calibration rather than evaluation. For synthetic tasks (Table 6), 100 examples are generated per difficulty level, and results are reported as simple accuracy percentages without confidence intervals. The absence of error bars or statistical tests means that small differences between methods (e.g., the 1.7 percentage point gap between self-consistency + CoT prompting at 85.3% and CoT-decoding + aggregation + CoT prompting at 87.0% in Table 7) should be interpreted cautiously — they may not be statistically significant given the test set size.
+
+---
+
+### Main Quantitative Results
+
+#### CoT-Decoding vs. Standard Decoding Methods on Mistral-7B (Table 4)
+
+The headline finding for Table 4 is that **CoT-decoding is the only decoding strategy that substantially improves reasoning over greedy decoding; most standard methods actually hurt performance on GSM8K with Mistral-7B.** Greedy decoding achieves 9.9% accuracy. Top-𝑘 sampling (𝑘=10) drops to 4.9%. Nucleus sampling (𝑝=0.9) achieves 6.4%. Beam search (𝑏=10) reaches 6.7%. Temperature sampling (𝑇=0.7) gets 7.5%. Self-consistency without prompting (10 paths) achieves 12.9% — a marginal improvement. CoT-decoding at 𝑘=10 reaches **25.1%** — more than doubling greedy performance and beating the next-best baseline (self-consistency) by 12.2 absolute percentage points. This is the core quantitative evidence for the paper's claim that standard decoding methods, designed for fluency rather than reasoning, are inadequate for surfacing latent reasoning capabilities.
+
+**What this table does and does not show.** The comparison is clean — all methods use the same model, same input format (`"Q: [question]\nA:"`), and same generation budget of 10 paths (for the multi-path methods). It establishes that the specific combination of first-step branching and answer-confidence selection is what drives the improvement, not the mere presence of diversity (self-consistency without prompting barely helps) or the optimization of sequence probability (beam search, ranking by log-prob). However, the table only reports Mistral-7B results on GSM8K — generalization to other models and tasks is established in subsequent figures.
+
+#### CoT-Decoding Across Model Families (Figure 3)
+
+Figure 3 extends the comparison across three model families — PaLM-2 Large, Mistral-7B, and Gemma-7B — and three tasks — GSM8K, MultiArith, Year Parity. The results are presented as bar charts comparing greedy decoding (darker bars) with CoT-decoding (lighter bars):
+
+- **GSM8K**: PaLM-2 Large jumps from ~34.8% (greedy) to ~63.2% (CoT-decoding) — an **81.6% relative improvement**. Mistral-7B: 9.9% to 25.1% (the numbers from Table 4 are reproduced). Gemma-7B: a substantial gain is visible though exact numbers are not stated in the text; the bar chart (Figure 3) shows the pattern holds. The paper summarizes: "yielding consistent accuracy gains over both math and commonsense reasoning tasks, sometimes doubling or even tripling the performance compared to greedy decoding."
+
+- **MultiArith**: The same pattern holds across all three model families with visibly large gaps between greedy and CoT-decoding in the bar chart.
+
+- **Year Parity**: The gains are dramatic. Greedy decoding on year parity hovers near chance (~50%) for all models. CoT-decoding pushes PaLM-2 Large to what appears to be near-perfect accuracy (>90% in the bar chart) and substantially improves Mistral-7B and Gemma-7B as well. The paper attributes this to the model recovering the birth-year retrieval step that greedy decoding skips.
+
+**The takeaway from Figure 3.** The phenomenon is not model-specific or task-specific. The adjacency of direct-answer and reasoning modes at the first token, and the ability of `$\Delta$`-based selection to distinguish them, generalizes across three independently trained model families of different scales and architectures.
+
+#### CoT-Decoding Across Model Scales (Figure 4)
+
+Figure 4 tests whether the benefit of CoT-decoding is consistent as models grow. For **GSM8K** (left panel), PaLM-2 models at four scales (X-Small, Small, Medium, Large) plus an instruction-tuned variant are tested:
+
+- **X-Small**: Greedy is near zero; CoT-decoding provides a small but visible absolute gain (~10 percentage points from the figure).
+- **Small**: Greedy is still very low; CoT-decoding reaches ~20-25%.
+- **Medium**: Greedy reaches ~15-20%; CoT-decoding reaches ~40-45%.
+- **Large**: Greedy reaches ~34.8%; CoT-decoding reaches ~63.2%.
+- **Instruction-tuned Large**: Greedy reaches ~67.8%; CoT-decoding further improves to what appears to be ~70-72% from the figure.
+
+The absolute gap between greedy and CoT-decoding grows with model scale — the paper describes this as "+10-30% absolute accuracy gains" and Figure 4 shows the gap widening from X-Small through Large. This means larger models not only have higher baseline performance but also show a larger *additional* benefit from CoT-decoding, suggesting that reasoning capabilities become more richly represented (with more correct CoT paths in the top-𝑘 distribution) as models scale.
+
+For **Year Parity** (right panel), the pattern is even more striking. Greedy decoding is essentially flat across Small, Medium, and Large scales — all near 50% chance accuracy — consistent with Allen-Zhu and Li (2023)'s finding that direct-answer prompting fails regardless of scale. CoT-decoding, however, shows dramatic improvement with scale: Small achieves ~60%, Medium achieves ~80%, and Large achieves what appears to be ~95%+ accuracy from Figure 4. This is the paper's strongest evidence that CoT-decoding recovers a capability (year parity reasoning) that greedy decoding completely obscures, and that this capability genuinely improves with model scale rather than being a fixed deficit.
+
+**The instruction-tuning comparison.** The paper highlights a specific finding from Figure 4 (left): "CoT-decoding achieves 63.2% accuracy on the pre-trained PaLM-2 Large model, close to the performance of the instruction-tuned model of the same scale at 67.8%." The gap is 4.6 percentage points. This is presented as evidence that a substantial fraction of instruction tuning's benefit can be recovered without any supervised data. However, the paper is careful not to overclaim — it says "partially achieved," not "matched" or "replaced."
+
+#### CoT-Decoding on Instruction-Tuned Models (Table 5)
+
+Table 5 tests whether CoT-decoding provides additional benefit even for models that have already been fine-tuned to produce CoT reasoning. On Mistral-7B:
+
+- **GSM8K**: Instruction-tuned greedy achieves 31.2%; CoT-decoding adds +7.0 to reach 38.2%. The pre-trained model shows a +15.2 gain (9.9% → 25.1%).
+- **MultiArith**: Instruction-tuned greedy achieves 37.8%; CoT-decoding adds +28.7 to reach 66.5%. Interestingly, this absolute gain (+28.7) is nearly as large as the pre-trained gain (+31.4 from 14.3% → 45.7%), suggesting the instruction-tuned model still has substantial latent reasoning paths that greedy decoding misses.
+- **Year Parity**: Instruction-tuned greedy achieves 62.2%; CoT-decoding adds +11.3 to reach 73.5%. The pre-trained gain is +31.0 (35.0% → 66.0%).
+
+The pattern is consistent: CoT-decoding improves instruction-tuned models across all tasks, but the absolute gains are smaller than for pre-trained models. This aligns with the paper's interpretation: instruction tuning already re-ranks the model's internal distribution so that CoT paths are more likely to appear as the top-1 token, reducing but not eliminating the benefit of explicit first-step branching. The authors observe in Section 3.1 that "even after instruction-tuning, the model occasionally persists in attempting to directly address a question" — CoT-decoding catches these residual direct-answer cases.
+
+#### The Effect of `$k$` on Performance (Figure 5)
+
+Figure 5 (left) shows accuracy as `$k$` — the number of alternative first tokens explored — increases from 1 to values beyond 10, broken out by PaLM-2 model scale (Small, Medium, Large) and for the instruction-tuned model. Key findings:
+
+- **Pre-trained models (Small, Medium, Large)**: Accuracy increases monotonically with `$k$`, with the slope being steepest for the largest model. The Large model's curve rises from ~35% at `$k=1$` (equivalent to greedy) to over 60% at higher `$k$`, with the curve still rising at the right edge of the plot. This suggests that for pre-trained models, the correct CoT path is often ranked quite low in the `$k$` distribution, and larger `$k$` continues to provide benefit beyond the default of 10. The paper notes: "higher values of 𝑘 typically result in improved model performance, suggesting that in many cases, the correct CoT paths may indeed exist but are often ranked lower during model's decoding."
+
+- **Instruction-tuned model**: The curve is much flatter, rising only slightly from ~68% at `$k=1$` to ~72% at higher `$k$`. The benefit of exploring additional alternatives saturates quickly, consistent with the interpretation that instruction tuning has already elevated the correct CoT path to a high rank.
+
+Figure 5 (right) explores the interaction of `$k$` with task difficulty on Multi-step Arithmetic (varying depth `$d$` and length `$l$`). The paper reports: "the model's accuracy improves only for larger 𝑘's as task complexity increases (higher 𝑑 and 𝑙's)." This means that on harder tasks, the correct CoT path is pushed further down in the model's ranking, requiring more exploration (larger `$k$`) to recover. On easier configurations (`$d=0, l=3$`, the simplest setting), the curve flattens quickly — the correct path is already near the top.
+
+#### Difficulty-Dependent Analysis of Pre-Trained Reasoning (Table 6)
+
+Table 6 systematically varies task difficulty on synthetic reasoning benchmarks to probe the boundaries of pre-trained models' intrinsic reasoning capabilities. All results use PaLM-2 Large:
+
+**Coin Flip** (2, 3, 4 rounds):
+- 2 flips: Greedy 70.0%, CoT-decoding 94.0% (+24.0)
+- 3 flips: Greedy 53.0%, CoT-decoding 57.0% (+4.0)
+- 4 flips: Greedy 48.0%, CoT-decoding 55.0% (+7.0)
+
+The absolute gain from CoT-decoding collapses as flip count increases. At 2 flips, the model easily contains and surfaces correct state-tracking paths. At 4 flips, CoT-decoding provides only a modest gain and absolute accuracy remains low (55%). The paper's qualitative analysis reveals that even when CoT paths are found, the model "can easily lose track of the states" in multi-step flips.
+
+**Web of Lies** (3, 4, 5 truth/lie statements):
+- 3 statements: Greedy 76.0%, CoT-decoding 87.0% (+11.0)
+- 4 statements: Greedy 58.0%, CoT-decoding 63.0% (+5.0)
+- 5 statements: Greedy 53.6%, CoT-decoding 57.6% (+4.0)
+
+Again, the absolute gain shrinks with difficulty. The paper notes that few-shot CoT prompts on this task "teach the model to perform explicit state tracking in each step" — a strategy the model does not spontaneously adopt, explaining why intrinsic reasoning degrades more sharply than prompted reasoning would.
+
+**Multi-step Arithmetic** (varying depth `$d$` and length `$l$`):
+- `$d=0, l=3$`: Greedy 39.0%, CoT-decoding 56.0% (+17.0)
+- `$d=0, l=4$`: Greedy 19.0%, CoT-decoding 42.0% (+23.0)
+- `$d=2, l=3$`: Greedy 8.0%, CoT-decoding 35.0% (+27.0)
+- `$d=2, l=4$`: Greedy 0.0%, CoT-decoding 16.0% (+16.0)
+
+This is a complex pattern. The *absolute* gain from CoT-decoding is substantial even at high difficulty (+27.0 at `$d=2, l=3$`), but the *absolute accuracy* remains low (35%) and drops to 16% at the hardest setting. The paper's qualitative analysis reveals a specific failure mode: "the model tends to perform calculations from left to right in the CoT-decoding paths, rather than following the correct mathematical order." This is a genuine capability limitation — the model has a reasoning strategy, but it's the wrong strategy, and CoT-decoding surfaces the wrong strategy with high confidence.
+
+**Sports Understanding and Object Counting**: Small gains (58.8% → 58.0% for Sports Understanding, actually a slight *decrease*; 36.0% → 39.2% for Object Counting). These tasks are from Big-Bench and are natural-language-based but synthetic, and the near-zero or negative gains suggest that the model's intrinsic reasoning strategies for these tasks are not well-developed, even if CoT paths exist.
+
+**The paper's interpretation of Table 6**: "The simpler the task is, the better chance that a correct reasoning path can be found... the correct CoT-paths become harder to find when the task becomes more synthetic. This mirrors the finding in McCoy et al. (2023), where the authors show language models are highly influenced by the distribution they have been trained on." This is the critical finding that bounds the paper's central claim: pre-trained models *do* possess intrinsic reasoning, but only for task types and difficulty levels that are well-represented in their pre-training distribution. For synthetic, multi-step, or unusual reasoning patterns, the capability is weak or absent, and CoT-decoding cannot create it — it can only surface whatever reasoning traces exist.
+
+#### Combining CoT-Decoding with CoT Prompting (Table 7)
+
+Table 7 tests the combination of CoT-decoding with zero-shot CoT prompting ("Let's think step by step") on GSM8K with both Mistral-7B and PaLM-2 Large. The comparison is structured to show the additive benefit of CoT-decoding beyond prompting:
+
+**Mistral-7B (without prompting, then with zero-shot CoT prompt):**
+- Greedy: 9.9% (no prompt) → 17.5% (zero-shot CoT prompt)
+- Self-consistency without prompt: 12.9% → with zero-shot CoT prompt: 39.4%
+- CoT-decoding (max path): 25.1% (no prompt) → 40.2% (with zero-shot CoT prompt)
+- CoT-decoding (agg path): 25.3% (no prompt) → 48.4% (with zero-shot CoT prompt)
+
+The combination of zero-shot CoT prompting with CoT-decoding (agg path) achieves 48.4%, which is higher than self-consistency + zero-shot CoT (39.4%) by 9.0 percentage points. CoT-decoding without prompting (25.3%) + zero-shot CoT prompting without decoding (17.5%) would give 42.8% if effects were purely additive; the actual 48.4% suggests synergy.
+
+**PaLM-2 Large:**
+- Greedy: 34.8% (no prompt) → 75.1% (zero-shot CoT prompt)
+- Self-consistency without prompt: 40.6% → with zero-shot CoT prompt: 85.3%
+- CoT-decoding (max path): 63.2% (no prompt) → 78.6% (with zero-shot CoT prompt)
+- CoT-decoding (agg path): 64.1% (no prompt) → 87.0% (with zero-shot CoT prompt)
+
+The headline number is 87.0% — the highest accuracy reported in the paper — achieved by combining zero-shot CoT prompting with CoT-decoding with path aggregation. This beats self-consistency + zero-shot CoT (85.3%) by 1.7 percentage points. Notably, CoT-decoding max-path + zero-shot CoT (78.6%) underperforms self-consistency + zero-shot CoT (85.3%), suggesting that the aggregation mechanism is important when combined with prompting — max-path alone may over-trust a single high-confidence path, while aggregation distributes weight across multiple reasoning chains.
+
+**What Table 7 demonstrates for the paper's thesis.** The combination results show that CoT-decoding captures a different source of variation than prompting. Even when the model is explicitly instructed to reason step-by-step (zero-shot CoT), its default first token can still lead to suboptimal paths, and exploring alternatives at that branching point recovers better chains. This is the empirical basis for the paper's claim that decoding is an axis "orthogonal to prompting" — improvements in one do not fully subsume the other.
+
+---
+
+### Ablation Studies and Robustness Checks
+
+- **Greedy decoding baseline across all experiments (Table 4, Figures 3, 4, Table 5, Table 6)**: Every main result table and figure includes greedy decoding as the primary reference point, establishing that CoT-decoding's gains are measured against the standard inference method. On GSM8K with Mistral-7B, greedy achieves 9.9% vs. CoT-decoding's 25.1% (Table 4); on PaLM-2 Large, 34.8% vs. 63.2% (Figure 4). This consistent baseline is essential because greedy decoding is the default for virtually all LLM deployments, making the comparison practically meaningful.
+
+- **Comparison of CoT-path extraction methods (Table 2)**: On the first 100 GSM8K questions and the year parity task with PaLM-2 Large, the paper compares four methods for selecting the best path from 10 decoded alternatives: (1) **model's highest raw log-probability** — achieves 37.0% on GSM8K and 55.0% on year parity (worse than greedy at 44.0% and 57.0% respectively); (2) **model's highest length-normalized log-probability** — 51.0% and 57.0%; (3) **greedy decoding** — 44.0% and 57.0%; (4) **CoT-decoding (model's answer confidence)** — 72.0% and 95.0%. Raw sequence probability is actively harmful as a selection criterion (worse than just taking the greedy path), length normalization helps somewhat on math but fails on year parity (exactly matching greedy), and only `$\Delta$`-based selection provides substantial gains on both tasks. This ablation isolates the contribution of the confidence metric specifically — the same 10 decoded paths are available to all methods; only the selection criterion differs.
+
+- **Sampling vs. first-step branching (Table 3)**: On GSM8K with Mistral-7B and PaLM-2 Large, standard self-consistency (10 sampled paths without CoT prompt, majority voting) is compared against CoT-decoding (10 paths from first-step branching, confidence-based selection). Mistral-7B: self-consistency achieves 12.9%, CoT-decoding achieves 25.1%. PaLM-2 Large: self-consistency achieves 40.6%, CoT-decoding achieves 63.2%. The large gap demonstrates that the *method* of generating diverse paths matters critically — sampling from the full distribution does not surface reasoning paths effectively because the model's default behavior at the first token is overwhelmingly to produce direct answers. Forcing diversity at the first token specifically is what enables reasoning paths to emerge. The paper states: "The ineffectiveness of sampling stems from the model's strong tendency in providing a direct answer during decoding, hence the first token tends to have less diversity compared to CoT-decoding."
+
+- **Branching at different decoding steps (Figure 2)**: This is a qualitative ablation rather than quantitative, but it is mechanistically important. Figure 2 shows the decoded paths when branching at step 0 (first token after `"A:"`) vs. step 1 (after the model has generated one token) vs. step 𝑘 (later in the generation). Branching at step 0 produces diverse paths that include both direct answers and full CoT chains. Branching at step 1 after generating `"5"` (in the math example) or `"Nicolas"` (in the year parity example) produces only local variations — all paths stay within the mode established by the first token. The paper concludes: "early branching, e.g., at the first decoding step, significantly enhances the diversity of potential paths. Conversely, later-stage branching is significantly influenced by previously generated tokens." This ablation establishes *why* the first token is special — it is the commitment point that determines the response mode. The paper does note a task-dependent caveat: "the optimal branching point may vary with the task; in the year parity task, for instance, mid-path branching can effectively yield correct CoT paths." This suggests that for some tasks, knowledge retrieval (extracting a birth year) and reasoning (determining parity) occur at different stages, and branching at the knowledge-retrieval point may be optimal. However, no quantitative ablation across tasks with different branching points is provided.
+
+- **Path aggregation vs. max-path selection (Tables 5, 7, 9)**: CoT-decoding offers two modes: selecting the single path with maximum `$\Delta$` ("max path"), or aggregating answers across all `$k$` paths weighted by their `$\Delta$` values ("agg path"). The difference is consistently small but in favor of aggregation. On GSM8K with PaLM-2 Large without prompting (Table 7): max-path 63.2%, agg-path 64.1%. With zero-shot CoT prompting: max-path 78.6%, agg-path 87.0% — here the gap widens substantially (8.4 percentage points), suggesting that when CoT prompting is used, multiple high-quality reasoning paths exist and aggregation provides more benefit. Table 9 provides a concrete example where aggregation is crucial: the correct answer "18" appears in 4 paths with `$\Delta$` summing to 3.488, while the majority answer "14" appears in 3 paths with total `$\Delta$` of 0.242. Max-path would have selected "18" anyway (since one of the "18" paths has `$\Delta = 0.999$`), but in other cases where the top few paths have similar `$\Delta$` values, aggregation provides robustness against logit-level noise.
+
+- **Choice of `$k$` (Figures 5, 6)**: Figure 5 (left) shows accuracy vs. `$k$` for PaLM-2 models — accuracy increases monotonically with `$k$` for pre-trained models, with the slope steepening for larger models. The instruction-tuned model's curve is essentially flat. Figure 6 (Appendix C) replicates this for Mistral-7B, showing the same pattern: pre-trained accuracy rises with `$k$` (the curve is still rising at `$k=10$`), while instruction-tuned accuracy plateaus quickly. This ablation establishes `$k=10$` as a reasonable default that captures most of the available gain for pre-trained models while keeping cost manageable, but it also reveals that larger `$k$` would likely yield further improvements — the pre-trained curves in Figures 5 and 6 do not appear to have saturated at `$k=10$`.
+
+- **Input format ablations (not systematically done, but discussed)**: The paper uses `"Q: [question]\nA:"` as the default format. In Appendix D, the paper notes that for Multi-step Arithmetic, "we use the original input without the QA format, as it is unnatural to insert Q/A given the original question (e.g., '3+5-6=')." This is the only format variation tested, and no quantitative comparison between formats is provided. The paper does not ablate whether a different minimal format (e.g., `"Question: ... Answer:"`) would produce different results, nor does it test whether the QA format is optimal among similarly minimal alternatives. This is a limitation — the method assumes a format that signals "answer expected," and the robustness to format choice is not established.
+
+- **Answer span identification methods (Appendix D)**: Two approaches are used: heuristic extraction (last numerical value/final option) for public models, and prompt-based alignment ("So the answer is") for PaLM-2. No direct comparison between these methods on the same model is provided. The paper describes edge-case handling (ignoring paths where the continuation after "So the answer is" is not found in the original decoding, computing `$\Delta$` over continuation tokens for open-ended answers, using probability mass differences for fixed-option answers), but these are implementation details rather than ablations. The sensitivity of CoT-decoding's performance to the answer-identification method is not quantified.
+
+- **Ill-formed response filtering (Appendix D)**: Simple heuristics remove empty responses, responses at maximum decoding length (assumed unfinished/repetitive), and responses ending in question marks. The paper notes that "those responses are easy to be filtered though" and implies this filtering is applied uniformly. No ablation is provided on what fraction of paths are filtered or whether filtering thresholds affect results. For Mistral models specifically, the paper filters paths that resemble training data — "in some cases the model outputs texts similar to the training data in alternative decoded paths (similar to the findings in Nasr et al. (2023))." The frequency of this filtering and its impact on results are not quantified.
+
+---
+
+### Critical Assessment
+
+**Claim from the executive summary: "CoT reasoning paths can be elicited from pre-trained LLMs by simply altering the decoding process to explore top-𝑘 alternative tokens at the first decoding step."**
+
+This claim is well-supported for the specific decoding procedure described. Table 1 and Figure 1 provide clear qualitative examples where greedy decoding produces a wrong direct answer while alternative top-𝑘 tokens initiate correct CoT paths. The manual examination of 100 GSM8K questions (Section 2.2) finding that 88% of highest-`$\Delta$` paths contain CoT provides quantitative validation. Figures 3 and 4 demonstrate this across three model families and multiple scales. The phenomenon is robust.
+
+However, the claim's scope needs careful bounding:
+
+- **"Elicited" is the right word** — the paper does not demonstrate that the model "knows" the correct answer in any strong sense; it demonstrates that correct reasoning paths exist in the model's next-token distribution and can be surfaced by exploring alternatives. This is a claim about the *distribution*, not about the model's *internal state* or *knowledge representation*. The distinction matters: if the model placed the correct CoT path at rank 9 in its top-𝑘 distribution, does that mean the model "can reason" independently? The paper's position is that accessibility in the distribution constitutes latent capability, but this is a definitional choice, not an empirical finding.
+
+- **The claim is limited to the first-token branching point**. The paper acknowledges but does not explore branching at other points. The discovery that the first token is a mode-switch is the central empirical finding, but the claim that reasoning paths exist "in the decoding process" might be interpreted as implying they exist throughout the distribution. The negative result in Figure 2 — that later-stage branching fails to recover reasoning — suggests the opposite: reasoning paths are concentrated at the initial branching point, and once the model commits to a direct-answer mode, the reasoning capability is effectively lost for that trajectory.
+
+- **The claim holds for grade-school math and fact-based commonsense reasoning, but not for synthetic multi-step tasks**. Table 6 clearly shows that on harder, more synthetic tasks, CoT-decoding provides diminishing returns and in some cases (Sports Understanding) essentially no gain. The paper is transparent about this, but the executive summary's framing — "pre-trained LLMs... inherently possess reasoning capabilities for many tasks" — is qualified by the word "many." A reader could easily overgeneralize to "all reasoning tasks." The paper's own data establishes sharp boundaries: reasoning is present for tasks resembling natural language explanation patterns found in pre-training data, and absent or weak for tasks requiring novel multi-step logical manipulation.
+
+**Claim: "The presence of a CoT in the decoding path correlates with a higher confidence in the model's decoded answer... This confidence metric effectively differentiates between CoT and non-CoT paths."**
+
+Supported with the 88% correlation on the first 100 GSM8K questions (Section 2.2) and the qualitative examples in Table 1 showing large `$\Delta$` gaps between CoT and non-CoT paths. However, the validation has limitations:
+
+- **The correlation is only validated on GSM8K and only for 100 questions.** The paper does not report similar manual validation for year parity, MultiArith, or any synthetic task. It is possible that on some tasks, high-confidence wrong reasoning (the model confidently walking through an incorrect chain of thought) produces high `$\Delta$` values, which would reduce the metric's discriminative power. The qualitative analysis in Appendix A notes cases where CoT-decoding reveals "flawed alternative reasoning" (Table 11, the coin flip example where the model uses a correct strategy but miscounts), but the `$\Delta$` values for these paths are not reported.
+
+- **The causal direction is not established.** The paper observes a correlation: paths with explicit CoT steps have high `$\Delta$`, paths without CoT have low `$\Delta$`. But does the reasoning *cause* the confidence, or does some third factor (e.g., the path being generally more coherent and well-formed) cause both? The paper's intuition — that reasoning deterministically constrains the answer, increasing confidence — is plausible but untested. An experiment that would strengthen this: measure `$\Delta$` on paths where the reasoning is present but factually wrong (e.g., arithmetic error in an otherwise correct structure). If `$\Delta$` remains high even for wrong reasoning, that supports the "reasoning causes confidence" interpretation; if `$\Delta$` drops, it suggests confidence is tracking correctness rather than reasoning structure.
+
+- **The 12% error rate (high-`$\Delta$` but no CoT) is not analyzed.** What are these false positives? Are they cases where the model is extremely confident about a direct guess? If so, these represent a failure mode where `$\Delta$`-based selection would choose a low-quality path. The aggregation mechanism partially addresses this, but the specific conditions under which `$\Delta$` fails are not characterized.
+
+**Claim: "CoT-decoding significantly improves reasoning performance over greedy decoding across various reasoning benchmarks."**
+
+This is the paper's most straightforward and best-supported claim. The quantitative evidence is consistent and substantial:
+
+- **GSM8K**: +15.2 to +28.4 absolute percentage points depending on model and scale (Tables 4, 5, Figure 4).
+- **MultiArith**: +28.7 to +31.4 points (Table 5, Figure 3).
+- **Year Parity**: +31.0 to +38.0 points (Table 5, Figure 4), with PaLM-2 Large reaching near-perfect accuracy where greedy is at chance.
+
+The improvements are large enough to be practically meaningful — these are not marginal gains. The cross-model and cross-scale consistency (Figures 3, 4) rules out model-specific artifacts. The negative result on synthetic tasks (Table 6) actually strengthens the claim by showing that CoT-decoding does not produce spurious improvements — it only helps where genuine reasoning paths exist.
+
+**Weaknesses in the evaluation:**
+
+1. **No standard errors or confidence intervals.** Every number is reported as a point estimate without uncertainty. On the 1,319-question GSM8K test set, the standard error for an accuracy of ~25% is approximately 1.2 percentage points. For the 100-question year parity set, the standard error at 95% is about 2.2 percentage points. Small differences — like the 1.7 percentage point gap between self-consistency + prompting and CoT-decoding + prompting (Table 7) — may not be statistically significant. The absence of error reporting makes it impossible to assess which comparisons are reliable and which are noise.
+
+2. **Lack of head-to-head comparison with prompting on equal compute budget.** Table 7 compares CoT-decoding (10 paths) against self-consistency (10 paths), which is fair. But the paper does not provide a comprehensive comparison where the same total generation budget is allocated to, say, CoT-decoding versus best-of-N sampling with a CoT prompt. The prompting results in Table 7 use standard zero-shot CoT with 10-path self-consistency, but what about 100-path self-consistency? Or beam search under CoT prompting? The paper does not establish that CoT-decoding is *the best* way to spend a fixed inference budget — only that it's better than the specific baselines tested.
+
+3. **The GSM8K test set is not large by modern standards.** 1,319 questions is standard for the field but limits the reliability of per-category breakdowns. The difficulty analysis in Table 6 uses *different datasets* (synthetic tasks) rather than stratifying GSM8K by difficulty, which makes it hard to connect the difficulty-dependent findings in Table 6 to the main GSM8K results. We do not know, for instance, what fraction of the GSM8K accuracy gain comes from easy questions (where CoT paths are abundant) versus hard questions (where they may be scarce).
+
+4. **No comparison against retrieval-augmented or tool-augmented baselines.** The paper frames CoT-decoding as an alternative to prompting, but the modern reasoning landscape includes approaches that give models access to calculators, code interpreters, or retrieval systems. The question of whether CoT-decoding provides value in those richer inference setups is not addressed.
+
+5. **Compute cost is only partially accounted for.** Table 7 reports `$O(k)$` cost for CoT-decoding and `$O(k)$` for self-consistency, which is fair. However, the paper does not report actual wall-clock times, total FLOPs, or memory requirements. For a decoding method where the primary cost is inference-time generation, these practical metrics matter for adoption. The paper also does not discuss whether the 10 paths can be generated in parallel (batch processing) — if so, the wall-clock cost might be similar to single-path generation, which would substantially change the practical tradeoff assessment.
+
+**What experiments would have strengthened the paper:**
+
+- **Human evaluation of the `$\Delta$`-reasoning correlation on additional tasks**, not just GSM8K. This would establish whether `$\Delta$` is a general reasoning indicator or a math-specific phenomenon.
+- **Comparison of CoT-decoding against an "oracle" upper bound** — e.g., taking the best answer among the top-𝑘 paths using ground-truth labels. This would quantify the headroom: how much of the remaining error is due to the correct answer not being in the top-𝑘 distribution at all (a capability limitation) versus being present but not selected by `$\Delta$` (a metric limitation).
+- **Stratification of GSM8K results by question difficulty**, using either the dataset's own difficulty labels or estimated difficulty from base model pass@1 rates. This would connect the main results more directly to the difficulty-dependent analysis in Section 3.2.
+- **Ablation of the input format**: testing whether `"Question: ... Answer:"` or `"Problem: ... Solution:"` yield different results, to establish that the phenomenon is not an artifact of the specific `"Q: ... A:"` convention.
+- **Direct comparison of first-step branching vs. mid-path branching across multiple tasks**, with quantitative results showing at which step branching is optimal for different reasoning types.
+
+**Overall assessment.** The experimental evidence strongly supports the paper's central qualitative claim: pre-trained language models contain chain-of-thought reasoning paths in their next-token distribution that are obscured by greedy decoding, and these can be surfaced through a simple, task-agnostic decoding intervention. The quantitative improvements are large and consistent across models and tasks. The primary limitations are: (a) the difficulty boundary (reasoning degrades on synthetic tasks) is established but not deeply characterized — we know *that* it happens but not precisely *where* or *why* in terms of pre-training data statistics; (b) the `$\Delta$` metric, while empirically effective, lacks rigorous validation beyond the 100-question GSM8K subset; and (c) the practical cost-performance tradeoff against other inference-time compute methods (more sampling, beam search with better scoring, etc.) is not fully explored. These limitations do not undermine the paper's core contribution — the discovery that reasoning capabilities are latent in pre-trained models' decoding distributions — but they bound the strength of the claim that CoT-decoding is a *practically superior* approach to existing inference-time strategies rather than a *complementary* one.
+
+## 6. Limitations and Trade-offs
+
+### The First-Token Branching Assumption: Reasoning Paths Are Clustered at Position Zero
+
+**The assumption or constraint.** CoT-decoding branches exclusively at the first decoding token after the input, continuing each branch with standard greedy decoding. The method assumes that the critical divergence between direct-answer and reasoning modes occurs at this single position, and that exploring top-𝑘 alternatives there is sufficient to surface the correct CoT path. The paper explicitly acknowledges that this choice is not universally optimal:
+
+> "the optimal branching point may vary with the task; in the year parity task, for instance, mid-path branching can effectively yield correct CoT paths." (Section 2.2, Figure 2 discussion)
+
+Furthermore, Section 5 discusses this as an open problem:
+
+> "our current exploration focuses on branching at the first token, but for future work one can explore branching at any token and searching for the best possible paths during the decoding phase."
+
+**The consequence.** If the correct reasoning path diverges from greedy decoding at a *later* token — for instance, when the model needs to first retrieve factual knowledge (like a birth year) before branching into reasoning about it — first-token branching will miss it entirely. The Figure 2 analysis shows this concretely: in the year parity example, branching at step 0 surfaces `"Nicolas"`, `"Even"`, `"Odd"`, and `"1"` — some of which are direct guesses. But branching at a later step after `"Nicolas Cage was born in"` yields `"1964, an even year."` — a correct path that first-token branching would not access unless the model happened to start with a retrieval-initiating token. More generally, complex multi-step reasoning tasks may require the model to commit to a *sub-procedure* (e.g., "First, let's find the birth year") before the reasoning-vs-guess divergence becomes meaningful. First-token branching imposes a single, fixed intervention point that may be suboptimal for tasks where the reasoning structure unfolds over multiple stages.
+
+**What evidence exists in the paper.** Figure 2 provides qualitative evidence that later-stage branching can sometimes recover correct paths that first-token branching misses. The year parity example explicitly shows a correct CoT path accessible only via mid-path branching. However, this is presented as an observation, not systematically tested — there is no experiment comparing first-token vs. mid-path branching accuracy across task types, no quantification of how often the optimal branching point lies beyond the first token, and no method proposed for automatically identifying where to branch.
+
+**Mitigation status.** Not mitigated. The paper acknowledges the limitation, flags it as future work, and defaults to first-token branching for simplicity across all experiments. No adaptive or multi-point branching strategy is proposed or evaluated. The computational cost of branching at multiple points (which would grow exponentially with the number of branching positions) is cited as a barrier: "The computational cost will be substantially higher though, and how to reliably identify the best token during the search will be an interesting direction to explore." For a practitioner, this means CoT-decoding is currently restricted to tasks where the reasoning mode is triggerable from the very first generated token — a constraint whose scope and impact are not characterized.
+
+---
+
+### The `$\Delta$` Metric Has Only Been Validated on Grade-School Math, Not on Other Reasoning Types
+
+**The assumption or constraint.** The entire CoT-decoding method relies on the empirical claim that the `$\Delta$` metric — the average probability gap between top-1 and top-2 tokens across answer-span positions — can reliably distinguish CoT reasoning paths from direct-guess paths. This claim is validated by a single manual analysis on a subset of one dataset:
+
+> "we manually examined the first 100 questions in GSM8K, and among those, if we take the decoding path with the highest answer confidence among the top-10 decoding paths, 88% of them contain CoT paths." (Section 2.2)
+
+This 88% correlation is the empirical foundation of the method. However, it is established only for grade-school math word problems on GSM8K using PaLM-2 Large.
+
+**The consequence.** On tasks where high-confidence *wrong* reasoning is prevalent — for instance, synthetic multi-step tasks where the model produces coherent but flawed chains of thought — `$\Delta$` may fail to discriminate between correct and incorrect paths, selecting wrong answers with high confidence. The paper's own qualitative analysis hints at this failure mode: on Coin Flip, the model produces "flawed alternative reasoning" paths (Table 11) where the reasoning structure is present but the answer is wrong; on Multi-step Arithmetic, "the model tends to perform calculations from left to right in the CoT-decoding paths, rather than following the correct mathematical order" (Section 3.2) — the model is reasoning confidently but incorrectly. In these cases, a high `$\Delta$` would select the *wrong* answer, and the method has no mechanism to detect this.
+
+Furthermore, the relationship between `$\Delta$` and reasoning quality may break down entirely for tasks where answers are not deterministic. For open-ended generation (essay writing, dialogue, creative tasks), the notion of a "correct answer token" with a unique high-probability value does not apply, and `$\Delta$` may simply measure the model's stylistic certainty rather than reasoning quality. The paper acknowledges this in Section 5:
+
+> "in cases where the answers are more open-ended, utilizing the probability differences of the top two tokens as an indicator of how models prefer one answer over another could be less precise."
+
+**What evidence exists in the paper.** The 88% validation is the only quantitative measurement of the `$\Delta$`-reasoning correlation. No similar manual analysis is reported for MultiArith, year parity, or any synthetic task. The difficulty-dependent results in Table 6 *indirectly* suggest that `$\Delta$`-based selection becomes less effective on synthetic tasks (gains shrink or vanish), but this could be due to either (a) the correct CoT paths not existing in the top-𝑘 distribution at all, or (b) the correct paths existing but `$\Delta$` failing to surface them. The paper cannot distinguish these two explanations without a per-task `$\Delta$` validation.
+
+The paper also does not report the `$\Delta$` values for the 12% of GSM8K paths that were *not* CoT despite having high `$\Delta$` — understanding these false positives (are they high-confidence direct guesses? confident wrong reasoning?) is important for bounding the metric's reliability.
+
+**Mitigation status.** Not mitigated. The paper acknowledges the open-ended answer limitation in the discussion section but does not address the more immediate concern that `$\Delta$` has not been validated beyond GSM8K even for closed-form reasoning tasks. No alternative confidence metric is proposed, and no analysis of failure modes (high-confidence wrong reasoning) is provided. For a practitioner deploying this on a new task or domain, the key empirical claim — that `$\Delta$` tracks reasoning quality — is unverified, and the cost of verification (manual examination of hundreds of paths) is substantial.
+
+---
+
+### Difficulty Estimation via Brute-Force Exploration: The Cost of CoT-Decoding Is Not Accounted for in Comparisons Against Greedy Decoding
+
+**The assumption or constraint.** CoT-decoding generates `$k$` complete decoding paths for every question and selects among them, where `$k=10$` by default. The computational cost is `$O(k)$` relative to greedy decoding's `$O(1)$`. The paper reports this cost factor explicitly (Table 7, final column) but frames the headline accuracy comparisons — "25.1% vs. 9.9% on Mistral-7B" — as direct head-to-head comparisons without normalizing for compute.
+
+**The consequence.** A practitioner choosing between CoT-decoding at `$k=10$` and an alternative that uses the same 10× generation budget differently (e.g., self-consistency with 10 sampled paths under a better prompt, or a search method with process-reward-model guidance) cannot determine which is more compute-efficient from the paper's results. The paper compares CoT-decoding against self-consistency *without* CoT prompting (Table 3: 12.9% vs. 25.1% on Mistral-7B at equal `$k=10$`), which is a fair comparison. But it does not compare against, for instance, self-consistency *with* zero-shot CoT prompting at `$k=10$` (which achieves 39.4% on Mistral-7B, per Table 7) — a prompted method using the same inference budget that substantially outperforms CoT-decoding without prompting (25.1%). This matters because the paper's central framing is that CoT-decoding recovers reasoning without prompting, and a practitioner might reasonably ask: for a fixed 10× inference budget, am I better off using CoT-decoding on an un-prompted model, or spending that same budget on a prompted model with standard sampling?
+
+The situation is somewhat different for PaLM-2 Large: CoT-decoding without prompting (63.2%) vs. self-consistency with zero-shot CoT prompting (85.3%) — the prompted method still wins substantially at the same budget. CoT-decoding's value proposition is strongest when *prompting is not allowed* (the scientific measurement use case), but for the practical use case of maximizing accuracy given a compute budget, the paper does not establish competitiveness against prompted alternatives.
+
+**What evidence exists in the paper.** Table 7 provides all the necessary numbers for this comparison but does not explicitly draw attention to it. The paper frames the `$O(k)$` vs. `$O(1)$` cost in Table 7, and the numbers are present, but no compute-matched analysis (e.g., "CoT-decoding at `$k=10$` costs the same as self-consistency at `$k=10$`, and here is how they compare") is conducted systematically across budgets. The effect of `$k$` on accuracy (Figure 5) is shown, but the cost-performance Pareto frontier — how accuracy scales with generation budget for CoT-decoding vs. alternatives — is not plotted.
+
+**Mitigation status.** Partially addressed by transparency — the `$k$` value and `$O(k)$` cost are always stated. However, the paper does not provide a systematic compute-matched comparison, a cost-performance curve, or a recommendation for choosing `$k$` based on a budget constraint. The choice of `$k=10$` is presented as a default based on the accuracy-vs-𝑘 curve (Figure 5), but this curve shows accuracy still rising at `$k=10$` for pre-trained models — suggesting the optimal `$k$` for accuracy-maximization under no budget constraint would be higher, while the optimal `$k$` under a tight budget is not established. Section 5 acknowledges this implicitly: "The exploration of alternative decoding paths incurs additional computational costs. Future work could leverage the CoT-decoding paths to fine-tune the model to further enhance its reasoning capabilities" — suggesting that one path to amortizing the cost is to distill the discovered reasoning paths into the model weights.
+
+---
+
+### No Evidence Beyond Math and Fact-Based Commonsense Reasoning: Generalization to Other Domains Is Uncharacterized
+
+**The assumption or constraint.** All quantitative experiments in the paper are on mathematical reasoning (GSM8K, MultiArith, Multi-step Arithmetic), commonsense fact-based reasoning (year parity), and synthetic logical reasoning (Coin Flip, Web of Lies, Sports Understanding, Object Counting). The paper makes no claims about generalizing to other reasoning domains — code generation, scientific reasoning, legal analysis, multi-hop question answering, or any task requiring integration of multiple knowledge sources. The paper's conceptual claims are framed in general terms ("LLMs inherently possess reasoning capabilities"; "Can LLMs reason effectively without prompting?"), but the empirical support is entirely within the math-and-logic domain.
+
+**The consequence.** The mechanism that makes CoT-decoding work — the model having learned both direct-answer and reasoning policies during pre-training, with the reasoning policy accessible at the first token — may be specific to tasks where (a) answers are short and deterministic (numbers, labels) and (b) step-by-step explanatory solutions were abundant in the pre-training corpus. Grade-school math word problems are among the most heavily represented reasoning tasks in web text, with countless examples of people solving problems and showing their work. For domains where such "showing work" patterns are less common in pre-training data — e.g., code debugging where the model might jump to the fix without explaining the bug, or medical diagnosis where reasoning chains are rarely published — the model may not have learned a distinct reasoning policy to surface, and CoT-decoding would provide no benefit. The paper has no evidence either way.
+
+Furthermore, the `$\Delta$` metric's dependence on short, extractable answer spans may fail for tasks with longer, multi-part, or structured answers. For code generation, the "answer" might be an entire function rather than a few tokens, and the probability gap averaged over dozens or hundreds of tokens would likely wash out any reasoning-confidence signal. For tasks where the answer is a choice among many options (not binary or numerical), the min-margin approach would need to be generalized to multi-way comparisons, which is not explored.
+
+**What evidence exists in the paper.** None beyond the datasets listed. The difficulty-dependent analysis in Table 6 shows that CoT-decoding's benefit degrades even *within* the reasoning domain as tasks become more synthetic, which is suggestive that domain shift matters. The Sports Understanding and Object Counting tasks — which are natural-language-based but synthetic — show essentially zero gain from CoT-decoding (58.8% → 58.0% and 36.0% → 39.2% respectively, Table 6). This provides some within-domain evidence that the method does not work uniformly for all reasoning tasks, but the paper does not explore whether this is due to the tasks' synthetic nature, their domain, or some other factor.
+
+**Mitigation status.** Not addressed. The paper makes no claims about domain generalization, but also provides no caveats or guidance about which domains are likely to benefit. A practitioner working on, say, legal document analysis or multi-hop QA over knowledge bases has no information about whether CoT-decoding would help, hurt, or do nothing. The paper's positive results, while strong, are confined to a narrow slice of the reasoning landscape, and the absence of negative results on other domains makes it impossible to assess the method's practical scope.
+
+---
+
+### Single Benchmark per Task Type: The GSM8K Test Set Is Only 1,319 Questions, and Many Analyses Use a 100-Question Subset
+
+**The assumption or constraint.** The primary mathematical reasoning benchmark, GSM8K, consists of 1,319 test questions. Several key analyses in the paper operate on even smaller subsets: the manual `$\Delta$`-reasoning validation uses only the first 100 questions (Section 2.2), the path extraction method comparison in Table 2 uses "GSM8K (top-100)", and the synthetic task evaluations in Table 6 use 100 examples per difficulty level. The paper reports all results as point estimates without confidence intervals, standard errors, or statistical significance tests.
+
+**The consequence.** For the main GSM8K results (Tables 4, 5, 7; Figures 3, 4), the effective sample size is 1,319 — large enough that differences of several percentage points are likely statistically significant. But for the per-task breakdowns and ablations using 100-question subsets, the standard error is approximately 3-5 percentage points for accuracy in the 25-75% range (where binomial variance is highest). This means that: (a) the 88% `$\Delta$`-reasoning correlation (on 100 questions) has a confidence interval of roughly ±6.5%, so the true correlation could be anywhere from ~81% to ~94%; (b) the path extraction method comparison in Table 2 (51.0% vs. 72.0% for length-normalized vs. CoT-decoding on 100 questions) is a large gap but the precision is limited; (c) the difficulty-dependent results in Table 6 (100 examples per cell) have wide confidence intervals — the difference between greedy (70.0%) and CoT-decoding (94.0%) on 2-flip Coin Flip (100 examples) is clearly significant, but the difference between greedy (48.0%) and CoT-decoding (55.0%) on 4-flip (also 100 examples) may not be.
+
+For a practitioner deciding whether CoT-decoding's benefit on their task is reliable, the absence of uncertainty quantification makes it difficult to assess how much variance to expect in practice. A 5-percentage-point improvement on a 100-question benchmark could easily be noise, and the paper's difficulty-dependent conclusions — e.g., that CoT-decoding provides "modest gains" at high difficulty — could be artifacts of small sample sizes for those difficulty bins.
+
+**What evidence exists in the paper.** All numbers are reported as point estimates. The paper does not mention standard errors, confidence intervals, bootstrap estimates, or any form of uncertainty quantification. The cross-validation described in the prior analysis sections (two-fold CV for strategy selection) is not applied here — CoT-decoding has no strategy to select per-bin, since `$k=10$` and first-token branching are fixed across all questions. The statistical reliability of the reported improvements — especially for the smaller subsets and per-task breakdowns — is therefore unknown.
+
+**Mitigation status.** Not addressed. Standard practice in the field at the time of publication varies; many papers report point estimates on GSM8K without confidence intervals. However, for a paper whose central contribution involves fine-grained claims about *when* reasoning paths exist and *when* they do not (Table 6, Figure 5 right), the lack of statistical rigor weakens the precision of the boundary conditions it claims to establish. A minimal mitigation would have been to report 95% binomial confidence intervals for the main results and to use larger sample sizes for the synthetic task evaluations where per-cell N is only 100.
+
+---
+
+### Instruction-Tuned Models Were Not Systematically Evaluated for the Core `$\Delta$`-Reasoning Correlation
+
+**The assumption or constraint.** CoT-decoding is designed for and primarily evaluated on pre-trained models. When applied to instruction-tuned models, the paper observes improvements (Table 5: +7.0 on GSM8K for Mistral-7B IT, +28.7 on MultiArith) and notes that:
+
+> "after instruction-tuning, the model occasionally persists in attempting to directly address a question. In contrast, CoT-decoding can enhance the exploration of alternative paths by triggering a CoT first." (Section 3.1)
+
+However, the paper does not validate whether the `$\Delta$` metric retains its reasoning-detection property for instruction-tuned models. The 88% correlation was established exclusively on pre-trained PaLM-2 Large; instruction-tuned models differ in that they have been explicitly trained to produce CoT paths, which may change the relationship between answer confidence and the presence of reasoning.
+
+**The consequence.** For instruction-tuned models, it is plausible that the model has learned to produce CoT paths that are *stylistically* CoT (showing steps) but *substantively* unreliable — the model goes through the motions of reasoning without the reasoning actually constraining the answer. In this scenario, `$\Delta$` could be high (the model has learned to be confident in its CoT-style outputs) without tracking correctness. Conversely, instruction-tuned models might have learned to produce direct answers with high confidence when the answer is obvious, which could induce false positives where `$\Delta$`-based selection picks a direct-guess path over a reasoning path. The paper's improved results with CoT-decoding on instruction-tuned models (Table 5) could be driven by `$\Delta$` still working, or by CoT-decoding's first-step branching simply increasing diversity in a way that happens to help, with `$\Delta$` operating as a noisy filter. The mechanism is unexamined.
+
+**What evidence exists in the paper.** None. The `$\Delta$`-reasoning correlation is validated only for pre-trained PaLM-2 Large on GSM8K. The behavior of `$\Delta$` on instruction-tuned models — correlation with CoT presence, distribution of `$\Delta$` values for correct vs. incorrect paths, false positive rate — is not analyzed. The instruction-tuned results in Table 5 and Figure 4 (left) are presented as outcome-level comparisons (greedy vs. CoT-decoding accuracy) without any diagnostic analysis of what `$\Delta$` is selecting.
+
+**Mitigation status.** Not addressed. The paper treats instruction-tuned models as a secondary evaluation (showing the method generalizes) without adapting the validation to account for the different training regime. For a practitioner deciding whether to deploy CoT-decoding on an instruction-tuned model — which is the more common deployment scenario — the key selection mechanism is operating in an unvalidated regime. The paper's discussion of instruction-tuning focuses on the performance outcome, not on whether the `$\Delta$` signal driving that outcome remains interpretable or reliable.
+
+## 7. Implications and Future Directions
+- How this changes the landscape
+  - Demonstrates that reasoning is partly a decoding/search problem, not just a prompting or training problem. This reframing encourages lightweight, model-agnostic methods to elicit capabilities that are already present.
+  - Provides a clean probe of “intrinsic” reasoning by minimizing human priors in prompts, enabling more faithful capability assessment (§3.2).
+- Practical applications
+  - Drop-in improvement in QA systems where prompts must stay concise or standardized (customer support, educational assistants, structured forms).
+  - Safety and reliability: path-level Δ provides a confidence signal tied to answer tokens, useful for abstention or routing.
+  - Low-resource settings: boosts reasoning without additional data or fine-tuning; can be combined with prompts or training when available (Table 7).
+- Research directions
+  - Search strategies: adaptive k, learned first-token selectors, or limited branching beyond step 0; balancing accuracy with compute (Discussion §5).
+  - Better answer-span detection for open-ended outputs; leveraging structure-aware decoders.
+  - Training with CoT-decoding traces: fine-tune to promote high‑Δ CoT paths to the top-1 greedy path, reducing the need for multi-branch decoding (Discussion).
+  - Efficiency: combine with speculative decoding or distillation to cut O(k) overhead (§4 Decoding for efficiency; future work suggestion).
+  - Diagnostics: use CoT-decoding to map failure modes (e.g., state tracking) and to study how pretraining distributions shape which CoTs are readily available (§3.2; McCoy et al. 2023 discussion).
+
+In short, CoT‑decoding is a simple, general, and well-evidenced method that uncovers latent reasoning in pretrained LLMs by searching the earliest branching point and selecting answers via a targeted confidence metric. Figures 1–5, Tables 1–7, and the appendices together show both why it works (early-branching plus answer confidence) and where it breaks (complex synthetic tasks and open-ended answers), setting a clear agenda for decoding-aware reasoning research.

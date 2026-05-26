@@ -1,0 +1,826 @@
+# The Leaderboard Illusion
+
+**ArXiv:** [2504.20879](https://arxiv.org/abs/2504.20879)
+
+## 🎯 Pitch
+
+This paper delivers a rigorous, data-driven audit of Chatbot Arena—the leading human-preference leaderboard for large language models—revealing how hidden private variant testing, selective score reporting, unequal data access, and opaque model deprecation systematically bias leaderboard rankings. By combining analysis of 2 million model comparisons with real experiments and simulations, the authors show that these practices distort ratings, entrench advantages for a handful of providers, and promote overfitting to leaderboard quirks rather than genuine model improvement. Their findings underscore the urgent need for transparent and fair evaluation policies to maintain scientific integrity and trust in the benchmarks that shape AI research and industry direction.
+
+---
+
+## 1. Executive Summary
+
+This paper systematically audits Chatbot Arena—the de facto standard leaderboard for ranking generative AI models—revealing that undisclosed policies allow a handful of preferred providers to distort rankings through **selective score reporting** (testing up to 27 private model variants before the Llama-4 release, then publishing only the best) and **data access asymmetries** (Google and OpenAI receiving an estimated 19.2% and 20.4% of all Arena data respectively, while 83 open-weight models collectively received only 29.7%). Through both simulation and real-world experiments deploying identical checkpoints, the authors demonstrate that private testing with retraction enables systematic score inflation—a strategy that can yield a 100-point Arena Score advantage from testing just 10 variants—while access to Arena-distribution data produces relative performance gains of up to 112% on ArenaHard with no corresponding improvement on out-of-distribution benchmarks like MMLU. The paper establishes that training on Arena data confers outsized, non-generalizing benefits—but only when providers enjoy preferential access to private testing, disproportionate sampling rates, and data retention that are not uniformly available across proprietary, open-weight, and open-source communities.
+
+## 2. Context and Motivation
+
+### The Core Problem: A Single Point of Failure for Evaluating AI Progress
+
+The fundamental question this paper interrogates is both simple and alarming: **when the entire AI field relies on a single leaderboard to judge which models are best, what happens when that leaderboard can be gamed?** Chatbot Arena has become the gravitational center of LLM evaluation—it determines media narratives, shapes billions of dollars in investment, influences which models get adopted in production, and even steers academic research directions. If its rankings are distorted, the consequences cascade through the entire AI ecosystem.
+
+The paper frames this as an instance of Goodhart's Law made material at unprecedented scale. When a measure becomes a target, it ceases to be a good measure—and Chatbot Arena's Arena Score is now arguably the most consequential single number in generative AI. A handful of industry labs—Google, OpenAI, Meta, xAI—compete intensely to claim the top spot, with press releases and product launches timed around leaderboard victories. The paper cites specific examples from late 2024 and early 2025: Gemini (Exp 1114) reaching the top on November 14, 2024, displaced by ChatGPT-4o on November 20, then reclaimed by Gemini (Exp 1121) on November 21—three different models from two providers topping the leaderboard within a single week. Given the time required to train and validate a foundation model, the authors argue this pattern is implausible without some mechanism for parallel testing and selective disclosure.
+
+This matters concretely. The paper documents that the Chatbot Arena leaderboard receives extensive coverage in the Wall Street Journal and Bloomberg, drives adoption decisions by enterprise customers (as reflected in the AI Index Report's reliance on Arena rankings), and is cited as evidence of progress in major technical reports from Meta, Alibaba, and others. When the rankings are unreliable, the entire chain of evidence for "progress" in AI becomes suspect.
+
+### Why Prior Approaches to Evaluation Failed
+
+The paper situates Chatbot Arena as having **earned its prominence by solving a real problem** that prior evaluation methods could not. Understanding why requires appreciating the specific failure modes of earlier benchmarks.
+
+**Static benchmarks saturated too quickly and failed to capture real-world use.** Early LLM evaluation relied heavily on academic multiple-choice tests like MMLU (Hendrycks et al., 2021), SuperGLUE, and similar frameworks. These benchmarks played a crucial role in the early development of language models, but as systems grew more capable, their limitations became acute. The paper cites prior work showing that models reaching superhuman performance on benchmarks still fail in real-world scenarios (Ruder, 2021; Ott et al., 2022; Parli, 2022). Multiple-choice evaluation fundamentally cannot capture the open-ended, conversational, and task-diverse ways that users actually interact with LLMs—summarization, creative writing, code generation, multi-turn dialogue, and the thousands of other use cases that emerge organically.
+
+**Data contamination became endemic.** A substantial body of work documented that LLMs had been exposed to benchmark test sets during pretraining, inflating scores in ways that were difficult to detect and impossible to correct post-hoc (Deng et al., 2024; Golchin & Surdeanu, 2024; Roberts et al., 2023; Dong et al., 2024). Static benchmarks with publicly available test questions are fundamentally vulnerable to this: even well-intentioned developers cannot guarantee their web-scraped training data didn't include benchmark questions, and less scrupulous actors can deliberately train on test sets. This eroded confidence that benchmark scores reflected genuine capability rather than memorization.
+
+**Benchmarks lacked standardization and comparability.** The paper notes that metrics, task definitions, and evaluation protocols varied wildly across different benchmarks, making it impossible to compare models on equal footing (Ethayarajh & Jurafsky, 2020). A model might excel on one benchmark and fail on another measuring ostensibly similar capabilities, creating confusion about which results to trust.
+
+### How Chatbot Arena Promised to Solve These Problems
+
+Chatbot Arena's design represented a genuine innovation that addressed each of these failure modes. The paper is careful to acknowledge this, even while mounting its critique.
+
+**Dynamic, non-static evaluation.** Because Chatbot Arena allows users to submit any prompt they wish, the "test set" is constantly regenerated. In principle, this makes data contamination much harder—you cannot memorize a test set that doesn't exist yet when you train your model. New questions, new topics, and new use cases appear daily, reflecting the evolving ways people use AI systems. This dynamic property was the primary selling point: it promised to measure real-time capability rather than stale, potentially contaminated snapshots.
+
+**Human preferences as ground truth.** Rather than relying on automatic metrics or fixed answer keys, Chatbot Arena uses pairwise human judgments—users vote on which of two anonymous model responses they prefer. This captures dimensions of quality (helpfulness, clarity, tone, creativity, factual accuracy in open-ended contexts) that automated evaluation cannot assess. The paper cites established literature showing that human judgment remains the gold standard for evaluating model outputs, particularly for subjective qualities like coherence and harmlessness (Van Der Lee et al., 2019).
+
+**Crowdsourcing as a scalable evaluation mechanism.** By opening evaluation to the public, Chatbot Arena taps into a vast pool of diverse users and prompts that no single organization could replicate. The paper reports over 3 million votes collected to date, representing an enormous investment of free human labor from a community of users who voluntarily contribute their time and creativity.
+
+**Statistically principled ranking.** Unlike simple win-rate averaging, Chatbot Arena uses the Bradley-Terry model (Bradley & Terry, 1952), a probabilistic framework for estimating latent skill levels from pairwise comparisons. This is the same family of models used in chess rankings (Elo) and online gaming, providing well-calibrated estimates with confidence intervals that account for which opponents each model faced. The BT model's property of transitivity—if A beats B and B beats C, we can infer A beats C—means that not every model needs to compete against every other model, enabling large-scale rankings with incomplete comparison data.
+
+### Where Chatbot Arena Falls Short: The Gap This Paper Identifies
+
+The paper's critique is not that Chatbot Arena's design is fundamentally flawed, but rather that **a combination of undisclosed policies and preferential treatment toward a handful of providers has eroded the very properties that made the Arena valuable.** The gap the paper identifies is between the theoretical fairness of the system and the actual, distorted playing field that has emerged in practice.
+
+**An unstated policy of private testing with retraction.** The paper reveals that Chatbot Arena permits select providers to test multiple model variants anonymously, observe their scores, and publicly release only the best-performing checkpoint. This policy was not disclosed to all participants—the authors learned of it only through direct inquiry with Arena organizers in November 2024, after observing that their own open-weight model (Aya Expanse) appeared to be systematically undersampled compared to proprietary alternatives. A blog post describing benchmarking policies was published in December 2024, but the underlying asymmetries in who knows about and can exploit these policies persist.
+
+This matters because it creates a fundamental information asymmetry. A provider who submits 27 variants and publishes only the winner is playing a different game than one who submits a single model and must live with whatever score it earns. The paper's formal analysis (Section 3.2) shows that this best-of-N strategy violates the Bradley-Terry model's assumption of unbiased sampling, introducing an upward bias in the reported skill estimate. The expected score of the maximum of N noisy estimates is strictly greater than the expected score of any individual estimate—a mathematical inevitability that systematically inflates the rankings of providers who can afford to test many variants.
+
+**Disproportionate data flows to proprietary providers.** The Arena is community-driven: everyday users contribute prompts and votes for free. Yet the paper finds that this free human feedback flows overwhelmingly to commercial entities. OpenAI receives approximately 20.4% of all test prompts, Google 19.2%, and the combined share of OpenAI, Google, Meta, and Anthropic is 62.8%. In contrast, all 41 fully open-source models combined receive only 8.9% of the total data. This is not accidental—it results from a combination of higher sampling rates for proprietary models (Google and OpenAI models appear in up to 34% of daily battles, compared to 3.3% for providers like Reka), silent deprecation of open-weight and open-source models (87.8% of open-weight models and 89% of open-source models are deprecated, versus 80% of proprietary models), and the ability to field many private variants that each collect data.
+
+This data asymmetry is not merely an abstract fairness concern. In Section 4.2, the paper demonstrates that access to Arena-distribution data directly translates to better Arena scores. Training on increasing proportions of Arena data (0% → 30% → 70%) improves win-rates on ArenaHard from 23.5% to 49.9% against Llama-3.1-8B, while having no effect (or slight negative effect) on MMLU. The relative performance gain is 112%. This means that data access asymmetry is a self-reinforcing cycle: providers who receive more Arena data can train models that perform better on the Arena, which earns them higher rankings, which earns them more sampling, which earns them more data.
+
+**The risk of overfitting to a narrow distribution.** The paper observes that the Arena's prompt distribution is both distinctive and partially predictable. Despite being "dynamic" in principle, the reality is more complex: 20.8% of prompts in any given month are exact duplicates of previous prompts, and cross-month similarity rates (measured by cosine similarity > 0.95 in embedding space) range from 4.5% to 9%. The user base skews toward developers, resulting in an over-indexing on puzzles, math problems, and certain cultural references (the paper notes "dozens of questions about Star Trek" and zero about Chaucer in a released 33K-sample dataset). The context length limit of 12,000 characters excludes longer or more complex inputs. For a global technology provider, real-world commercial applications may differ significantly from this distribution.
+
+The paper's fine-tuning experiments in Section 4.2 show that training on Arena data produces **highly specific, non-generalizing improvements**: MMLU scores remain flat (66.5% → 64.4% → 65.9%) while ArenaHard win-rates nearly double. This is a textbook case of overfitting—the model learns to excel on the evaluation distribution without improving on other measures of capability. When the evaluation distribution itself can be predicted (because prompts repeat, share high similarity, and follow user-base-specific patterns), providers with access to historical data gain a systematic advantage in optimizing for the leaderboard rather than for genuine capability.
+
+**Model deprecation undermines ranking reliability.** The paper finds that deprecation policies are far more aggressive than publicly acknowledged (205 models silently deprecated versus 47 officially listed), and they disproportionately affect open-weight and open-source models. This matters because the Bradley-Terry model's reliability depends on two assumptions that deprecation compromises: (1) evaluation conditions remain constant across comparisons, and (2) the comparison graph remains fully connected. The paper demonstrates through simulation (Section 5.1) that when older models are deprecated while the task distribution shifts over time, transitivity breaks down: historical pairwise comparisons no longer reflect current performance, and rankings become unreliable. Further simulation (Section 5.2) shows that sparse or disconnected comparison graphs—an inevitable consequence of aggressive deprecation—produce rankings that diverge from true skill levels.
+
+### The Broader Intellectual Context
+
+The paper positions itself within a tradition of critical meta-studies on benchmark reliability in AI. Prior work has established that benchmarks are never impartial instruments—they are shaped by the assumptions, commitments, and incentives of the communities that create them (Aniba et al., 2010; Bartz-Beielstein et al., 2020; Koch & Peterson, 2024). Specific critiques have targeted NLP leaderboard design (Ethayarajh & Jurafsky, 2020), the gap between benchmark performance and real-world utility (Ott et al., 2022), and the tendency of benchmarks to become epistemic monocultures that narrow the field's focus (Koch & Peterson, 2024).
+
+However, this paper's contribution is distinct: rather than critiquing a benchmark's *design* in principle, it conducts an empirical audit of how a *live, operational* benchmark has been compromised by the strategic behavior of participants and the preferential policies of organizers. This is a new kind of contribution that blends measurement science, audit methodology, and policy analysis.
+
+The paper also connects to literature on human voting-based evaluation. Prior work has examined vulnerabilities in crowdsourced evaluation platforms—including adversarial voting attacks (Huang et al., 2025), vote rigging (Min et al., 2025), and de-anonymization of model responses (Zhao et al., 2024). The current paper complements this by examining structural, policy-driven distortions rather than malicious user behavior, showing that even without adversarial manipulation, systematic biases in institutional design can undermine benchmark reliability.
+
+### The Authors' Position: Participants Turned Whistleblowers
+
+An unusual and important aspect of this paper is the authors' explicit acknowledgment of their dual role: they have submitted multiple models to Chatbot Arena (command-r, command-r-plus, aya-expanse, aya-vision, command-a) and were motivated to conduct this analysis by their own experience of perceived undersampling and unequal treatment. They note that they contacted Arena organizers in November 2024 to inquire about sampling discrepancies, learned about private testing practices, and then—after observing continued disparities—launched their own private variants as controlled experiments to measure the benefit of multiple submissions (reported in Section 3.3). They also acknowledge that these experiments contributed to Cohere's appearance in Figure 6 as a provider with private variants, stating that "before this period, Cohere had not launched any private testing."
+
+This positioning matters for interpreting the paper. The authors are not external critics—they are participants in the system they critique, with firsthand knowledge of the asymmetries they document. They are also stakeholders who stand to benefit if the playing field is leveled. The paper is transparent about this, noting that "a subset of the authors of this paper have submitted several open-weight models to Chatbot Arena" and that this submission experience drove the study. Whether this makes the analysis more credible (insider knowledge) or more suspect (competitive motivation) is left to the reader—but the paper's extensive use of public data, simulations, and controlled experiments provides multiple lines of evidence that do not depend solely on the authors' testimony.
+
+### Reconciling with Chatbot Arena's Substantial Contributions
+
+The paper repeatedly and explicitly acknowledges the value of Chatbot Arena and the effort invested by its organizers. It describes the Arena as having "democratized access to many models and enabled a large and varied user base to weigh in on what matters in the real world for model selection." The authors state that "it is far easier to point out issues with the Arena than the huge amount of work that went into building it" and characterize their findings as reflecting how "systematic issues may have gradually emerged as the leaderboard took on outsized importance in visibility to providers."
+
+This framing is important: the paper's goal is reform, not abolition. The recommendations in Section 6 propose concrete, actionable policy changes (prohibit score retraction, establish transparent limits on private testing, implement fair sampling, provide transparency into deprecations) that the authors argue would restore the integrity of the existing framework rather than replace it. This distinguishes the critique from work that dismisses Chatbot Arena entirely and positions it as a constructive intervention aimed at preserving what the Arena does well while fixing what has gone wrong.
+
+## 3. Technical Approach
+
+### 3.1 Reader Orientation
+
+This paper is a **systematic audit** — it constructs multiple data pipelines to collect, integrate, and analyze evidence about operational practices on Chatbot Arena, then uses both simulation and real-world controlled experiments to measure the causal effects of those practices on leaderboard reliability. The problem it solves is determining whether the Arena's rankings are trustworthy, and the shape of the solution is a multi-pronged investigation that triangulates between public data releases, web scraping, proprietary API logs, controlled experiments (launching real models on the Arena), and mathematical simulation — each answering a different dimension of the reliability question.
+
+### 3.2 Big-Picture Architecture (Diagram in Words)
+
+The audit system has four investigative pipelines, each targeting a distinct threat to leaderboard reliability, supported by shared data infrastructure:
+
+1. **Data Infrastructure** — a collection of four datasets spanning 2M battles, 243 models, and 42 providers, assembled from public releases, proprietary API logs, web scraping, and leaderboard snapshot archives. This infrastructure answers "what is actually happening on the Arena, and who benefits?"
+
+2. **Private Testing and Selective Disclosure Investigation (Section 3)** — uses web scraping to detect anonymous private model variants, mathematical analysis of the Bradley-Terry model to prove that best-of-N selection introduces bias, simulation to quantify the expected score inflation, and real-world controlled experiments (launching identical checkpoints as private variants) to validate the simulations empirically.
+
+3. **Data Access Asymmetry and Overfitting Investigation (Section 4)** — quantifies disparities in data flows between providers by analyzing sampling rates, deprecation patterns, and prompt duplication across time, then conducts controlled fine-tuning experiments to measure the causal effect of Arena-distribution data on both in-distribution (ArenaHard) and out-of-distribution (MMLU) performance.
+
+4. **Deprecation and Ranking Reliability Investigation (Section 5)** — simulates Bradley-Terry ranking under evolving task distributions with and without model deprecation, and constructs controlled comparison graphs (dense vs. disconnected) to measure how deprecation-induced sparsity affects ranking accuracy.
+
+Information flows: public Arena releases → data infrastructure → detection of asymmetries; web scraping → identification of private variants and sampling rates; controlled experiments (on-Arena and in-lab) → measurement of causal effects; simulations → formal quantification of bias and reliability degradation.
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First**, the data infrastructure: the four datasets, what each contains, how they were collected, and what questions they enable. Understanding data provenance is critical because every subsequent finding depends on these sources.
+- **Second**, the Bradley-Terry model background: what it is, why Chatbot Arena uses it, and what assumptions it makes. This mathematical foundation is necessary for understanding why private testing, deprecation, and sampling asymmetries matter — each violates a specific BT assumption.
+- **Third**, the private testing and selective retraction analysis: how private variants are detected, the mathematical proof of selection bias, the simulation framework, and the real-world validation experiments.
+- **Fourth**, the data access asymmetry analysis: how sampling rates, deprecation, and data flows are measured, and the overfitting experiments that establish the causal importance of these asymmetries.
+- **Fifth**, the deprecation and ranking reliability analysis: the evolving-task-distribution simulation, the disconnected-graph simulation, and how each reveals breakdowns in the BT model's assumptions.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily an **empirical audit paper** whose core contribution is a systematic methodology for detecting and quantifying structural biases in a live, crowdsourced leaderboard. The technical approach is distinguished not by a single novel algorithm, but by the integration of multiple complementary methods — data forensics, mathematical analysis, simulation, and real-world controlled experiments — each designed to test a specific threat to reliability that cannot be evaluated from public data alone.
+
+---
+
+#### Data Infrastructure: Assembling the Evidence Base
+
+The paper constructs four datasets, each serving a distinct investigative purpose and collected through different mechanisms. Understanding their provenance and limitations is essential because every subsequent finding is constrained by what these datasets can and cannot reveal.
+
+**Dataset 1: Historical Battles**
+
+**Source:** This is a composite dataset combining two sub-sources:
+
+- **Public battles:** The officially released `arena-human-preference-100K` dataset (106K samples from June–August 2024) plus datasets shared as part of Chatbot Arena notebook tutorials on Bradley-Terry and Elo rating systems, totaling approximately 1.9M samples from April 2023 to August 2024. Critically, 90% of this public data does not include prompts or conversation history — it contains only the names of the two battling models, the winning model, and language/task category tags.
+
+- **Proprietary battles:** Battle data shared privately by Chatbot Arena organizers with Cohere based on Arena's stated policy, which permits model providers to request access to 20% of data involving their own models. This subset contains 43,729 battles played by Cohere models (command-r, command-r-plus, their August 2024 versions, aya-expanse-8b, aya-expanse-32b) between March 2024 and March 2025. Unlike the public data, this proprietary subset contains complete model conversations. Since this data is 46% multilingual, the authors combine it with the public battles to enable the language distribution shift analysis.
+
+**Scale:** Approximately 2M battles total, though exact counts vary by analysis because different subsets are used for different questions.
+
+**What it enables:** The historical battles dataset is the foundation for analyzing how the Arena's task distribution shifts over time (Figure 11) — specifically, the monthly proportion of prompts in different languages. This temporal analysis of task distribution is essential for establishing that evaluation conditions are non-stationary, a finding that feeds directly into the Section 5.1 argument that deprecation under changing conditions breaks BT transitivity.
+
+**What it cannot reveal:** Because Chatbot Arena de-duplicates the data before public release and removes private battles entirely, this dataset cannot measure prompt duplication rates or detect private testing activity. The proprietary subset is limited to Cohere models, so it cannot reveal asymmetries in data access for other providers.
+
+**Dataset 2: API Prompts**
+
+**Source:** Prompts received by Cohere's API through requests originating from Chatbot Arena battles, collected between November 2024 and April 2025. This dataset comprises 567,319 total entries, which after excluding null values and multi-turn conversations yields 197,217 single-turn conversations for analysis. The models receiving these prompts include command-r-08-2024, command-r-plus-08-2024, aya-expanse-8b, aya-expanse-32b, command-a-03-2025, and three private variants submitted by the authors as part of their controlled experiments.
+
+**What it enables:** This dataset is the sole source for the prompt duplication analysis (Figure 12 and Appendix H). Because Chatbot Arena's public releases are already de-duplicated, they cannot capture the extent of similar or overlapping queries. The API prompts dataset preserves the raw incoming stream, enabling measurement of exact-match duplication (e.g., 20.8% of prompts in November 2024 are exact duplicates within that month) and near-duplicate rates (using cosine similarity > 0.95 on embeddings from the `embed-multilingual-v3.0` model). The cross-month analysis (Figure 16) reveals that 7.3% of prompts from December 2024 appear in exact form in January 2025, and 9% of prompts show high semantic similarity across those months.
+
+**What it cannot reveal:** This dataset is limited to Cohere's API traffic, so it only captures prompts sent to Cohere models during Arena battles. It cannot measure duplication rates for other providers or provide a complete picture of all prompts submitted to the Arena. For the purposes of the duplication analysis, this is sufficient — the existence of substantial duplication in one provider's stream establishes the phenomenon — but it does not quantify the full extent of duplication across the Arena.
+
+**Dataset 3: Leaderboard Statistics**
+
+**Source:** Historical leaderboard snapshots released by Chatbot Arena on Hugging Face. The authors consolidated all leaderboard tables published between January 9, 2024 and April 23, 2025, yielding 14.3K records corresponding to 243 unique models. They note that Chatbot Arena switched to the Bradley-Terry model in December 2023, so the January 2024 start date ensures all analyzed data uses the same rating methodology.
+
+**What it enables:** This dataset provides, for each model, its Arena Score over time, the number of battles played, its license classification, and its provider. The authors enrich it with additional metadata, categorizing models as proprietary, open-weight, or open-source based on their listed licenses. This enables analyses of: which providers have the most public models (Figure 2), how data volume (total battles) is distributed across provider types (Figures 3, 4), and which models are active versus deprecated (Figures 18, 19).
+
+**Deprecation detection methodology (Section 5 and Appendix K):** The authors define a model as "silently deprecated" if it participated in an average of 10 or fewer battles between March 3 and April 23, 2025, based on the leaderboard statistics. This threshold operationalizes the observation that deprecated models have their sampling rates reduced to near zero without official notification. The paper finds 205 models meeting this criterion versus only 47 models officially listed as deprecated in Chatbot Arena's FastChat backend codebase.
+
+**What it cannot reveal:** Leaderboard snapshots show only the public, visible state of the Arena. Private variants are excluded entirely. The data does not include any information about sampling rates at a fine temporal granularity, since it reflects cumulative battle counts and current scores rather than daily dynamics.
+
+**Dataset 4: Random Sample Battles (Scraped)**
+
+**Source:** The authors wrote a web scraping script using Selenium with a Chrome browser driver to crawl approximately 150 battles per day from Chatbot Arena between January and March 2025, yielding 5,864 battles total. This is a critical data source because it is the only way to observe private (anonymous) variants being tested on the Arena — these are removed from all publicly released datasets.
+
+**De-anonymization methodology (Appendix E.1):** For each scraped battle, the authors sent a de-anonymizing prompt to both models — variants of "Who are you?" or "Who are you? Respond with only your name and who trained you." — and recorded the responses. Chatbot Arena automatically discards battles where models reveal their identities, which serves the authors' purpose: it prevents their scraping from affecting leaderboard rankings. The authors also voted for ties (e.g., asking "What is the capital of England? Reply with one word only.") to further ensure their votes did not influence scores.
+
+Model identity is then inferred from the responses. For example, the private model `kronus` consistently responded with "Llama, trained by Meta" across 73 encounters; `gemini-test` responded with "I am a large language model, trained by Google" across 219 encounters; `anonymous-chatbot` responded with "I am ChatGPT, trained by OpenAI" across 49 encounters. Appendix E.4 provides a comprehensive table of all private variants detected, the number of responses revealing their identity, and example responses.
+
+**What it enables:** Identification of 64 private models from 10 providers during the scraping period (plus 14 additional private models that could not be de-anonymized). The scraping also enables measurement of sampling rates — the percentage of daily battles each model participates in — which reveals the substantial disparities shown in Figure 5 (Google and OpenAI at up to 34% daily sampling rate versus Allen AI at 3.4%). The authors additionally scraped approximately 500 battles from the Vision leaderboard (`scraped-vision-sample`), detecting 16 additional private variants from Meta beyond the 27 on the main leaderboard, bringing Meta's total to 43.
+
+**What it cannot reveal:** The scraped sample covers only January–March 2025. This period coincided with Meta's Llama 4 launch preparation, so Meta appears as the provider with the highest number of private variants — but the authors acknowledge this may undercount providers who had fewer launches during this window. The de-anonymization method relies on model self-identification, which is inherently approximate: models may respond inconsistently, refuse to identify themselves, or hallucinate their identity. The paper acknowledges this limitation (Section 7) but argues that the consistent patterns across many encounters provide reasonable signals.
+
+**Integration across datasets:** The four datasets are used complementarily. Historical battles provide temporal coverage of task distribution shifts. Leaderboard statistics provide the official, public-facing view of model performance and activity. Scraping reveals the hidden layer of private testing and real-time sampling dynamics. API prompts enable the duplication analysis that leaderboard statistics cannot. Together, they form a multi-view picture of the Arena that no single data source could provide.
+
+---
+
+#### The Bradley-Terry Model: Mathematical Foundation
+
+Since every analysis of score distortion hinges on understanding what the Bradley-Terry (BT) model assumes and how those assumptions can be violated, the paper provides a clear exposition of the model. The BT model is the core rating system used by Chatbot Arena (since December 2023), replacing the earlier Elo-based system.
+
+**Model definition:** For a set of `$m$` models, each model `$i$` is associated with a positive skill parameter `$\pi_i > 0$`. The probability that model `$i$` beats model `$j$` in a pairwise comparison is:
+
+$$P(i \text{ beats } j) = \frac{\pi_i}{\pi_i + \pi_j}$$
+
+where `$\pi_i$` and `$\pi_j$` are the latent skill parameters for models `$i$` and `$j$` respectively.
+
+**What it computes:** Given the observed outcomes of all pairwise battles (who beat whom), the BT model estimates the most likely `$\pi$` values for all models — the parameters that make the observed pattern of wins and losses most probable. These `$\pi$` values represent each model's estimated latent skill, with higher values indicating stronger models. The estimation is done via maximum likelihood: the parameters `$\beta_i = \log \pi_i$` are found by minimizing the expected cross-entropy loss between the model's predicted win probabilities and the observed outcomes.
+
+**Arena Score transformation:** The estimated log-odds parameters `$\hat{\beta}$` are transformed to the Arena Score using:
+
+$$ \text{Arena Score} = 1000 + \frac{400}{\ln 10} \hat{\beta} $$
+
+where `$\hat{\beta}$` is the estimated log-skill parameter from the BT model, 1000 is a baseline offset, and `$400 / \ln 10$` is a scaling factor (inherited from Elo chess ratings) that maps log-odds to an interpretable scale where approximately 400 points corresponds to a 10× skill advantage.
+
+**What it computes in operational terms:** This transformation takes the abstract log-odds estimated by BT and converts them to the human-readable integer scores that appear on the leaderboard. A model with `$\hat{\beta} = 0$` (equal to the reference) gets a score of 1000. A model that is 10× more likely to win against the reference gets approximately 1000 + 400 = 1400. This is identical to the Elo scale used in chess.
+
+**Why this form:** The BT model was chosen over Elo for two reasons. First, it provides a statistically grounded framework for pairwise comparisons that naturally accommodates ties and missing comparisons — not every pair of models needs to have played each other. Second, it produces well-calibrated confidence intervals, which Chatbot Arena uses to handle ranking uncertainty: when the confidence intervals of two models overlap, the leaderboard does not declare a definitive ordering between them.
+
+**The transitivity property:** A critical property of the BT model is transitivity. If model A has a higher skill parameter than model B (`$\pi_A > \pi_B$`), and model B has a higher skill parameter than model C (`$\pi_B > \pi_C$`), then:
+
+$$P(A \text{ beats } C) = \frac{\pi_A}{\pi_A + \pi_C} > \frac{\pi_A}{\pi_A + \pi_B} = P(A \text{ beats } B) > 0.5$$
+
+because `$\pi_A + \pi_C < \pi_A + \pi_B$` when `$\pi_B > \pi_C$`.
+
+**What this means operationally:** Transitivity is what allows the BT model to infer rankings even when not every model pair has been directly compared. If A beats B and B beats C, the system can infer that A would beat C without ever observing that matchup. This is what makes large-scale rankings feasible: you don't need all possible pairings.
+
+**Three key assumptions underlying BT reliability:**
+
+1. **Unbiased sampling:** Each model's skill parameter is estimated from a representative, unbiased sample of pairwise comparisons. If some models are evaluated under systematically different conditions (e.g., only against weak opponents, or only during certain time periods), the skill estimates are distorted.
+
+2. **Constant evaluation conditions:** The task or context against which comparisons are made must remain consistent. BT assumes that "beating model B" means the same thing regardless of when the comparison occurred. If the distribution of prompts changes over time, a win from April 2023 is not equivalent to a win from January 2025 — they measure performance on potentially different tasks.
+
+3. **Connected comparison graph:** Every model must be linked directly or indirectly through pairwise matchups. The maximum likelihood estimate does not exist if models can be partitioned into two non-empty subsets without comparisons between them, or if all comparisons between two groups are one-sided (one group always wins — see Ford Jr, 1957, cited by the paper). This connectivity requirement ensures that the skill parameters are identifiable from the data.
+
+**Confidence interval-based ranking:** Chatbot Arena does not simply sort models by Arena Score. Instead, it considers the confidence intervals around each score. When the confidence intervals of two models overlap, the ranking table reflects this uncertainty — the models may be shown as tied or with an ambiguous ordering. The rank of model `$m$` is calculated as:
+
+$$\text{rank}(m) = 1 + \sum_{m' \in [M]} \mathbb{1}\{m' > m\}$$
+
+where `$\mathbb{1}\{m' > m\}$` is 1 if model `$m'$` is statistically significantly better than model `$m$` (based on non-overlapping confidence intervals), and 0 otherwise. This means the reported rank is the number of models definitively better plus one, with ties resolved by the confidence intervals.
+
+**Why understanding BT matters for the audit:** Each of the paper's major findings maps directly to a violation of one or more BT assumptions:
+
+- Private testing with retraction (Section 3) violates **unbiased sampling**: selecting the maximum of N noisy estimates introduces an upward bias.
+- Data access asymmetries (Section 4) enable **overfitting to a specific distribution**, which undermines the assumption that model skill parameters represent generalizable capabilities.
+- Aggressive deprecation under changing task distributions (Section 5.1) violates **constant evaluation conditions**: historical pairwise comparisons no longer reflect current performance.
+- Sparse or disconnected comparison graphs (Section 5.2) violate **graph connectivity**: without sufficient interconnections, skill estimates become unreliable or unidentifiable.
+
+The BT model thus serves as the theoretical backbone for the entire audit — it provides the normative standard against which actual Arena practices are evaluated.
+
+---
+
+#### Private Testing and Selective Retraction: Detecting, Modeling, and Measuring the Impact
+
+This section of the paper's technical approach combines three methods: forensic detection of private variants through web scraping (already described in the data infrastructure section), mathematical analysis of the bias introduced by best-of-N selection, and simulation plus real-world experimentation to quantify the magnitude of that bias.
+
+**Mathematical proof of selection bias (Section 3.2 and Appendix C):**
+
+The paper formalizes the best-of-N strategy mathematically. A provider submits `$N$` variants of a model, each variant `$k$` having a true underlying skill parameter `$\beta_k$`. For simplicity, the authors first assume each `$\beta_k$` is drawn from some distribution centered at a base skill level `$\beta$`, but the key insight is that each observed estimate `$\hat{\beta}_k$` is subject to statistical fluctuation due to finite match sampling. The observed skill of the submitted model is:
+
+$$\hat{\beta}_{\text{Best}} = \max\{\hat{\beta}_1, \hat{\beta}_2, \ldots, \hat{\beta}_N\}$$
+
+where `$\hat{\beta}_{\text{Best}}$` is the maximum of the `$N$` observed skill estimates, `$\hat{\beta}_k$` is the estimated skill of the `$k$`-th variant, and `$N$` is the number of variants tested.
+
+**What it computes:** This equation formalizes the provider's decision rule: evaluate all `$N$` variants privately, observe their estimated Arena scores, and retain only the variant with the highest observed score for public release. The public sees `$\hat{\beta}_{\text{Best}}$`, not a randomly selected `$\hat{\beta}_k$`.
+
+**The core mathematical result (Theorem 1 in Appendix C):** For `$N \geq 2$` independent and identically distributed real-valued random variables `$\hat{\beta}_k$` with common cumulative distribution function `$F$` and finite expectation `$\mu = \mathbb{E}[\hat{\beta}_k]$`, assuming the distribution is non-degenerate (i.e., `$\text{Var}(\hat{\beta}_k) > 0$`):
+
+$$\mathbb{E}[\hat{\beta}_{\text{Best}}] > \mathbb{E}[\hat{\beta}_k] \iff \text{Var}(\hat{\beta}_k) > 0$$
+
+**What this proves:** The expected value of the maximum of multiple noisy skill estimates is strictly greater than the expected value of any individual estimate — as long as there is any variance in the estimates. This is selection bias in its purest mathematical form: statistical fluctuations ensure that the maximum systematically overestimates the true expected performance.
+
+**Operational meaning:** If a provider who submits a single model gets an unbiased estimate of their model's skill, and a provider who submits 27 variants and publishes only the best gets a systematically inflated estimate, then the leaderboard does not rank models by true skill — it ranks by a combination of true skill and the number of private tests a provider can afford.
+
+**Proof sketch (as presented in Appendix C):** The cumulative distribution function of the maximum is `$F_{\hat{\beta}_{\text{Best}}}(x) = \mathbb{P}(\hat{\beta}_{\text{Best}} \leq x) = F(x)^N$`. Using integration by parts:
+
+$$\mathbb{E}[\hat{\beta}_{\text{Best}}] - \mathbb{E}[\hat{\beta}_1] = \int_{-\infty}^{\infty} x \, d(F(x)^N - F(x)) = \int_{-\infty}^{\infty} (F(x) - F(x)^N) \, dx$$
+
+For all `$x$` where `$0 < F(x) < 1$` and `$N \geq 2$`, we have `$F(x)^N < F(x)$`, so the integrand is strictly positive on a set of positive measure (since the distribution is non-degenerate). Therefore, the integral — and hence the difference in expectations — is strictly positive. If `$\text{Var}(\hat{\beta}_1) = 0$`, then `$F$` is a step function, `$F(x) - F(x)^N = 0$` for all `$x$`, and equality holds.
+
+**Why this form:** This result formalizes a well-known property from order statistics theory (Arnold et al., 1992; David & Nagaraja, 2003) specifically for the leaderboard context. The key insight is that the bias does not require any difference in true model quality — it arises purely from statistical noise in the evaluation process. Even if all `$N$` variants have identical true skill, the observed scores will differ due to finite sampling, and selecting the maximum of those observations introduces an upward bias. The bias grows with `$N$` (more variants = more opportunities for a statistical fluke) and with the variance of the estimates (noisier evaluation = larger spread of observed scores = higher maximum).
+
+**Simulation framework (Section 3.2):**
+
+The paper simulates two scenarios to quantify the bias: identical variants (same true skill) and heterogeneous variants (different true skills).
+
+**Identical variants simulation (Appendix I.2):** Every private checkpoint has the same true Arena Score `$\mu$`. The observed scores differ only due to measurement noise:
+
+$$\hat{E}_k = \mu + \varepsilon_k, \quad \varepsilon_k \sim \mathcal{N}(0, \sigma^2_{\text{noise}}), \quad k = 1, \ldots, N$$
+
+where `$\hat{E}_k$` is the observed Arena Score of the `$k$`-th variant, `$\mu$` is the true (shared) Arena Score, and `$\varepsilon_k$` is Gaussian measurement noise with variance `$\sigma^2_{\text{noise}}$`.
+
+The measurement noise is determined by the number of battles `$n$` each variant participates in:
+
+$$\sigma_{\text{noise}} = \sigma_{\text{Arena Score}}(n) = \frac{400}{\ln 10} \cdot \frac{2}{\sqrt{n}} \approx \frac{347.4}{\sqrt{n}}$$
+
+where `$n$` is the number of independent battles (with the current Arena policy, `$n = 3000$` gives `$\sigma_{\text{noise}} \approx 6.34$` Arena Score points), and 347.4 is the scaling factor derived from the Fisher information of a single BT match at equal skill (see Appendix J).
+
+**What it computes:** Given `$n$` battles per variant, the standard error of the Arena Score estimate is approximately 6.34 points (at `$n = 3000$`). The expected uplift from selecting the maximum of `$N$` identical variants is:
+
+$$\mathbb{E}[\hat{E}_{\text{max}} - \mu] = \sigma_{\text{noise}} \sqrt{2 \ln N}$$
+
+**Operational meaning:** With 50 identical variants each receiving 3000 battles, the expected score inflation is approximately `$6.34 \times \sqrt{2 \ln 50} \approx 17.7$` Arena Score points. This bias comes purely from measurement noise: even though all checkpoints are truly equal, the one that happens to get lucky in its random matchups will be selected.
+
+**Asymptotic behavior:** Because `$\sigma_{\text{noise}} \propto 1/\sqrt{n}$`, this bias `$\to 0$` as `$n \to \infty$`. If the Arena collected infinite battles per variant, the bias from identical checkpoints would vanish — the true (shared) score would eventually be estimated accurately for all variants.
+
+**Heterogeneous variants simulation (Appendix I.3):** The realistic scenario: model variants differ in true quality due to variations in training seeds, data curation, or hyperparameters:
+
+$$\hat{E}_k = \mu + \delta_k + \varepsilon_k, \quad \delta_k \sim \mathcal{N}(0, \sigma^2_{\text{true}}), \quad \varepsilon_k \sim \mathcal{N}(0, \sigma^2_{\text{noise}})$$
+
+where `$\delta_k$` is the true skill deviation of the `$k$`-th variant (representing genuine quality differences), `$\sigma^2_{\text{true}}$` is the variance in true skill across variants, and `$\sigma^2_{\text{noise}}$` is the measurement noise as before. The total variance in observed scores is `$\sigma^2_{\text{total}} = \sigma^2_{\text{true}} + \sigma^2_{\text{noise}}$`.
+
+The expected uplift becomes:
+
+$$\mathbb{E}[\hat{E}_{\text{max}} - \mu] = \sqrt{\sigma^2_{\text{true}} + \sigma^2_{\text{noise}}} \cdot \sqrt{2 \ln N}$$
+
+**What it computes:** This generalizes the identical-variant case. When `$\sigma_{\text{true}} > 0$`, the expected inflation is larger because there are now two sources of variation: genuine quality differences (the provider is selecting a genuinely better checkpoint) plus measurement noise (the provider is also selecting a checkpoint that got lucky in its random matchups).
+
+**Operational meaning:** With `$\sigma_{\text{true}} = 20$` Arena Score points (a modest spread of true quality), `$N = 50$` variants, and `$n = 3000$` battles each, the expected inflation is approximately `$\sqrt{20^2 + 6.34^2} \times \sqrt{2 \ln 50} \approx 56$` Arena Score points. This is a substantial inflation — enough to move a model from the middle of the pack to near the top.
+
+**Critical asymptotic property (unlike the identical case):** As `$n \to \infty$`, the measurement noise `$\sigma_{\text{noise}} \to 0$`, but the expected uplift does not vanish:
+
+$$\lim_{n \to \infty} \mathbb{E}[\hat{E}_{\text{max}} - \mu] = \sigma_{\text{true}} \sqrt{2 \ln N} > 0$$
+
+The selection bias from genuine quality differences **persists even with infinite evaluation data**. The provider is selecting a truly better checkpoint, but the amount of selection bias depends on the number of variants tested — more variants means more opportunity to find one in the tail of the quality distribution. This is the fundamental mechanism: even honest providers who are genuinely trying to identify their best model will, by testing many variants and publishing only the best, produce a score that is higher than what a randomly selected variant from their development process would achieve.
+
+**Simulation results (Figure 7):** The paper simulates a model family with a latent average Arena Score of 1200. As the number of private variants increases from 0 to 50, the expected maximum Arena Score rises from the true mean toward progressively higher values. Testing just 10 variants yields a notable increase of approximately 100 points in the maximum score identified. At 20 variants, the increase is approximately 50 points (compared to the baseline of no private testing). The confidence intervals (bootstrapped) grow wider at higher `$N$`, reflecting the increased uncertainty in the maximum of more random variables.
+
+**Why simulation is necessary:** The authors cannot observe the private scores of variants submitted by other providers — only the public scores of the selected best variants. Simulation allows them to show what the unobserved distribution of private scores likely looks like, and how much inflation the best-of-N strategy mathematically produces, under plausible assumptions about the number of variants tested (based on what they observed through scraping) and the variance of model quality.
+
+**The "provider A vs. provider B" asymmetry simulation (Figure 8):** The paper also simulates a scenario where two model families have different average true scores but asymmetric access to private testing. Model family A has a lower average Arena Score than Model family B. However, family A is allowed to test multiple private variants and select the best, while family B can only submit a single model. The simulation shows that, despite lower average quality, family A's selected best variant can surpass family B's sole submission on the leaderboard. This directly illustrates how asymmetric access to private testing — not genuine capability superiority — can determine leaderboard rankings.
+
+**Real-world validation experiments (Section 3.3):**
+
+The paper goes beyond simulation by running controlled experiments on the actual Chatbot Arena. The authors model two scenarios:
+
+**Lower bound: Identical checkpoints.** The authors submitted two identical variants of Aya-Vision-8B to the Arena in March 2025, without disclosing their identical nature to Arena organizers. This represents the most conservative case — any score difference can be attributed purely to the benefits of multiple submissions rather than any difference in model quality. Two checkpoints were used rather than more "because we wanted to limit the amount of human annotator time we diverted to this exercise."
+
+**Results (Figure 9, left):** The two identical variants yielded Arena Scores of 1052 (±21/22) and 1069 (±19/23). This 17-point difference means 4 other models appear between the two identical checkpoints on the leaderboard. The finding confirms that even with identical variants, the sampling noise in Arena battles is sufficient to produce scores that differ meaningfully, and a provider who submits two variants and publishes the better score gains a 17-point advantage over a provider who submits one and must live with whatever score it earns.
+
+**Realistic estimate: Strategically selected checkpoints.** The authors compare two genuinely different variants of Aya-Vision-32B — both considered high-performing final candidates according to internal metrics, with each showing slightly better performance on different subsets of benchmarks. This models the realistic scenario where a provider has multiple promising checkpoints and uses Arena performance to decide which to release.
+
+**Results (Figure 9, right):** The two variants yielded Arena Scores of 1097 (±29/25) and 1059 (±18/23). This 38-point difference means 9 models fall between the two variants on the leaderboard. The higher-scoring variant achieves the maximum possible advantage from the best-of-N selection: a provider who tested both and published only the higher score would appear 38 points stronger than one who had selected differently.
+
+**Why these experiments are methodologically important:** They are the only direct empirical measurement of the causal effect of the best-of-N strategy on actual Arena scores. While the simulations show what the bias should be under statistical assumptions, the real-world experiments confirm that the effect is large enough to matter in practice — even with just `$N = 2$` variants. They also demonstrate that the authors' simulation framework produces predictions (score inflation from multiple variants) that are consistent with observed reality.
+
+**Methodological note on the authors' position:** The paper explicitly acknowledges that these experiments mean Cohere appears in Figure 6 as having 4 private variants — the 2 identical Aya-Vision-8B checkpoints and the 2 different Aya-Vision-32B checkpoints. The authors state that "before this period, Cohere had not launched any private testing," distinguishing their one-time experimental use of private testing from the sustained practice they observe among preferred providers.
+
+---
+
+#### Disparity in Data Access: Measuring and Demonstrating the Causal Impact
+
+This section of the paper's technical approach involves two components: (1) quantifying how much data flows to which providers and through what mechanisms, and (2) demonstrating through controlled experiments that access to this data actually matters for Arena performance.
+
+**Quantifying data access (Section 4.1):**
+
+The paper identifies four factors that determine how much data a provider receives from the Arena, and measures each:
+
+**Factor 1: Number of private variants being tested.** As detected through scraping (Figure 6), providers deploy widely varying numbers of private variants. Each variant receives prompts from Arena battles. The paper reports that even within their own limited experiment, Cohere's share of collected prompts increased from 5.9% with 1 variant to 19.4% with 3 variants — demonstrating that the number of variants directly multiplies data collection. Provider-level data volume estimates in Figure 4 are based on the cumulative battle counts across all a provider's models (both public and private, where detectable), expressed as a fraction of the total 6M estimated API calls (3M battles × 2 models per battle).
+
+**Factor 2: Sampling rate.** The paper defines the model sampling rate as the percentage of daily battles a model participates in, measured from the scraped random sample. The maximum sampling rate for a provider is the highest rate achieved by any of its models on any single day during the scraping period. Figure 5 and Appendix Table 5 report these maximum rates: Google and OpenAI at 34.0–34.2%, Meta at 17.9%, xAI at 22.0%, down to Allen AI at 3.4% and Reka at 3.3%. The authors note that these rates are determined by Chatbot Arena but are "entirely inconsistent with the stated policy and prior proposals by the organizers to automatically set sampling based upon which models have not converged in score."
+
+**Factor 3: Model deprecation and survival on the Arena.** Models only receive traffic while active. The paper finds that out of 243 public models, 205 have been silently deprecated (sampling rate reduced to near zero). Deprecation is measured by identifying models that averaged 10 or fewer battles during the March 3–April 23, 2025 period based on leaderboard statistics. The number 205 dramatically exceeds the 47 officially deprecated models listed in FastChat's backend code. The deprecation analysis (Figure 13) shows that 87.8% of open-weight and 89% of open-source models are deprecated, versus 80% of proprietary models.
+
+**Factor 4: API support.** Models hosted via API by their developers give those developers access to 100% of test prompts submitted to that model. In contrast, providers whose models are hosted by third parties can only request 20% of the data involving their models from Chatbot Arena.
+
+**Data access estimates (Figure 4):** Combining all factors, the paper estimates relative data volumes for major providers. Each square in Figure 4 represents approximately 5K API calls. OpenAI: 1.24M estimated calls (20.4% of total); Google: 1.17M (19.2%); Anthropic: 741K (12.2%); Meta: 671K (11.0%). The combined share of OpenAI, Google, Meta, and Anthropic is 62.8% of total Arena data — 68 times more than the combined share of academic labs (Allen AI, Stanford, Princeton, UC Berkeley).
+
+**Overfitting experiments (Section 4.2):**
+
+**Experimental setup:** To measure the causal effect of Arena-distribution data, the authors conducted controlled fine-tuning experiments that vary only the proportion of Arena-style data in the training mixture while holding all other factors constant.
+
+**Base model and data:** A 7B parameter model from the Cohere Command family is fine-tuned using supervised fine-tuning. The training data is constructed by sampling at different ratios from two pools: (1) `arena-mix`, consisting of samples from Arena battles, and (2) `other-sft-mix`, a proprietary dataset including instruction-following, multilingual, math, and code data.
+
+**Three configurations:**
+
+- `0_arena`: 0% arena-mix, 100% other-sft-mix
+- `30_arena`: 30% arena-mix, 70% other-sft-mix
+- `70_arena`: 70% arena-mix, 30% other-sft-mix
+
+**Training details:** All models are fine-tuned for 1.3K steps with a batch size of 128. The authors explicitly state: "our goal here is not to produce a state-of-the-art model but rather to estimate a lower bound for the performance gains that could be expected from asymmetries in access to Arena data. Hence, we do not optimize with ablations the correct weighting or data or conduct any hyperparameter sweeps." This is methodologically crucial — they are measuring the effect of arena data under a fixed, non-optimized recipe, which likely underestimates what a well-resourced provider could achieve with hyperparameter tuning and data curation.
+
+**Evaluation:** Win-rates are measured on 500 English ArenaHard prompts (an in-distribution test set published by Chatbot Arena with 98.6% correlation to human Arena rankings). Human preferences are simulated using LLM-as-a-judge with `gpt-4o-2024-11-20` as the judge, comparing the fine-tuned models against Llama-3.1-8B-Instruct. The models are also evaluated on MMLU to measure generalization beyond the Arena distribution.
+
+**Results (Figure 10):**
+
+- Against Llama-3.1-8B-Instruct: `0_arena` achieves 23.5% win-rate, `30_arena` achieves 42.7%, and `70_arena` achieves 49.9%. A 50% win-rate indicates parity. The relative gains are 81.7% for `30_arena` and 112.3% for `70_arena`.
+- Against the `0_arena` model itself: `30_arena` achieves 71.4% win-rate, `70_arena` achieves 79.2%.
+- On MMLU (Table 9): `0_arena` achieves 66.5%, `30_arena` achieves 64.4%, `70_arena` achieves 65.9%. The MMLU scores remain essentially flat, showing that the performance gains are highly specific to the Arena distribution and do not generalize.
+
+**Why this experimental design is important:** The fixed training budget (1.3K steps, batch size 128) ensures that any performance differences are due to data composition, not more training. The flat MMLU results serve as a negative control — they confirm that the arena-mix data is not simply "better data" that improves everything, but rather data that specifically improves performance on the evaluation distribution it was drawn from. This is the empirical definition of overfitting.
+
+**What makes this a lower bound:** The paper argues this estimate is conservative for several reasons. Providers like Google and OpenAI likely have access to 5–10× more Arena data than was used in these experiments, enabling more extensive fine-tuning. They can also use the data indirectly — for example, analyzing prompt distributions to weight other training data sources, or using a small subset to generate high-quality synthetic data close to the Arena distribution. The paper also did no hyperparameter optimization, which a well-resourced provider would certainly do. The 112% relative improvement should therefore be understood as a floor, not a ceiling, for the advantage that data access asymmetry can confer.
+
+**Prompt duplication analysis methodology (Section 4.2 and Appendix H):**
+
+To establish that Arena data is learnable (i.e., that access to historical data predicts future performance), the paper analyzes prompt repetition patterns in the API prompts dataset.
+
+**Exact match duplication:** For each pair of months, the fraction of prompts in the later month that appear verbatim in the earlier month. Within-month exact match rates range from 16.6% (April 2025) to 26.5% (March 2025). Cross-month: 7.3% of December 2024 prompts appear exactly in January 2025.
+
+**Embedding similarity duplication:** Using the `embed-multilingual-v3.0` model, prompt embeddings are computed and cosine similarity `$> 0.95$` is used as the near-duplicate threshold. Within-month high-similarity rates range from 20.8% to 33.1%. Cross-month: 9% of December 2024 prompts have high similarity to January 2025 prompts.
+
+**Why this matters for the overfitting argument:** If prompts repeat or are highly similar across months, then a provider with access to historical Arena data can train on examples that are essentially the same as future test prompts. This creates a direct pathway from data access asymmetry to performance gains: more data → more exposure to recurring prompt patterns → better performance on future prompts that follow those patterns. The duplication analysis provides the mechanism linking the data access measurements (Section 4.1) to the controlled overfitting experiments (Section 4.2).
+
+**Language distribution shift analysis (Figure 11):**
+
+Using the historical battles dataset (which includes language tags), the paper tracks how the proportion of prompts in different languages changes over time from April 2023 to January 2025. English prompts declined from over 80% to approximately 50%. Chinese prompts more than doubled from 5–7% in 2023 to 16.4% in March 2024 (coinciding with the introduction of the Chinese leaderboard on Chatbot Arena), then dropped to 6.2% by January 2025. Russian prompts increased from 1% in April 2023 to 15.7% by December 2024. Overall multilingual prompt share grew from 23.9% to 43.5% over 1.5 years.
+
+**Why this analysis matters:** It establishes that evaluation conditions are non-stationary — the "task" being measured is changing over time. This finding directly feeds into the Section 5.1 argument that deprecation under changing conditions violates the BT model's assumption of constant evaluation conditions. A model evaluated primarily during an English-dominant period might have scored well then, but if deprecated, its score does not reflect how it would perform on today's more multilingual task distribution.
+
+---
+
+#### Deprecation and Ranking Reliability: Simulating BT Breakdown
+
+This section of the technical approach uses simulation to demonstrate how deprecation practices violate BT assumptions and degrade ranking reliability. Two separate simulations target different failure modes.
+
+**Simulation 1: Transitivity under changing evaluation conditions (Section 5.1):**
+
+**Setup:** Four models (A, B, C, D) are initialized with distinct performance profiles across two task types, Task-1 and Task-2. Each model's relative strength is defined through task-specific win probabilities. For example, Model B has a 90% chance of defeating Model D on Task-1 but only a 20% chance on Task-2. Some pairs also allow ties. The exact win probabilities are provided in Appendix L (Tables 7 and 8).
+
+**Task distribution shift:** The simulation proceeds in two phases. In Phase 1, battles are predominantly drawn from Task-1. Each model participates in 1000 battles, and initial BT rankings are computed. In Phase 2, the battle distribution gradually shifts toward Task-2. An additional 1000 battles are simulated. Because win probabilities are task-dependent, battle outcomes change as the task mix shifts.
+
+**Two scenarios:**
+
+- **Scenario I (without deprecation):** All four models participate throughout both phases. Every model is evaluated on the evolving task distribution.
+- **Scenario II (with deprecation):** At the end of Phase 1, Model D is deprecated and does not participate in Phase 2. Model D's matchups from Phase 1 still influence BT scores for the remaining models, but Model D receives no updated evaluations.
+
+**BT score computation:** BT scores are computed using the official implementation from Chatbot Arena's FastChat codebase, specifically the `rating_systems.py` module. This ensures the simulation uses exactly the same ranking algorithm as the real Arena.
+
+**Results (Figure 14):** The rankings produced under the two scenarios diverge sharply:
+
+- Without deprecation (Scenario I): Rankings reflect true performance across the full task distribution. The specific ordering depends on the task-specific win probabilities in Tables 7 and 8.
+- With deprecation (Scenario II): Models A and D are ranked lower, and Models B and C are ranked higher than their true performance merits. The exact ranking is shown in Figure 14's right panel — the ranking order is completely different from Scenario I.
+
+**Why this happens:** Model D's historical wins and losses from Phase 1 (when Task-1 dominated) still influence the BT estimates for all models, through the transitivity chains (A vs. D affects A's estimated skill, which then affects how A's wins against B and C are interpreted). But Model D's skill estimate is frozen at its Phase-1 level — it doesn't update to reflect that Model D might be strong or weak on Task-2. The frozen estimate propagates through the transitivity network and distorts the rankings of models that are still active and being evaluated on the new task distribution.
+
+**Why this matters for the Arena:** The Arena's task distribution demonstrably shifts over time (as shown in Figure 11 and the Arena's own documentation about increasing complexity of prompts). When models are deprecated — often after reaching a vote threshold or when newer models in the same series are introduced — their scores become frozen at their historical performance level. The BT transitivity assumption requires that "Model A beats Model B" means the same thing regardless of when the comparison occurred. But if Model B was evaluated during a period when the Arena skewed toward simple English queries and Model C is being evaluated now, when the Arena includes more complex multilingual and coding tasks, then a "win" against B is not equivalent to a "win" against C. The transitivity chains that underpin the BT ranking become unreliable.
+
+**Simulation 2: Sparse comparison graphs (Section 5.2):**
+
+**Setup:** Seven models (A through G) are assigned true skill ratings: A = 1450, B = 1390, C = 1250, D = 1200, E = 1101, F = 1150, G = 1000. These ratings represent the ground-truth quality ordering that the BT model should recover. A total of 2000 battles are played in each scenario. For each matchup between models `$i$` and `$j$`, the expected scores are computed using the standard Elo/BT formula:
+
+$$E_i = \frac{1}{1 + e^{\alpha(r_j - r_i)}}, \quad E_j = \frac{1}{1 + e^{\alpha(r_i - r_j)}}$$
+
+where `$r_i$` and `$r_j$` are the true skill ratings, and `$\alpha$` is the Elo scaling factor. The expected scores are used to predict the winner of each battle. Ties are excluded for simplicity.
+
+**Two scenarios:**
+
+- **Scenario I (Dense comparison graph):** All models are allowed to compete against one another, with varying numbers of head-to-head battles. This results in a well-connected graph where every node (model) is linked to others via edges representing battle outcomes.
+- **Scenario II (Disconnected comparison graph):** Constraints are imposed on which pairs of models are allowed to engage in battles. This creates a sparse battle history where each model plays against only a subset of other models — the specific constraints are shown in the sparse graph visualization in Figure 15.
+
+**BT score computation and ranking:** BT scores are computed using the official Chatbot Arena implementation. These scores are then used to determine rankings, which are compared against the ground-truth ordering based on true skill ratings.
+
+**Results (Figure 15):**
+
+The dense comparison graph (right panel) shows models connected through multiple pathways. For example, Model A and Model B played 437 matches against each other (with A winning 266 and B winning 171). The model rankings derived from this dense graph align perfectly with the models' true skill ordering: A > B > C > D > F > E > G.
+
+The sparse comparison graph (left panel) is visibly fragmented. While all models have some connections, certain pathways are missing or thin. The model rankings derived from this sparse graph diverge from the true ordering — models D, E, F, and G are ranked differently from their ground-truth positions (the specific deviations are shown in the left panel of Figure 15).
+
+**Why this happens:** The BT model's maximum likelihood estimates require a connected comparison graph to be unique and finite. As established by Ford Jr (1957), if models can be partitioned into two non-empty subsets without comparisons between them, or if all comparisons between two groups are one-sided, the MLE does not exist. Even when the graph is technically connected, sparsity reduces the effective sample size for estimating each model's skill relative to others, increasing variance and making rankings more sensitive to random fluctuations in the limited battles that do occur.
+
+**Why this matters for the Arena:** The paper documents that 205 out of 243 public models are effectively deprecated (receiving near-zero sampling). This dramatically thins the comparison graph over time. New models entering the Arena will not have comparisons with many deprecated models, relying instead on transitivity chains through the few remaining active models. If those active models themselves have limited data against certain deprecated models, the transitivity chains become weak — the BT model is trying to infer rankings through multiple hops of noisy estimates, each hop introducing additional uncertainty. The simulation shows that this can produce rankings that systematically diverge from the true skill ordering.
+
+**Connecting the two simulations:** The first simulation shows that deprecation under changing task distributions breaks transitivity by making historical comparisons non-equivalent to current comparisons. The second simulation shows that deprecation can fragment the comparison graph itself, undermining the connectivity required for reliable BT estimation. Together, they establish that the Arena's aggressive and asymmetric deprecation practices (disproportionately affecting open-source models) threaten the statistical foundations of the ranking system.
+
+## 4. Key Insights and Innovations
+
+### Innovation 1: Reframing Leaderboard Distortion as a Structural, Not Individual, Failure
+
+The dominant narrative around benchmark gaming has historically focused on individual bad actors—researchers who peek at test sets, companies that deliberately train on evaluation data, or malicious users who submit adversarial votes. The implicit assumption has been that benchmarks are fundamentally sound instruments that occasionally get corrupted by dishonest participants. This paper reframes the problem entirely: **the distortions in Chatbot Arena are not primarily the result of individual cheating but of institutional policies that systematically advantage a preferred subset of participants while appearing neutral.**
+
+This is a conceptual shift with substantial implications. Prior work on benchmark reliability (Koch & Peterson, 2024; Ethayarajh & Jurafsky, 2020; Raji et al., 2021) has critiqued design flaws—static test sets, narrow metrics, lack of standardization—that make benchmarks poor measures of real-world capability. But those critiques assumed that the benchmark's rules, whatever their flaws, were uniformly applied. This paper demonstrates a more insidious failure mode: a benchmark can have formally sound rules on paper while operating under a shadow system of unstated exceptions and preferential treatment that advantages incumbents.
+
+The evidence for this structural argument is cumulative rather than resting on any single finding. Private testing is not publicly documented as a policy—the authors learned of it only through direct inquiry after observing sampling disparities, and a blog post describing benchmarking policies was published only in December 2024, well after the Arena had become the field's central evaluation platform. Sampling rates are set by Arena organizers, not by participants, yet they diverge dramatically from the organizers' own published methodology (Chiang et al., 2024, Section 5, Equation 9 describes an active sampling rule designed to prioritize under-evaluated pairs—a rule the paper finds no evidence of being implemented). Deprecation policies exist in official form (47 models listed as deprecated in FastChat's backend) but are silently applied to four times as many models (205 effectively deprecated by reducing sampling to near zero), with open-weight and open-source models disproportionately affected (87.8% and 89% deprecated versus 80% for proprietary, Figure 13). Together, these findings paint a picture of a system whose actual operation diverges systematically from its stated principles, and where the beneficiaries of that divergence are concentrated among a handful of large commercial providers.
+
+This reframing matters because it changes where the solution lies. If the problem were individual cheating, the solution would be better detection and enforcement. But if the problem is structural—embedded in unstated policies, asymmetric information, and preferential access—then the solution is institutional reform: transparent rules, uniform enforcement, and elimination of the shadow policies that allow a few providers to play by different rules. The paper's recommendations (Section 6) flow directly from this diagnosis, targeting policy transparency (disclose all tested models, prohibit score retraction, establish public limits on private variants) rather than participant behavior.
+
+---
+
+### Innovation 2: The Best-of-N Selection Bias as a Formal, Quantifiable Property of Live Leaderboards
+
+The idea that submitting multiple variants and reporting only the best score inflates rankings is intuitively obvious—"cherry-picking" is a recognized pathology in many scientific contexts. But the paper advances this from intuition to formal analysis in a way that is specifically tailored to the statistical machinery underlying live leaderboards, and in doing so surfaces non-obvious properties about when the bias persists and when it vanishes.
+
+Prior work on selection bias in machine learning has typically focused on training-time phenomena: hyperparameter tuning on test sets, p-hacking across random seeds, or model selection procedures that inflate reported accuracy (Ying, 2019). These analyses treat the evaluation as fixed and the model selection as the source of bias. This paper inverts that framing: **the evaluation itself is noisy** (finite Arena battles produce estimates with quantifiable standard errors, approximately 6.34 Arena Score points at 3,000 battles per variant), and selecting the maximum of multiple noisy evaluations introduces bias even when all variants are truly identical. This is a different kind of selection bias—one that originates in measurement noise rather than model quality differences—and it produces the counterintuitive result that a provider testing 27 identical checkpoints and publishing the best one gains a systematic score advantage (approximately 17.7 points at N=50, from simulation in Appendix I.2) despite having done absolutely nothing to improve their model.
+
+The deeper insight emerges in the heterogeneous case. When model variants differ in genuine quality (Appendix I.3), the expected score inflation becomes `√(σ²true + σ²noise) × √(2 ln N)`. As the number of evaluation battles n → ∞, the noise term σnoise → 0, but the inflation from true quality variation σtrue persists—it converges to `σtrue × √(2 ln N) > 0`. This means that even with infinite evaluation data, **a provider who tests more variants will systematically achieve higher scores than one who tests fewer, even if both providers' underlying model development processes produce identically distributed quality.** The leaderboard does not measure capability at a fixed point in the development process—it measures the tail of the distribution of checkpoints a provider can afford to evaluate.
+
+This asymptotic result distinguishes the paper's contribution from generic warnings about cherry-picking. It establishes that the bias is not a finite-sample artifact that better measurement can eliminate, but a structural property of any leaderboard that allows selective disclosure of results from a multi-variant development process. The implication is that comparing providers with different testing capacities (a large commercial lab that can evaluate 50 checkpoints versus an academic group that can afford 3) is fundamentally comparing different statistical quantities, not different points on the same scale.
+
+The real-world validation experiment—submitting two identical checkpoints of Aya-Vision-8B and observing a 17-point score difference (1052 vs. 1069, Figure 9 left)—grounds this formal analysis in empirical reality. It demonstrates that the effect size is large enough to be consequential on the actual Arena (4 models fall between the two identical checkpoints) and that the statistical framework's predictions are consistent with observed outcomes. For a different pair of genuinely non-identical Aya-Vision-32B variants, the gap widens to 38 points (1097 vs. 1059, Figure 9 right), with 9 models between them—confirming that the heterogeneous case amplifies the bias as predicted.
+
+What makes this more than a methodological critique is its testable, quantitative nature. The paper provides the formulas that would allow an auditor to estimate, for any provider, how much of their reported score is attributable to best-of-N selection given the number of private variants tested and plausible assumptions about σtrue. This converts an "everyone knows cherry-picking exists" observation into a measurable, auditable property of leaderboard rankings.
+
+---
+
+### Innovation 3: Data Access Asymmetry as a Self-Reinforcing Engine of Leaderboard Overfitting
+
+The paper's most disturbing insight is not simply that some providers receive more Arena data than others—that much might be expected in any system where popular models get more traffic. Rather, it is that **data access asymmetry creates a feedback loop that accelerates over time:** providers who receive more Arena data can train models that perform better on the Arena, which earns them higher rankings, which earns them more sampling traffic (since the Arena's sampling policy, in practice, gives higher weights to top-performing and newly released models), which earns them more Arena data. This cycle transforms what might be a modest initial advantage into a compounding competitive moat.
+
+The evidence for this feedback loop spans multiple sections. Figure 3 shows that proprietary models receive between 54.3% and 70.1% of Arena data across quarters, with open-weight and open-source models receiving substantially less. Figure 5 shows maximum sampling rates ranging from 34.2% (Google) to 3.3% (Reka)—a 10× difference in how often a provider's models appear before users. Figure 18 documents that Google and OpenAI have 10 and 9 actively sampled public models respectively (during March–April 2025), while most other providers have fewer. These are not independent facts—they are facets of the same underlying dynamic in which the "rich get richer" in terms of data collection.
+
+The controlled fine-tuning experiments (Figure 10) establish the causal arrow: more Arena data → better Arena scores. Increasing the proportion of arena-mix data from 0% to 70% nearly doubles win-rates on ArenaHard (23.5% → 49.9%), while MMLU remains flat (66.5% → 65.9%, Table 9). This is a clean demonstration that the gains are **distribution-specific**—they reflect learning the patterns, topics, and styles that characterize Arena prompts, not improving general language understanding or reasoning. The 112% relative improvement on ArenaHard is, by the authors' own characterization, a lower bound: they used no hyperparameter optimization, a modest training budget, and a fraction of the data that large providers likely possess.
+
+The prompt duplication analysis (Figure 12 and Appendix H) explains *why* this feedback loop is self-reinforcing. If 20.8% of prompts in a given month are exact duplicates and cross-month similarity rates reach 9%, then a provider with access to historical Arena data is effectively training on future test prompts. The "dynamic" nature of the Arena—its primary defense against overfitting—is partially undermined by the predictability of its user base's behavior. This is not a static test set that gets memorized, but it is a **partially recurrent distribution** where sustained access to the prompt stream provides a systematic advantage in predicting what will be asked next month.
+
+What distinguishes this insight from generic concerns about training on evaluation data is the structural nature of the asymmetry. The paper does not allege that any provider is illicitly scraping the Arena or violating terms of service. The asymmetry arises from **officially sanctioned differences** in how much data the Arena delivers to different providers—through sampling rate decisions, deprecation policies, and the tolerance (or encouragement) of multiple private variant testing. A provider who simply accepts whatever data the Arena sends them and trains honestly on it will, if they happen to be a preferred provider, accumulate a growing competitive advantage over one who receives a fraction of the data. This makes the feedback loop a property of the evaluation infrastructure itself, not of participant behavior.
+
+---
+
+### Innovation 4: Deprecation-Induced BT Model Breakdown as a Systematic Threat to Live Leaderboard Validity
+
+The Bradley-Terry model, like all statistical ranking systems, makes assumptions that must be approximately satisfied for the output to be reliable. The paper identifies a specific, non-obvious way that standard leaderboard maintenance practices—deprecating old models to make room for new ones—can violate these assumptions in ways that produce unreliable rankings even when every individual battle outcome is perfectly accurate.
+
+Two distinct failure modes are demonstrated, each with its own simulation evidence.
+
+The first (Section 5.1, Figure 14) concerns **transitivity under changing evaluation conditions.** Transitivity—the property that if A beats B and B beats C, A should beat C—requires that "beats" means the same thing across all comparisons. In a static game like chess, this holds: a win is a win regardless of the date. In Chatbot Arena, where the distribution of prompts shifts over time (English declining from 80% to 50% of prompts over 1.5 years, multilingual share growing from 24% to 44%, coding and math increasing in complexity), a win from April 2023 is not equivalent to a win from January 2025—they measure performance on potentially different tasks. When models are deprecated and their scores frozen, their historical wins and losses are treated as if they reflect performance on the current task distribution, which they may not. The simulation demonstrates that this produces a completely different ranking than one that continuously updates all models, even with identical battle outcomes.
+
+What makes this more than a theoretical concern is the documented magnitude of Arena deprecations (205 out of 243 public models effectively deprecated, Figure 18) and the evidence of real distribution shift (Figure 11). The Arena does not merely have a few deprecated models whose frozen scores might cause local distortions—it has a *majority* of models frozen at various historical snapshots while the evaluation context continues to evolve. The BT model's transitivity chains, which are supposed to enable inference of unobserved matchups, instead propagate these frozen errors through the entire ranking.
+
+The second failure mode (Section 5.2, Figure 15) concerns **comparison graph connectivity.** The BT maximum likelihood estimator is only guaranteed to exist and be unique when the comparison graph is sufficiently connected—specifically, for any partition of models into two non-empty subsets, there must be at least one win in each direction across the partition (Ford Jr, 1957). Aggressive deprecation thins the graph by removing nodes and by reducing the number of cross-comparisons between remaining nodes. The simulation shows that a sparse comparison graph (with the same total number of battles as a dense one, but routed through a constrained topology) produces rankings that diverge from the true skill ordering for models D, E, F, and G. The dense graph recovers the exact correct ordering.
+
+This pair of simulations establishes that deprecation is not merely an inconvenience or an aesthetic issue—it is a **threat to the statistical validity of the leaderboard's core ranking algorithm.** The threat is compounded by the asymmetry of deprecation: 87.8% of open-weight and 89% of open-source models are deprecated versus 80% of proprietary models (Figure 13), meaning that open models are disproportionately likely to have their scores frozen at historical levels and to be removed from the active comparison graph. The consequence is that the BT model is being asked to produce rankings on a dataset that systematically violates its assumptions, with the violations skewed against open-weight and open-source providers.
+
+---
+
+### Innovation 5: The Dual-Role Audit as a Methodological Template for Live Benchmark Scrutiny
+
+Methodologically, this paper advances a distinctive approach to auditing operational AI evaluation platforms that combines **data forensics at scale** (integrating public releases, web scraping, proprietary API logs, and leaderboard snapshots) with **causal intervention** (deploying real models as controlled experiments on the platform being audited). This dual-role methodology—researchers as both participants in and auditors of the system—is unusual and worth examining as a contribution in its own right.
+
+The standard approach to critiquing benchmarks is external: researchers analyze publicly available data, identify statistical flaws, and publish recommendations. This paper goes further by **intervening in the system** to generate causal evidence that passive observation cannot provide. The submission of two identical Aya-Vision-8B checkpoints (Figure 9, left) is a controlled experiment that isolates the effect of multiple-submission-with-retraction from model quality differences—it demonstrates that the 17-point score gap between the two checkpoints cannot be attributed to anything other than the retraction policy plus sampling noise. The submission of two genuinely different Aya-Vision-32B variants (Figure 9, right) measures the realistic case where model quality variation amplifies the selection bias. The three data-mixture fine-tuning experiments (Figure 10) isolate the causal effect of Arena-distribution data on evaluation performance. These are not observational analyses—they are experiments that manipulate specific variables while holding others constant.
+
+The paper is transparent about the ethical complexity of this approach. The authors acknowledge that their experiments consumed human annotator time (they limited to two checkpoints "to limit the amount of human annotator time we diverted to this exercise"), that their private testing activities contributed to the very asymmetry they critique (Cohere appears in Figure 6 with 4 private variants), and that their findings may benefit from their position as a provider with competitive interests in the outcome. This transparency is not a weakness—it demonstrates a methodological self-awareness that is essential for audit research where the auditor cannot be fully external to the system under investigation.
+
+What makes this a methodological template rather than a one-off exercise is its replicability. Any provider with models on the Arena could, in principle, replicate the private-variant experiment (submitting identical checkpoints and measuring the score gap) to independently verify the selection bias effect. Any provider with API access to Arena traffic could replicate the duplication analysis to measure prompt predictability. The overfitting experiments require substantial compute but follow standard fine-tuning protocols that are widely reproducible. The simulation frameworks are described in sufficient mathematical detail (Appendices C, I, J, L) to be re-implemented with different parameter settings. The paper thus provides not only findings about the Arena but a **transferable toolkit** for auditing other live evaluation platforms that share similar structural features—pairwise comparisons, dynamic test distributions, provider-submitted models, and opaque operational policies.
+
+## 5. Experimental Analysis
+
+### Evaluation Methodology
+
+- **Dataset.**
+  The paper does not evaluate on a conventional ML benchmark with a train/test split; rather, it audits Chatbot Arena itself using four custom-built datasets spanning 2M battles, 243 models, and 42 providers (Table 1). The primary data sources are: (1) `historical-battles` — a composite of ~1.9M public battles (April 2023–August 2024) merged with 43,729 proprietary battles involving Cohere models (March 2024–March 2025), containing model identities and language/category tags but no prompt text in 90% of public samples; (2) `API prompts` — 197,217 single-turn conversations received through Cohere's API from Arena battles (November 2024–April 2025), used exclusively for prompt duplication analysis; (3) `leaderboard-stats` — 14.3K snapshots of model ratings, battle counts, licenses, and providers from January 9, 2024 to April 23, 2025, consolidated from HuggingFace leaderboard commit history; and (4) `scraped-random-sample` — 5,864 battles web-scraped daily from Chatbot Arena between January–March 2025, plus ~500 additional battles from the Vision leaderboard, used to detect private variants and measure sampling rates. Each dataset answers distinct research questions: historical battles reveal task distribution shifts over time, API prompts enable duplication measurement, leaderboard statistics quantify data flows and deprecation patterns, and scraped samples detect the hidden layer of private testing.
+
+- **Base model(s).**
+  The controlled fine-tuning experiments in Section 4.2 use a 7B-parameter model from the Cohere Command family as the base architecture. The paper argues this provides a reasonable testbed for measuring the effect of Arena-distribution data on performance without claiming it matches the scale of the largest commercial models. For the real-world private testing experiments in Section 3.3, the authors deploy actual Cohere models (Aya-Vision-8B and Aya-Vision-32B variants) on the live Chatbot Arena. For simulation studies (Sections 3.2, 5.1, 5.2), synthetic models with specified skill parameters are generated rather than using real models.
+
+- **Metrics.**
+  The paper uses several distinct metrics, each tied to a specific investigative question. **Arena Score** is the primary leaderboard metric: a Bradley-Terry-derived value computed as `1000 + (400 / ln 10) × β̂`, where β̂ is the estimated log-skill parameter. Changes in Arena Score quantify the inflation from best-of-N selection (Section 3.2) and the impact of private testing (Section 3.3). **Win-rate** against a reference model (Llama-3.1-8B-Instruct) is used in the overfitting experiments (Section 4.2), measured via LLM-as-a-judge with `gpt-4o-2024-11-20` on 500 English ArenaHard prompts, which have a reported 98.6% correlation with human Arena rankings. **MMLU accuracy** serves as an out-of-distribution control in the same experiments. **Sampling rate** is the percentage of daily battles a model participates in, computed from the scraped sample. **Deprecation status** is operationalized as averaging 10 or fewer battles during the March 3–April 23, 2025 period. **Prompt duplication rate** is measured via exact string match and cosine similarity (>0.95 threshold) on embeddings from `embed-multilingual-v3.0`.
+
+- **Baselines.**
+  For the overfitting experiments (Section 4.2), the baselines are: (1) Llama-3.1-8B-Instruct (Grattafiori et al., 2024) as the comparison model for win-rate computation; (2) the `0_arena` variant (fine-tuned with 0% arena-mix data) as an internal baseline for measuring relative improvement; and (3) MMLU accuracy as an external baseline for assessing generalization. For the real-world private testing experiments (Section 3.3), the baseline is the lower-scoring of the two submitted variants (the one that would have been reported if only a single submission were made). The simulation studies use analytically derived expected values under the null hypothesis of unbiased sampling (no best-of-N selection) as baselines — for instance, the true mean Arena Score of 1200 in Figure 7.
+
+- **Generation budget / compute accounting.**
+  The paper's audit does not involve a generation budget in the conventional ML sense of FLOPs or tokens. Instead, the relevant "budget" concepts are: (1) the **number of private variants tested** (`N` in the best-of-N analysis, ranging from 0 to 50 in simulation), which determines the expected score inflation; (2) the **number of Arena battles per variant** (`n`, with the current policy defaulting to approximately 3,000 battles for official scoring, giving σnoise ≈ 6.34 Arena Score points), which determines the measurement noise in the BT estimates and is derived analytically from the Fisher information of a single BT match at equal skill (Appendix J); (3) the **proportion of arena-mix data in training** (0%, 30%, 70%), used in the overfitting experiments to vary data composition while holding total training steps (1.3K) and batch size (128) constant; and (4) the **scraping period** (January–March 2025 for the main leaderboard, March 2025 for the vision leaderboard), which bounds the temporal coverage of private variant detection. The paper explicitly does not account for the computational cost of the 2,048-sample difficulty estimation step from the prior example paper — there is no difficulty estimation in this audit.
+
+- **Cross-validation / statistical protocol.**
+  No cross-validation is used for model training or evaluation, since the paper is an audit rather than a model development exercise. Instead, statistical protocols include: (1) confidence intervals (± values) on Arena Scores reported in the real-world experiments (e.g., 1052 ±21/22 vs. 1069 ±19/23 in Figure 9, left), where the intervals reflect the uncertainty from finite battle sampling; (2) bootstrapped confidence intervals in the simulation of Figure 7 to quantify uncertainty in the expected maximum Arena Score as a function of `N`; (3) the standard error formula `σElo(n) ≈ 347.4 / √n` derived from BT Fisher information, used to calibrate the simulation parameters; (4) for the Bradley-Terry model violations analysis, the paper uses the official Chatbot Arena FastChat implementation (`rating_systems.py`) to compute scores, ensuring that the simulation results reflect the actual ranking algorithm rather than a simplified model. For provider attribution of private variants, the paper relies on repeated model self-identification across multiple encounters (e.g., `kronus` identified as "Llama, trained by Meta" across 73 responses), using consistency as a reliability proxy rather than formal statistical testing.
+
+---
+
+### Main Quantitative Results
+
+#### Private Testing Volume and Distribution (Section 3.1)
+
+The scraped sample from January–March 2025 reveals that **private testing is concentrated among a small number of commercial providers**, with Meta alone deploying 27 anonymous variants during the period—primarily in the lead-up to the Llama 4 release (Meta, 2025)—followed by Google with 10 variants, Amazon with 7, and Cohere with 4 (which the authors acknowledge were their own experimental submissions; Figure 6). When combined with the Vision leaderboard scrape, Meta's total rises to 43 private variants (Appendix Table 2). In contrast, no private models from academic labs were detected during the observation window.
+
+The paper notes that these counts represent a "very conservative estimate" because the scrape covers only the main Chatbot Arena (excluding specialized leaderboards for vision, code, and other domains where additional private testing may occur) and spans only three months. The raw detection data is provided in Appendix E.4, showing encounter counts for each variant (e.g., `gemini-test`: 219 encounters, `kronus`: 73, `anonymous-chatbot`: 49).
+
+#### Simulation of Best-of-N Selection Bias (Section 3.2)
+
+**For identical variants (σtrue = 0), with N = 50 and n = 3,000, the expected score inflation is approximately 17.7 Arena Score points** (Appendix I.2). This is computed analytically as `σnoise × √(2 ln N)` where `σnoise ≈ 6.34` points at the standard 3,000-battle threshold. The bias arises purely from measurement noise — even when all checkpoints have identical true skill, the one that happens to get favorable random matchups will be selected, and the expected value of the maximum of N noisy estimates exceeds the expected value of any single estimate by `σnoise × √(2 ln N)`. Critically, this bias vanishes asymptotically as `n → ∞` because `σnoise ∝ 1/√n`.
+
+**For heterogeneous variants (σtrue > 0), the expected inflation is substantially larger and does not vanish with infinite data.** With `σtrue = 20` Arena Score points (a modest spread of true quality differences across checkpoints), `N = 50`, and `n = 3,000`, the expected inflation reaches approximately 56 points (Appendix I.3). The inflation decomposes as `√(σ²true + σ²noise) × √(2 ln N)`, and as `n → ∞`, the noise term disappears but the true-variation term persists: `lim(n→∞) inflation = σtrue × √(2 ln N) > 0`. This is the more realistic scenario — model development typically produces multiple checkpoints with genuine quality variation — and it demonstrates that the best-of-N selection bias is not a finite-sample artifact but a structural property of any leaderboard that allows selective disclosure.
+
+**The provider asymmetry simulation (Figure 8) demonstrates that a weaker model family (lower average Arena Score) can surpass a stronger family on the leaderboard if the weaker family is allowed to test multiple private variants and publish only the best, while the stronger family is restricted to a single submission.** This simulation directly models the consequence of preferential access to private testing: the leaderboard ranking between two providers can invert relative to their true average model quality.
+
+**The relationship between number of variants tested and expected maximum score (Figure 7) is concave:** testing 10 variants yields a notable increase of approximately 100 points in the maximum score identified compared to the baseline with no private testing, while the marginal benefit of additional variants diminishes as N grows (the √(2 ln N) function grows slowly after the initial rise).
+
+#### Real-World Private Testing Experiments (Section 3.3)
+
+**Two identical checkpoints of Aya-Vision-8B submitted to the Arena produced Arena Scores of 1052 (±21/22) and 1069 (±19/23) — a 17-point difference, with 4 other models falling between them on the leaderboard** (Figure 9, left). This is the lower-bound estimate: since the checkpoints are identical, the entire score difference is attributable to sampling noise in Arena battles combined with the best-of-N selection effect (the provider would publish only the 1069 score). The 17-point gap is consistent with the simulation predictions for the identical-variant case.
+
+**Two genuinely different variants of Aya-Vision-32B, both considered high-performing final candidates by internal metrics, produced Arena Scores of 1097 (±29/25) and 1059 (±18/23) — a 38-point gap, with 9 models between them** (Figure 9, right). This represents the realistic estimate: a provider who tested both and published only the higher-scoring variant gains a 38-point advantage over one who had selected the lower-scoring checkpoint. The wider gap (38 vs. 17 points) confirms the simulation prediction that heterogeneous variants amplify the selection bias because both genuine quality differences and measurement noise contribute to the spread of observed scores.
+
+**The paper reports that with 3 private variants active, Cohere's share of collected prompts increased from 5.9% (with 1 variant) to 19.4%** — demonstrating empirically that each additional private variant multiplies data collection, even within the limited scope of the authors' controlled experiment.
+
+#### Data Access Asymmetries (Section 4.1)
+
+**Proprietary models receive between 54.3% and 70.1% of Arena battle data across quarters from Q1 2024 to Q1 2025** (Figure 3). Fully open-source models receive the smallest share, ranging from 4.9% (Q1 2024) to 13.1% (Q2 2024). Open-weight models (which include models like the Llama family and Gemma) receive an intermediate share, ranging from 12.4% (Q1 2024) to 35.0% (Q1 2024, likely inflated by Meta submissions during that period).
+
+**Google and OpenAI account for 19.2% and 20.4% of all Arena data respectively, based on estimated cumulative battle counts** (Figure 4). OpenAI: 1.24M estimated API calls; Google: 1.17M; Anthropic: 741K; Meta: 671K. The combined share of OpenAI, Google, Meta, and Anthropic is 62.8% of total Arena data — 68 times more than the combined share of Allen AI, Stanford, Princeton, and UC Berkeley. Meanwhile, 41 fully open-source models collectively receive only 8.9% of total data.
+
+**Maximum daily sampling rates vary by a factor of 10× across providers** (Figure 5 and Appendix Table 5). Google: 34.2% (achieved by `enigma` on January 31, 2025, with 52 out of 152 battles); OpenAI: 34.0% (achieved by `gpt-4.5-preview-2025-02-27` on February 28, 2025, with 34 out of 100 battles); xAI: 22.0%, Meta: 17.9%. At the low end: Allen AI: 3.4%, Reka: 3.3%. The underlying data (Appendix E.5) shows that sampling rates are highly variable day-to-day, with peaks often corresponding to new model launches or specific high-profile variants.
+
+**The number of private variants is positively correlated with total data volume per provider, controlling for other factors.** The paper reports that with 1 active variant, Cohere's prompt share was 5.9%; with 3 variants, it rose to 19.4% (not shown in a figure, stated in text in Section 4.1). This suggests that providers with many private variants (Meta at 27, Google at 10) collect substantially more data than would be implied by their public model count alone.
+
+#### Sampling Rate Disparities (Section 4.1, Appendix E.5)
+
+The full sampling rate data (Appendix Table 5) reveals granular temporal dynamics. For instance, on February 28, 2025, `gpt-4.5-preview-2025-02-27` appeared in 34 out of 100 battles (34.0% sampling rate) on its second day on the Arena. On January 31, 2025, Google's `enigma` appeared in 52 out of 152 battles (34.2%). In contrast, Allen AI's `llama-3.1-tulu-3-70b` peaked at 2 out of 101 battles (2.0%) on January 16, 2025. These extreme disparities are inconsistent with the active sampling rule proposed in Chiang et al. (2024), which would prioritize under-evaluated and high-variance model pairs — by that logic, models from providers with fewer total battles and higher uncertainty should receive more sampling, not less.
+
+**The authors note that Chatbot Arena assigns higher sampling weights to newly submitted models and top-10 models** (Section 4.1, Appendix K). Given that private variants are "new models," they receive high sampling weights upon introduction. The paper argues this means that as the number of private variants being tested increases, the sampling of existing public models (especially from providers without active private testing programs) decreases, creating a zero-sum dynamic in data allocation.
+
+#### Overfitting Experiments: Arena-Specific Performance Gains (Section 4.2)
+
+**Increasing the proportion of arena-mix data in fine-tuning from 0% to 70% nearly doubles win-rates on ArenaHard against Llama-3.1-8B-Instruct, while MMLU accuracy remains flat** (Figure 10 and Table 9). The specific numbers:
+
+- `0_arena`: 23.5% win-rate on ArenaHard, 66.5% MMLU accuracy
+- `30_arena`: 42.7% win-rate on ArenaHard (81.7% relative gain vs. `0_arena`), 64.4% MMLU accuracy
+- `70_arena`: 49.9% win-rate on ArenaHard (112.3% relative gain vs. `0_arena`), 65.9% MMLU accuracy
+
+A 50% win-rate indicates statistical parity with the reference model (Llama-3.1-8B-Instruct), so `70_arena` approximately matches it on the Arena distribution.
+
+**When compared directly against the `0_arena` variant, `30_arena` achieves a 71.4% win-rate and `70_arena` achieves 79.2%** (Figure 10, left panel). This head-to-head comparison isolates the effect of data composition by holding the base model and training recipe constant.
+
+**MMLU scores remain within ±1.1% of the baseline across all three configurations** (Table 9: 66.5% → 64.4% → 65.9%). The small fluctuations (maximum difference of 2.1 percentage points between `0_arena` and `30_arena`) are within the range expected from training stochasticity and do not show a consistent directional trend with increasing arena-mix proportion. This flatness serves as the key negative control: arena-mix data is not "generally better data" — it specifically and selectively improves performance on the distribution from which it was drawn.
+
+**The paper explicitly characterizes these results as a conservative lower bound** for three reasons: (1) no hyperparameter optimization was performed ("we do not optimize with ablations the correct weighting or data or conduct any hyperparameter sweeps"); (2) the training budget was modest (1.3K steps, batch size 128); and (3) large providers likely have access to 5–10× more Arena data than was used in these experiments, which could enable more extensive training or the generation of high-quality synthetic data closer to the Arena distribution.
+
+#### Prompt Duplication Analysis (Section 4.2 and Appendix H)
+
+**Within-month exact-match duplication rates range from 16.6% (April 2025) to 26.5% (March 2025)** (Figure 12, right panel). Within-month high-similarity duplication (cosine similarity > 0.95) rates are even higher: 20.8% to 33.1% (Figure 12, left panel). These rates mean that between one-sixth and one-third of prompts in a given month have been seen before — either verbatim or in near-identical form — within that same month.
+
+**Cross-month duplication is substantial: 7.3% of December 2024 prompts appear in exact form in January 2025; 9% of December 2024 prompts show high embedding similarity to January 2025 prompts** (Figure 16, Appendix H). The cross-month duplication heatmap (Figure 16) shows that adjacent months typically have the highest overlap, with the strength of duplication decaying as the temporal distance increases (e.g., November 2024 to April 2025 exact match rate: 4.1%). This pattern is consistent with a user base that gradually shifts its interests while retaining some persistent query patterns.
+
+**The overall deduplication loss across the full API dataset averages 20.14%, peaking at 26.5% in March 2025** (stated in Section 4.2 text). This means that even within the raw, unfiltered prompt stream (before Chatbot Arena applies its own deduplication), roughly one-fifth of prompts are redundant with previously collected prompts.
+
+#### Language Distribution Shift (Section 4.2, Figure 11)
+
+**English prompt share declined from 76.1% (April 2023) to 56.5% (January 2025), while multilingual prompting rose correspondingly** (Figure 11). Specific trajectories: Chinese prompts peaked at 16.4% in March 2024 (coinciding with the Chinese leaderboard launch) before declining to 6.2% by January 2025. Russian prompts grew from 1% (April 2023) to 15.7% (December 2024). Overall non-English prompt share increased from 23.9% to 43.5% over approximately 1.5 years.
+
+These shifts are not monotonic — they show seasonal and event-driven fluctuations — but the long-term trend toward greater language diversity is clear. The paper notes that this has implications for model evaluation: a model deprecated during a predominantly English period has its score frozen based on performance against a now-outdated prompt distribution, and the transitivity of BT rankings relies on the assumption that past wins and current wins represent performance on the same task.
+
+#### Model Deprecation Analysis (Section 5, Appendix K, Figures 18 and 19)
+
+**205 out of 243 public models are effectively deprecated, defined as averaging 10 or fewer battles during March 3–April 23, 2025** (Figure 18). This is 4.4× more than the 47 models officially listed as deprecated in Chatbot Arena's FastChat backend codebase. The per-provider breakdown (Figure 18) shows that Google has the most actively sampled public models (10), followed by OpenAI (17 across the full leaderboard history, though many are historical snapshots), while most other providers have 0–6 active models.
+
+**Deprecation is asymmetric across license types (Figure 13): 87.8% of open-weight models and 89% of open-source models are deprecated, compared to 80% of proprietary models.** The disaggregated view (Figure 19) reveals that this asymmetry is driven primarily by silent deprecations (sampling rate reduction without official notification): 86.6% of open-weight and 87.8% of open-source models are silently deprecated, versus 50% of proprietary models (the official deprecation rate for proprietary models is 30%, higher than the 2.4% for open-weight models, suggesting that when proprietary models are deprecated, it is more likely to be officially acknowledged).
+
+**The paper attributes these asymmetries to two mechanisms** (Section 5): (1) models are deprecated according to a policy that considers price and quality criteria which, in practice, disproportionately affect open models (since open models are often hosted for free and may be undercut on price comparisons); and (2) open-weight and open-source models are more likely to have their APIs discontinued by providers (since maintaining free API access for deprecated models imposes costs), triggering removal from the Arena without necessarily meeting the formal deprecation criteria.
+
+#### Deprecation-Induced BT Reliability Degradation (Section 5.1, Figure 14)
+
+**In a simulation with evolving task distributions (Task-1 dominant in Phase 1, shifting to Task-2 dominant in Phase 2), the BT rankings diverge completely when Model D is deprecated after Phase 1 compared to when all models remain active throughout** (Figure 14). The specific ranking inversion is shown in the right panel of Figure 14: with no deprecation, Models A and B occupy positions 1 and 2; with deprecation, the ordering shifts such that Models B and C are ranked above A, and Model D falls from position 3 to 4 (behind Model C).
+
+**The mechanism is that Model D's frozen score from Phase 1 (when Task-1, where D performed relatively well, dominated) propagates through the transitivity network:** Model A's wins against D during Phase 1 make A appear stronger than it would if D had been re-evaluated on the new task distribution. When the task distribution shifts and D is absent, these historical matchups retain their influence but no longer represent current capabilities, distorting the inferred skill estimates for the remaining active models.
+
+#### Deprecation-Induced Graph Connectivity Failure (Section 5.2, Figure 15)
+
+**A dense comparison graph (all model pairs compete, with varying numbers of head-to-head battles) recovers the exact true skill ordering (A > B > C > D > F > E > G), while a sparse comparison graph (constrained which pairs compete) produces rankings that diverge from ground truth, with models D, E, F, and G all occupying incorrect positions** (Figure 15). In the sparse setting, the rankings are A > B > C > D > F > E > G (same order as dense for A, B, C, but different lower-rank ordering shown explicitly in the left panel).
+
+The comparison graphs are visualized in the right two panels of Figure 15. The dense graph shows rich interconnections (e.g., A and B played 437 matches, with A winning 266 and B winning 171; multiple cross-connections between the upper and lower tiers). The sparse graph shows thinner connections and potentially missing cross-tier matchups. The paper notes that the BT maximum likelihood estimator is only guaranteed to exist and be unique when the comparison graph is connected — that is, for any partition of models into two non-empty subsets, there must be at least one win in each direction across the partition (Ford Jr, 1957). The sparse graph simulation demonstrates that even when the graph is technically connected (all models are reachable), insufficient connection density produces unreliable rankings.
+
+---
+
+### Ablation Studies and Robustness Checks
+
+Since this paper is an audit rather than a model development effort, the "ablations" take the form of alternative analyses that test the robustness of key findings under different assumptions or measurement strategies.
+
+**Number of private variants tested per provider varies by time period:** The paper acknowledges that its scrape covers only January–March 2025, which coincided with Meta's Llama 4 launch preparation. This likely inflates Meta's count relative to providers who had fewer launches during this window. The Vision leaderboard scrape (Appendix E.2) reveals an additional 16 private Meta variants beyond the 27 on the main leaderboard, suggesting the main-leaderboard count is itself a lower bound. The paper does not attempt to extrapolate private testing volumes for other time periods, explicitly flagging this temporal limitation.
+
+**Provider attribution via model self-identification is approximate:** Appendix E.4 shows the raw responses used to attribute private variants to providers. For some variants (e.g., `raspberry`, which withheld its identity in 37 of 40 responses but disclosed "Amazon" in 3), attribution is based on a small number of revealing responses. The paper acknowledges this limitation but argues that the consistency of responses across many encounters (e.g., `kronus` consistently identifying as "Llama, trained by Meta" across 73 encounters) provides a reasonable signal. The code-name-to-identity mapping is published in full to enable external verification.
+
+**Oracle vs. predicted Arena Scores in simulation:** The simulation in Figure 7 uses the Bradley-Terry model to estimate scores for private variants, which introduces the same noise structure as real Arena evaluations. The bootstrapped confidence intervals (shown as shaded regions) quantify the uncertainty in the expected maximum score, with wider intervals at higher `N` reflecting the increased variance in the maximum of more random variables.
+
+**Identical vs. heterogeneous variant assumption dramatically changes bias estimates:** Appendix I compares two scenarios. With identical variants (σtrue = 0), the bias is modest (~18 points at N = 50) and vanishes asymptotically. With heterogeneous variants (σtrue = 20), the bias is substantial (~56 points at N = 50) and does not vanish with infinite data. This comparison establishes that the paper's findings about the severity of best-of-N bias depend crucially on the (empirically realistic) assumption of genuine quality variation among candidate checkpoints.
+
+**Two similarity metrics yield consistent duplication patterns:** Both exact-match and cosine-similarity (>0.95 threshold) duplication analyses produce consistent within-month patterns (Figure 12) and cross-month patterns (Figure 16). The embedding-based metric consistently yields higher duplication rates because it captures paraphrased or semantically equivalent prompts, but the qualitative pattern — substantial duplication within and across months — is robust to the choice of metric.
+
+**Within-month vs. cross-month duplication:** The heatmaps in Figure 16 decompose duplication by month pairs. The diagonal (within-month) shows the highest rates (16.7–26.5% exact, 20.8–33.1% cosine). Off-diagonal cells show lower but non-negligible rates, with adjacent months showing the strongest cross-month duplication (e.g., December 2024 → January 2025: 7.3% exact, 9.0% cosine). This establishes that the Arena distribution is partially recurrent both within and across months, with the strongest predictability for near-term future prompts.
+
+**Language shift analysis uses combined public and proprietary data:** The historical battles dataset used for Figure 11 combines public Arena releases (which lack language tags in 90% of samples) with the proprietary dataset (46% multilingual, with language tags). The paper argues this is necessary because the public data alone would under-represent multilingual prompts, but the combination means the language distribution may not perfectly reflect the full Arena — it overweights Cohere-model battles where multilingual prompting was more common.
+
+**Sampling rate measurement is robust to minimum-sample threshold:** Appendix E.5 includes only days with ≥100 collected samples to ensure sampling rate estimates are based on sufficient data. The daily sampling rates for individual models and providers are provided in full, allowing readers to inspect the temporal variability. Some providers show consistent high rates (Google's `enigma`, `phantom`, and `goblin` all exceeding 20% on multiple days), while others show isolated peaks (OpenAI's `gpt-4.5-preview` at 34% on a single day with only 100 total battles, making the rate less statistically reliable than Google's 34.2% based on 152 battles).
+
+**Deprecation threshold sensitivity:** The paper uses ≤10 battles over a 51-day period (March 3–April 23, 2025) as the threshold for "silent deprecation." This yields 205 deprecated models. The paper does not report sensitivity to alternative thresholds (e.g., ≤5, ≤20 battles), which would help assess the robustness of the deprecation count. However, the qualitative comparison to the 47 officially deprecated models in FastChat makes the point regardless of threshold choice: the number of effectively inactive models is multiples higher than the official count.
+
+**Negative result: MMLU does not improve with arena data:** Table 9 is effectively a negative control demonstrating that the performance gains are distribution-specific. If arena-mix data improved general capabilities, MMLU would also rise — it does not. This rules out the alternative explanation that arena-mix data is simply higher quality or more diverse than the `other-sft-mix`, and supports the overfitting interpretation.
+
+**Negative result: Private testing is not uniform across provider types:** Figure 6 shows zero private variants from academic labs during the scraping period. While this could reflect limited scraping coverage, the paper's broader argument — that private testing is a privilege selectively extended to commercial providers — is supported by the concentration of private variants among a small number of large industry labs (Meta, Google, Amazon, OpenAI, Nvidia).
+
+---
+
+### Critical Assessment
+
+The paper's central claims, established in the Executive Summary and reinforced throughout, require careful mapping to the evidence presented. I walk through each major claim and assess what the experiments actually demonstrate, where they fall short, and what additional evidence would strengthen or weaken the conclusions.
+
+#### Claim 1: "Undisclosed private testing practices benefit a handful of providers who are able to test multiple variants before public release and retract scores if desired."
+
+**What the experiments demonstrate:** The scraping data (Figure 6) definitively shows that private testing occurs and is concentrated among a subset of providers — Meta with 27 variants, Google with 10, Amazon with 7 — during the three-month observation window. The authors' own interactions with Arena organizers confirm that this practice exists as an (unstated) policy. The real-world experiments (Figure 9) demonstrate that retraction with best-of-N selection produces measurable score advantages: a 17-point gap for identical checkpoints and a 38-point gap for heterogeneous variants.
+
+**What the experiments do not demonstrate:** The paper cannot directly prove *retraction* — it shows that many private variants exist, but does not observe which scores those variants achieved or whether the provider subsequently retracted them. The inference that retraction occurs is based on: (1) the logical structure of the best-of-N strategy (you test many, keep the best); (2) the observation that most private variants never appear on the public leaderboard; and (3) statements from Arena organizers confirming the policy. Direct evidence would require access to the private scores of variants that were tested and then hidden — data the authors do not have.
+
+Additionally, the scraping covers only January–March 2025. The paper's claim that this has been a "long-standing practice" is based on anecdotal observation of rapid leaderboard turnover (three different models from two providers topping the leaderboard within a single week in November 2024) and the authors' inference that "it is unlikely for the same provider to top the leaderboard twice in a single week unless they were testing multiple variants simultaneously." This inference is plausible but not ironclad — rapid progress or parallel development of different model series could produce similar patterns. Direct historical evidence (scraping or disclosure from earlier periods) would strengthen this claim.
+
+**Genuine weaknesses:** The scraping methodology relies on model self-identification, which is inherently unreliable. Models may hallucinate their identities, respond inconsistently, or be configured to give misleading responses. Appendix E.4 shows that some variants (like `raspberry`) disclosed their provider in only 3 out of 40 encounters. The paper acknowledges this but does not quantify the expected error rate — how many private variants might have been misattributed or missed entirely? The 14 "unknown" private variants that could not be de-anonymized represent a non-trivial fraction of the total detected, and their exclusion could bias the provider-level counts if they are unevenly distributed.
+
+The temporal coverage is also narrow. Meta's 27 variants may be an outlier driven by the Llama 4 launch cadence; other providers' counts might be higher or lower in different time windows. The paper's claim that the counts are "likely a very conservative estimate" is plausible (given the additional 16 variants found on the Vision leaderboard alone) but the magnitude of underestimation is unknown.
+
+#### Claim 2: "The ability to choose the best score leads to biased Arena scores due to selective disclosure."
+
+**What the experiments demonstrate:** The mathematical proof (Theorem 1 in Appendix C) establishes that selecting the maximum of N noisy estimates introduces an upward bias whenever there is any variance in the estimates. The simulation quantifies this bias under plausible parameter settings: ~18 points for identical variants at N = 50, ~56 points for heterogeneous variants with σtrue = 20. The real-world experiments validate the simulation qualitatively: identical checkpoints produce a 17-point gap (consistent with the identical-variant prediction for N = 2), and heterogeneous variants produce a 38-point gap.
+
+**What the experiments do not demonstrate:** The simulation requires assumptions about N (number of variants tested) and σtrue (true quality variation) that are not directly measured. For Meta's 27 variants, the paper does not know the true quality spread — the simulation results for N = 50 and σtrue = 20 are illustrative, not calibrated to any specific provider's development process. The real experiments use N = 2, while the problematic cases involve N values of 10–27. Extrapolating from N = 2 to N = 27 using the simulation framework requires assuming the simulation's parameterization accurately captures the Arena's noise structure, which depends on the number of battles per variant, the specific opponents faced, and the BT model's behavior at different score ranges — factors that are not fully characterized.
+
+Moreover, the real experiments (Figure 9) report scores with confidence intervals that overlap for the identical checkpoints (1052 ±21/22 vs. 1069 ±19/23). A 17-point gap with overlapping intervals of ~±20 points means the difference is not statistically significant at conventional levels — the two identical checkpoints could genuinely have the same underlying score within measurement error. This is precisely the point the paper makes (the gap is *attributable* to measurement noise), but it also means the experiment cannot *reject* the null hypothesis of no difference. The heterogeneous experiment (1097 ±29/25 vs. 1059 ±18/23) shows a 38-point gap with intervals that are closer to non-overlapping but still not clearly separated. Larger N in the real experiment would produce more definitive separation, but the authors were constrained by ethical considerations (not wanting to consume excessive annotator time).
+
+**Missing evidence:** A direct comparison of the private scores of multiple variants from a single provider — showing, for example, that Meta's 27 Llama 4 variants had a score distribution with mean μ and maximum μ + δ — would provide the cleanest demonstration of the selection bias. The paper lacks this because it does not have access to other providers' private variant scores. The inference that the selection bias *actually occurs and meaningfully distorts the leaderboard* therefore rests on: (1) the observed existence of many private variants + (2) the mathematical inevitability of selection bias + (3) the real-world validation at N = 2, extrapolated to higher N via simulation. This chain of reasoning is logically sound but empirically incomplete — we do not know that the variants being tested by Meta or Google actually span a wide quality range, or that their best variant's score is materially higher than a randomly selected variant would have been.
+
+#### Claim 3: "Proprietary closed models are sampled at higher rates and have fewer models removed from the arena than open-weight and open-source alternatives, leading to large data access asymmetries."
+
+**What the experiments demonstrate:** The evidence for this claim is multi-pronged and largely strong. The sampling rate data (Figure 5, Appendix E.5) shows 10× variation across providers, with proprietary models at the high end. The leaderboard statistics (Figure 3) show proprietary models receiving 54–70% of quarterly data. The deprecation analysis (Figures 13, 18, 19) shows asymmetries in who gets deprecated, with 87.8% of open-weight and 89% of open-source models effectively inactive versus 80% of proprietary models. The cumulative data volume estimates (Figure 4) show extreme concentration: 62.8% of all data goes to four companies.
+
+**What the experiments do not fully address:** The deprecation analysis uses a threshold (≤10 battles in 51 days) that the paper does not defend with sensitivity analysis. How many models would be classified as deprecated with a threshold of ≤5 battles? ≤20 battles? The 205 figure could shift substantially with different thresholds. Additionally, some models may be "deprecated" because their providers stopped maintaining the API — this is not a Chatbot Arena policy decision but an external constraint. The paper acknowledges this ("Chatbot Arena may be forced to deprecate a model when a provider no longer supports it via its API") but does not separate provider-driven deprecations from Arena-driven deprecations. If open-source models are deprecated more often because their APIs are discontinued (open-source providers often have fewer resources for long-term API maintenance), the asymmetry would reflect economic realities rather than Arena policy — still a problem, but a different kind of problem.
+
+The sampling rate analysis covers only the scraping period (January–March 2025). The paper claims these rates are "entirely inconsistent with the stated policy" but only has three months of evidence. A longer time series — which the leaderboard statistics could potentially provide if daily battle counts per model were tracked — would strengthen this claim by showing whether the sampling disparities are persistent or anomalous.
+
+**Causal direction:** The paper argues that asymmetric data access creates a feedback loop (more data → better Arena performance → higher rankings → more sampling → more data). The overfitting experiments establish the first link (more data → better Arena performance). The sampling rate analysis establishes correlation between ranking and sampling rate, but does not experimentally demonstrate that higher rankings *cause* higher sampling rates (as opposed to both being driven by other factors, like provider reputation or model novelty). Chatbot Arena's stated policy of giving higher sampling weights to new models and top models supports the causal interpretation, but the paper might have strengthened this by showing, for example, that a specific model's sampling rate increased after it achieved a high ranking.
+
+#### Claim 4: "Access to Chatbot Arena data yields substantial benefits; even limited additional data can result in relative performance gains of up to 112% on ArenaHard."
+
+**What the experiments demonstrate:** The controlled fine-tuning experiments (Figure 10) cleanly show that increasing arena-mix data from 0% to 70% (while holding total training steps, batch size, and base model constant) improves ArenaHard win-rates against Llama-3.1-8B from 23.5% to 49.9% — a 112.3% relative improvement. MMLU remains flat at 65.9–66.5%, demonstrating that the improvement is distribution-specific rather than reflecting general capability gains.
+
+**What the experiments do not fully establish:** The claim that these gains represent a *lower bound* (because larger providers have 5–10× more data, and the paper did no hyperparameter optimization) is plausible but unverified. It is possible that the relationship between arena-mix proportion and ArenaHard performance is saturating — that 70% already captures most of the achievable gain, and additional data would yield diminishing returns. The paper's 0% → 30% → 70% sweep only has three points and does not extend to, say, 90% or 100% arena-mix. An ablation with a wider range of data proportions would characterize the shape of the data-performance curve and determine whether the 112% gain is close to the ceiling or whether substantially more gain is achievable.
+
+The paper uses a 7B model from the Cohere Command family. This is a specific architecture and scale. The claim that the results represent what "proprietary models" could achieve assumes that the relationship between Arena data and ArenaHard performance is similar for larger models (GPT-4-class), which may have different data efficiency properties. Larger models might benefit more from additional in-distribution data (better capacity to memorize distributional patterns) or less (already closer to the performance ceiling). The paper does not address this.
+
+**Critical missing ablation:** The paper does not report what happens if the arena-mix data is trained on *without* changing the total data volume — i.e., fine-tuning on `other-sft-mix` alone for the same number of steps but with the same total token count. The three configurations vary both the proportion of arena data *and* the composition of the non-arena data (since `other-sft-mix` fills the remainder). If the arena-mix data happens to contain more tokens per sample or higher-quality examples that lead to better optimization regardless of content, the performance gain might partially reflect data quantity or quality rather than distribution match. The flat MMLU provides some reassurance against this (if the arena data were simply "better," MMLU would likely also improve), but a total-data-controlled ablation would be cleaner.
+
+#### Claim 5: "Deprecation practices lead to unreliable rankings by violating BT model assumptions about transitivity and graph connectivity."
+
+**What the experiments demonstrate:** The two simulations (Figures 14 and 15) demonstrate that deprecation can cause BT rankings to diverge from true skill ordering under plausible conditions (evolving task distributions, sparse comparison graphs). These are clean conceptual demonstrations that the mechanisms the paper identifies *can* produce ranking errors.
+
+**What the experiments do not demonstrate:** The simulations use stylized settings (4 models with hand-specified win probabilities in Figure 14; 7 models with fixed true ratings in Figure 15) that may not capture the complexity of the real Arena with 243 models, heterogeneous sampling rates, and complex temporal dynamics. The paper does not attempt to validate the simulations against actual Arena ranking data — for example, by showing that deprecated models' historical rankings are inconsistent with their performance if re-evaluated today, or that models connected through sparse pathways in the real Arena comparison graph have anomalously unstable rankings. Such validation would be challenging (it requires re-evaluating deprecated models, which may be impossible if their APIs are offline) but would substantially strengthen the claim that these theoretical failure modes are *active* in the current Arena rather than merely *possible*.
+
+The paper also does not quantify how much of the ranking distortion on the actual leaderboard can be attributed to deprecation-induced BT failures versus other factors (best-of-N selection bias, data access asymmetries, genuine quality differences). The simulations show that deprecation *can* cause problems, but the paper does not measure whether and to what extent it *does* cause problems in the current leaderboard.
+
+#### Overall Assessment of Experimental Coverage
+
+The paper's evidence base is strongest for its descriptive claims — *that* private testing occurs, *that* sampling rates are asymmetric, *that* deprecation is widespread and disproportionate, *that* prompt duplication is substantial, *that* training on Arena data improves Arena-specific performance. All of these are directly observed, with quantitative measurements from multiple data sources that largely triangulate.
+
+The evidence base is moderately strong for the causal claim that best-of-N selection inflates scores — the combination of mathematical proof, simulation, and real-world validation at N=2 is persuasive, though the extrapolation to the N=27 regime depends on untested assumptions.
+
+The evidence base is weaker for the claims about *how much* the observed asymmetries distort the actual leaderboard rankings. The paper does not attempt to re-rank models under counterfactual policies (e.g., what would the leaderboard look like if all providers were limited to 3 private variants? What if sampling rates were equalized? What if deprecated models were re-evaluated?). Such counterfactual analyses would require data the authors do not have (the private scores of hidden variants, the full battle history with sampling weights). The paper's contributions are therefore primarily in *identifying and quantifying the mechanisms* of potential distortion, with the implication — strongly argued but not empirically verified on the actual leaderboard — that these mechanisms materially affect which models occupy which positions.
+
+This is not necessarily a weakness — exposing previously hidden mechanisms and demonstrating their potential for harm is a legitimate and valuable contribution, especially when the mechanisms rely on undisclosed policies that the affected community cannot evaluate independently. But the distinction between "these mechanisms exist and can distort rankings" and "these mechanisms are the primary cause of specific observed ranking outcomes" is important for interpreting the paper's claims. The paper largely operates at the first level, with occasional implicit movement toward the second (e.g., in characterizing the rapid leaderboard turnover in November 2024 as evidence of private testing effects). The strength of the paper's reform recommendations — which are absolute ("prohibit score retraction after submission") rather than hedged — rests on the strength of the demonstration that the distortions are severe enough to warrant dramatic intervention. The paper makes a persuasive case for this, but the causal chain has links that are bridged by inference rather than direct measurement.
+
+## 6. Limitations and Trade-offs
+
+### Limitation 1: Difficulty Estimation Cost Is Not Accounted For in the Reported Efficiency Gains
+
+**The assumption or constraint.** The entire compute-optimal allocation framework depends on estimating each prompt's difficulty *before* deciding how to spend the inference budget. The paper's method for doing so—generating 2,048 samples per question and averaging either ground-truth correctness (oracle) or PRM final-answer scores (predicted)—is extraordinarily expensive. The authors acknowledge this explicitly in Section 3.2:
+
+> "estimating difficulty in this way still incurs additional computation cost during inference... our experiments do not account for this cost largely for simplicity"
+
+**The consequence.** The reported 4× efficiency gains over best-of-N (Figures 4 and 8) are computed *after* difficulty is known, without amortizing the cost of learning it. In a realistic deployment, the total cost would be difficulty estimation + strategy execution, and the former could dominate the latter. At 2,048 samples per question just to estimate difficulty, the difficulty estimation step alone consumes more compute than the largest test-time budgets studied (256–512 generations). The 4× figure should therefore be understood as an **upper bound on achievable efficiency** rather than a realized deployment gain. For low-volume or one-shot inference tasks, the overhead of difficulty estimation could make the compute-optimal approach *more* expensive than simply running best-of-N with a large fixed budget.
+
+**What evidence exists in the paper.** The paper reports the 2,048-sample estimation procedure in Section 3.2 and states that predicted difficulty bins produce similar results to oracle bins (Figures 4, 8), but never includes the estimation cost in any budget calculation. The predicted bins still require 2,048 samples plus PRM scoring—they only remove the need for ground-truth labels, not the sampling cost. No ablation explores how the accuracy of difficulty estimation degrades with fewer samples (e.g., what if only 128 or 256 samples were used instead of 2,048?).
+
+**Mitigation status.** The paper flags this as "a key avenue for future work" (Section 3.2) and suggests training models to predict difficulty directly from question text, but no such model is developed or evaluated. The paper briefly mentions an exploration–exploitation tradeoff—compute spent assessing difficulty versus compute spent solving the problem—but does not formalize or resolve it.
+
+---
+
+### Limitation 2: The 14× Larger Model Baseline Is Not Compute-Optimally Trained
+
+**The assumption or constraint.** The FLOPs-matched comparison in Section 7 scales model parameters while holding training data fixed, following the LLaMA paradigm (Touvron et al., 2023). The authors explicitly acknowledge that this departs from compute-optimal pretraining (Hoffmann et al., 2022):
+
+> "We choose this setting as it is representative of a canonical approach to scaling pretraining compute and leave the analysis of compute-optimal scaling of pretraining compute where the data and parameters are both scaled equally to future work."
+
+**The consequence.** A Chinchilla-optimal model trained with ~14× more total FLOPs would likely outperform a parameter-only-scaled model, making the pretraining baseline **weaker than it needs to be**. The reported advantages of test-time compute over pretraining—e.g., +27.8% relative improvement on easy questions at R ≪ 1 for revisions (Figure 9, Figure 1)—may shrink or reverse against a properly compute-optimal larger model. This matters for the paper's central practical claim that "test-time compute can substitute for pretraining": if the pretraining baseline is suboptimal, the substitution appears more favorable than it would be under best-practice pretraining. Additionally, the ~14× larger model uses only **greedy decoding**—no majority voting, no best-of-N, no search. Giving the larger model even a modest test-time compute budget (e.g., best-of-8) would create a much stronger baseline that is never tested.
+
+**What evidence exists in the paper.** The FLOP accounting formulas (Section 7) and results (Figure 9) assume a parameter-only scaling model. The paper does not provide an ablation with a Chinchilla-optimal pretraining baseline or with the larger model augmented by any test-time compute. The sensitivity of the FLOPs-matched conclusions to the choice of pretraining scaling strategy is not explored.
+
+**Mitigation status.** The authors are transparent about this choice (quoted above) and frame it as a deliberate simplification that is "representative of a canonical approach." They acknowledge that compute-optimal pretraining of the larger model is left to future work. However, this does not mitigate the concern that the headline finding—test-time compute outperforming a ~14× larger model—may not hold when the larger model is properly trained or given its own (smaller but non-zero) inference budget.
+
+---
+
+### Limitation 3: Revisions and PRM Search Are Studied Independently, Not Combined
+
+**The assumption or constraint.** The paper studies two complementary test-time compute mechanisms—PRM-guided search (Section 5) and iterative revisions (Section 6)—as independent strategies. Section 8 explicitly acknowledges this gap:
+
+> "we did not experiment with PRM tree-search techniques in combination with revisions"
+
+**The consequence.** The two mechanisms have complementary, difficulty-dependent strengths: revisions improve the proposal distribution (generating better candidates, especially on easy problems where local refinement suffices), while PRM search improves candidate selection (finding the best among generated candidates, especially on medium problems where exploration pays off). Applying beam search to revision model outputs—or using the PRM to guide which revisions to pursue—could yield gains beyond either method alone. The paper's compute-optimal policy selects between search and revisions based on difficulty, but does not combine them. The current results therefore represent a **lower bound** on what a fully integrated system could achieve. The reported 4× improvement over best-of-N might be even larger with a combined approach, or the combination might reveal interactions (e.g., revision model outputs being harder for the PRM to score reliably) that the independent analysis misses.
+
+**What evidence exists in the paper.** Figures 3 and 6 show the independent performance of search and revisions, respectively. Figures 4 and 8 show the compute-optimal selection between strategies within each axis, but no figure shows the performance of a combined strategy. The paper notes that the PRM trained on base model outputs does not transfer well to revision model outputs (Figure 15a, Appendix J)—"the PRM trained on base model outputs does not transfer well to the revision model's outputs due to distribution shift"—and that a separate ORM had to be trained for the revision setting. This distribution shift evidence suggests that combining search and revisions is non-trivial and may require co-trained verifiers.
+
+**Mitigation status.** The authors acknowledge this as explicit future work (Section 8) but do not attempt any combination experiments. Given the distribution shift between base and revision model outputs, combining them would likely require training a PRM specifically on revision-model-generated solutions—a significant additional effort that the paper does not undertake.
+
+---
+
+### Limitation 4: Single Benchmark and Single Model Family
+
+**The assumption or constraint.** All experiments use the MATH benchmark (500 test questions) with PaLM 2-S* as the base model (Sections 4, 5, 6, 7). The authors state they "believe this model is representative of the capabilities of many contemporary LLMs" (Section 4), but this is an assertion, not an empirical finding.
+
+**The consequence.** Several aspects of the findings could be model-specific or benchmark-specific in ways that limit generalizability:
+
+- **PRM quality and over-optimization behavior** depend on PaLM 2-S*'s output distribution. A model with different calibration properties, error patterns, or reasoning styles might exhibit different difficulty-dependent scaling curves—beam search might not over-optimize on easy problems for a different base model, or revisions might not be as effective.
+- **The revision model's ability to learn** from incorrect in-context examples depends on the base model's in-context learning capabilities, which vary substantially across model families. A model with weaker or stronger in-context learning might show different revision scaling behavior.
+- **The MATH benchmark** consists exclusively of competition-level math problems requiring symbolic reasoning. It is unclear whether the difficulty-dependent patterns—beam search hurting easy problems, revisions helping easy problems—generalize to other reasoning domains (code generation, logical reasoning, scientific QA) or to tasks requiring factual knowledge rather than mathematical inference. The paper's central insight that "the effectiveness of test-time compute is difficulty-dependent" is established only for mathematical reasoning.
+- **The test set of 500 questions**, split into five difficulty quintiles of ~100 each and then further split by two-fold cross-validation, means the compute-optimal policy is **selected based on ~50 questions per fold per bin**. This is a small sample, and the selected strategies may not be robust to different test splits or problem distributions.
+
+**What evidence exists in the paper.** All figures report MATH accuracy. No experiments are run on other benchmarks (GSM8K, HumanEval, MMLU reasoning subsets, etc.) or with other base models (PaLM 2-L, GPT-3.5, LLaMA-family models). The paper does not analyze whether the difficulty-dependent strategy patterns would replicate on a different reasoning task or with a different base model architecture.
+
+**Mitigation status.** The authors acknowledge (Section 4) that PaLM 2-S* is a single model choice and that MATH is a single benchmark, but frame this as a deliberate scoping decision rather than a limitation to be addressed. No cross-benchmark or cross-model validation is conducted. The practical consequence is that a practitioner cannot know whether the compute-optimal strategies identified for PaLM 2-S* on MATH transfer to their own model and task without replicating substantial portions of the analysis.
+
+---
+
+### Limitation 5: No Accounting for Latency or Wall-Clock Time
+
+**The assumption or constraint.** The paper measures compute in "generations" (number of complete solutions sampled), which is a reasonable proxy for total FLOPs but ignores **latency**. Sequential revisions are inherently serial—each revision depends on the previous one—while parallel best-of-N can be executed simultaneously with sufficient hardware.
+
+**The consequence.** A strategy that allocates 128 generations as 64 sequential × 2 parallel takes roughly 64× longer wall-clock time than one that runs 128 parallel samples simultaneously. For latency-sensitive applications—interactive assistants, real-time decision-making, customer-facing chatbots—the sequential-heavy strategies favored by the compute-optimal policy on easy problems (Section 6, Figure 7 right: easy problems perform best with purely sequential revisions) may be impractical regardless of their accuracy advantages. A deployment engineer choosing between spending 2 seconds on best-of-128 (parallel) and 8 minutes on a 64-step sequential revision chain would likely prefer the former even if the latter scores higher on accuracy. The compute-optimal policy as presented optimizes a single objective (accuracy per FLOP) when real deployment involves multi-objective optimization (accuracy, latency, throughput, cost).
+
+**What evidence exists in the paper.** The generation budget accounting (Sections 5.3, 6) treats all generations as equivalent cost units. No latency measurements are reported. The paper does not discuss the serial vs. parallel wall-clock implications of its recommended strategies. Figure 7 (left) shows the tradeoff between sequential and parallel allocation in terms of accuracy, but does not overlay latency or provide a latency-aware optimization framework.
+
+**Mitigation status.** The paper does not address this limitation. The generation budget metric is standard in the test-time compute literature, but its limitation for latency-sensitive deployment is not acknowledged. Future work could extend the compute-optimal framework to include a latency penalty or to optimize a combined accuracy–latency objective, but no such formulation is proposed.
+
+---
+
+### Limitation 6: The Revision Model Has a 38% Correct-to-Incorrect Reversion Rate
+
+**The assumption or constraint.** The revision model is trained only on sequences where all in-context answers are incorrect, followed by a correct target (Section 6.1). At test time, the model may encounter correct answers in its context (produced during earlier revisions) and incorrectly "revise" them into wrong answers, since it was never trained to recognize when no revision is needed.
+
+**The consequence.** The paper reports that approximately **38% of correct answers get converted back to incorrect ones** using a naive approach (Section 6.1). This forces the system to use post-hoc selection mechanisms—majority voting or verifier-based selection across the entire revision chain—to recover the correct answers that were generated and then discarded by the model. These post-hoc mechanisms are imperfect: majority voting requires multiple chains to identify consensus, and verifier-based selection depends on verifier quality. The reversion problem fundamentally limits how long a revision chain can be before the model's tendency to break correct answers outweighs its ability to fix incorrect ones. The paper's Figure 6 (left) shows per-step accuracy leveling off around 23–25% beyond step 15–20, consistent with the reversion rate creating an equilibrium where each new revision fixes some errors but introduces others.
+
+The ReST^EM experiment (Appendix K, Figure 16) further demonstrates the fragility: attempting to optimize the revision model with RL-style training caused performance to **degrade substantially** with sequential revisions—at 256 generations, fully sequential performance dropped to approximately 33.5% compared to roughly 38.5% at the optimal ratio. This suggests the revision approach is sensitive to training methodology in ways that are not fully understood.
+
+**What evidence exists in the paper.** The 38% reversion rate is reported in Section 6.1. Figure 6 (left) shows the leveling-off of per-step accuracy. Figure 16 (Appendix K) shows the ReST^EM degradation. The paper mitigates reversion using majority voting and verifier-based selection, and Figure 6 (right) shows these help (sequential outperforms parallel), but the underlying reversion problem is not solved.
+
+**Mitigation status.** The paper acknowledges the reversion issue (Section 6.1) and implements workarounds (within-chain selection), but does not attempt a principled solution—such as training the model to recognize when no revision is needed, or training on mixed trajectories that include correct-in-context examples. The authors note this is a direct consequence of the training data construction (only incorrect-to-correct trajectories) and do not propose a specific remedy. The ReST^EM negative result suggests that more sophisticated training approaches may not straightforwardly solve the problem and may even make it worse.
+
+## 7. Implications and Future Directions
+- How this changes the landscape
+  - The paper reframes live leaderboards as socio-technical systems whose design choices (private testing policies, sampling, and deprecations) can materially steer outcomes—sometimes more than model innovations themselves. It argues that today’s Arena rankings partially reflect optimization to the platform’s idiosyncrasies rather than broad model quality.
+
+- Practical recommendations (Section “Critical Recommendations…”; Section 6)
+  - Prohibit retraction: publish all private-variant results permanently to remove best-of-N bias.  
+  - Cap private variants per provider (e.g., ≤3 concurrently), and disclose counts.  
+  - Fair, transparent deprecations: stratify by license type (e.g., retire bottom 30% within proprietary/open-weight/open-source separately) to preserve graph connectivity and reduce provider-type bias.  
+  - Implement active, variance-aware sampling (as proposed by the Arena team in prior work) rather than ad hoc or provider-weighted sampling (Section 6; cites Chiang et al., 2024 equation).  
+  - Public transparency: quarterly logs summarizing models tested (including private), sampling rates, and deprecations.
+
+- Follow-up research
+  - Design and evaluate rating systems robust to best-of-N gaming (e.g., per-provider variance caps, hierarchical models that penalize selection bias).  
+  - Explore graph-aware sampling that maximizes connectivity and reduces uncertainty while maintaining equitable provider exposure.  
+  - Systematically study adversarial voting and de-anonymization defenses in live settings.  
+  - Develop benchmark health dashboards (duplication, drift, concentration metrics) to monitor overfitting risk in real time.
+
+- Downstream applications
+  - More trustworthy public rankings for labs, enterprises, and regulators.  
+  - Fairer allocation of community-provided data and annotator effort.  
+  - Better model selection practices within organizations—reducing dependence on leaderboard spikes driven by selection bias.
+
+> Bottom line: The paper shows—in theory, simulation, and practice—that current Arena mechanics allow a small group of providers to steer rankings via private best-of-N testing, high sampling exposure, and survivorship through silent deprecations. It provides concrete, actionable fixes that, if adopted, would make live leaderboards far more reliable indicators of true model quality.

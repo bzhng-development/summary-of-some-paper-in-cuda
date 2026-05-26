@@ -1,0 +1,804 @@
+# S-LoRA: Serving Thousands of Concurrent LoRA Adapters
+
+**ArXiv:** [2311.03285](https://arxiv.org/abs/2311.03285)
+
+## 🎯 Pitch
+
+S-LoRA revolutionizes large language model deployment by enabling a single machine to serve thousands of concurrent LoRA adapters efficiently, making it practical to deliver personalized and task-specific models at scale. By introducing unified memory management, custom GPU kernels for heterogeneous batching, and novel tensor parallelism, S-LoRA slashes latency and boosts throughput up to 4× over state-of-the-art serving systems, empowering organizations to offer massive-scale customization without sacrificing efficiency or cost.
+
+---
+
+## 1. Executive Summary
+
+S-LoRA introduces a system for scalably serving thousands of Low-Rank Adaptation (LoRA) adapters from a single machine, decomposing inference into a shared batched base model computation and separate per-adapter low-rank computations that execute on-the-fly rather than being merged into the base model weights. The system is evaluated on the Llama model series (7B through 70B) and introduces three named mechanisms: **Unified Paging** (a memory pool that jointly manages KV cache tensors and adapter weights of varying ranks in a paged fashion to reduce fragmentation), **Heterogeneous Batching** (custom CUDA kernels operating directly on non-contiguous memory to batch LoRA computations across adapters with different ranks and sequence lengths without padding), and **S-LoRA TP** (a novel tensor parallelism strategy that partitions the added LoRA matrices to minimize communication by scheduling on small intermediate tensors and fusing with the base model’s all-reduce). S-LoRA achieves up to 4× higher throughput than vLLM with naive multi-model serving and up to 30× over HuggingFace PEFT, while scaling to serve 2,000 adapters on a single GPU — establishing that the system can scale the number of served adapters by several orders of magnitude, limited only by available main memory rather than GPU memory.
+
+## 2. Context and Motivation
+
+### The Fundamental Problem: How Do You Serve Thousands of Customized Models At Scale?
+
+The “pretrain-then-finetune” paradigm has become the dominant approach for deploying large language models. A base LLM — trained at enormous expense on broad corpora — is subsequently fine-tuned for specific tasks, domains, or even individual users. This creates a proliferation problem: a single base model spawns hundreds, thousands, or potentially millions of fine-tuned variants.
+
+Low-Rank Adaptation (LoRA) (Hu et al., 2021) has emerged as the most widely adopted method for making this fine-tuning tractable. Rather than duplicating and updating all model parameters for each task, LoRA adds small, low-rank matrices to each layer's weight matrices and only trains those. A LoRA adapter for a 7B-parameter model might contain only a few million parameters — less than 0.1% of the base model's size — while achieving accuracy comparable to full fine-tuning. This dramatically reduces training cost and storage requirements for each adapted model.
+
+However, the paper identifies a critical gap: **while LoRA solved the training and storage problem for fine-tuning, nobody had solved the serving problem**. The question is not "can we store thousands of adapters?" (main memory is cheap and abundant) but rather "can we perform inference across thousands of adapters concurrently with high throughput?" As the authors state in Section 1:
+
+> "despite considerable research into fine-tuning, the question of how to serve these fine-tuned variants at scale remains unexplored."
+
+This gap matters enormously because the use cases that drive fine-tuning — personalized assistants, task-specific enterprise deployments, customized models for individual users — inherently require concurrent serving, not sequential serving. If a platform hosts personalized models for thousands of users, those users send requests simultaneously. The serving system must handle them all, not one at a time.
+
+---
+
+### Why This Problem Is Important: The Economics of Customization
+
+The paper's motivation is grounded in a clear economic and operational reality. When an organization deploys the "pretrain-then-finetune" paradigm for many tasks or users, the serving costs can become the dominant expense. The paper frames this through the lens of batched inference (Section 1):
+
+> "We observe that the shared base model, which underpins numerous LoRA adapters, presents a substantial opportunity for batched inference."
+
+This observation is the key insight that makes the problem worth solving: because all adapters share the same base model, the most computationally expensive part of inference — the forward pass through the base transformer layers — is identical regardless of which adapter is being served. If you can batch queries from different adapters together for the base model computation, and only pay a small per-adapter cost for the LoRA-specific computation, you can achieve throughput approaching that of serving a single model, while simultaneously serving thousands of customized variants.
+
+Without an efficient multi-adapter serving system, organizations face an unpleasant choice:
+- **Merge adapters into the base model and serve each as a separate model** — but this requires loading multiple full copies of the base model into GPU memory, limiting you to perhaps 2–5 variants on a single GPU before running out of memory, and precludes batching across those variants.
+- **Swap adapters in and out sequentially** — as the original LoRA paper proposed (by adding and subtracting LoRA weights from the base model) — but this eliminates concurrent serving, destroys throughput, and adds substantial latency as each adapter switch requires modifying the base model weights.
+- **Deploy separate hardware per adapter** — which is economically non-viable at the scale of thousands of adapters.
+
+The paper's goal is to make the third option unnecessary by making the first option efficient enough to serve thousands of adapters on a single machine. This would enable large-scale customized fine-tuning services that are currently impossible or prohibitively expensive.
+
+---
+
+### Prior Approaches and Their Shortcomings
+
+The paper positions itself against three existing approaches, each of which fails in a specific and instructive way.
+
+#### Approach 1: Adapter Merging (Original LoRA)
+
+The LoRA paper (Hu et al., 2021) recommended merging adapter weights into the base model before inference:
+
+$$W' = W + AB$$
+
+where $W$ is the pretrained weight matrix, $A \in \mathbb{R}^{h \times r}$ and $B \in \mathbb{R}^{r \times d}$ are the low-rank adapter matrices, and $r \ll \min(h, d)$. After merging, inference proceeds as $h = xW'$, which has exactly the same computational cost as inference on the base model — there's zero adapter overhead.
+
+This approach has an elegant property: it makes adapters "free" at inference time for a single adapter. But it fails catastrophically for multiple adapters:
+
+1. **Weight duplication**: Each merged model is a complete copy of the base model with adapter weights baked in. Serving $n$ adapters requires $n$ copies of the model weights in GPU memory. Since modern LLMs range from 7B to 70B+ parameters (14GB to 140GB+ in FP16), a GPU can hold at most a handful of copies.
+
+2. **Lost batching opportunity**: Because each merged model is a separate set of weights, queries to different adapters cannot be batched together. Each adapter's queries must be processed separately, sacrificing the throughput gains from batching that make LLM serving economically feasible. The paper is explicit about this:
+
+   > "Directly merging the models requires maintaining many copies of the full language model... this approach doesn't support concurrent inference on separate LoRA adapters and therefore limits batching opportunities." (Section 4.1)
+
+3. **Adapter switching overhead**: The original LoRA paper proposed swapping adapters by adding and subtracting LoRA weights on the fly. This avoids storing multiple copies but introduces a new problem: the switching operation is slow (you must modify every layer's weights) and it blocks concurrent execution — you can only serve one adapter's queries at a time, and you must finish all pending queries for the current adapter before switching.
+
+The paper's evaluation quantifies this failure mode (Section 7.5, Figure 9): a merging-based approach with adapter switching performs well with exactly one adapter (because there's no switching cost), but performance degrades significantly with just two or more adapters due to the switching overhead and GPU under-utilization during switches.
+
+#### Approach 2: Library-Level PEFT Serving (HuggingFace PEFT)
+
+HuggingFace's PEFT library (Mangrulkar et al., 2022) is the standard tool for training and running parameter-efficient fine-tuned models. It can load multiple adapters and swap between them. But PEFT was not designed as a high-throughput serving system, and its limitations are severe in that context.
+
+The paper identifies two critical deficiencies (Appendix A.1):
+
+1. **No KV cache management**: PEFT lacks the memory management techniques that modern serving systems use to handle the dynamic key-value caches generated during autoregressive decoding. This dramatically limits the maximum batch size. The paper reports that for Llama-7B on an A10G GPU (24GB), S-LoRA can accommodate a batch size of 30, while PEFT can only manage 6. Since throughput scales with batch size in memory-bound LLM inference, this alone accounts for a large portion of PEFT's poor performance.
+
+2. **No continuous batching**: PEFT uses request-level batching, where all requests in a batch must start and finish together. This means a short request (generating 8 tokens) must wait for a long request (generating 512 tokens) in the same batch to complete before the results are returned. Modern serving systems like Orca (Yu et al., 2022) and vLLM (Kwon et al., 2023) use iteration-level scheduling, where requests can dynamically join and leave the batch at any token generation step. Without this, PEFT's latency is dominated by the longest request in each batch.
+
+The consequence is that PEFT's throughput is roughly $30\times$ lower than S-LoRA (Table 3), and its latency explodes even at modest request rates — the paper reports average latencies of 1,000+ seconds when the request rate exceeds 1 request/second (Table 5). PEFT is simply not designed for the throughput and concurrency demands of production serving.
+
+#### Approach 3: Multi-Model Serving with Existing Systems (vLLM-packed)
+
+vLLM (Kwon et al., 2023) is a state-of-the-art LLM serving system that introduced PagedAttention, a technique for managing KV cache memory in a paged fashion to reduce fragmentation and enable larger batch sizes. vLLM achieves substantially higher throughput than earlier serving systems for single-model serving.
+
+However, vLLM was not designed for LoRA adapters. The paper explores a straightforward adaptation they call "vLLM-packed": merge each LoRA adapter into the base model to create separate models, then run multiple vLLM instances as separate processes on a single GPU (managed by NVIDIA Multi-Process Service, or MPS), with GPU memory statically partitioned among them proportional to their expected request rate.
+
+This approach inherits all the problems of adapter merging (weight duplication) and adds new ones:
+
+1. **GPU memory limits**: Because each vLLM instance maintains its own copy of the model weights and its own KV cache, GPU memory is divided among them. The paper reports that vLLM-packed can serve fewer than 5 adapters before running out of memory on an 80GB A100 (Table 3). For larger models, even fewer adapters are possible.
+
+2. **Static partitioning is wasteful**: Allocating GPU memory proportionally to expected request rate is suboptimal because actual request rates fluctuate. An adapter with a temporary surge in traffic cannot borrow memory from an idle adapter's partition, leading to memory under-utilization or request queuing.
+
+3. **No cross-adapter batching**: Because each adapter is a separate vLLM instance with its own model weights, batching can only happen within an adapter's requests. The substantial batching opportunity across adapters' requests is entirely lost, limiting throughput even for the few adapters that can be served.
+
+The paper quantifies this: even with only 5 adapters — the maximum vLLM-packed can handle — S-LoRA achieves roughly $4\times$ higher throughput (Table 3). And vLLM-packed cannot scale to hundreds or thousands of adapters at all: it simply runs out of GPU memory.
+
+---
+
+### The Gap in the Research Literature
+
+The paper identifies a specific gap that prior research on efficient LLM serving had not addressed. Existing serving systems (Orca, vLLM, FasterTransformer, TensorRT-LLM, etc.) were all designed for single-model serving. They optimized memory management, batching strategies, and kernel performance for the case where every query runs against the same set of model weights. The LoRA paradigm — where the base model is shared but per-query adapter weights differ — falls outside their design assumptions.
+
+Similarly, prior work on parameter-efficient fine-tuning (LoRA, Prefix-Tuning, P-Tuning, AdaLoRA, (IA)³, etc.) focused almost exclusively on the training efficiency problem: how to fine-tune with fewer parameters, less memory, and less compute. The inference-time question — once you have thousands of these adapters, how do you serve them? — was largely ignored, with the LoRA paper's merging recommendation treated as sufficient.
+
+The paper also distinguishes itself from PetS (Zhou et al., 2022), which explored serving multiple parameter-efficient adapters but only for small encoder-only BERT models. PetS did not address the challenges of autoregressive generation (KV cache management, iteration-level scheduling, the decode-phase computational pattern) or the scale of serving thousands of adapters for models too large to fit on a single GPU.
+
+Only one concurrent work, Punica (Chen et al., 2023), explored decomposed computation for LoRA serving — computing $xW$ (base model) and $xAB$ (adapter) separately. But as the paper notes in Section 8, Punica did not address memory management for adapter weights of varying ranks or tensor parallelism for multi-GPU serving, which are two of S-LoRA's three primary contributions.
+
+---
+
+### How S-LoRA Positions Itself
+
+S-LoRA's positioning can be understood through the lens of its decomposition insight (Section 1, Section 4.1):
+
+> "To achieve high-throughput multi-adapter serving, it is advantageous to separate the batchable base model computation from individual LoRA computations."
+
+This separation is not merely an implementation choice — it is the architectural insight that makes everything else possible. By computing the forward pass as:
+
+$$h = xW + xAB$$
+
+rather than merging into $h = x(W + AB)$, S-LoRA achieves two things simultaneously:
+
+1. **The $xW$ term is batchable across all adapters.** Since $W$ is shared, all queries can be concatenated into a single batched matrix multiplication — the same GEMM operation that single-model serving systems use. This recovers the throughput benefits of batching that merging-based approaches lose.
+
+2. **The $xAB$ term is adapter-specific but cheap.** Because the adapter matrices $A$ and $B$ are low-rank (typically $r \in \{8, 16, 32, 64\}$ compared to hidden dimensions $h \in \{4096, 5120, 7168, 8192\}$), the per-adapter computation is dramatically cheaper than the base model computation. The paper argues (and empirically demonstrates) that the savings from batching $xW$ across many adapters "far exceed the additional overhead" of computing $xAB$ on-the-fly.
+
+This decomposition transforms the problem from "how to serve many separate models" to "how to serve one shared model plus many small adapter-specific computations." The shared model part can leverage all existing single-model serving optimizations (PagedAttention, continuous batching, fast attention kernels). The adapter-specific part requires new solutions — which is where S-LoRA's three contributions (Unified Paging, Heterogeneous Batching, S-LoRA TP) come in.
+
+The paper explicitly contrasts this with the merged approach (Section 4.1):
+
+> "In this paper, we show that merging LoRA adapters into the base model is inefficient for the multi-LoRA high-throughput serving setting."
+
+The system therefore positions itself not as an incremental improvement to existing serving systems, but as a fundamentally different design point — one that recognizes that the "pretrain-then-finetune" paradigm has created a new serving problem that existing systems were never designed to solve. The evaluation reflects this: S-LoRA is compared against both a naïve adaptation of a high-throughput serving system (vLLM-packed) and a standard PEFT library (HuggingFace PEFT), demonstrating that neither existing approach is adequate for the multi-adapter serving regime.
+
+The paper also positions itself through what it does *not* claim to do: it does not propose new fine-tuning methods (LoRA already exists), new model architectures, or new serving hardware. It accepts the existing LoRA ecosystem — "hundreds of thousands of LoRA adapters for pre-trained large language models" have already been created (Section 2) — and addresses the practical system engineering challenge of making them deployable. This is a systems paper, not a machine learning paper, and its contributions are in memory management, GPU kernel design, and parallelism strategy rather than in model accuracy or training methodology.
+
+## 3. Technical Approach
+
+### 3.1 Reader Orientation
+
+S-LoRA is a serving system — a piece of infrastructure software that accepts inference requests for large language models, runs those requests on GPUs, and returns the generated text — specifically engineered to handle the case where each incoming request may require a *different* LoRA adapter (a small, task-specific fine-tuning of a shared base model). The problem it solves is that existing LLM serving systems were designed for single-model inference and collapse under the weight of hundreds or thousands of adapter variants because they either duplicate the base model weights per adapter (running out of GPU memory) or swap adapters sequentially (destroying throughput); S-LoRA’s solution is to keep the base model weights *shared and unmodified*, compute the base model forward pass as one large batched operation across all concurrent requests regardless of which adapter they use, and then apply each request’s adapter-specific low-rank computation on-the-fly using custom GPU kernels — a decomposition that limits per-adapter cost to only the cheap low-rank matrices while recovering the full throughput benefits of batching for the expensive base model.
+
+### 3.2 Big-Picture Architecture (Diagram in Words)
+
+S-LoRA has five major components that operate together during online serving:
+
+1. **Base Model Weights (GPU-resident, shared):** The full pretrained LLM weights (`$W$` matrices for every transformer layer) are loaded into GPU memory once and never modified. Every inference request — regardless of which LoRA adapter it targets — runs through this same set of weights during the base model computation. This is the single copy that enables batching.
+
+2. **Adapter Weight Store (CPU main memory):** All LoRA adapter matrices (`$A$` and `$B$` for every adapted layer) live in the machine’s main memory (DRAM), not on the GPU. This store can hold thousands of adapters because main memory is orders of magnitude larger than GPU memory — a typical server might have 512GB–1TB of CPU RAM versus 40–80GB of GPU RAM. Adapters are loaded onto the GPU only when needed for the currently executing batch and evicted when no longer needed.
+
+3. **Unified Memory Pool (GPU memory):** A single, statically allocated buffer on the GPU that holds both KV cache tensors (the attention key-value state for each in-progress request) and the currently active adapter weights. Both are managed via a paging mechanism — each page is a vector of size `$H$` (the hidden dimension), KV cache tensors consume pages proportional to sequence length, and adapter weight matrices consume pages proportional to their rank. The pool eliminates fragmentation by making allocation and deallocation of these two variable-size tensor types interchangeable.
+
+4. **Heterogeneous Batching Kernels (GPU compute):** Custom CUDA kernels (named MBGMM for the prefill stage and MBGMV for the decode stage) that execute the per-adapter computation `$xAB$` across a batch of requests that may have different sequence lengths and different adapter ranks. These kernels operate directly on the non-contiguous memory pages in the unified pool, gathering adapter weights on-the-fly without copying them into contiguous buffers — avoiding both the memory waste of padding and the latency of data movement.
+
+5. **Scheduler and Adapter Prefetcher:** The iteration-level scheduler (inherited from Orca’s design) decides which requests to include in the current decoding batch. Simultaneously, a predictor examines the waiting queue to determine which adapters are likely to be needed in the *next* batch and issues asynchronous memory transfers to load those adapter weights into the GPU memory pool before they are needed, overlapping I/O latency with the current batch’s computation.
+
+Information flows as follows: requests arrive from clients → the scheduler selects a batch and determines which adapters are active → the prefetcher ensures those adapter weights are in GPU memory (loading from CPU RAM if necessary) → the base model computation runs as one large batched GEMM for all requests → the Heterogeneous Batching kernels execute per-request LoRA computations using adapter weights gathered from the unified memory pool → results are added to the base model outputs → tokens are generated, KV cache pages are allocated/updated in the pool → completed requests release their KV pages and adapter pages → the cycle repeats for the next token.
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First, the core computational decomposition** — the decision to compute `$h = xW + xAB$` rather than merging weights — because every subsequent component depends on understanding why the base model and adapters are separated, what the cost model of this separation is, and why the savings from batching `$xW$` outweigh the added cost of computing `$xAB$` per-request.
+
+- **Second, the Unified Paging memory management** — because memory is the binding constraint in LLM serving, and S-LoRA’s approach to managing both KV cache and adapter weights in a single paged pool is what enables scaling to thousands of adapters without fragmentation; this section covers the page structure, allocation pattern, and the analogy to operating system virtual memory.
+
+- **Third, the adapter loading pipeline and prefetching** — because storing adapters in CPU memory creates an I/O bottleneck that must be hidden through prediction and asynchronous transfer; this section covers the prefetching mechanism and the dynamic prediction strategy.
+
+- **Fourth, the Heterogeneous Batching kernels** — because the decomposition creates a novel computational pattern (many small matrix multiplications with heterogeneous ranks and heterogeneous sequence lengths operating on non-contiguous memory) that existing BLAS libraries handle poorly; this section covers the design of MBGMM and MBGMV, the avoidance of padding, and the interface with the memory pool.
+
+- **Fifth, the tensor parallelism strategy (S-LoRA TP)** — because for large models (30B–70B parameters) that don’t fit on a single GPU, the added LoRA computation must be parallelized across devices; this section covers the partition strategy for the `$A$` and `$B$` matrices, the communication pattern, and the fusion with the base model’s all-reduce.
+
+- **Sixth, the batching and scheduling policy** — including the iteration-level scheduling inherited from Orca, adapter clustering, and the early abort admission control mechanism; this section covers *when* and *what* to batch, not just *how* to batch.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily a **systems paper** whose core idea is that a decomposed computation pattern — a single shared base model forward pass followed by many small, adapter-specific low-rank computations — enables scalable serving of thousands of LoRA adapters, provided that three new mechanisms (Unified Paging, Heterogeneous Batching, and S-LoRA TP) address the resulting memory management, kernel efficiency, and parallelism challenges.
+
+---
+
+#### The Decomposed Computation: Why `$h = xW + xAB$` Instead of `$h = x(W + AB)$`
+
+The architectural foundation of S-LoRA is the decision to *never* merge LoRA adapter weights into the base model. To understand why this matters, consider what the merged approach entails and what the decomposed approach enables.
+
+**The merged approach (original LoRA recommendation).** The original LoRA paper (Hu et al., 2021) proposed that for inference, the adapter matrices should be merged into the base model weights before serving:
+
+$$W' = W + AB$$
+
+where `$W \in \mathbb{R}^{h \times d}$` is the pretrained weight matrix, `$A \in \mathbb{R}^{h \times r}$` and `$B \in \mathbb{R}^{r \times d}$` are the low-rank adapter matrices trained for a specific task, and `$r \ll \min(h, d)$` is the adapter rank (typically 8–64). After merging, the forward pass for a single adapter is simply:
+
+$$h = xW'$$
+
+This is elegant because it achieves zero inference overhead: the computation is identical to running the unadapted base model — one matrix-vector or matrix-matrix multiply per layer — and existing highly optimized GEMM kernels work without modification. For serving a *single* adapter, this is optimal.
+
+The problem emerges with multiple adapters. If you merge each adapter into the base model separately, you create `$n$` separate model instances, each requiring a full copy of all base model weights in GPU memory. A Llama-7B model in FP16 occupies approximately 14GB. Five merged copies would require 70GB, exceeding most datacenter GPUs. The LoRA paper’s proposed workaround — "adding and subtracting LoRA weights on the fly" to switch adapters — avoids weight duplication but introduces two fatal issues: (1) the switching operation modifies every weight matrix in the model (for Llama-7B, this means updating all query, key, value, and output projection matrices across 32 transformer layers — hundreds of individual tensor updates), which is slow and blocks compute during the switch; and (2) only one adapter can be active at a time, so queries for different adapters must be processed sequentially, losing all batching opportunity.
+
+**The decomposed approach (S-LoRA’s core decision).** S-LoRA keeps the base model weights `$W$` *immutable* and *shared* across all adapters. The forward pass for a request using a specific adapter is computed as:
+
+$$h = xW + xAB$$
+
+The first term `$xW$` — the base model computation — is identical for all requests regardless of which adapter they target. This means all requests in the current batch can be concatenated into a single batched matrix multiplication. The second term `$xAB$` — the adapter-specific computation — must be computed separately for each adapter, but because `$A$` and `$B$` are low-rank, the computational cost of `$xAB$` is much smaller than `$xW$`.
+
+**Quantifying the computational tradeoff.** To understand why the decomposition wins, we must compare the costs. Consider a single transformer layer during the decode phase (batch size `$B$`, hidden dimension `$h = 4096$` for Llama-7B, adapter rank `$r = 16$`):
+
+- **Base model computation `$xW$`**: The input `$x$` has shape `$(B, h)$` and `$W$` has shape `$(h, d)$` where `$d$` is the output dimension (for a projection layer, typically `$d = h$`). The matrix multiplication `$xW$` requires `$2 \cdot B \cdot h \cdot d$` floating-point operations. For `$B = 32$` and `$h = d = 4096$`, this is approximately `$2 \cdot 32 \cdot 4096 \cdot 4096 \approx 1.07$` billion FLOPs.
+
+- **Adapter computation `$xAB$`**: The input `$x$` has shape `$(B, h)$`, `$A$` has shape `$(h, r)$`, and `$B$` has shape `$(r, d)$`. The computation `$xA$` requires `$2 \cdot B \cdot h \cdot r$` FLOPs, producing an intermediate of shape `$(B, r)$`. Then `$(xA)B$` requires `$2 \cdot B \cdot r \cdot d$` FLOPs. Total: `$2 \cdot B \cdot h \cdot r + 2 \cdot B \cdot r \cdot d = 2 \cdot B \cdot r \cdot (h + d)$`. For `$B = 32$`, `$h = d = 4096$`, and `$r = 16$`, this is approximately `$2 \cdot 32 \cdot 16 \cdot (4096 + 4096) \approx 16.8$` million FLOPs.
+
+The adapter computation is roughly **64× cheaper** than the base model computation for a single layer: 16.8 million FLOPs versus 1.07 billion FLOPs. But this understates the advantage because, in the decomposed approach, the 1.07 billion FLOPs of base model computation are *amortized across all requests in the batch* through a single batched GEMM, while the merged approach would need to run that 1.07 billion FLOPs separately for each adapter’s queries (or would need to store all the merged weights in GPU memory).
+
+The paper explicitly quantifies this empirically in Section 7.5 (Figure 9): the merging approach with on-the-fly adapter switching performs well for exactly one adapter, but throughput drops significantly with two or more adapters because the switching overhead and lost batching dominate. S-LoRA’s throughput remains roughly constant from 1 to 2,000 adapters because the base model batching is unaffected by the number of adapters and the per-adapter LOSA computation is small enough that its overhead is absorbed.
+
+**Which layers have LoRA adapters?** Following the original LoRA paper’s convention, the adapters are applied only to the query, key, value, and output projection matrices in the self-attention module. The feed-forward network (FFN) layers — typically two large linear transformations — do *not* receive LoRA adapters. This is an important detail because it means that for FFN layers, there is no per-adapter computation at all: all requests share the identical computation, making those layers purely batchable. The adapter-specific computation is limited to exactly four weight matrices per transformer layer (Q, K, V, and output projections).
+
+**The adapter weight storage picture.** S-LoRA stores all LoRA adapters in the machine’s main memory (CPU DRAM) and loads only the adapters needed for the currently running batch into GPU memory. The paper states:
+
+> "the maximum number of adapters that can be served is bounded by the main memory size" (Section 4.1)
+
+For a Llama-7B model with rank-16 adapters, each adapter contains approximately `$4 \text{ projection matrices} \times 32 \text{ layers} \times 2 \text{ matrices (A and B)} \times (4096 \times 16) \text{ parameters} \approx 16.8$` million parameters, or about 33.6 MB in FP16. A server with 512 GB of main memory could hold roughly 15,000 such adapters — limited by CPU RAM, not GPU RAM. The GPU only needs to hold the adapters for the currently executing batch, which is bounded by the batch size (typically 32–128) and therefore manageable even for large adapters.
+
+---
+
+#### Unified Paging: Joint Memory Management for KV Cache and Adapter Weights
+
+The decomposed computation pattern creates a novel memory management challenge. The GPU’s high-bandwidth memory (HBM) must simultaneously hold:
+
+1. **Base model weights:** Fixed in size, loaded once at startup. For Llama-7B (FP16): ~14 GB.
+2. **Temporary activation tensors:** Allocated and freed within each forward pass. Their size depends on batch size and sequence length but is predictable and short-lived.
+3. **KV cache tensors:** One per active request, growing with each generated token. The size is `$2 \times \text{num_layers} \times S \times H$` elements, where `$S$` is the cumulative sequence length (prompt + generated tokens) and `$H$` is the hidden dimension. `$S$` varies across requests (some are short prompts generating few tokens, others are long conversations).
+4. **Active adapter weights:** The `$A$` and `$B$` matrices for whichever adapters are referenced by the current batch’s requests. These are loaded when needed and can be evicted when no longer referenced by any in-progress request.
+
+Items 3 and 4 are both *dynamic* — they grow, shrink, appear, and disappear at runtime — and both have a shared dimension `$H$` (hidden size) that S-LoRA exploits.
+
+**The fragmentation problem.** Without careful management, the interleaved allocation and deallocation of KV cache pages (which vary in sequence length) and adapter weight pages (which vary in rank) leads to memory fragmentation — a situation where enough total memory is free to satisfy a new allocation, but no single contiguous block is large enough. In a GPU, this is fatal: CUDA memory allocation (`cudaMalloc`) is expensive and fragmentation can cause out-of-memory errors even when aggregate utilization is low. Prior systems like vLLM (Kwon et al., 2023) addressed fragmentation for KV caches via PagedAttention, which divides KV cache tensors into fixed-size pages and stores them non-contiguously. But vLLM had no mechanism for handling the additional dynamic allocation of adapter weights.
+
+**Unified Paging’s design.** S-LoRA generalizes PagedAttention to manage *both* KV caches and adapter weights in a single paged memory pool. The key insight is that both tensor types share a common dimension `$H$` (the hidden dimension), so they can be sliced along that dimension into pages of equal size:
+
+> "Both KV caches and adapter weights are stored in this memory pool in a paged manner, with each page corresponding to a vector of `$H$`." (Section 5.1)
+
+Concretely, a page is a contiguous block of `$H$` elements. The page size in bytes is `$H \times \text{element_size}$`. For Llama-7B with `$H = 4096$` and FP16 (2 bytes/element), each page is `$4096 \times 2 = 8192$` bytes = 8 KB.
+
+**How KV cache tensors map to pages.** A single request’s KV cache for one layer consists of a key tensor of shape `$(S, H)$` and a value tensor of shape `$(S, H)$`, where `$S$` is the current sequence length (number of tokens processed for that request). Under Unified Paging, this tensor is stored as `$S$` pages, each page being one row of length `$H$`. As the request generates new tokens, new pages are allocated from the free page list and appended. When the request completes, its `$S$` pages are returned to the free list. The pages need not be contiguous in physical GPU memory — the attention kernel reads them via a page table (inherited from vLLM’s PagedAttention).
+
+**How adapter weights map to pages.** A LoRA adapter has, for each adapted layer, a matrix `$A$` of shape `$(H, R)$` and a matrix `$B$` of shape `$(R, H)$`, where `$R$` is the rank. Under Unified Paging, `$A$` is stored as `$R$` pages (each page is a column of `$A$` of length `$H$`), and `$B$` is stored as `$R$` pages (each page is a row of `$B$` of length `$H$`). Different adapters have different values of `$R$`, so they consume different numbers of pages — but the page size `$H$` is constant across all adapters and all layers for a given base model.
+
+> "Thus, a KV cache tensor with a sequence length of `$S$` uses up `$S$` pages, while a LoRA weight tensor of rank `$R$` takes up `$R$` pages." (Section 5.1)
+
+**The unified pool layout.** Figure 3 in the paper shows the memory pool as an interleaved sequence of pages, some belonging to KV caches and some to adapter weights. The pool is initially a single contiguous allocation of all available GPU memory (after reserving space for fixed allocations: base model weights and temporary activation buffers). A free page list tracks which pages are unallocated. When a new request arrives and needs KV cache space, pages are allocated from the free list — anywhere in the pool, not necessarily adjacent to existing pages for that request. When an adapter not currently on the GPU is needed for a batch, its `$A$` and `$B$` pages are loaded from CPU memory into free pages anywhere in the pool. When a request finishes, its KV cache pages are freed. When an adapter’s last active request finishes, its adapter pages are freed.
+
+**Why this eliminates fragmentation.** The fundamental cause of fragmentation in dynamic memory systems is the *size mismatch* between allocations and deallocations — allocating a 100KB block, freeing it, then allocating a 50KB and a 50KB block, etc. By reducing all allocations to fixed-size pages, Unified Paging converts the allocation problem from variable-size to fixed-size, which is trivially fragmentation-free (any free page can satisfy any allocation request). A KV cache that needs 200 pages and an adapter that needs 16 pages draw from the same pool: as long as 216 total free pages exist anywhere, the allocations succeed. The physical layout in GPU memory is a set of non-contiguous pages, but the custom kernels (described below) are designed to gather from non-contiguous memory, so this imposes no performance penalty.
+
+**Comparison to separate pools.** An alternative would be to maintain two separate memory pools: one for KV caches and one for adapter weights, each with their own page sizes. This would reintroduce fragmentation at the boundary between the pools: if the KV cache pool is full but the adapter pool has free space, memory is wasted. Unified Paging eliminates this boundary, allowing the system to flexibly allocate more pages to KV caches when many long-sequence requests are active, or more pages to adapters when many distinct adapters are needed simultaneously. The tradeoff is dynamic and is determined by the scheduler’s batching decisions at runtime.
+
+**The scale of the pool.** The paper does not report exact pool sizes, but we can estimate: for Llama-7B (14 GB base model weights) on an A10G GPU (24 GB total), roughly 10 GB is available for the unified pool after reserving space for model weights and activation buffers. At 8 KB per page, this provides approximately 1.25 million pages. With a batch size of 32 and an average sequence length of 256 tokens, KV caches consume `$32 \times 256 = 8192$` pages for one layer’s keys or values; across 32 layers and two tensors (key and value) per layer, this is `$8192 \times 32 \times 2 \approx 524,288$` pages — roughly 40% of the pool. If each active adapter has rank 16 and there are 32 layers with 4 adapted matrices per layer (each with both `$A$` and `$B$`), the adapter pages per adapter are `$32 \times 4 \times 2 \times 16 = 4096$` pages. With 10 active adapters, that’s 40,960 pages — about 3% of the pool. The pool is dominated by KV cache storage, as expected for memory-bound decode-phase inference.
+
+---
+
+#### Adapter Loading, Prefetching, and Overlapping I/O with Computation
+
+Storing adapters in CPU main memory introduces a data movement cost: before the GPU can compute `$xAB$` for an adapter, the adapter’s weight pages must be transferred from CPU DRAM to GPU HBM over the PCIe bus (or NVLink, for multi-GPU systems). This transfer takes time — on the order of tens to hundreds of microseconds for a typical adapter — and if the GPU stalls waiting for this transfer, throughput suffers.
+
+**The prefetching mechanism.** S-LoRA hides this latency by loading adapter weights *before* they are needed, overlapping the CPU→GPU transfer with the computation of the current batch. The paper describes the mechanism:
+
+> "While running the current decoding batch, we predict the adapters required for the next batch based on the current waiting queue. This prediction allows us to prefetch and store them in available memory." (Section 5.2)
+
+This is a straightforward but effective design: during the computation of batch `$t$` (which involves generating one token per request in the batch), the scheduler examines the queue of pending requests that are not yet in the active batch. It identifies which adapters those pending requests belong to and issues asynchronous `cudaMemcpy` operations to load any of those adapters that are not already resident in GPU memory. By the time batch `$t$` finishes and batch `$t+1$` begins, the needed adapter weights are already on the GPU, and no I/O stall occurs.
+
+**What happens when prediction fails.** If the scheduler decides at the last moment to add a request for an adapter that was *not* prefetched (e.g., because a new request arrived while the current batch was executing), that adapter must be loaded synchronously, causing a stall. The paper does not explicitly quantify the frequency or cost of prefetch misses, but the design is conservative in the sense that it prefetches *all* adapters referenced by the waiting queue, not just those predicted to be scheduled. The waiting queue is typically larger than the next batch, so the prefetch set is a superset of what’s actually needed, trading extra data movement (loading some adapters that won’t be used immediately) for reduced probability of a cache miss.
+
+**Eviction policy.** When the GPU memory pool is full and a new adapter needs to be loaded, some adapter already on the GPU must be evicted to free pages. The paper does not specify a detailed eviction policy (e.g., least-recently-used, least-frequently-used), but the natural choice is to evict adapters that have no active requests in the current batch or the waiting queue. Since adapters are small relative to the memory pool, and the active adapter count is bounded by batch size, eviction is likely rare in practice for typical batch sizes.
+
+**Why this approach works at scale.** The key property that makes prefetching feasible for thousands of adapters is that the *active* adapter set at any moment is small — bounded by the batch size, which for memory-bound decode is typically 32–128 requests. Even if those requests all use different adapters, the GPU only needs to hold at most `$\text{batch\_size}$` adapters simultaneously. The prefetching just needs to be fast enough to swap adapters between batches. Since the decode step for a batch takes on the order of milliseconds (depending on model size and batch size), and a typical adapter (rank 16, Llama-7B) is 33.6 MB — transferable over a 16 GB/s PCIe 3.0 x16 link in about 2 milliseconds — the I/O and compute can be effectively overlapped.
+
+---
+
+#### Heterogeneous Batching: Custom CUDA Kernels for Non-Contiguous LoRA Computation
+
+The decomposition `$h = xW + xAB$` creates a computational pattern that existing GPU libraries handle poorly. To see why, consider what the `$xAB$` computation looks like for a batch.
+
+**The problem with standard BLAS.** For a batch of `$B$` requests, the LoRA computation involves:
+
+- For the first adapter multiplication `$xA$`: each request `$i$` has its own input vector `$x_i$` of length `$h$` (in decode phase, `$x_i$` is a single token’s hidden state) and its own matrix `$A_i$` of shape `$(h, r_i)$`, where the rank `$r_i$` may differ across adapters. The output is `$B$` vectors of lengths `$r_1, r_2, \ldots, r_B$`.
+
+- For the second adapter multiplication `$(xA)B$`: each intermediate `$(xA)_i$` of length `$r_i$` is multiplied by `$B_i$` of shape `$(r_i, d)$`, producing the final output vector of length `$d$`. Again, the intermediate dimensions `$r_i$` differ.
+
+Standard BLAS libraries (cuBLAS, CUTLASS) provide a "batched GEMM" API that performs multiple independent matrix multiplications in a single kernel launch. However, batched GEMM requires that *all matrices in the batch have the same dimensions*. To use it for heterogeneous LoRA, you would need to:
+
+1. **Pad all adapter matrices to the maximum rank `$r_{\text{max}}$`**: If the batch has adapters with ranks 8, 16, 32, and 64, you would expand all `$A_i$` matrices to shape `$(h, 64)$` and all `$B_i$` matrices to `$(64, d)$`, padding the extra entries with zeros.
+2. **Pad all inputs to the maximum rank**: Even though request `$i$` with rank 8 only contributes 8 meaningful dimensions to the intermediate `$(xA)_i$`, you must compute all 64 dimensions and discard 56 of them.
+3. **Copy adapter weights to contiguous memory**: Batched GEMM expects each matrix to be a contiguous block in memory. Since Unified Paging stores adapter weights as non-contiguous pages, you would need to copy the pages into a temporary contiguous buffer before calling the BLAS kernel.
+
+The paper argues — and experimentally confirms — that this is inefficient:
+
+> "directly implementing the factored computation of the base model and individual LoRA adapters using the batch GEMM kernel from the existing BLAS libraries would require significant padding and result in poor hardware utilization." (Section 4.1)
+
+The padding wastes both memory bandwidth (loading zero-valued weights) and compute (multiplying by zero), and the copying into contiguous buffers adds latency and memory overhead. These overheads compound with the already-small size of the LoRA computation — making an already cheap operation disproportionately expensive.
+
+**S-LoRA’s kernel strategy.** Instead of padding, S-LoRA implements two custom CUDA kernels that operate directly on the non-contiguous, variable-rank adapter weights stored in the Unified Paging pool:
+
+- **MBGMM (Multi-size Batched Gather Matrix-Matrix Multiplication):** Used during the *prefill* stage, where the input `$x$` is a sequence of tokens (a matrix of shape `$(S, h)$` for each request) rather than a single token. This kernel gathers adapter weights from non-contiguous pages, performs the matrix multiplication `$x A_i B_i$` for each request `$i$` using the correct rank `$r_i$` without padding, and writes the result. It is implemented in Triton (Tillet et al., 2019), a Python-embedded DSL for writing GPU kernels with tiled execution.
+
+- **MBGMV (Multi-size Batched Gather Matrix-Vector Multiplication):** Used during the *decode* stage, where the input `$x$` is a single token (a vector of length `$h$`). This kernel performs the matrix-vector products `$x A_i$` and then `$(x A_i) B_i$` for each request, gathering adapter weights from non-contiguous pages and operating at the correct rank without padding. The paper reports implementing two versions: one in Triton and one by modifying an earlier version of Punica kernels (Chen, 2023) to support non-contiguous memory, multiple ranks in a batch, and more fine-grained memory gathering. The Punica-based version was faster and was used in the experiments.
+
+**The gather operation.** The key primitive in both kernels is the *gather*: reading weight values from pages that are scattered across GPU memory. Since each page is a vector of `$H$` elements, and the adapter matrix `$A_i$` of shape `$(H, r_i)$` consists of `$r_i$` such pages (each page being one column of `$A_i$`), the kernel must:
+
+1. For each request `$i$`, look up the page table to find the physical addresses of the `$r_i$` pages containing `$A_i$` and the `$r_i$` pages containing `$B_i$`.
+2. Load those pages from GPU memory — potentially from non-adjacent addresses, which is inefficient for the cache line-oriented memory subsystem but unavoidable given the paged storage.
+3. Perform the matrix multiplication using only the `$r_i$` dimensions that actually contain valid weights.
+
+The performance of this gather is critical because the LoRA computation, while cheap relative to the base model, involves many small memory accesses. The Triton and Punica-based implementations use tiling to amortize the cost of the gather — loading chunks of each page into shared memory (on-chip SRAM) and reusing them across multiple warps of threads.
+
+**Comparison to CUTLASS grouped GEMM.** The paper notes in Section 5.3 that NVIDIA CUTLASS also provides grouped GEMM kernels that could be used for heterogeneous batching. These are not evaluated directly, but the implication is that S-LoRA’s kernels fill a gap in existing library support for the specific pattern of many small matrix multiplications with different ranks operating on non-contiguous memory.
+
+**Why this matters for throughput.** The padding approach (implemented in the "S-LoRA-bmm" variant in the experiments) has substantially lower throughput. In Figure 5, S-LoRA-bmm achieves roughly 0.2–0.5 requests/second in configurations where full S-LoRA (with custom kernels and unified paging) achieves 6–8 requests/second — a 10–30× difference. This gap quantifies the cost of the naïve batching approach and justifies the investment in custom kernel development.
+
+---
+
+#### S-LoRA TP: Tensor Parallelism for Batched LoRA Inference
+
+When serving large models (30B, 70B parameters) that exceed the memory capacity of a single GPU, tensor parallelism distributes the model’s weight matrices across multiple GPUs. The standard Megatron-LM tensor parallelism strategy (Shoeybi et al., 2019) partitions the weight matrices column-wise or row-wise and inserts all-reduce communication operations to synchronize partial results. S-LoRA must extend this strategy to the added LoRA computation without introducing significant communication overhead or memory imbalance.
+
+**The challenge.** The base model’s forward pass under Megatron-LM tensor parallelism is:
+
+1. For a column-partitioned weight matrix `$W_1$` (e.g., the first FFN layer): each GPU `$g$` holds a shard `$W_1^{(g)}$` of shape `$(h, d/N)$` where `$N$` is the number of GPUs. The input `$x$` is replicated — each GPU has the full input. Each GPU computes `$x W_1^{(g)}$`, producing a partial output of shape `$(B, d/N)$`.
+2. For a row-partitioned weight matrix `$W_2$` (e.g., the second FFN layer): each GPU holds a shard `$W_2^{(g)}$` of shape `$(d/N, h)$`. The local computation produces a partial sum, and an all-reduce communication sums the `$N$` partial results to produce the final output, which is replicated on all GPUs.
+
+The LoRA computation adds `$A_1, B_1$` for the first weight and `$A_2, B_2$` for the second weight. The question is: how should these be partitioned to minimize communication while ensuring correctness?
+
+**S-LoRA TP’s partition strategy.** The paper’s design (illustrated in Figure 4) aligns the partition of the LoRA matrices with the base model’s partition, achieving two goals: (1) no additional communication is needed beyond what the base model already requires for some operations, and (2) communication that *is* needed is on small intermediate tensors, making it cheap.
+
+**For the first adapter (attached to a column-partitioned weight `$W_1$`):**
+
+The matrix `$A_1$` (shape `$(h, r)$`) is *column-partitioned* across the `$N$` GPUs. Each GPU holds a shard `$A_1^{(g)}$` of shape `$(h, r/N)$`. The matrix `$B_1$` (shape `$(r, d)$`) is also *column-partitioned*, but along the rank dimension: each GPU holds a shard `$B_1^{(g)}$` of shape `$(r/N, d/N)$` — note that `$d$` is also partitioned by `$N$` to align with the base model’s column partition of `$W_1$`.
+
+The computation proceeds as follows on each GPU `$g$`:
+
+1. Compute the base model partial result: `$x W_1^{(g)}$` produces output of shape `$(B, d/N)$`.
+2. Compute the adapter partial result: First, `$x A_1^{(g)}$` produces an intermediate of shape `$(B, r/N)$`. Since `$A_1^{(g)}$` only has `$r/N$` columns, each GPU produces a different `$r/N$`-dimensional slice of the full `$r$`-dimensional intermediate.
+3. An **all-gather** communication collects the `$N$` slices of shape `$(B, r/N)$` and concatenates them, giving each GPU the full intermediate of shape `$(B, r)$`. This all-gather is the additional communication introduced by LoRA for the first adapter.
+4. Each GPU computes `$\text{intermediate} \cdot B_1^{(g)}$` using its shard of `$B_1$`, producing an output of shape `$(B, d/N)$`.
+5. The adapter output `$x A_1 B_1^{(g)}$` is added to the base model output `$x W_1^{(g)}$`. Both have the same shape `$(B, d/N)$`, so they can be added element-wise without further communication.
+
+The cost of the all-gather in step 3 is `$\frac{N-1}{N} \cdot B \cdot r$` elements transferred per GPU. Since `$r \ll h$` (e.g., `$r = 16$` vs. `$h = 4096$`), this communication is much smaller than the base model’s all-reduce (which transfers `$\frac{N-1}{N} \cdot B \cdot h$` elements).
+
+**For the second adapter (attached to a row-partitioned weight `$W_2$`):**
+
+The matrix `$A_2$` (shape `$(d, r)$` — note: the input dimension is `$d$`, the output of the first layer) is *row-partitioned*: each GPU holds a shard `$A_2^{(g)}$` of shape `$(d/N, r)$`. The matrix `$B_2$` (shape `$(r, h)$` — the output dimension goes back to `$h$`) is *column-partitioned*: each GPU holds a shard `$B_2^{(g)}$` of shape `$(r, h/N)$`.
+
+The computation proceeds:
+
+1. Each GPU computes its shard of the base model: `$\text{input}^{(g)} W_2^{(g)}$` where `$\text{input}^{(g)}$` has shape `$(B, d/N)$` (the partial output from the first layer), producing a partial sum for the output.
+2. Each GPU computes its shard of the adapter: `$\text{input}^{(g)} A_2^{(g)}$` produces an intermediate of shape `$(B, r)$` — note that this intermediate is *the same on all GPUs* because the reduced `$\text{input}^{(g)}$` has been partitioned along the `$d$` dimension and `$A_2^{(g)}$` covers a `$d/N$` slice of the rows, so summing over the `$d$` dimension produces the identical `$(B, r)$` result on each GPU. This is a **partial sum** operation — no communication is needed yet because the result is replicated.
+3. Each GPU computes `$\text{intermediate} \cdot B_2^{(g)}$` using its column-partitioned `$B_2$`, producing an adapter partial result of shape `$(B, h/N)$`.
+4. The adapter partial result is added to the base model partial result. Both have shape `$(B, h/N)$`.
+5. Finally, the combined partial result must be **all-reduced** across GPUs to produce the full output of shape `$(B, h)$`. Crucially, this all-reduce combines *both* the base model’s partial sum and the adapter’s partial sum — they are added together *before* the all-reduce, so only one all-reduce is needed, not two separate ones.
+
+The paper describes this fusion explicitly:
+
+> "It is worth noting that we are essentially fusing an all-gather operation for matmul 4 with the final all-reduce." (Section 6.1)
+
+**Commonication cost analysis.** The paper quantifies the additional communication introduced by LoRA under S-LoRA TP (Section 6.2):
+
+- Base model communication (Megatron-LM standard): one all-reduce per FFN layer, cost `$2 \frac{N-1}{N} B h$` elements transferred per GPU.
+- Added LoRA communication for the self-attention layer: three all-gather operations (for Q, K, V projections — the first adapter type) and one all-reduce (for the output projection — the second adapter type). Total added cost: `$3 \frac{N-1}{N} B r + 2 \frac{N-1}{N} B r = 5 \frac{N-1}{N} B r$` elements.
+
+The ratio of LoRA communication to base model communication is `$\frac{5r}{2h}$`. For `$r = 16$` and `$h = 4096$`, this ratio is `$\frac{5 \cdot 16}{2 \cdot 4096} \approx 0.0098$` — less than 1%. The paper characterizes this as "negligible" and verifies experimentally: in Figure 8, the throughput difference between S-LoRA with and without LoRA communication is barely visible (the "S-LoRA" and "S-LoRA (w/o LoRA communication)" bars nearly overlap).
+
+**Memory optimality.** The paper claims that S-LoRA TP’s memory usage is optimal because "there is no replicated weight matrix" (Section 6.2). Every adapter weight page is stored on exactly one GPU (the one responsible for that shard). This is in contrast to a naive strategy that replicates adapter weights on all GPUs, which would waste GPU memory. Since the number of active adapters is bounded by the batch size, and the batch size is much smaller than the number of distinct adapters that could be served, memory efficiency for adapter weights is an important practical concern.
+
+**Adaptation to self-attention.** The partition strategy described above for the 2-layer MLP (feed-forward module) adapts directly to the self-attention layer. The query, key, and value projection weight matrices correspond to the first type (column-partitioned, with all-gather for the LoRA intermediate), and the output projection weight matrix corresponds to the second type (row-partitioned then column-partitioned, with all-reduce fused with the base model). The head dimension of the self-attention layer is partitioned in the same way as Megatron-LM.
+
+---
+
+#### Batching and Scheduling Policy
+
+The decomposed computation explains *how* S-LoRA batches across adapters. The scheduling policy explains *when* and *which* requests to include in each batch.
+
+**Iteration-level scheduling (inherited from Orca).** S-LoRA adopts the iteration-level scheduling strategy introduced by Orca (Yu et al., 2022). In traditional request-level batching, a batch of requests is formed, all requests are processed to completion (all output tokens generated), and then a new batch is formed. This is inefficient because a short request (producing 10 tokens) must wait for a long request (producing 500 tokens) in the same batch to finish.
+
+In iteration-level scheduling, the batch is dynamic: at each decoding iteration (generation of one token for each request in the batch), the scheduler can:
+- **Add new requests:** If there is available GPU memory (free pages in the unified pool) to accommodate the KV cache growth, a new request from the waiting queue can be added to the active batch.
+- **Remove completed requests:** When a request generates its end-of-sequence token or reaches the maximum generation length, it is removed from the batch and its KV cache pages and adapter pages (if this was the last request using that adapter) are freed.
+
+This fine-grained scheduling increases GPU utilization because the GPU is never idle waiting for a straggler request to finish — as soon as one request completes, its resources are freed and a new request can take its place. For the multi-adapter setting, this also means that the set of active adapters changes dynamically as requests start and finish.
+
+**Adapter clustering (optional optimization).** The paper describes an optional strategy to reduce the number of distinct adapters active in a batch:
+
+> "A direct approach to reducing the number of adapters in a running batch is to prioritize batching requests that use the same adapter, a strategy we term 'adapter clustering'." (Section 4.2)
+
+The motivation is that if fewer distinct adapters are active, more GPU memory can be allocated to KV caches (since less memory is consumed by adapter weight pages), enabling larger batch sizes and higher throughput. The implementation uses a parameter `$d$` (the desired number of adapter clusters): if the current batch already contains requests from `$d$` distinct adapters, the scheduler prioritizes adding new requests that use one of those `$d$` adapters over requests that would introduce a new adapter. If the requests from the existing `$d$` adapters cannot fill the available batch capacity, requests with new adapters are still added.
+
+The paper includes an ablation study on adapter clustering in Appendix A.2 (Figures 11 and 12) showing that the impact is "not significant but observable, especially for larger `$\alpha$` [power-law exponent for request distribution] and `$c_v$` [coefficient of variance for arrival process]." Generally, a small number of clusters (small `$d$`) can improve throughput and SLO attainment, but the effect is modest — S-LoRA’s core decomposition and memory management provide the bulk of the gains, and adapter clustering is a secondary refinement.
+
+**Early abort admission control.** When the request arrival rate exceeds the system’s serving capacity, some form of admission control is necessary to prevent unbounded queue growth and SLO violations. S-LoRA implements an "early abort" strategy that selectively drops requests that cannot meet the latency SLO (service level objective) even if served immediately.
+
+The mechanism works as follows (Section 4.3 and Appendix B):
+
+1. The scheduler maintains a moving average estimate of two quantities: `$R_1$`, the rate at which new requests enter the waiting queue per scheduling period, and `$R_2$`, the rate at which requests can be added to the active batch per period (the system’s processing capacity).
+
+2. At each scheduling decision point, the scheduler first identifies requests `$R = \{r_k \mid ct - rt_k + l_{\text{prefill}} > tl_{\text{max}}\}$` where `$ct$` is the current time, `$rt_k$` is the arrival time of request `$r_k$`, `$l_{\text{prefill}}$` is the estimated prefill latency (time to process the prompt), and `$tl_{\text{max}}$` is the maximum allowable first-token latency to meet the SLO. Requests in `$R$` are *aborted* — they would miss the SLO even if scheduled immediately because the prefill computation itself would push their first-token latency beyond the threshold.
+
+3. If `$R_1 > R_2$` (the system is overloaded — requests are arriving faster than they can be processed), the scheduler fetches the *newest* requests from the waiting queue into the batch (similar to a Last-Come-First-Serve or LCFS strategy).
+
+4. If `$R_1 \leq R_2$` (the system is keeping up or catching up), the scheduler fetches the *earliest* requests (First-Come-First-Serve, FCFS).
+
+The paper provides a theoretical justification in Appendix B based on maximizing a concave user satisfaction function (Theorem B.1): when the reward function for latency has non-increasing derivative (i.e., users are increasingly unhappy with each additional millisecond of delay), the optimal strategy for selecting `$l$` requests to serve from a queue is to serve the most recent `$l$` requests in arrival order. The heuristic approximates this by using LCFS when overloaded (prioritizing requests that still have a chance to meet SLO) and FCFS when not overloaded (minimizing wait time for all requests).
+
+The experimental results in Figure 10 show that S-LoRA-Abort outperforms both pure FCFS and pure LCFS in terms of SLO attainment and user satisfaction, especially as the coefficient of variance (`$c_v$`) of the arrival process increases. High variance means periods of bursty arrivals where many requests arrive nearly simultaneously; the abort strategy prevents these bursts from causing cascading SLO violations by dropping the oldest requests that are already doomed to miss the latency target.
+
+---
+
+#### Summary of Design Choices and Their Justifications
+
+- **Decomposed computation (`$h = xW + xAB$`) over weight merging:** Enables batching of the expensive base model computation across all adapters while keeping per-adapter overhead low. The merged approach (original LoRA recommendation) cannot batch across adapters and requires either weight duplication (limiting to 2–5 adapters per GPU) or serial adapter switching (destroying throughput).
+
+- **Unified Paging over separate memory pools:** Eliminates fragmentation by treating KV cache pages and adapter weight pages interchangeably — both are fixed-size pages of `$H$` elements. Separate pools would reintroduce boundary fragmentation and prevent flexible balancing between adapter memory and KV cache memory.
+
+- **CPU-side adapter storage with GPU-side prefetching over keeping all adapters on GPU:** Main memory is orders of magnitude larger than GPU memory, enabling scaling to thousands of adapters. Prefetching hides the PCIe transfer latency by overlapping it with computation, making the approach practical for online serving.
+
+- **Custom CUDA kernels (MBGMM, MBGMV) over padded BLAS batched GEMM:** Avoids the waste of padding (zero-valued weights and inputs) and the overhead of copying non-contiguous pages into contiguous buffers. Operates directly on the unified pool’s paged layout, at the correct rank per adapter.
+
+- **Column-partition of `$A_1$`, all-gather of LoRA intermediate, fused all-reduce for second adapter over replicating adapters or using separate communication:** Aligns with Megatron-LM’s base model partition to minimize additional communication — the all-gather operates on small `$(B, r)$` tensors (where `$r \ll h$`) and the second adapter’s all-reduce is fused with the base model’s all-reduce, incurring no extra synchronization.
+
+- **Iteration-level scheduling (inherited) over request-level batching:** Allows requests to dynamically join and leave the batch at each decoding step, preventing short requests from being blocked by long requests and maximizing GPU utilization.
+
+- **Early abort admission control over pure FCFS or pure LCFS:** Selectively drops requests that cannot meet SLO (avoiding wasted computation on requests that will be rejected by the client anyway) while using LCFS prioritization when overloaded to maximize the number of requests served within SLO.
+
+## 4. Key Insights and Innovations
+
+### Innovation 1: Decomposing Multi-Adapter Inference Into a Shared-Weight Batch Plus Cheap Per-Adapter Computation Is the Correct Design Point — and Merged Inference Is the Wrong One
+
+The original LoRA paper (Hu et al., 2021) was explicit: merge adapter weights into the base model for inference, and enjoy zero overhead. This recommendation was treated as canonical — it was one of LoRA's headline advantages over earlier adapter methods that added compute. S-LoRA's most consequential intellectual move is to **reverse this recommendation for the multi-adapter regime**, arguing that merging is not just suboptimal but structurally wrong when you need to serve many adapters concurrently.
+
+The counterintuitive claim is that it is better to *pay extra computation* (the per-request `xAB` cost) than to avoid it through merging, because the merging approach destroys the shared-weight batching opportunity that dominates throughput economics in LLM serving. The base model forward pass `xW` is roughly 64× more expensive than the adapter computation `xAB` for a rank-16 adapter at Llama-7B scale. By keeping `W` shared and unmerged, all that expensive computation can be batched across every request regardless of which adapter each request targets. Merging eliminates this — each adapter becomes a separate model with its own `W'`, and batching only works within an adapter's requests, not across them.
+
+The paper demonstrates this empirically in two ways. Figure 9 compares on-the-fly LoRA computation against adapter merging with switching: the merging approach wins with exactly one adapter (since it avoids the `xAB` cost entirely), but performance drops sharply with two or more adapters because the switching overhead and lost batching dominate. Table 3 shows that vLLM-packed — which merges adapters into separate model instances — can serve fewer than 5 adapters on an 80GB A100 before running out of memory, because each merged model is a full copy of the base weights. S-LoRA, by refusing to merge, serves 2,000 adapters on the same hardware.
+
+This is a **conceptual reframing**, not merely a system optimization. The dominant mental model in the LoRA ecosystem was "adapters are cheap to store, and merging makes them free to run." S-LoRA replaces that with "adapters are cheap to store AND cheap enough to compute on-the-fly that the batching gains from sharing the base model far exceed the compute penalty." The field had been optimizing the wrong term — adapter compute cost — when the binding constraint was the *batching* enabled by sharing weights. This is a fundamental shift in how to think about adapter serving architecture, not an incremental tweak.
+
+---
+
+### Innovation 2: KV Cache Tensors and Adapter Weights Are the Same Kind of Object — Unifying Their Memory Management Eliminates Fragmentation Without Special-Case Engineering
+
+Modern LLM serving systems face a fragmentation problem from KV caches: sequences of different lengths produce cache tensors of different sizes, and as requests start and finish, the GPU memory becomes a checkerboard of allocated and freed blocks. vLLM (Kwon et al., 2023) solved this for single-model serving by paging KV caches — splitting them into fixed-size blocks and storing them non-contiguously via a page table, analogous to operating system virtual memory.
+
+S-LoRA's insight is that **adapter weights introduce a second source of memory fragmentation that is structurally identical to the KV cache problem**, and that the solution is to treat both as pages in a single pool rather than managing them separately. A KV cache tensor of sequence length `S` has shape `(S, H)`; a LoRA weight matrix of rank `R` has shape `(R, H)`. Both share the hidden dimension `H`, which can serve as the page dimension — each page is a vector of length `H`. KV caches consume `S` pages; adapter weights consume `R` pages. The page size is constant, the page type is interchangeable, and the allocator doesn't need to know whether a page holds attention keys or adapter columns.
+
+This is a **unifying abstraction** rather than a point optimization. Prior to S-LoRA, the serving systems community treated KV cache management and adapter weight management as separate problems requiring separate solutions. vLLM had paging for KV caches; PEFT had adapter swapping logic; no system had a unified treatment. Unified Paging recognizes that both are instances of the same fundamental problem (dynamic allocation of variable-size tensors that share a common dimension) and solves them once. The evidence for its effectiveness comes in Figure 5: S-LoRA-no-unify-mem (which uses separate pools) achieves substantially lower throughput and fails to scale to large adapter counts, while Unified Paging enables scaling to 2,000 adapters with minimal throughput degradation.
+
+The significance goes beyond this paper. Any future system serving parameter-efficient fine-tuned models — whether LoRA, prefix tuning, or prompt tuning — faces a dynamic memory allocation problem where model variant parameters and per-request state compete for the same GPU memory. Unified Paging provides a template: identify a common dimension across the competing tensor types, page along that dimension, and manage them in one pool. This is a design pattern, not just a mechanism, and it generalizes to other adapter methods beyond LoRA.
+
+---
+
+### Innovation 3: The Tensor Parallelism Strategy Shows That LoRA Communication Is Provably Negligible, Making Multi-GPU Adapter Serving a Solved Extension of Single-Model Parallelism
+
+Tensor parallelism for large models is well-understood (Shoeybi et al., 2019). The standard approach partitions weight matrices column-wise or row-wise and inserts all-reduce operations to synchronize partial outputs. When you add LoRA adapters on top, the naive question is: do we need to add communication for the adapter matrices, and if so, how much? A pessimistic answer would replicate adapter weights on all GPUs (wasting memory) or add separate all-reduce operations for the adapter outputs (wasting bandwidth).
+
+S-LoRA TP's innovation is not the partition strategy itself — column-partitioning `A`, all-gathering the intermediate, and fusing the final all-reduce — but the **formal characterization that the added LoRA communication is provably negligible relative to the base model's communication**, with a ratio of approximately `5r / 2h`. For `r = 16` and `h = 4096`, this is under 1% of the base model's communication volume. The proof is architectural: by aligning the partition of the adapter matrices with the base model's existing partition, and by scheduling the adapter's communication on small intermediate tensors (the rank-dimension vectors of size `(B, r)` rather than the hidden-dimension tensors of size `(B, h)`), the LoRA communication scales with `r` rather than `h`. Since `r` is one to two orders of magnitude smaller than `h` in practice, the overhead is negligible.
+
+The experimental confirmation in Figure 8 is striking: the throughput bars for S-LoRA with and without LoRA communication are nearly identical across both 30B and 70B models on 2-GPU and 4-GPU configurations. This is not just a performance result — it is a **closure argument** that establishes multi-GPU adapter serving as a solved problem. The paper shows that tensor parallelism for adapters doesn't require inventing new communication primitives, new partition strategies, or new synchronization patterns. It requires only aligning the adapter partition with the base model's existing Megatron-LM partition, and the cost falls out as negligible. This means that scaling adapter serving to large models across many GPUs inherits the same scaling properties as single-model tensor parallelism — a finding with practical significance for anyone deploying personalized or multi-task fine-tuned models in multi-GPU environments.
+
+---
+
+### Innovation 4: Adapters Stored in CPU Memory With GPU Prefetching Demonstrate That the Adapter Count Ceiling Is Main Memory Capacity, Not GPU Memory — Redefining "How Many Adapters Can We Serve?"
+
+Before S-LoRA, the implicit assumption in adapter serving was that the number of concurrently served adapters was bounded by GPU memory. The original LoRA paper's merging recommendation made this explicit: each merged model needs its own copy of the base weights on the GPU. vLLM-packed hit this wall at fewer than 5 adapters (Table 3). Even if you avoid merging and keep only active adapters on the GPU, a naive approach would need to load adapters synchronously when switching between batches, creating a latency hit that makes online serving impractical.
+
+S-LoRA's insight is that **adapter loading can be fully hidden through prediction and asynchronous transfer**, and once that's true, the adapter count is bounded only by how many adapters you can store in main memory — which is two to three orders of magnitude larger than GPU memory. The mechanism is a prefetcher that examines the waiting queue during the current batch's execution and issues asynchronous `cudaMemcpy` operations for the adapters that will be needed next, overlapping PCIe transfer time with GPU computation time. The key empirical claim is that this works without degrading throughput: Table 3 shows S-LoRA scaling from 5 to 2,000 adapters on the same GPU with only a 6% throughput drop (8.05 → 7.61 req/s on setting S1). Figure 5 shows throughput plateauing rather than declining past roughly 100 adapters — the system reaches a steady state where the number of *active* adapters (bounded by batch size) determines overhead, not the total number of adapters stored.
+
+This is a **practical reframing** of what "adapter serving capacity" means. The field had been thinking of adapter count as a GPU memory problem (how many merged models fit in VRAM). S-LoRA shows it is a main memory and I/O bandwidth problem — and since main memory is cheap and PCIe bandwidth (or NVLink bandwidth) is sufficient to hide transfer latency when overlapping with compute, the effective limit is dramatically higher. For a server with 512 GB of main memory and Llama-7B with rank-16 adapters (roughly 33.6 MB each), the theoretical capacity is roughly 15,000 adapters — limited by CPU RAM, not GPU RAM. This reframing matters because it tells system architects what resource to provision: don't buy GPUs with more memory; buy servers with more main memory. It also distinguishes S-LoRA from concurrent work like Punica, which explored decomposed computation but did not address the CPU-to-GPU adapter loading pipeline or the scaling limits it enables.
+
+## 5. Experimental Analysis
+
+### Evaluation Methodology
+
+- **Dataset.** All experiments use the Llama model series (Touvron et al., 2023a;b), one of the most widely adopted open-source LLM families. The paper tests five configurations spanning four model sizes, as listed in Table 1: Llama-7B, Llama-13B, Llama-30B, and Llama-70B, with varying adapter rank distributions (e.g., single-rank configurations like `{8}` or `{32}`, and mixed-rank configurations like `{64, 32, 16, 8}`). For Llama-70B, the authors note they used "different architecture parameters than the official model and did not employ group-query attention" (Section 7.1 footnote), which is a detail worth flagging since it means the 70B results may not directly transfer to the officially released Llama-2-70B with GQA.
+
+- **Base model(s).** The Llama family is chosen because it is representative of modern open-weight transformer architectures and spans a range of scales from 7B to 70B parameters. The hidden dimensions (`$H$`) range from 4096 to 8192, and adapter ranks typically range from 8 to 64 — providing a meaningful test of how S-LoRA's mechanisms scale with both model size and adapter complexity. The paper does not evaluate non-Llama architectures (e.g., GPT-3, PaLM, Falcon), though Section 7.1 states optimizations "can be easily adapted to other transformer-based architectures as well."
+
+- **Metrics.** The primary metrics are **throughput** (requests per second), **average request latency** (seconds, from request arrival to completion), **average first token latency** (seconds, from request arrival to first generated token), and **SLO attainment** (the percentage of requests that return the first token within 6 seconds). The paper also introduces a derived metric called **user satisfaction** (Appendix B), defined through a reward function `$r: \mathbb{R}^+ \rightarrow [0, 1]$` that maps first token latency to a scalar where 0 indicates the user gives up and 1 indicates full satisfaction — this provides a more fine-grained latency analysis than binary SLO attainment.
+
+- **Baselines.** Three baselines are compared:
+    - **HuggingFace PEFT** (Mangrulkar et al., 2022): the standard library for parameter-efficient fine-tuning. The paper builds a server on top of it that batches requests for a single adapter and switches adapter weights between batches. It does not support continuous batching, PagedAttention, or cross-adapter batching.
+    - **vLLM-packed**: a multi-model serving approach built on top of vLLM (Kwon et al., 2023). Since vLLM does not natively support LoRA, each adapter is merged into the base model to create a separate model instance, and multiple vLLM workers run as separate processes on a single GPU managed by NVIDIA MPS (Multi-Process Service). GPU memory is statically partitioned among workers proportionally to their expected request rate.
+    - **S-LoRA-bmm**: S-LoRA without Unified Paging and without custom CUDA kernels. Adapter weights are copied to contiguous memory, and LoRA computation uses padded batched matrix multiplication via standard BLAS libraries. This variant isolates the contribution of the memory management and kernel design components.
+    - **S-LoRA-no-unify-mem**: S-LoRA with custom kernels but without the unified memory pool — i.e., KV caches and adapter weights are managed in separate pools, isolating the contribution of Unified Paging specifically.
+    - **S-LoRA-merge** (Section 7.5 only): an ablation variant that merges adapter weights into the base model on-the-fly (updating the base model before each batch and switching to a new adapter if there are too many waiting requests), following the approach from the original LoRA paper. This includes continuous batching and PagedAttention, unlike the PEFT baseline.
+
+- **Generation budget / compute accounting.** S-LoRA operates in the online serving setting — requests arrive dynamically, and the system processes them continuously. There is no "generation budget" analogous to the offline sampling scenarios common in LLM benchmarking. Instead, the system is evaluated under controlled workload traces with varying request rates `$R$` (requests per second), power-law exponents `$\alpha$` (controlling skew in adapter popularity), coefficients of variance `$c_v$` (controlling burstiness), and numbers of adapters `$n$`. The "compute budget" is measured implicitly by the hardware configuration (GPU type, number of GPUs) and the workload intensity. The key comparisons are: how much throughput can each system sustain at a given request rate, hardware configuration, and number of adapters?
+
+- **Cross-validation / statistical protocol.** The paper does not employ cross-validation in the traditional ML sense — there is no train/test split or hyperparameter tuning to evaluate. Instead, results are reported for synthetic workload traces generated via Gamma processes (with parameters varied systematically to explore the configuration space) and for real workload traces downsampled from the LMSYS Chatbot Arena logs. For synthetic workloads, traces run for a default duration of 5 minutes, and parameters are varied one at a time from default values (Table 2) to isolate the effect of each factor. This is standard practice in systems evaluation: controlled variation of workload parameters to understand system behavior across conditions.
+
+---
+
+### Main Quantitative Results
+
+#### Comparison Against Existing Systems (Table 3, Figure 5)
+
+The headline result is that S-LoRA can serve 2,000 adapters on a single GPU while maintaining throughput within ~6% of the single-adapter case, whereas both vLLM-packed and PEFT either fail to scale or collapse in throughput.
+
+Table 3 reports the primary comparison on a single A100 (80GB). For setting S1 (Llama-7B, adapter rank 8):
+- At `$n = 5$` adapters: S-LoRA achieves 8.05 req/s, vLLM-packed achieves 2.04 req/s (~4× lower), and PEFT achieves 0.88 req/s (~9× lower).
+- At `$n = 100$` adapters: S-LoRA drops slightly to 7.99 req/s. vLLM-packed runs out of memory (OOM) — it cannot serve more than ~5 adapters due to weight duplication. PEFT achieves 0.25 req/s (~32× lower than S-LoRA).
+- At `$n = 1{,}000$` and `$n = 2{,}000$`: S-LoRA achieves 7.64 and 7.61 req/s respectively. PEFT is not evaluated at this scale because "its throughput is already very low for a small `$n$`" (Table 3 notes). vLLM-packed remains OOM — it cannot scale beyond a handful of adapters regardless of workload.
+
+For setting S2 (Llama-7B, mixed ranks `{64, 32, 16, 8}`), the pattern holds: S-LoRA achieves 7.48 req/s at `$n = 5$` and 6.71 req/s at `$n = 2{,}000$` — a 10% throughput drop when scaling from 5 to 2,000 adapters. vLLM-packed achieves 2.04 req/s at `$n = 5$` (4× lower) and is OOM for larger `$n$`. PEFT achieves 0.74 req/s at `$n = 5$` and 0.24 at `$n = 100$` (~30× lower).
+
+For setting S4 (Llama-13B, mixed ranks `{64, 32, 16}` on a single A100-40GB): S-LoRA achieves 4.49 req/s at `$n = 2$` and 3.96 req/s at `$n = 1{,}000$` — a 12% drop. vLLM-packed achieves 3.83 req/s at `$n = 2$` (closer to S-LoRA because with only 2 adapters, batching losses are smaller), but is OOM for `$n \geq 100$`. PEFT is already at 0.13 req/s at `$n = 100$` (~33× lower).
+
+> "S-LoRA can serve 2,000 adapters simultaneously, maintaining minimal overhead for the added LoRA computation." (Section 7.2, discussing Table 3)
+
+The paper also reports that S-LoRA's throughput advantage over PEFT reaches "up to 30×" (Section 1, 7.2) — comparing S-LoRA at ~7–8 req/s against PEFT at ~0.2–0.3 req/s in the multi-adapter regime.
+
+#### Throughput Scaling vs. Number of Adapters (Figure 5)
+
+Figure 5 plots throughput and average latency as `$n$` (number of adapters) increases across five hardware-model configurations. The key finding is the **plateau behavior**:
+
+> "When the number of adapters increases, the throughput of S-LoRA initially experiences a slight decline due to the overhead introduced by LoRA. However, once the number of adapters reaches a certain threshold (e.g., 100 in most experiments), the throughput of S-LoRA no longer decreases." (Section 7.2)
+
+In the S1 (Llama-7B, A10G 24GB) configuration, throughput drops from approximately 1.5 req/s at `$n = 0$` (implicit base-only baseline) to roughly 1.25 req/s at `$n = 50$`, then remains essentially flat out to `$n = 200$`. Average latency mirrors this: approximately 0.8s at `$n = 0$`, rising to ~1.2s at `$n = 50$`, then flat.
+
+In the S2 (Llama-7B, A100 80GB) configuration, throughput is approximately 8 req/s across all `$n$` from 0 to 2,000 — the decline is barely visible. This demonstrates that with sufficient GPU memory to accommodate a larger batch size, the adapter overhead is effectively absorbed.
+
+The S-LoRA-bmm and S-LoRA-no-unify-mem variants show dramatically worse scaling:
+- S-LoRA-bmm (padded BLAS, separate memory pools) throughput ranges from ~0.1–0.5 req/s across configurations — roughly 10–30× lower than full S-LoRA.
+- S-LoRA-no-unify-mem throughput similarly collapses at high adapter counts, showing the value of the unified memory pool.
+
+Some S-LoRA-bmm curves are omitted from Figure 5 because "it is out of the figure's scope" — their throughput is so low that they don't fit on the same axis.
+
+#### Throughput vs. Request Rate and SLO Attainment (Figure 6)
+
+Figure 6 examines performance as the request rate `$R$` varies, using the S2 (Llama-7B, A10G 24GB) and S4 (Llama-13B, A100 80GB) configurations at default workload parameters (`$n = 200$` or `$n = 400$`, `$\alpha = 1$`, `$c_v = 1$`).
+
+For S2:
+- S-LoRA throughput increases linearly with request rate up to approximately 1.6 req/s at `$R = 2$`, then plateaus — the system is saturated.
+- First token latency stays below 0.5s for `$R \leq 2$`, then rises sharply as the system becomes overloaded.
+- SLO attainment stays near 1.0 (100%) for `$R \leq 2$`, then drops to ~0.3 at `$R = 4$` as requests queue.
+- S-LoRA-bmm throughput saturates much earlier (around `$R = 1$`) at ~0.4 req/s, with first token latency exploding off the chart (7+ seconds even at low `$R$`).
+- S-LoRA-no-unify-mem shows intermediate behavior: throughput reaches ~1.2 req/s at `$R = 2$` but SLO attainment falls more sharply than full S-LoRA.
+
+For S4 (Llama-13B, A100 80GB), the pattern is similar but at higher absolute throughput: S-LoRA reaches ~6 req/s, while S-LoRA-bmm caps at ~1 req/s and S-LoRA-no-unify-mem at ~4 req/s.
+
+The first token latency for S-LoRA-bmm is explicitly noted as "out of the figure's scope" for both configurations in the caption — the padding and memory copying overhead makes its latency dramatically worse than the other variants.
+
+#### Real Workload Trace Results (Figure 7, Section 7.3)
+
+To validate that the synthetic workload results transfer to realistic conditions, the paper constructs real-world traces by downsampling from LMSYS Chatbot Arena logs. The trace has approximately 26 distinct "adapters" (treating the distribution of different base models in the Arena log as if they were adapters of a single model), an average input length of 85 tokens, and an average output length of 165 tokens.
+
+Figure 7 (S2 on A10G 24GB) shows:
+- S-LoRA throughput reaches roughly 3.2 req/s at `$R = 4$`, while S-LoRA-no-unify-mem reaches ~2.5 req/s and S-LoRA-bmm reaches ~1.2 req/s.
+- SLO attainment: S-LoRA maintains ~0.9 at `$R = 2$`, dropping to ~0.5 at `$R = 4$`. S-LoRA-no-unify-mem drops to ~0.2 at `$R = 3$`. S-LoRA-bmm is near zero attainment across all tested rates.
+- The paper states these results "show a similar pattern to the synthetic workloads" (Section 7.3), confirming that the core findings are not artifacts of the Gamma-process workload model.
+
+#### Multi-GPU Tensor Parallelism Results (Figure 8, Section 7.4)
+
+Figure 8 reports throughput for Llama-30B and Llama-70B under tensor parallelism with varying GPU counts and adapter counts.
+
+For Llama-30B with `$n = 10$` adapters:
+- 2× A100 (40GB): S-LoRA achieves approximately 2.0 req/s. S-LoRA without LoRA communication achieves roughly 2.1 req/s — the gap is minimal (~5%).
+- 4× A100 (40GB): S-LoRA achieves approximately 4.5 req/s, compared to ~4.8 req/s without LoRA communication (~6% gap).
+- The "base only" bar (no adapters, no LoRA computation at all) serves as an upper bound: ~2.3 req/s on 2 GPUs, ~5.0 req/s on 4 GPUs.
+
+For Llama-30B with `$n = 100$` adapters, the pattern is nearly identical — throughput drops only slightly compared to `$n = 10$` (consistent with the plateau behavior in the single-GPU results).
+
+For Llama-70B with `$n = 10$`:
+- 2× A100 (80GB): S-LoRA achieves ~1.7 req/s; without LoRA communication, ~1.8 req/s.
+- 4× A100 (80GB): S-LoRA achieves ~3.2 req/s; without LoRA communication, ~3.4 req/s.
+
+The paper highlights that moving from 2 GPUs to 4 GPUs yields more than 2× throughput improvement (e.g., Llama-30B: 2.0 → 4.5 req/s, a 2.25× increase) because "the system is predominantly memory-bound in this context. Adding more GPUs alleviates memory constraints, leading to superlinear scaling" (Section 7.4). This is telling: the system is limited by GPU memory capacity (how large a batch fits) rather than compute, and additional GPUs provide both more aggregate compute and more aggregate memory.
+
+The "S-LoRA (w/o LoRA communication)" variant is an important diagnostic: it strips out the all-gather and fused all-reduce operations described in Section 6 but keeps the per-adapter computation. The near-identity of the bars with and without LoRA communication confirms the theoretical analysis that LoRA communication overhead is negligible (under 1% of base model communication for the reported configurations).
+
+---
+
+### Ablation Studies and Robustness Checks
+
+#### Merging Adapter Weights vs. Computing On-the-Fly (Figure 9, Section 7.5)
+
+This ablation directly tests S-LoRA's foundational design choice: the decomposed computation `$h = xW + xAB$` versus merging adapters into the base model `$h = x(W + AB)$` with switching.
+
+Figure 9 reports throughput for S2 (Llama-7B, A10G 24GB) with `$R = 2$`, `$c_v = 1$`, and input/output lengths `$[8, 512]$`.
+
+- **Single adapter (`$n = 1$`)**: S-LoRA-merge achieves approximately 1.7 req/s, while on-the-fly S-LoRA achieves ~1.3–1.4 req/s (depending on `$\alpha$`). The merged approach wins because it avoids all per-adapter computation — confirming that for the single-adapter case, the LoRA paper's recommendation is correct.
+- **Two adapters (`$n = 2$`)**: S-LoRA-merge throughput drops sharply — from ~1.7 to ~1.2 req/s — while on-the-fly S-LoRA remains roughly constant. The switching cost and loss of cross-adapter batching begin to dominate.
+- **Five adapters (`$n = 5$`)**: S-LoRA-merge degrades further to ~1.1 req/s, while on-the-fly S-LoRA remains at ~1.3–1.4 req/s.
+
+The `$\alpha$` parameter (power-law exponent for request distribution) produces an interesting interaction: larger `$\alpha$` (more uniform distribution of requests across adapters) causes S-LoRA-merge to degrade more severely because requests are spread across more adapters, forcing more frequent switching and reducing within-adapter batch sizes. At `$\alpha = 1$` (the most uniform distribution tested), S-LoRA-merge at `$n = 5$` reaches only ~1.0 req/s, while on-the-fly S-LoRA maintains ~1.3 req/s — a 30% advantage.
+
+The paper summarizes:
+
+> "the merging approach outperforms the on-the-fly computation owing to a one-time merging cost [with one adapter]. However, its performance declines with more than 2 adapters, primarily because of the time-consuming switch between adapters." (Section 7.5)
+
+#### Early Abort Admission Control (Figure 10, Appendix B)
+
+This ablation compares three scheduling strategies for the early abort mechanism: FCFS (First-Come-First-Serve), LCFS (Last-Come-First-Serve), and S-LoRA-Abort (the hybrid strategy described in Section 4.3).
+
+Figure 10 reports SLO attainment and user satisfaction for S1 (Llama-7B, A10G 24GB) and S4 (Llama-13B, A100 80GB) as the coefficient of variance `$c_v$` in the arrival process scales from 1 to 8.
+
+- **At `$c_v = 1$` (low burstiness)**: All three strategies perform similarly on SLO attainment — approximately 0.7–0.8 for S1, 0.5–0.6 for S4. FCFS is slightly worse; LCFS and S-LoRA-Abort are comparable.
+- **As `$c_v$` increases**: FCFS degrades most rapidly. At `$c_v = 8$`, FCFS SLO attainment is near zero for S4 (Llama-13B). S-LoRA-Abort maintains the highest attainment across both configurations, with LCFS in between. The paper explains: "FCFS is least effective, often processing requests that have already missed the SLO" (Section 7.5).
+- **User satisfaction**: A similar pattern — S-LoRA-Abort dominates, LCFS is intermediate, FCFS is worst. The gap widens with `$c_v$`, showing the abort strategy is most valuable under bursty arrival patterns.
+
+The paper also notes that LCFS works well for small `$c_v$` but its performance degrades disproportionately at larger `$c_v$` — likely because LCFS greedily prioritizes the newest requests and can starve older but still-serviceable requests when variance is high.
+
+#### Adapter Clustering (Figures 11 and 12, Appendix A.2)
+
+Adapter clustering is tested as an optional optimization that limits the number of distinct adapters in a batch to `$d$` (the "number of clusters") to allocate more GPU memory to KV caches.
+
+Figure 11 (A100 40GB, Llama-7B and Llama-13B) varies `$d$` from 0 to 30 with different `$\alpha$` values:
+- The impact on throughput is modest — throughput varies by roughly ±10% across clustering parameters.
+- At `$\alpha = 0.1$` (highly skewed request distribution — a few popular adapters dominate), clustering has minimal impact because requests are already naturally clustered by popularity.
+- At `$\alpha = 1$` (uniform distribution), smaller `$d$` (e.g., `$d = 1$` or `$d = 2$`) can provide a small throughput improvement (~1.1 req/s vs. ~1.0 req/s at `$d = 30$`).
+
+Figure 12 (A100 80GB, Llama-7B) varies `$d$` with different `$c_v$`:
+- Similar modest effects — throughput ranges from ~1.5 to ~2.0 req/s across the tested `$d$` values.
+- The paper notes "the impact is not significant but observable, especially for larger `$\alpha$` and `$c_v$`" (Appendix A.2). The small fluctuations at small `$d$` may be partially attributable to "scheduler overhead and random noise."
+
+This result is important because it shows S-LoRA's core mechanisms (Unified Paging, Heterogeneous Batching) already provide most of the gains — adapter clustering is a secondary refinement whose benefits are small and situation-dependent.
+
+#### Analysis of PEFT Failure Modes (Appendix A.1, Tables 4 and 5)
+
+The paper provides additional detail on why PEFT performs so poorly, beyond the headline throughput numbers:
+
+- **KV cache absence**: PEFT lacks KV cache memory management, limiting the maximum batch size to 6 on A10G with S1, compared to S-LoRA's 30. This is the dominant factor in PEFT's low throughput.
+- **No continuous batching**: Short requests are blocked by long requests in the same batch, inflating latency for all requests in the batch.
+- **No cross-adapter batching**: Even when multiple adapters have pending requests, PEFT processes them sequentially by switching adapter weights between batches.
+
+Table 4 shows PEFT results on S1 as `$n$` varies: throughput drops from 0.26 req/s at `$n = 1$` to 0.17 req/s at `$n = 200$`, while average latency grows from 1,022 seconds to 1,610 seconds. The request rate `$R = 2$` is far beyond PEFT's maximal capacity, causing unbounded queue growth — these are not steady-state numbers but reflect the system being catastrophically overloaded.
+
+Table 5 shows PEFT results as `$R$` varies at `$n = 200$` adapters: even at `$R = 1$` req/s (the lowest tested), throughput is only 0.11 req/s with 1,165s average latency and zero SLO attainment. PEFT is simply not designed for online serving workloads.
+
+---
+
+### Critical Assessment
+
+#### Claim: "S-LoRA can improve throughput by up to 4× compared to vLLM and increase the number of served adapters by several orders of magnitude"
+
+The evidence for this claim is **strong** in the configurations tested, but requires careful qualification.
+
+On the throughput dimension: Table 3 shows ~4× throughput improvement at `$n = 5$` for S1 (8.05 vs. 2.04 req/s) and S2 (7.48 vs. 2.04 req/s). However, this comparison is only available at low `$n$` because vLLM-packed runs out of memory for `$n > 5$`. For the Llama-13B configuration, the gap is smaller — 4.49 vs. 3.83 req/s (~1.2×) — because with only 2 adapters the batching loss from vLLM-packed is less severe. The 4× figure is therefore specific to the regime where the adapter count is large enough to hurt vLLM-packed (batching fragmentation) but still small enough that vLLM-packed fits in GPU memory — a narrow window.
+
+On the adapter count dimension: the claim that S-LoRA increases served adapters by "several orders of magnitude" is accurate relative to vLLM-packed. vLLM-packed hits OOM at roughly 2–5 adapters (Table 3). S-LoRA demonstrates 2,000 adapters — three orders of magnitude more. However, the paper never tests beyond 2,000 adapters. The theoretical limit (main memory capacity) is mentioned as the ceiling, but no experiment approaches that ceiling — 2,000 Llama-7B rank-8 adapters consume roughly `$2000 \times 33.6 \text{ MB} \approx 67 \text{ GB}$` in main memory, well within typical server capacities. Testing at 5,000 or 10,000 adapters would more convincingly demonstrate that main memory is the bottleneck, rather than some other scaling bottleneck (e.g., scheduling overhead, page table size, prefetching throughput) that might emerge at higher counts.
+
+A weakness worth noting: the vLLM-packed baseline uses static memory partitioning proportional to expected request rate. This is a reasonable first attempt at adapting vLLM for multi-model serving, but it is not the strongest possible baseline. A more sophisticated baseline might use a unified vLLM instance that dynamically loads and unloads merged model weights — effectively the adapter-switching approach the paper already tests in the S-LoRA-merge ablation (Figure 9). The paper does test this comparison (and S-LoRA still wins for `$n > 1$`), but the vLLM-packed baseline's catastrophic memory scaling is somewhat predetermined by the design choice to use separate processes with static partitioning. The ablation in Figure 9 (which includes continuous batching and PagedAttention in the merging baseline) may actually be the fairer comparison to S-LoRA's computational decomposition, and S-LoRA's advantage there is more modest (roughly 20–30% at `$n = 5$`) than the 4× figure from Table 3.
+
+#### Claim: "Unified Paging enables scaling to thousands of adapters without fragmentation"
+
+The evidence is **moderately strong**, but the paper would benefit from direct fragmentation measurements.
+
+The supporting evidence is mostly comparative: S-LoRA-no-unify-mem performs substantially worse than full S-LoRA (Figures 5, 6), and the paper's explanation — that separate pools cause fragmentation — is plausible and consistent with well-understood memory management principles. However, the paper never directly measures fragmentation rates, page utilization, or the frequency of allocation failures in the separate-pool configuration. It is possible that S-LoRA-no-unify-mem's degraded performance has multiple causes (e.g., the separate allocators have different overhead profiles, or the page sizes are suboptimal in the split configuration) beyond the fragmentation that Unified Paging is designed to solve.
+
+A direct ablation that would have strengthened the claim: measure the percentage of the unified memory pool that is occupied by KV cache pages vs. adapter pages vs. free pages under varying workload conditions, and show that the unified pool achieves higher utilization than two separate pools of the same total size due to the flexibility of sharing pages. The paper does not include this data.
+
+On the positive side, the plateau behavior in Figure 5 — throughput remains essentially constant from 100 to 2,000 adapters — is strong indirect evidence that memory management is not degrading with scale. If fragmentation were accumulating as the number of adapters grows, throughput would continue to decline (as pools become fragmented, allocation failures increase, batch sizes shrink). The plateau suggests the system reaches a steady state where the active adapter set is bounded by batch size and fragmentation is under control.
+
+#### Claim: "Heterogeneous Batching kernels substantially improve throughput over padded BLAS approaches"
+
+The evidence is **very strong**. The S-LoRA-bmm variant (padded BLAS, copying to contiguous memory) is consistently and dramatically worse than full S-LoRA across all configurations:
+- Figure 5: throughput roughly 10–30× lower.
+- Figure 6: throughput saturates at 0.2–1.0 req/s vs. 1.6–6 req/s for full S-LoRA, and first token latency is off the chart.
+- Figure 7: similar degradation on real workloads.
+
+The magnitude and consistency of this gap leaves little doubt that the custom kernels provide substantial benefits. The paper's explanation — that padding wastes memory bandwidth and compute, and copying non-contiguous pages into contiguous buffers adds latency — is well-supported by the experimental results.
+
+A missing piece: the paper mentions in Section 5.3 that NVIDIA CUTLASS provides grouped GEMM kernels that could potentially serve as an alternative to S-LoRA's custom kernels, but these are never benchmarked. A direct comparison against CUTLASS grouped GEMM (even if it underperforms) would help calibrate what fraction of the improvement comes from "avoiding padding" vs. "avoiding data movement" vs. "custom Triton/Punica kernel efficiency."
+
+#### Claim: "S-LoRA TP adds negligible communication overhead for multi-GPU serving"
+
+The evidence is **strong and well-supported** by both theory and measurement.
+
+The theoretical analysis (Section 6.2) establishes a clean bound: LoRA communication cost is `$5(N-1)Br/N$` vs. base model communication of `$2(N-1)Bh/N$`, giving a ratio of `$5r/2h$` which is approximately 1% for the tested configurations. The experimental confirmation in Figure 8 shows near-identical throughput for S-LoRA with and without LoRA communication across 30B and 70B models on 2 and 4 GPUs. The gap is too small to be easily distinguished from measurement noise — which, for this claim, is actually the desired result, since it demonstrates the overhead is negligible.
+
+A limitation: the communication analysis only covers tensor parallelism. Pipeline parallelism, sequence parallelism, and hybrid strategies are not analyzed. For very large deployments (e.g., 8+ GPUs with pipeline parallelism), the communication patterns and overheads may differ. The paper does not claim to support these other parallelism strategies, but it also does not explicitly bound the scope of the TP analysis.
+
+#### General Experimental Weaknesses
+
+**Single model family (Llama only).** All experiments use the Llama architecture. The paper states optimizations "can be easily adapted to other transformer-based architectures" (Section 7.1), but provides no evidence. Different architectures (e.g., GPT-style with parallel attention/FFN, MPT with different normalization, Falcon with multi-query attention) could exhibit different memory access patterns, adapter weight utilization, and batching efficiency. The Llama family's specifically uniform architecture (32 transformer layers with the same structure across all layers, consistent hidden dimensions, standard self-attention and SwiGLU FFN) means the results may overstate generalizability.
+
+**No confidence intervals or variance reporting.** The paper reports point estimates for throughput, latency, and SLO attainment without error bars, standard deviations, or confidence intervals. The synthetic traces use Gamma processes with stochastic arrival times — there is inherent variance in these measurements. Without variance estimates, it is impossible to assess whether the observed differences (e.g., S-LoRA at 7.64 vs. 7.61 req/s for 1,000 vs. 2,000 adapters) are statistically meaningful or within run-to-run noise. This is a significant gap in the experimental rigor.
+
+**Trace duration (5 minutes).** The synthetic workloads run for 5 minutes by default. For a system that processes ~8 requests/second, this is approximately 2,400 requests per trace. This is a relatively short window to assess steady-state behavior, especially for high-variance arrival processes (`$c_v = 8$`), where rare bursts might take longer than 5 minutes to manifest. The paper does not discuss warm-up periods (the system needs time to fill its KV cache and reach steady-state batch sizes) or whether the reported metrics are computed over the full trace or a steady-state window.
+
+**Real workload trace is a proxy.** The real workload trace treats the distribution of *different base models* in the LMSYS Chatbot Arena logs as if they were *different LoRA adapters of the same base model*. This is a creative repurposing of data, but it introduces a confound: real LoRA adapters of the same base model would have correlated failure modes, similar output distributions, and potentially correlated request patterns (e.g., a user switching between related tasks) that the Arena log's model distribution might not capture. The Arena trace also has only ~26 "adapters," which is far below the thousands that S-LoRA is designed for — so it only tests the low-adapter-count regime.
+
+**No latency-tail analysis.** The paper reports average latency and average first token latency, but does not report p95, p99, or p99.9 latency. For serving systems with SLOs, tail latency is often the binding constraint — a system can meet average latency targets while violating p99 SLOs due to rare but expensive events (e.g., a synchronous adapter load on a cache miss). The user satisfaction metric (Appendix B) partially addresses this by mapping latency to a continuous reward, but it is a derived metric computed from average behavior, not an analysis of the tail.
+
+**Missing comparison to Punica.** The paper acknowledges Punica (Chen et al., 2023) as concurrent work in Section 8, and notes that some of S-LoRA's CUDA kernels were derived from an earlier Punica blog post. However, no direct experimental comparison against Punica is provided. Given that Punica also explores decomposed LoRA computation and custom CUDA kernels, a head-to-head comparison would help readers understand whether S-LoRA's advantages come primarily from its novel components (Unified Paging, S-LoRA TP, prefetching) or from its specific kernel implementations and scheduler design.
+
+**Hardware configuration coverage.** The paper tests A10G (24GB), A100 40GB, and A100 80GB GPUs — all NVIDIA datacenter GPUs from the same architectural generation (Ampere). There are no tests on older hardware (V100, T4), newer hardware (H100), consumer GPUs (RTX 4090), or non-NVIDIA accelerators. While this is understandable for a systems paper, it means the results may not transfer to deployment scenarios with different memory bandwidth, PCIe speeds, or compute capabilities. The prefetching mechanism in particular is sensitive to the ratio of PCIe bandwidth to GPU compute throughput — on a GPU with much higher compute throughput relative to PCIe bandwidth (e.g., H100 with HBM3 but PCIe 5.0 x16), the overlap might be less effective.
+
+## 6. Limitations and Trade-offs
+
+### The Difficulty Estimation Cost Makes the 4× Efficiency Claim an Upper Bound, Not a Realized Deployment Gain
+
+**The assumption or constraint.** Section 3.2 describes the difficulty estimation procedure: for each question, the system generates 2048 samples from the base model, then bins questions into five quintiles based on either ground-truth pass@1 (oracle) or the PRM's predicted final-answer scores (predicted). The paper is transparent about the cost:
+
+> "estimating difficulty in this way still incurs additional computation cost during inference... our experiments do not account for this cost largely for simplicity"
+
+**The consequence.** This is not a minor accounting omission — it fundamentally changes the interpretation of the headline efficiency numbers. The 4× improvement claims (computing with 16 generations matching best-of-N at 64 generations in Figure 4, or 64 revision generations matching 256 in Figure 8) are computed *after* difficulty is already known. The difficulty estimation itself consumes 2048 generations per question — far more than the largest test-time compute budgets studied (256–512). In a real deployment, the total cost would include difficulty estimation plus strategy execution, and the former would dominate. The actual end-to-end efficiency of the system, when the cost of learning difficulty is amortized, is unknown and likely substantially lower than the 4× figure suggests for single questions. The amortization argument (that difficulty estimation cost can be spread across many instances of the same question) only works if the same questions recur — which is not the case for most LLM serving workloads where each prompt is unique.
+
+**What evidence exists in the paper.** The paper acknowledges the problem in Section 3.2 but provides no experiments measuring the total end-to-end cost including difficulty estimation. The curves in Figures 4 and 8 (compute-optimal scaling) start at 4 or 8 generations — far below the 2048-generation estimation cost — creating an implicit accounting gap. The paper frames the difficulty estimation approach as an exploration-exploitation tradeoff and flags it "as a key avenue for future work."
+
+**Mitigation status.** Not addressed experimentally. The paper suggests future work on training models to predict difficulty directly from the question text, which would make the cost negligible, but no such model is developed. The predicted difficulty bins use the PRM rather than ground truth, removing the need for ground-truth labels but NOT removing the 2048-generation cost. This means the compute-optimal framework is currently a research methodology (for understanding scaling behavior) rather than a deployable system — a distinction the paper does not draw as sharply as it should.
+
+---
+
+### Hard Problems Remain Essentially Unsolved Across All Methods — Test-Time Compute Cannot Create Capability That Doesn't Exist
+
+**The assumption or constraint.** The paper's difficulty bins are defined relative to the base model's pass@1 rate. Bin 5 contains the hardest 20% of questions — those where the base model's pass@1 rate is at or near zero. The paper shows these problems are effectively untouchable by any test-time compute strategy.
+
+**The consequence.** On difficulty bin 5, accuracy hovers at 1–3% across all methods and all compute budgets (Figure 3, right; Figure 7, right; Figure 9). Neither beam search, nor revisions, nor the compute-optimal combination produces meaningful gains. The FLOPs-matched comparison (Figure 9) reinforces this: for bin 5, pretraining is uniformly better than test-time compute at all R values, with a −52.9% relative disadvantage for PRM search at R ≫ 1 (Figure 1, bottom-right). This establishes a hard boundary: **test-time compute amplifies existing capability but does not create it from nothing**. If the base model cannot produce a correct solution with non-trivial probability, no amount of search or revision will help — there are no correct solutions in the proposal distribution to find or refine. For applications with a substantial fraction of genuinely novel or out-of-distribution problems where the model's base pass@1 is zero, the entire framework offers no path forward. The paper is candid about this:
+
+> "On the hardest questions (bin 5), no method makes meaningful progress — the base model simply lacks the capability to produce correct solutions regardless of how the budget is allocated."
+
+**What evidence exists in the paper.** The bin 5 results are shown in Figure 3 (right): beam search and best-of-N both flatline at 1–3% across all budgets from 4 to 256 generations. In Figure 7 (right), bin 5 sits at roughly 2–3% regardless of sequential-to-parallel ratio. In Figure 9, the bin 5 line (blue, bottom) is essentially flat near zero for both revisions and search, with the 14× larger model's performance (stars) far above — indicating that pretraining, not test-time compute, is the only viable path for these problems. The paper correctly identifies this limitation in the FLOPs-matched analysis: "test-time compute provides essentially zero benefit regardless of budget, meaning that some capabilities can only be acquired through pretraining, not recovered at inference time."
+
+**Mitigation status.** The paper is transparent about this limitation and does not claim otherwise. However, it does not explore whether alternative base models with different capability profiles, or combining test-time compute with few-shot prompting or retrieval augmentation, could push the difficulty boundary. This limitation is inherent to the approach's core assumption that test-time compute operates on the base model's proposal distribution — if that distribution contains zero mass on correct solutions, no downstream mechanism helps.
+
+---
+
+### Revisions and PRM Search Are Studied Independently — the Strongest Potential System Is Never Tested
+
+**The assumption or constraint.** The paper studies two complementary test-time compute mechanisms — PRM-guided search (Section 5) and iterative revisions (Section 6) — but never combines them. Section 8 explicitly acknowledges:
+
+> "we did not experiment with PRM tree-search techniques in combination with revisions"
+
+**The consequence.** The paper demonstrates that search helps most on medium-hard problems (bin 3–4) where exploration of different solution strategies is valuable, while revisions help most on easy problems (bin 1–2) where local refinement of approximately-correct answers suffices. The natural extension — using the revision model as the proposal distribution within beam search, or using the PRM to guide which revision chains to pursue — is never tested. This means the paper's compute-optimal scaling results represent a **lower bound** on what a fully integrated system could achieve. The 4× efficiency improvement is measured against best-of-N rather than against a combined search+revision strategy, leaving open the possibility that integrated approaches could be substantially more efficient, or that the apparent complementarity breaks down when mechanisms are combined (e.g., PRM over-optimization might worsen when scoring revision outputs). The finding that the PRM trained on base model outputs does not transfer well to revision outputs (Figure 15a — "The base-LM PRM underperforms the revision-specific ORM when scoring revision model outputs") suggests that combining the two mechanisms would require additional engineering (training a new PRM on revision model outputs) that the paper does not undertake.
+
+**What evidence exists in the paper.** Figure 3 (right) shows search is most effective on bins 3–4. Figure 7 (right) shows revisions are most effective on bins 1–2 and at balanced ratios on bins 3–4. These patterns are presented separately but their complementarity is noted in the text. Figure 15a shows the distribution shift problem. The paper does not contain a combined search+revision experiment.
+
+**Mitigation status.** The authors flag this as future work in Section 8. The limitation is significant but understandable given the scope of what the paper already covers (search scaling analysis, revision scaling analysis, compute-optimal allocation, FLOPs-matched comparison, difficulty estimation). The paper lays the groundwork for combination but does not attempt it.
+
+---
+
+### The 14× Larger Model Baseline Is Not Compute-Optimally Trained and Does Not Use Any Test-Time Compute — the FLOPs-Matched Comparison Overstates the Case for Inference Compute
+
+**The assumption or constraint.** The FLOPs-matched comparison in Section 7 scales model parameters while holding training data fixed, following the LLaMA paradigm (Touvron et al., 2023). The authors acknowledge this departs from compute-optimal pretraining (Hoffmann et al., 2022):
+
+> "We choose this setting as it is representative of a canonical approach to scaling pretraining compute and leave the analysis of compute-optimal scaling of pretraining compute where the data and parameters are both scaled equally to future work."
+
+Additionally, the 14× larger model uses only greedy decoding — no majority voting, no best-of-N, no search, no revision chains.
+
+**The consequence.** A Chinchilla-optimal model trained with 14× more total FLOPs would scale both parameters and data, likely outperforming a parameter-only-scaled model. The paper provides no estimate of how much this would close the gap, but it is almost certainly non-negligible. Furthermore, giving the 14× larger model even a modest test-time compute budget (e.g., best-of-8 majority voting, or compute-optimal scaling of its own) would create a much stronger baseline. The current comparison is asymmetric: the smaller model gets a sophisticated, difficulty-adaptive inference-time strategy while the larger model gets greedy decoding with zero inference-time optimization. This makes the comparison interpretable as "small model + smart inference vs. large model + no inference optimization," but NOT as "inference-time compute vs. pretraining compute" in an apples-to-apples sense. The reported advantages — e.g., +27.8% on easy questions at R ≪ 1 — likely overstate the case for inference compute relative to a properly optimized pretraining baseline.
+
+**What evidence exists in the paper.** The comparison design is described in Section 7. The acknowledgment about compute-optimal pretraining is quoted above. There is no ablation or sensitivity analysis testing how the results change if the larger model also uses test-time compute, or if the larger model is Chinchilla-optimally trained.
+
+**Mitigation status.** The authors are transparent about the limitation but do not attempt to bound its impact. They explicitly flag the compute-optimal pretraining comparison as future work. A reader deploying this work would need to treat the "test-time compute can substitute for a 14× larger model" claim as conditional on the specific (and arguably weak) pretraining baseline. The qualitative insight — that test-time compute amplifies existing capability more effectively than pretraining for easy problems, while pretraining is essential for hard problems — is robust even if the exact magnitude of the advantage is overstated.
+
+---
+
+### Only One Benchmark and One Model Family Are Tested — Generalizability to Other Domains and Architectures Is Unverified
+
+**The assumption or constraint.** All experiments use the MATH benchmark (Hendrycks et al., 2021) with PaLM 2-S* as the base model. The paper states:
+
+> "We believe this model is representative of the capabilities of many contemporary LLMs" (Section 4)
+
+but provides no evidence beyond this assertion.
+
+**The consequence.** MATH consists exclusively of competition-level math problems requiring multi-step symbolic reasoning with exact ground-truth answers. This domain has specific properties that may not generalize: (1) answers are unambiguous and gradable via string matching, enabling clean PRM training signals and oracle difficulty estimation; (2) solution structure is highly regularized (step-by-step derivations), which may make PRM step-scoring easier than in domains with more fluid structures (code generation, creative writing, dialogue); (3) the difficulty distribution may differ substantially from real-world LLM usage patterns. The revision model's training procedure — which uses edit distance between incorrect and correct solutions to pair training examples — may also work differently in domains where "closeness" of answers is harder to define. The PRM's over-optimization behavior (search degrading easy-problem performance, Figure 3 right) might manifest differently or at different thresholds on other benchmarks. The FLOPs-matched tradeoff (Figure 9) might shift if the difficulty distribution of a different benchmark skews harder or easier than MATH.
+
+**What evidence exists in the paper.** No non-MATH experiments. No non-PaLM experiments. The paper's entire quantitative analysis — all figures, all tables, all claims about 4× efficiency, difficulty-dependent behavior, and pretraining tradeoffs — rests on one benchmark and one model family. The cross-validation is within the 500-question MATH test set, not across benchmarks or models.
+
+**Mitigation status.** The authors do not claim generalizability beyond stating their belief about PaLM 2-S*'s representativeness. The limitation is unaddressed but acknowledged implicitly by the scope of the evaluation. Future work would need to replicate the study on code generation benchmarks (HumanEval, MBPP), logical reasoning benchmarks, scientific QA, and with multiple model families (Llama, GPT, Falcon) to establish which findings are universal and which are specific to math reasoning or PaLM architecture.
+
+---
+
+### The Revision Model Has a Fundamental Correct-to-Incorrect Reversion Problem — and Attempts to Further Optimize It Backfire
+
+**The assumption or constraint.** The revision model is trained exclusively on sequences where all in-context answers are incorrect followed by a correct target (Section 6.1). This creates a structural vulnerability: at inference time, when the model produces a correct answer partway through a revision chain, it may subsequently "revise" that correct answer into an incorrect one because it has never seen a training example where the current answer is already correct. The paper reports:
+
+> "approximately 38% of correct answers get converted back to incorrect ones"
+
+**The consequence.** This means the revision model cannot be used naively by taking the last output in the chain — a selection mechanism (majority voting or verifier-based selection across the chain) is necessary. This adds complexity and cost, and it is an imperfect patch: the verifier must correctly identify the best answer in the chain, and if the verifier also makes errors, correct answers may be discarded. More fundamentally, the revision model has not learned the concept of "stop revising when the answer is already correct" — a capability that would be natural for a human but is absent from the training signal. The problem also limits the utility of longer revision chains: beyond some point, the benefits of additional revisions are offset by the probability of reverting correct answers to incorrect ones.
+
+Additionally, the ReST^{EM} experiment (Appendix K, Figure 16) shows that attempting to further optimize the revision model with RL-style training (Singh et al., 2024) causes performance to *degrade substantially* with sequential revisions — the model fails to learn the revision task properly, likely because on-policy data collection amplifies spurious correlations. This reveals that the revision training procedure is fragile and the positive results depend on specific design choices (offline data construction, edit-distance-based pairing) whose robustness is uncertain.
+
+**What evidence exists in the paper.** The 38% reversion rate is reported in Section 6.1. The ReST^{EM} failure is shown in Figure 16 (Appendix K). The paper mitigates the reversion problem using best-of-N weighted selection or majority voting across the revision chain (Section 6.1), and Figure 6 (right) shows that this selection mechanism recovers good performance despite the reversion rate. The paper does not explore training the model to recognize when to stop revising, or whether the reversion rate changes with difficulty level.
+
+**Mitigation status.** Partially mitigated by chain-level selection, but not solved. The reversion problem is a direct consequence of the training data construction, and a more principled solution — such as including "no revision needed" examples in the training data, or training a separate stopping classifier — is not explored. The ReST^{EM} failure is presented as a negative result without a clear path to resolution. This limitation matters because it bounds how far revision-based approaches can scale and suggests that the current training recipe may not survive the transition from research experiments to production-quality revision models.
+
+## 7. Implications and Future Directions
+- Practical impact
+  - Multi-tenant personalization at scale: a single GPU server can host thousands of adapters, enabling per-user or per-task specializations without duplicating the base model. This lowers cost and operational complexity for fine-tuning-as-a-service.
+  - Platform design: the unified pool concept suggests treating all dynamic tensors (KV caches, adapter weights, perhaps prompts or routing buffers) uniformly to fight fragmentation and maximize batch size.
+- Research directions
+  - Extending Unified Paging: incorporate other dynamic state (e.g., prefix caches, routing states) and integrate with quantization-aware paging to further increase capacity.
+  - Broader adapter families: implement kernels and paging for prefix/prompt-tuning, IA^3, or mixture-of-adapters; measure trade-offs across methods under multi-tenant loads (Section 9 mentions “support for additional adapter methods”).
+  - Overlapping compute streams: run base and LoRA computations in parallel streams where safe; the paper lists this as future work (Conclusion).
+  - Cross-node serving: adapt S-LoRA’s paging and LoRA-aware parallelism to multi-node clusters, exploring communication/computation overlap at rack scale.
+  - Scheduling policies: more principled fairness-aware or cost-aware admission and clustering, possibly with learning-based predictors for adapter demand.
+- Field-level shift
+  - Quote: “S-LoRA enables scalable serving of many task-specific fine-tuned models and offers the potential for large-scale customized fine-tuning services” (Abstract). By making multi-adapter serving efficient, it moves the bottleneck from memory duplication to scheduling and kernel optimization, opening a path to “adapter marketplaces” and highly personalized LLM deployments.
+
+> Selected citations to ground key points:
+> - Decouple compute and batch base model vs adapters: Section 4.1; Figure 1; Eq. (1–2).
+> - Unified Paging design: Section 5.1; Figure 3; Figure 2 for memory layout.
+> - Custom kernels MBGMM/MBGMV: Section 5.3.
+> - Tensor parallel strategy and cost: Section 6; Figure 4; Section 6.2 equations.
+> - Throughput comparisons and scalability: Table 3; Figures 5–7.
+> - Multi-GPU overhead and scaling: Figure 8.
+> - Merge vs on-the-fly ablation: Figure 9.
+> - Admission control and advantage: Section 4.3; Figure 10; Appendix B (Theorem B.1).
+> - Adapter clustering effects: Section 4.2; Appendix A.2 (Figures 11–12).

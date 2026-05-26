@@ -1,0 +1,815 @@
+# Native Sparse Attention: Hardware-Aligned and Natively Trainable Sparse Attention
+
+**ArXiv:** [2502.11089](https://arxiv.org/abs/2502.11089)
+
+## 🎯 Pitch
+
+Native Sparse Attention (NSA) introduces a novel, hierarchical sparse attention mechanism that is natively trainable and specifically optimized for modern hardware, enabling unprecedented efficiency for long-context language models. By combining token compression, blockwise token selection, and a local sliding window—alongside custom low-level kernels—NSA delivers dramatic real-world speedups (up to 11.6× for decoding) without sacrificing, and sometimes even surpassing, the accuracy of full attention models on challenging benchmarks. This innovation addresses key shortcomings of previous sparse methods, making it possible to efficiently train and deploy LLMs at long context lengths that are essential for tasks like codebase completion, document reasoning, and multi-turn conversational AI.
+
+---
+
+## 1. Executive Summary
+
+This paper introduces **NSA**, a **Natively trainable Sparse Attention** mechanism that replaces standard dense attention with a dynamic hierarchical sparse strategy, combining coarse-grained token compression (aggregating sequential key-value blocks into learned block-level representations) with fine-grained token selection (retaining the top-*n* most important contiguous token blocks per query) and a dedicated sliding window for local context. Evaluated on a 27B-parameter GQA-MoE backbone pretrained on 270B tokens, NSA maintains or exceeds Full Attention performance across general benchmarks, long-context tasks, and chain-of-thought reasoning, while achieving up to 9.0× forward and 6.0× backward training speedup at 64k sequence lengths and an 11.6× decoding speedup at 64k contexts through arithmetic-intensity-balanced blockwise kernel design. The paper establishes that native sparsity is an imperative — pretraining with sparse attention from scratch yields superior or matching performance against both Full Attention baselines and inference-only sparse methods, but only when the sparsity patterns are hardware-aligned through group-centric data loading, shared KV fetching across GQA heads, and blockwise continuous memory access.
+
+## 2. Context and Motivation
+
+### The Core Problem: Attention Is the Bottleneck in Long-Context LLMs
+
+The fundamental challenge this paper confronts is deceptively simple but technically profound: **as sequence lengths grow, standard attention mechanisms become the dominant computational cost in transformer-based language models, yet existing approaches to making attention sparse systematically fail to deliver real-world speedups or support end-to-end training.** This is not merely an efficiency concern — it is a capability bottleneck. The paper opens with the empirical observation that when decoding 64k-length contexts, softmax attention computation accounts for **70–80% of total latency**, making it the primary obstacle to deploying models that can process entire codebases, lengthy documents, or multi-turn conversations spanning thousands of tokens.
+
+This problem sits at the intersection of two critical trends in modern LLM development. First, the research community increasingly demands **long-context capability** as a prerequisite for advanced applications: in-depth reasoning (DeepSeek-AI, 2025; Zelikman et al., 2022), repository-level code generation (Zhang et al., 2023a), and multi-turn autonomous agents (Park et al., 2023) all require models to maintain coherent representations over tens of thousands of tokens. Second, the **quadratic complexity** of standard attention (Zaheer et al., 2020) makes this capability prohibitively expensive — not just in terms of FLOPs, but in terms of the memory access patterns that dominate real hardware performance.
+
+The paper's framing of this problem is notable for its **hardware realism**. Rather than treating "computational cost" as an abstract FLOPs count, the authors center the concept of **arithmetic intensity** — the ratio of compute operations to memory accesses — as the key variable determining whether an attention implementation is compute-bound or memory-bound on modern GPUs. This framing shifts the optimization target from "reduce theoretical FLOPs" to "design sparse patterns that respect the GPU's memory hierarchy and Tensor Core requirements." The paper argues that most prior sparse attention methods optimize the wrong metric, achieving theoretical sparsity that fails to translate to wall-clock speedups because the resulting memory access patterns are scattered, non-contiguous, and incompatible with the block-based computation that architectures like FlashAttention rely on.
+
+### Why This Problem Matters Now
+
+The urgency of solving this problem stems from three converging practical realities that the paper identifies, implicitly and explicitly:
+
+**1. The scaling trajectory makes attention the inevitable bottleneck.** As language models are pushed toward longer and longer contexts — from 8k to 32k to 128k and beyond — the quadratic growth of attention cost means that even with optimized implementations like FlashAttention, the attention mechanism eventually dominates all other components of the model. The paper's Section 1 cites the 70–80% latency figure at 64k contexts, but the implication is clear: at 128k or 256k contexts, this percentage approaches near-total domination. Without fundamentally restructuring how attention works, further scaling of context length becomes economically and practically infeasible, regardless of how much GPU compute is thrown at the problem.
+
+**2. The training-inference asymmetry is underexplored.** The paper makes a crucial observation that prior work largely misses: **sparse attention methods must work across the entire model lifecycle — training, prefilling, and decoding — to be practically useful.** Methods that only accelerate decoding (like many KV-cache eviction strategies) leave the pretraining and fine-tuning stages entirely unaddressed, meaning models must still be trained with expensive Full Attention and only later converted to sparse inference. This creates what the paper calls an "architectural bias" (Section 2.2): the model's weights are optimized under dense attention during training, then forced to operate under sparse attention at inference, leading to performance degradation. Conversely, methods that only accelerate prefilling leave autoregressive decoding — the dominant cost in interactive applications — untouched. The paper argues that a truly effective sparse attention mechanism must provide speedups at **all three stages**, and that this requirement fundamentally constrains the design space.
+
+**3. Advanced architectures (GQA, MQA) create new challenges for sparse attention.** Modern state-of-the-art LLMs overwhelmingly adopt Grouped-Query Attention (GQA; Ainslie et al., 2023) or Multi-Query Attention (MQA; Shazeer, 2019), where multiple query heads share the same key-value cache. The paper identifies a specific failure mode that prior sparse attention methods encounter under these architectures: when each attention head independently selects its KV-cache subset, the actual memory access volume corresponds to the **union** of all heads' selections within a GQA group (Section 2.1). A method might successfully reduce the *computation* for each head, but if the selected KV blocks are disjoint across heads, the total *memory access* remains high, defeating the purpose of GQA's shared-KV design. The paper's example is Quest (Tang et al., 2024), which achieves consistent sparsity in both computation and memory access under MHA but suffers under GQA because the scattered selection pattern forces loading a large fraction of the KV cache anyway. This insight — that sparse patterns must be **consistent across query heads within a GQA group** to preserve the memory bandwidth benefits of shared KV caches — is a key architectural constraint that motivates NSA's design.
+
+### Prior Approaches and Where They Fall Short
+
+The paper organizes existing sparse attention methods into three categories (Section 7) and identifies specific limitations for each, but the deeper critique runs through Sections 2.1 and 2.2, where the authors systematically dismantle the assumptions underlying prior work.
+
+#### Fixed Sparse Patterns
+
+Methods like SlidingWindow, StreamingLLM (Xiao et al., 2023), Longformer (Beltagy et al., 2020), and DuoAttention (Xiao et al., 2024b) use predefined, hand-designed sparsity patterns — typically combining local windows with a small set of global "sink" tokens. The paper's critique is straightforward: these patterns are **task-agnostic and suboptimal**. A fixed pattern might work well for language modeling where local context dominates, but fails on tasks requiring retrieval of specific distant tokens (like needle-in-a-haystack) or tasks where attention patterns are inherently dynamic (like multi-hop reasoning across a document). More fundamentally, fixed patterns cannot learn — the model has no way to adapt its attention sparsity to the specific content of the input. The paper's visualization in Figure 8 showing blockwise clustering of attention scores in a Full Attention model suggests that sparsity patterns are complex, content-dependent, and unlikely to be captured by any single hand-designed template.
+
+The more subtle limitation — which the paper implies but doesn't state explicitly — is that fixed sparse patterns create an **inductive bias that cannot be trained away**. If the pretraining objective is language modeling and the attention pattern is constrained to local windows, the model never learns to attend to distant tokens during training, meaning that even if the pattern is later relaxed at inference, the model's weights haven't developed the capability to use long-range information. This is distinct from the "architectural bias" issue (where inference sparsity differs from training sparsity) — here, the training sparsity *itself* limits what the model can learn.
+
+#### Dynamic Token Pruning
+
+The second category — exemplified by H2O (Zhang et al., 2023b), SnapKV (Li et al., 2024), and BUZZ (Zhao et al., 2024) — dynamically evicts tokens from the KV cache during inference based on some importance heuristic. The paper groups these under "inference-only" methods and identifies a critical limitation: they are **phase-restricted**. H2O, for example, requires computing full attention scores during prefilling to build its importance estimates before applying sparsity during decoding. This means the prefilling stage remains as expensive as Full Attention, limiting speedup in workloads where prefilling dominates (document summarization, code completion). Conversely, methods focused solely on prefilling sparsity leave decoding unaccelerated, limiting speedup in interactive or chain-of-thought applications where hundreds or thousands of autoregressive steps dominate the total cost.
+
+There is a deeper issue that the paper only partially articulates: dynamic token pruning introduces a **causal violation** in the computation graph. When tokens are evicted based on their importance scores — which themselves depend on future tokens' attention patterns — the method implicitly requires information that wouldn't be available in a strict autoregressive setting without expensive lookahead computation. This tension is resolved differently by different methods (some use heuristics that don't require lookahead, others accept the computational cost of computing full attention during prefilling), but it points to a fundamental instability in inference-only dynamic sparsity: the criteria for deciding what to keep are themselves products of the attention mechanism, creating a chicken-and-egg problem.
+
+#### Query-Aware Selection
+
+The third and most relevant category includes methods like Quest (Tang et al., 2024), InfLLM (Xiao et al., 2024a), ClusterKV (Liu et al., 2024), HashAttention (Desai et al., 2024), and MInference (Jiang et al., 2024). These methods compute importance scores for KV blocks or tokens based on each query and selectively attend to the most important ones. The paper's critique here is the most developed and forms the direct motivation for NSA's design.
+
+**The trainability gap.** Most query-aware methods are designed for inference only and contain **non-differentiable discrete operations** that prevent gradient flow. ClusterKV uses k-means clustering to group keys — an operation whose cluster assignments have no meaningful gradient with respect to the clustering criterion, let alone with respect to the upstream model parameters. MagicPIG (Chen et al., 2024b) uses SimHash-based locality-sensitive hashing to select tokens, another fundamentally non-differentiable operation. The paper argues (Section 2.2) that this creates a hard barrier: models pretrained with Full Attention develop attention patterns that are adapted to dense computation, and applying these non-trainable sparse patterns at inference forces the model to operate under distribution shift. The result is performance degradation — the paper cites Chen et al. (2024b)'s finding that the top 20% of attention scores only cover 70% of total attention mass, meaning that even an "optimal" sparse selection misses nearly a third of the model's intended attention distribution.
+
+**The back-propagation inefficiency trap.** Even methods that are *theoretically* trainable — because their selection operations are differentiable or can be approximated with straight-through estimators — suffer from a separate problem: the resulting sparse patterns are **token-granular and non-contiguous**. HashAttention (Desai et al., 2024) selects individual tokens scattered throughout the sequence. When these scattered tokens are loaded for attention computation, the memory access pattern is essentially random, preventing the use of FlashAttention-style blockwise kernels that rely on contiguous memory regions and coalesced loads. The paper notes that implementations of such methods "are forced to fall back to low hardware utilization, significantly degrading training efficiency" (Section 2.2). This is a concrete manifestation of the arithmetic intensity problem: the theoretical FLOP reduction from sparse attention is more than offset by the catastrophic drop in hardware utilization from scattered memory access.
+
+**The GQA incompatibility problem.** As discussed above, methods where each attention head independently selects its KV subset (like Quest) conflict with the shared-KV architecture of GQA. The paper identifies this as a specific failure mode: the memory access volume scales with the *union* of all heads' selections, meaning that even if individual heads achieve high sparsity, the total KV cache loading can remain substantial. This is not a theoretical concern — it directly impacts wall-clock latency, since decoding is memory-bandwidth-bound and every byte of unnecessary KV cache loading translates to additional latency.
+
+**The importance score computation overhead.** Methods that compute block importance scores using learned functions introduce **auxiliary computation that can rival the cost of attention itself**. The paper's experiments with an auxiliary loss-based selection method (Section 6.1, Figure 7) show that the overhead of computing block importance scores — introducing additional queries and representative keys, computing supervision signals via mean-pooled attention, and applying KL divergence loss — can degrade rather than improve training efficiency. Conversely, heuristic parameter-free methods (like Quest's min-max product) suffer from **low recall**: they simply miss too many important tokens, leading to suboptimal attention quality. The paper's Figure 7 demonstrates both failure modes on a 3B-parameter model: both the auxiliary-loss and heuristic selection approaches produce inferior training loss compared to NSA and even Full Attention.
+
+### The Paper's Position: Native Sparsity as an Architectural First Principle
+
+Against this landscape of fragmented, inference-only, hardware-unaware approaches, the paper positions NSA as a **fundamental redesign rather than an incremental improvement**. The key intellectual move — signaled by the paper's title and argued explicitly in Section 2.3 — is to treat sparse attention not as an optimization applied post-hoc to a pretrained dense model, but as a **first-class architectural choice that must be integrated into training from the beginning**.
+
+This "native sparsity" position has several concrete implications that differentiate NSA from prior work:
+
+**1. End-to-end differentiability is non-negotiable.** NSA's token selection mechanism must support gradient flow so that the model can learn which tokens to attend to during pretraining. The paper achieves this through a clever design: rather than learning importance scores through a separate neural network (which would add overhead and potential instability), NSA **repurposes the attention scores from the compression branch** to derive selection block importance. This is described in Section 3.3.2: the compressed key representations $\tilde{K}^{\text{cmp}}_t$ produce intermediate attention scores $\mathbf{p}^{\text{cmp}}_t$ when computing $\text{Softmax}(\mathbf{q}_t^T \tilde{K}^{\text{cmp}}_t)$, and these scores — which are already being computed and are fully differentiable — serve as the importance signal for which fine-grained blocks to select. The paper calls this a "low computational overhead" mechanism because it avoids introducing a separate scoring network; the computation that would happen anyway in the compression branch is reused.
+
+**2. Blockwise sparsity is a hardware requirement, not a modeling convenience.** The paper explicitly grounds its blockwise design in GPU architecture constraints: "modern GPU architectures exhibit significantly higher throughput for continuous block accesses compared to random index-based reads" and "blockwise computation enables optimal utilization of Tensor Cores" (Section 3.3.2). This is not presented as a secondary consideration but as a primary design constraint on par with modeling quality. The kernel design in Section 3.4 further reinforces this: the group-centric data loading pattern, shared KV fetching, and outer-loop grid scheduling are all designed to maximize arithmetic intensity by ensuring that SRAM-resident data is reused maximally before being evicted.
+
+**3. Sparsity must be hierarchical to balance global and local information.** The paper's three-branch architecture (compression, selection, sliding window) is motivated by the observation that different types of information require different granularities of attention. Coarse-grained compression captures high-level semantic patterns across the entire context at low cost. Fine-grained selection preserves precise token-level information for the most relevant regions. Local sliding windows handle the rapid adaptation of local patterns, which "typically adapt faster and can dominate the learning process" (Section 3.3.3). The paper's insight is that without isolating local patterns into a dedicated branch, the model **shortcuts** — it learns to rely exclusively on local context because local tokens are always available and highly predictive, and never develops the capability to use the compression and selection branches effectively. The independent keys and values for each branch further prevent gradient interference, ensuring that gradients for long-range pattern recognition don't get washed out by much stronger local-pattern gradients.
+
+**4. Consistency across GQA heads must be enforced, not hoped for.** The paper's selection mechanism explicitly aggregates importance scores across all query heads within a GQA group before selecting blocks (Equation 10 in Section 3.3.2). This ensures that all heads in a group select the same KV blocks, meaning the KV cache loading during decoding loads exactly the union — which, by construction, equals the selection of any individual head. This is a direct response to the Quest failure mode: rather than letting heads select independently and paying the cost of the union, NSA enforces shared selection at the algorithmic level, making the memory access pattern dense in the selected blocks and sparse everywhere else.
+
+The paper's positioning can be understood as occupying a previously empty spot in a two-dimensional design space: **trainability × hardware alignment**. Prior methods cluster in three quadrants — trainable but hardware-inefficient (token-granular methods like HashAttention), hardware-efficient but not trainable (fixed patterns), or efficient in some phases but not others (inference-only dynamic pruning). NSA claims the fourth quadrant: fully trainable, hardware-aligned across all phases (training, prefilling, decoding), and architecturally compatible with modern design choices (GQA, MoE). The empirical results — matching or exceeding Full Attention on general benchmarks while achieving substantial speedups — are presented as evidence that this quadrant is not only achievable but represents the correct direction for sparse attention research.
+
+### How the Paper Contextualizes Its Specific Contributions
+
+While the paper does not explicitly frame its contributions this way, the logical structure of the introduction and methodology sections reveals three tightly coupled claims that together constitute the paper's argument:
+
+1. **Sparse attention is inevitable** (the problem exists and matters) → Sections 1 and 2.1.
+2. **Native training is necessary** (inference-only sparsity is fundamentally limited) → Section 2.2.
+3. **Hardware-aligned blockwise sparsity is sufficient** (the specific design choices in NSA achieve the goal) → Sections 3.3, 3.4, and the empirical results.
+
+The paper also positions itself within the broader context of DeepSeek's model lineage, building on DeepSeekMoE (Dai et al., 2024) and the architectural patterns established in DeepSeek-V2 (DeepSeek-AI, 2024). The use of GQA with 4 groups, the MoE structure with shared and routed experts, and the specific hyperparameter choices (hidden dimension 2560, 30 layers) are inherited from this lineage, making NSA's results directly comparable to DeepSeek's production models. This is significant because it means the paper is not evaluating NSA in isolation on a toy architecture — it is demonstrating that the sparse attention mechanism works at the scale and with the architectural choices that state-of-the-art LLMs actually use.
+
+Finally, the paper implicitly positions itself in opposition to a common narrative in the sparse attention literature: that sparse attention is inherently a compromise — you trade model quality for speed. The paper's results challenge this narrative directly. NSA **exceeds** Full Attention performance on 7 of 9 general benchmarks (Table 1), outperforms Full Attention on LongBench by +0.032 (Table 2), and achieves higher AIME accuracy at both 8k and 16k context lengths (Table 3). The paper attributes this to the "filtering out noise from irrelevant attention pathways" (Section 4.3), suggesting that sparsity, when natively trained, can act as a form of **regularization** that improves model quality rather than degrading it. This is a strong claim — that sparse attention is not just an efficiency hack but a potentially superior inductive bias — and the paper's empirical results are structured to support it.
+
+## 3. Technical Approach
+
+### 3.1 Reader Orientation
+
+This paper presents a **system for efficient attention computation** — a drop-in replacement for standard Multi-Head Attention that can be trained from scratch (end-to-end differentiable) while delivering wall-clock speedups across all stages of a transformer's lifecycle. The problem it solves is that standard attention scales quadratically with sequence length, and existing sparse attention methods either cannot be trained natively (inference-only), fail to deliver real speedups due to poor hardware utilization, or both. The shape of the solution is a **three-branch hierarchical attention mechanism** where each query attends to a compact, dynamically-constructed representation of the full key-value history: coarse-grained compressed tokens for global context, fine-grained selected token blocks for precise local retrieval, and a fixed sliding window for rapid local pattern adaptation.
+
+### 3.2 Big-Picture Architecture (Diagram in Words)
+
+NSA replaces the standard attention operation `o_t = Attn(q_t, k_{:t}, v_{:t})` with a three-branch computation. When a query token `q_t` arrives at position `t`, the system constructs three different key-value representations from the full history `k_{:t}, v_{:t}`, computes attention against each separately, then combines the outputs through learned gates:
+
+1. **Compression Branch:** All preceding keys are partitioned into blocks of length `l = 32` with stride `d = 16`. Each block is passed through a learnable MLP `φ` that maps a set of keys in that block to a single compressed key representation (and analogously for values). This produces a sequence of `⌊(t - l)/d⌋` compressed key-value pairs that capture coarse-grained semantic information at drastically reduced resolution. This branch enables efficient global context scanning.
+
+2. **Selection Branch:** The full key-value sequence is partitioned into selection blocks of size `l' = 64`. To determine which blocks are most relevant to the current query, the system reuses the attention scores already computed between `q_t` and the compressed keys — these scores are aggregated spatially to produce importance scores for each selection block. The top-`n = 16` highest-scoring blocks (including the first block and 2 local blocks by default) are retained as fine-grained key-value pairs. This branch preserves token-level precision for the most relevant regions.
+
+3. **Sliding Window Branch:** The most recent `w = 512` tokens are preserved in their original, uncompressed form. This branch explicitly handles local context patterns, which the paper argues would otherwise dominate learning and prevent the compression and selection branches from developing useful long-range capabilities.
+
+All three branches have independent key-value projections (separate linear layers), computed from the same hidden states but with different parameters. Their outputs are combined via learned scalar gates `g^c_t ∈ [0,1]` (one per branch `c ∈ {cmp, slc, win}`) produced by an MLP with sigmoid activation applied to the input features.
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First**, the formal framework (Equations 3–6) that defines how NSA generalizes standard attention — this establishes the vocabulary of "remapping strategies" and the gated combination that all subsequent sections instantiate.
+- **Second**, the token compression mechanism (Equation 7) — the coarsest granularity branch that provides the efficiency backbone and also produces the attention scores reused for selection.
+- **Third**, the token selection mechanism (Equations 8–12) — the most technically intricate component, covering blockwise importance score computation, how compression-derived scores are mapped to selection blocks, GQA head aggregation, and the top-`n` block selection that produces the fine-grained subset.
+- **Fourth**, the sliding window and the architectural isolation of branches — explaining *why* separate branches with independent key-value projections are necessary, not merely convenient.
+- **Fifth**, the kernel design — the hardware-specific implementation decisions (group-centric data loading, shared KV fetching, outer-loop grid scheduling) that translate the algorithmic sparsity into actual wall-clock speedups.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is an **architectural design and systems paper** whose core idea is that sparse attention can replace dense attention in transformer training *provided* the sparsity patterns are (1) blockwise to match GPU memory hierarchy, (2) dynamically query-aware rather than fixed, (3) consistent across GQA heads to preserve shared-KV memory bandwidth benefits, (4) derived from differentiable operations that allow end-to-end gradient flow, and (5) organized hierarchically to prevent local patterns from absorbing all model capacity.
+
+---
+
+#### Formal Framework: Attention as Remapping
+
+The paper begins by reframing standard attention through a **remapping lens**. Instead of computing attention against all preceding key-value pairs `k_{:t}, v_{:t}`, NSA computes attention against a much smaller set of *representation* key-value pairs that capture the same information in compressed or selected form.
+
+The standard attention output at position `t` is:
+
+$$o_t = \text{Attn}(q_t, k_{:t}, v_{:t}) = \sum_{i=1}^{t} \frac{\exp(q_t^\top k_i / \sqrt{d_k})}{\sum_{j=1}^{t} \exp(q_t^\top k_j / \sqrt{d_k})} v_i$$
+
+where `q_t ∈ R^{d_k}` is the query at position `t`, `k_{:t} ∈ R^{t×d_k}` and `v_{:t} ∈ R^{t×d_v}` are all keys and values up to position `t`, and `d_k` is the per-head key dimension (192 in the paper's configuration).
+
+NSA replaces this with:
+
+$$\tilde{K}_t = f_K(q_t, k_{:t}, v_{:t}), \quad \tilde{V}_t = f_V(q_t, k_{:t}, v_{:t})$$
+
+where `f_K` and `f_V` are **remapping functions** that dynamically construct a compact set of key-value pairs `\tilde{K}_t, \tilde{V}_t` given the current query and the full history.
+
+**What this computes:** For each query, the system produces a much smaller set of key-value representations — on the order of hundreds of tokens rather than tens of thousands — that are intended to contain all the information relevant to that specific query. The attention is then computed against this compact set rather than the full history.
+
+**Why this form:** This generalizes standard attention (which is the special case where `f_K` and `f_V` are identity functions returning the full history) while creating an explicit design space for what the remapping functions should do. The key constraint is that `\tilde{K}_t` and `\tilde{V}_t` should be much smaller than the full history (`N_t ≪ t`, where `N_t = \sum_c \text{size}[\tilde{K}^c_t]` is the total number of remapped tokens), but still contain the information necessary to produce accurate attention outputs.
+
+The paper then decomposes the remapping into multiple **strategies** (categories), each producing its own set of key-value pairs, with the final output being a gated combination:
+
+$$o^*_t = \sum_{c \in C} g^c_t \cdot \text{Attn}(q_t, \tilde{K}^c_t, \tilde{V}^c_t)$$
+
+where:
+
+- `C = \{cmp, slc, win\}` is the set of three strategies: compression, selection, and sliding window.
+- `\tilde{K}^c_t, \tilde{V}^c_t` are the key-value pairs produced by strategy `c` for this query.
+- `g^c_t \in [0,1]` is a learned gate score for strategy `c`, produced by applying an MLP followed by sigmoid activation to the input features at position `t`.
+
+**What this computes:** For each query, three separate attention operations are performed — one against compressed keys, one against selected fine-grained keys, and one against a local window — and their outputs are linearly combined with per-branch learned weights. The gates allow the model to dynamically adjust how much it relies on each information source per token.
+
+**Why this form:** The gated combination serves two purposes. First, it allows the model to learn *when* to use each branch — a token early in a document might rely more on the local window, while a token requiring cross-document reasoning might upweight the compression branch. Second, it enables **stable training** by preventing any single branch from dominating gradients. Without gating, if one branch consistently provides better predictions, the model might never learn to use the others effectively. The gates (initialized and learned) provide a differentiable mechanism for balancing information sources.
+
+The total number of remapped tokens is the sum across all strategies:
+
+$$N_t = \sum_{c \in C} \text{size}[\tilde{K}^c_t]$$
+
+**What this computes:** The total token budget that NSA uses for this query. For the paper's configuration at 64k sequence length, `N_t` equals approximately `⌊64000/16⌋` compression tokens (≈4000) + `16 × 64` selected tokens (1024) + 512 window tokens ≈ **5632 total**, compared to 65536 for Full Attention. This is approximately an 11.6× reduction in attention computation.
+
+---
+
+#### Token Compression: Coarse-Grained Global Context
+
+The compression branch produces a **low-resolution summary** of all preceding tokens by aggregating sequential blocks of keys (and values) into single compressed representations. This is the branch that enables global context scanning at drastically reduced cost, and — crucially — it is also the mechanism that provides the importance scores for the selection branch.
+
+Formally, the compressed key representation is defined as:
+
+$$\tilde{K}^{\text{cmp}}_t = f^{\text{cmp}}_K(k_{:t}) = \left\{ \varphi(k_{id+1:id+l}) \;\middle|\; 0 \leq i \leq \left\lfloor \frac{t - l}{d} \right\rfloor \right\}$$
+
+where:
+
+- `l = 32` is the block length — the number of consecutive keys grouped together for compression.
+- `d = 16` is the sliding stride — the distance between the start positions of adjacent blocks.
+- `k_{id+1:id+l} ∈ R^{l×d_k}` is the set of `l` consecutive key vectors starting at position `id+1`.
+- `φ` is a learnable MLP with **intra-block position encoding** that maps a block of `l` key vectors to a single compressed key vector `\tilde{k}^{\text{cmp}}_i ∈ R^{d_k}`.
+- The result `\tilde{K}^{\text{cmp}}_t ∈ R^{\lfloor (t-l)/d \rfloor × d_k}` is the sequence of compressed keys.
+
+An analogous formulation applies for compressed values `\tilde{V}^{\text{cmp}}_t`, using the same block structure and a separate learnable MLP (or the same one — the paper does not specify whether `φ` is shared between keys and values).
+
+**What this computes:** The full key sequence is partitioned into overlapping blocks (stride 16 means adjacent blocks overlap by 16 tokens when block length is 32), and each block is transformed through a learned MLP into a single vector. The result is a sequence of compressed key-value pairs approximately `t/16` in length — a 16× reduction compared to the full sequence.
+
+**Why this form with overlapping blocks (`d < l`):** The paper states explicitly that `d < l` is chosen "to mitigate information fragmentation." With `d = 16` and `l = 32`, every token (except those at the very beginning and end) participates in exactly two compressed blocks — the block that starts at its own position and the block that started 16 positions earlier. This double coverage ensures that no token boundary artifact determines whether information about a particular token is captured. If `d = l` (non-overlapping blocks), a token at the boundary between two blocks might have its information split awkwardly, and patterns that span block boundaries would be invisible to the compression mechanism. The overlap acts as a form of **redundant encoding** that smooths out block-boundary effects.
+
+**Why MLP with intra-block position encoding instead of simple pooling:** Standard pooling operations (mean, max) treat all positions in a block identically, losing fine-grained positional information. The intra-block position encoding combined with a learnable MLP allows the compression function to learn *how* to weight different positions within a block — for example, it might learn that boundary tokens carry less information than central tokens, or that certain relative positions within a block are more informative for certain types of queries. This is a subtle but important design choice: the compression MLP is not just a dimensionality reduction but a learned feature extractor that the model can adapt during training.
+
+**What the compression branch enables downstream:** The compressed key-value pairs are used directly in one of the three attention branches, providing coarse-grained global context. But equally importantly, the attention scores between the query and these compressed keys — specifically, `Softmax(q_t^T \tilde{K}^{\text{cmp}}_t)` — serve as the **importance signal** for which fine-grained blocks to select in the selection branch. This means the computation done for the compression branch is **reused** rather than duplicated, which is key to keeping the overhead of the selection mechanism low.
+
+---
+
+#### Token Selection: Fine-Grained Attention for Important Regions
+
+The selection branch is the most technically complex component of NSA. Its goal is to identify and retain **a small number of continuous token blocks** where fine-grained (token-level) attention is most valuable, while discarding the vast majority of the sequence where coarse-grained (compressed) attention suffices. The design is driven by four constraints: (1) blockwise continuity for hardware efficiency, (2) low overhead for importance score computation, (3) consistency across GQA heads for shared-KV memory bandwidth, and (4) full differentiability for end-to-end training.
+
+##### Blockwise Selection
+
+The paper **partitions** the full key-value sequence into **selection blocks** of size `l' = 64` — these are contiguous groups of 64 consecutive tokens. The key design decision is that selection operates at the level of *blocks*, not individual tokens.
+
+**What this means operationally:** The model decides which blocks to attend to, and if a block is selected, *all* tokens within that block are included in the fine-grained attention computation. If a block is not selected, *none* of its tokens appear in the fine-grained branch (though they still contribute through the compression branch). This is in contrast to token-level selection methods like HashAttention, where individual tokens scattered across the sequence are selected independently.
+
+**Why blockwise:** The paper gives two justifications. First, hardware efficiency: "modern GPU architectures exhibit significantly higher throughput for continuous block accesses compared to random index-based reads" and "blockwise computation enables optimal utilization of Tensor Cores." Reading 64 contiguous tokens from memory and loading them into SRAM is vastly more efficient than reading 64 individual tokens scattered throughout a 64k-length KV cache. Second, attention score patterns: the paper's Figure 8 visualization shows that attention scores "tend to exhibit blockwise clustering characteristics, with nearby keys often showing similar attention scores." This spatial continuity means that block-level selection loses relatively little information compared to token-level selection, since important tokens tend to cluster in continuous regions.
+
+##### Importance Score Computation
+
+The efficiency of NSA hinges on computing block importance scores **without introducing significant additional computation**. The paper's solution is elegant: reuse the attention scores from the compression branch.
+
+When the compression branch computes attention between query `q_t` and compressed keys `\tilde{K}^{\text{cmp}}_t`, it produces intermediate attention scores:
+
+$$\mathbf{p}^{\text{cmp}}_t = \text{Softmax}\left(q_t^\top \tilde{K}^{\text{cmp}}_t\right)$$
+
+where `\mathbf{p}^{\text{cmp}}_t \in \mathbb{R}^{\lfloor (t-l)/d \rfloor}` is a probability distribution over compressed blocks (since Softmax ensures the scores sum to 1).
+
+**What this computes:** For each compressed block, this produces a scalar between 0 and 1 representing how relevant the coarse-grained content of that block is to the current query. Compressed blocks that contain information relevant to `q_t` receive higher attention scores.
+
+**Why these scores are informative for selection:** Each compressed block was produced by aggregating a span of `l` tokens via the MLP `φ`. If a compressed block receives a high attention score, it means the aggregated content of that token span is relevant to the query. Since attention patterns tend to be spatially continuous, tokens near that span are also likely to be relevant. The compressed attention scores thus serve as a **low-resolution relevance map** over the entire sequence.
+
+##### Mapping Compression Scores to Selection Block Scores
+
+The compression blocks and selection blocks use different blocking schemes (`l = 32, d = 16` for compression vs. `l' = 64` for selection), so the compression-derived scores must be mapped to selection block indices.
+
+In the simplest case where compression and selection share the same blocking scheme (`l' = l = d`), the mapping is direct — the attention score for compression block `i` is exactly the importance score for selection block `i`. However, the paper uses different schemes, requiring a spatial aggregation.
+
+The mapping formula when `l ≤ l'`, `d | l` (d divides l), and `d | l'` (d divides l') is:
+
+$$\mathbf{p}^{\text{slc}}_t[j] = \sum_{m=0}^{\frac{l'}{d}-1} \sum_{n=0}^{\frac{l}{d}-1} \mathbf{p}^{\text{cmp}}_t\left[\frac{l'}{d}j - m - n\right]$$
+
+where:
+
+- `\mathbf{p}^{\text{slc}}_t[j]` is the importance score for selection block `j`.
+- `l' = 64` is the selection block size.
+- `l = 32` is the compression block length.
+- `d = 16` is the compression stride.
+- `l'/d = 4`, `l/d = 2` are the number of strides per selection block and per compression block respectively.
+- The index `[⋅]` denotes accessing the corresponding element of the vector.
+
+**What this computes:** Each selection block spans `l'/d = 4` compression strides. Each compression stride spans `l/d = 2` compression blocks (due to overlapping blocks with stride 16 and block length 32). The double sum aggregates all compression block scores that overlap spatially with the selection block. Specifically, selection block `j` covers positions `[j·l', (j+1)·l')`, and the sum accumulates the attention scores of all compressed blocks whose token spans intersect this interval. This is essentially a **spatial convolution** that converts the overlapping-block compression scores into non-overlapping selection block scores.
+
+**Why this mapping is needed:** The compression scheme uses overlapping blocks to prevent information fragmentation, but selection needs non-overlapping blocks (for efficient, non-redundant KV loading). The mapping handles the change in coordinate systems. The condition `d | l` and `d | l'` ensures that block boundaries align at stride boundaries, making the spatial relationship well-defined.
+
+##### Aggregation Across GQA Heads
+
+For models using GQA (Grouped-Query Attention), multiple query heads within a group share the same key-value cache. To maintain the memory bandwidth benefits of this sharing, all heads in a group must select the **same** KV blocks — otherwise, the memory access volume scales with the union of individual selections.
+
+The paper enforces this by aggregating importance scores across all heads in a group:
+
+$$\mathbf{p}^{\text{slc}'}_t = \sum_{h=1}^{H} \mathbf{p}^{\text{slc}, (h)}_t$$
+
+where:
+
+- `\mathbf{p}^{\text{slc}, (h)}_t` is the selection block importance score vector computed for head `h` (using that head's query `q^{(h)}_t`).
+- `H = 4` is the number of query heads per GQA group (the paper's configuration uses 64 total heads and 4 GQA groups, so `H = 16` heads per group — **note**: the paper states `g = 4` GQA groups and `h = 16` heads per group in Section 5, but in Section 3.3.2 Equation 10 the sum is over `h = 1..H` where `H` is "the number of query heads in each group" which would be 16, not 4; the variable naming is slightly inconsistent but the intent is clear).
+- `\mathbf{p}^{\text{slc}'}_t` is the aggregated importance score vector, shared across all heads in the group.
+
+**What this computes:** The (unnormalized) importance of each selection block is summed across all query heads. A block that is important to multiple heads gets a higher aggregated score.
+
+**Why aggregation instead of intersection:** If the system took the intersection of per-head selections (only blocks all heads agree on), it might miss blocks critical to individual heads. If it took the union without aggregation (each head selects independently), the total loaded KV would be the union of all selections, potentially defeating the shared-KV efficiency. Aggregation before selection ensures that highly-relevant blocks (important to many heads) are prioritized, while the top-`n` constraint limits the total loaded KV regardless of how many heads found a block relevant.
+
+**Why sum rather than max:** Sum implicitly weights blocks by how many heads find them important — a block that is the single most important block for one head but irrelevant to 15 others would have a lower aggregated score than a block that is the 5th most important for all 16 heads. This biases selection toward blocks with broad relevance across heads, which is desirable for shared-KV efficiency. Max would select blocks that are critical to any single head but might be irrelevant to others, leading to wasted memory bandwidth.
+
+##### Top-`n` Block Selection
+
+Given the aggregated importance scores `\mathbf{p}^{\text{slc}'}_t`, the system selects the top-`n` highest-scoring blocks:
+
+$$\mathcal{I}_t = \{i \mid \text{rank}(\mathbf{p}^{\text{slc}'}_t[i]) \leq n\}$$
+
+where:
+
+- `\text{rank}(·)` returns the ranking position in descending order (rank 1 = highest score, rank 2 = second highest, etc.).
+- `n = 16` is the number of selected blocks (the paper's configuration includes "fixed activating the 1 initial block and 2 local blocks" — meaning of the 16 blocks, 3 are always selected regardless of importance scores, and the remaining 13 are selected by rank. The 1 initial block corresponds to the first `l' = 64` tokens, and the 2 local blocks correspond to the most recent `2 × 64 = 128` tokens before the sliding window).
+- `\mathcal{I}_t` is the set of indices of selected blocks.
+
+The selected keys are then constructed by concatenating the selected blocks:
+
+$$\tilde{K}^{\text{slc}}_t = \text{Cat}\left(\{k_{il'+1 : (i+1)l'} \mid i \in \mathcal{I}_t\}\right)$$
+
+where:
+
+- `k_{il'+1 : (i+1)l'}` is the block of `l' = 64` contiguous key vectors starting at position `il' + 1`.
+- `\text{Cat}` denotes concatenation along the sequence dimension.
+- `\tilde{K}^{\text{slc}}_t \in \mathbb{R}^{nl' × d_k}` is the concatenated tensor of selected key blocks, with total size `16 × 64 = 1024` key vectors.
+
+An analogous formulation produces selected values `\tilde{V}^{\text{slc}}_t`.
+
+**What this computes:** Out of all `⌊t/l'⌋` possible selection blocks in the sequence, only 16 are retained. The selected key-value pairs proceed to the fine-grained attention computation, while all others are excluded from this branch (but still contribute through the compression branch). The fixed inclusion of the first block (attention sink) and two local blocks (recent context) ensures a minimum coverage of known-important regions, while the remaining 13 blocks are dynamically selected based on the compression-derived importance scores.
+
+**Why `n = 16`:** The paper does not provide a detailed ablation for this specific value, but the total selected tokens (`16 × 64 = 1024`) plus compression tokens and window tokens yields the target sparsity ratio. The choice balances — enough fine-grained tokens to capture important details (1024 tokens can represent a substantial fraction of the most relevant context) while keeping the total well below the full sequence length (at 64k context, 1024 selected tokens is 1.56% of the full sequence).
+
+**Why fixed inclusion of initial and local blocks:** The first block serves as an **attention sink** — a well-documented phenomenon where transformers allocate disproportionate attention to initial tokens regardless of content (Xiao et al., 2023). Forcing its inclusion prevents the importance scoring mechanism from accidentally excluding it. The local blocks ensure that the most recent context is always available at fine granularity, which is important because local patterns are both highly predictive and rapidly changing — they might not score highly in the coarse-grained compression branch but are essential for fluent token prediction.
+
+**Why ranking with fixed `n` rather than thresholding:** A threshold-based selection (`p > τ`) would produce variable numbers of selected blocks, which is problematic for two reasons. First, the kernel implementation relies on a fixed inner-loop size for optimal scheduling (discussed in Section 3.4). Second, variable selection would make the computational cost unpredictable, complicating latency guarantees. Fixed `n` ensures consistent, predictable cost per query.
+
+##### Differentiability of the Selection Mechanism
+
+A subtle but critical property: the entire selection pipeline is **differentiable** with respect to the model parameters, despite the discrete top-`n` operation. The paper achieves this because:
+
+1. The importance scores `\mathbf{p}^{\text{slc}'}_t` are computed from `\mathbf{p}^{\text{cmp}}_t`, which is itself the output of a Softmax over `q_t^T \tilde{K}^{\text{cmp}}_t` — all operations in this chain are differentiable (matrix multiplication, Softmax, summation).
+
+2. The top-`n` selection is indeed a non-differentiable operation (ranking and hard selection), but **gradients flow through the selected tokens themselves** during the attention computation. When the attention mechanism computes gradients for the selected key-value blocks, those gradients propagate back to the parameters that produced those key-value representations (the projection matrices, and ultimately all earlier layers).
+
+3. The **importance scores themselves** receive gradients indirectly. Although the hard selection operation blocks direct gradient flow from the attention output to the importance scores, the compression branch's attention output — which uses `\mathbf{p}^{\text{cmp}}_t` directly — provides a gradient path. The compression attention loss penalizes the model when important tokens are missed by the coarse-grained branch, which in turn improves the quality of `\mathbf{p}^{\text{cmp}}_t`, which determines the selection. This is a form of **implicit supervision**: the compression branch must learn to produce attention scores that are good enough for its own prediction task, and these same scores determine which fine-grained tokens the selection branch accesses.
+
+This design avoids the need for auxiliary losses (which the paper's experiments in Figure 7 show degrade performance) or straight-through gradient estimators (which can be unstable) while still allowing the model to learn effective sparse patterns during training.
+
+---
+
+#### Sliding Window: Isolated Local Context
+
+The sliding window branch is conceptually the simplest but architecturally crucial. It simply preserves the most recent `w = 512` tokens as key-value pairs:
+
+$$\tilde{K}^{\text{win}}_t = k_{t-w:t}, \quad \tilde{V}^{\text{win}}_t = v_{t-w:t}$$
+
+**What this computes:** The 512 most recent key-value pairs are included in their original, uncompressed form as a separate attention branch.
+
+**Why a dedicated branch with independent key-value projections:** The paper's argument is subtle and important. The authors observe that "local patterns typically adapt faster and can dominate the learning process, potentially preventing the model from effectively learning from compression and selection tokens." This is the **shortcut learning problem**: if local and long-range tokens share the same attention mechanism, the model can achieve good loss by attending only to the most recent tokens (which are highly predictive in language modeling) and never learns to use long-range context. The gradients for long-range attention are weaker and noisier than local gradients, so the model converges to a local-only solution.
+
+By providing **independent keys and values** for each branch (separate linear projections from the same hidden states), the paper isolates gradient flow. The sliding window branch's key-value projections can specialize for local pattern recognition without interfering with the compression and selection branches' projections, which can specialize for long-range patterns. The gating mechanism at the output provides a differentiable way to combine these specialized representations.
+
+**Why `w = 512`:** This provides approximately 512 tokens of local context, which is sufficient for most local syntactic and semantic patterns. Combined with the 2 fixed local selection blocks (each 64 tokens, providing 128 tokens of fine-grained local context overlapping with the window), the model has substantial local information capacity.
+
+**Additional detail:** The paper states that independent keys and values are provided "to further prevent shortcut learning across attention branches with marginal computational overhead." The overhead is indeed marginal — it means having three separate sets of key and value projection matrices (`W_K, W_V`) instead of one, which adds a small number of parameters (for a hidden dimension of 2560 and key dimension 192, each projection matrix is `2560 × 192`, so two additional projection matrices per branch for three branches means roughly `2 × 2560 × 192 × 2 ≈ 1.97M` additional parameters, negligible compared to the 27B total).
+
+---
+
+#### Kernel Design: From Algorithmic Sparsity to Wall-Clock Speedup
+
+Section 3.4 describes the implementation that translates NSA's algorithmic sparsity into actual speedups on NVIDIA GPUs. The paper implements custom Triton kernels for the selection attention branch (compression and sliding window use standard FlashAttention-2 kernels, since they operate on contiguous blocks).
+
+##### The Problem with Naive Implementation
+
+A straightforward adaptation of FlashAttention to sparse attention would use the standard approach: load contiguous blocks of queries into SRAM, then for each query block, fetch the relevant KV blocks from HBM. However, **queries within a contiguous block may require disjoint KV blocks** because NSA's selection is per-query — query `t` might select blocks `[3, 7, 12, ...]` while query `t+1` selects blocks `[5, 9, 15, ...]`. If queries are grouped into blocks, the union of their required KV blocks could be large, reducing sparsity and increasing memory traffic.
+
+##### NSA's Solution: Group-Centric Data Loading
+
+The key innovation is to **change the loop ordering**: instead of iterating over query blocks, the kernel iterates over individual query positions, but for each position, it loads **all query heads within a GQA group** simultaneously.
+
+**How it works (Figure 3 and Section 3.4 description):**
+
+1. **Grid Loop (outermost):** Triton's grid scheduler distributes query positions across GPU streaming multiprocessors (SMs). Each thread block is assigned a set of query positions to process.
+
+2. **Group-Centric Data Loading:** For each query position `t`, the kernel loads all `H = 16` query vectors `Q ∈ R^{H × d_k}` belonging to the same GQA group into SRAM simultaneously. Since all heads in a GQA group share the same KV cache and NSA enforces shared block selection (via aggregated importance scores in Equation 10), all 16 heads require exactly the same sparse KV blocks `\mathcal{I}_t`.
+
+3. **Shared KV Fetching (inner loop):** The kernel iterates over the selected block indices `\mathcal{I}_t` (which is the same for all 16 heads). For each selected block index `i`, it loads the contiguous key block `K ∈ R^{l' × d_k}` and value block `V ∈ R^{l' × d_v}` from HBM into SRAM. Because the block is contiguous in memory (it represents `l' = 64` consecutive tokens in the original sequence), this is a single coalesced memory transaction.
+
+4. **Compute on SRAM:** For each loaded KV block, the kernel computes the attention scores between all 16 query vectors in SRAM and the key block, then computes the weighted sum of the value block, accumulating results in SRAM.
+
+5. **Output to HBM:** After processing all selected blocks, the accumulated attention outputs for all 16 heads are written back to HBM.
+
+**What this achieves:**
+
+- **Eliminates redundant KV transfers:** Because all 16 heads share the same block selection (by design of NSA's GQA aggregation), each KV block is loaded from HBM exactly once and used by all 16 heads. Without this design, if heads selected blocks independently, each head might need different blocks, requiring multiple loads of the same or similar KV regions.
+
+- **Balances compute workloads:** The inner-loop length is `n = 16` blocks (fixed), which is nearly identical for all query positions. This uniform workload makes load balancing across SMs simple — Triton's grid scheduler can distribute queries evenly without concern for some queries taking much longer than others.
+
+- **Achieves near-optimal arithmetic intensity:** The computation involves `H × l' × d_k` multiply-adds per loaded KV block (16 heads × 64 tokens × 192 key dimension, plus the value computation), while the memory access is `l' × (d_k + d_v)` loads (64 × 320 = 20480 elements). The ratio of compute to memory access is high enough to be compute-bound on modern GPUs for the inner computation, and the blockwise loading ensures that HBM bandwidth is used efficiently through large contiguous transfers.
+
+##### Why Outer Loop on Grid
+
+The paper states: "Since the inner-loop length (proportional to the selected block count `n`) remains nearly identical for different query blocks, we put query/output loops in Triton's grid scheduler to simplify and optimize the kernel."
+
+This is a pragmatic engineering decision. Triton's grid scheduler is designed for embarrassingly parallel workloads where each grid cell does roughly equal work. By making query position the grid dimension, each SM processes a subset of query positions independently — there is no communication between SMs and no synchronization points within the attention computation. The alternative — making KV blocks the grid dimension and having each SM compute attention for all queries against its assigned KV block — would require atomic additions or reductions to combine partial results, adding complexity and potential bottlenecks.
+
+##### Arithmetic Intensity Analysis
+
+The paper introduces arithmetic intensity in Section 3.1 as background, then the kernel design explicitly optimizes for it. The key insight is:
+
+- **During training and prefilling:** Batched attention over many queries and keys has high arithmetic intensity — many operations per byte loaded. NSA's speedup here comes from reducing the total number of operations (since `N_t ≪ t`), while the kernel design ensures that the operations that remain are executed at high utilization through blockwise memory access and Tensor Core-compatible dimensions.
+
+- **During decoding:** Autoregressive generation processes one query at a time but must load the entire KV cache. This is memory-bandwidth-bound — the GPU spends most of its time waiting for data from HBM. NSA's speedup here comes from reducing the volume of data that must be loaded from HBM (from `t` tokens to `N_t` tokens, approximately 11.6× less at 64k context), while the group-centric design ensures that the reduced data is loaded in large contiguous blocks (not scattered individual tokens), maximizing HBM bandwidth utilization.
+
+##### Compatibility with FlashAttention-2
+
+The compression and sliding window branches are "readily compatible with existing FlashAttention-2 kernels" because they operate on contiguous key-value sequences — the compressed keys form a contiguous sequence in memory (they are produced sequentially), and the sliding window is a contiguous suffix of the KV cache. No custom kernel is needed for these branches, reducing implementation complexity and letting the authors focus optimization effort on the selection branch where the sparsity pattern is non-contiguous.
+
+---
+
+#### Putting It All Together: End-to-End NSA Computation
+
+For a given input sequence of length `T`, the NSA attention mechanism at each layer proceeds as follows:
+
+1. **Standard projections:** Input hidden states are projected to queries, keys, and values through three separate sets of projection matrices (one set for each of the three branches). This produces `q_t^{\text{cmp}}, k_{:t}^{\text{cmp}}, v_{:t}^{\text{cmp}}` for the compression branch, `q_t^{\text{slc}}, k_{:t}^{\text{slc}}, v_{:t}^{\text{slc}}` for the selection branch, and `q_t^{\text{win}}, k_{:t}^{\text{win}}, v_{:t}^{\text{win}}` for the sliding window branch.
+
+2. **Compression:** For the compression branch, keys and values are partitioned into blocks of `l = 32` with stride `d = 16`, and each block is passed through the compression MLP `φ` to produce compressed key-value pairs. Attention is computed between `q_t^{\text{cmp}}` and the compressed keys and values using a standard FlashAttention-2 kernel.
+
+3. **Selection:** The attention scores `\mathbf{p}^{\text{cmp}}_t = \text{Softmax}((q_t^{\text{cmp}})^\top \tilde{K}^{\text{cmp}}_t)` from the compression branch are mapped to selection block importance scores, aggregated across GQA heads, and used to select the top-`n = 16` blocks (including fixed initial and local blocks). The selected key-value blocks are loaded and attention is computed using the custom group-centric sparse kernel.
+
+4. **Sliding Window:** Attention is computed between `q_t^{\text{win}}` and the most recent `w = 512` key-value pairs using a standard FlashAttention-2 kernel.
+
+5. **Gated combination:** The three branch outputs are combined: `o_t^* = g_t^{\text{cmp}} \cdot o_t^{\text{cmp}} + g_t^{\text{slc}} \cdot o_t^{\text{slc}} + g_t^{\text{win}} \cdot o_t^{\text{win}}`, where gates `g_t^c` are produced by an MLP with sigmoid activation applied to the original input features (before the query/key/value projections — this detail is implied but not explicitly stated in the paper, though the architecture diagram in Figure 2 shows the gates being derived from the input before branching).
+
+6. **Output projection:** The combined attention output is passed through the standard output projection matrix `W_O` to produce the final attention output for this layer.
+
+This design achieves the paper's stated goal: **end-to-end trainable sparse attention with hardware-aligned computation**. Every operation in the pipeline is differentiable (the only non-differentiable operation is the hard top-`n` selection, but as discussed, gradients flow through the selected tokens and indirectly through the compression branch), the blockwise design ensures high GPU utilization, the GQA head aggregation preserves shared-KV memory bandwidth, and the hierarchical three-branch structure with learned gates prevents local patterns from dominating and enables the model to learn task-optimal sparse patterns during pretraining.
+
+## 4. Key Insights and Innovations
+
+### Innovation 1: Native Sparsity as a First-Principle Architectural Choice, Not a Post-Hoc Optimization
+
+The dominant paradigm in sparse attention research treats sparsity as an **inference-time optimization** applied to models pretrained with Full Attention. Whether through KV-cache eviction (H2O, SnapKV), query-aware selection (Quest, InfLLM), or clustering-based approaches (ClusterKV, MagicPIG), the model learns its attention patterns under dense computation and is only later forced to operate under a sparse regime. The paper identifies this as the root cause of a cascade of failures: performance degradation from architectural bias (the model was optimized for a different computation graph), inability to learn optimal sparse patterns (non-differentiable selection operations block gradient flow), and fundamental incompatibility with end-to-end training (methods designed only for inference phases).
+
+NSA makes the **intellectually distinctive move of inverting this assumption**: rather than asking "how can we make an already-trained dense model sparse at inference," the paper asks "what if sparse attention were the only attention the model ever knew?" This transforms sparsity from a compromise — something you tolerate to save compute — into a **learnable architectural inductive bias**. The model is pretrained from random initialization with sparse attention, meaning its weights, its attention patterns, and its internal representations all develop under the constraint that only a small fraction of tokens can be attended to at fine granularity. The result, as shown in Table 1 and Table 2, is not merely that sparsity doesn't hurt — it actually **improves** performance on several benchmarks (+0.042 on DROP, +0.034 on GSM8K, +0.032 over Full Attention on LongBench average). The paper's interpretation that sparsity acts as a regularizer, "filtering out noise from irrelevant attention pathways" (Section 4.3), suggests that dense attention may be **over-parameterized for the actual information content** in attention distributions, and that learned sparsity recovers a more efficient representation.
+
+This is a **fundamental reframing**, not an incremental improvement. Prior work accepted the pretrain-dense-then-sparsify pipeline as unavoidable; NSA demonstrates it is not only avoidable but **counterproductive**. The field's default assumption — that dense pretraining is the "safe" baseline and sparsity is the risky optimization — is inverted: native sparsity is presented as the safer choice because it eliminates the distribution shift between training and inference. The supporting evidence is not just the performance numbers but the qualitative finding that inference-only methods like Exact-Top (which computes full attention scores and selects the top-n keys — an "oracle" upper bound on inference sparsity) underperform NSA by 0.046 on LongBench (Table 2), despite having access to exact, lossless importance scores at inference time. This gap can only be explained by the architectural bias problem: the pretrained model's weights were optimized for dense attention, and even perfect inference-time sparsity cannot fully compensate.
+
+### Innovation 2: Hardware-Aware Sparsity Design as an Algorithm-Hardware Co-Optimization Problem
+
+Prior sparse attention research treats hardware efficiency as an **implementation detail** — something addressed after the algorithm is designed. Methods are evaluated on theoretical FLOPs reduction or KV-cache compression ratios, with the implicit assumption that these metrics translate to wall-clock speedups. The paper's Section 2.1 systematically dismantles this assumption, showing that many methods with impressive theoretical sparsity fail to achieve corresponding latency improvements because their memory access patterns are incompatible with GPU memory hierarchies.
+
+The conceptual innovation is to **elevate hardware constraints to the level of algorithmic design principles**. The paper doesn't just implement sparse attention efficiently — it *designs* the sparsity pattern to be efficient by construction. Three specific constraints shape the entire NSA architecture:
+
+**Blockwise continuity is a first-class design constraint.** The selection mechanism operates on contiguous blocks of 64 tokens (`l' = 64`) not as a modeling convenience but because "modern GPU architectures exhibit significantly higher throughput for continuous block accesses compared to random index-based reads" (Section 3.3.2). Methods like HashAttention that select individual scattered tokens are not merely harder to implement efficiently — they are **fundamentally incompatible** with the block-based memory access patterns that make FlashAttention fast. This is not an optimization detail; it's a design criterion on par with model quality.
+
+**GQA head consistency is enforced algorithmically, not left to chance.** The paper identifies a specific failure mode in prior work: when attention heads within a GQA group independently select KV blocks, the memory access volume scales with the *union* of their selections, potentially defeating the shared-KV memory bandwidth savings that GQA was designed to provide. NSA's solution — aggregating importance scores across heads before selection (Equation 10) — ensures that all heads in a group select identical blocks, making the memory access pattern dense in the selected blocks and sparse elsewhere. This is a **hardware-algorithm co-design**: the algorithm is modified to match what the hardware can execute efficiently, rather than hoping the implementation can compensate.
+
+**Arithmetic intensity, not FLOPs, is the optimization target.** Section 3.1 introduces arithmetic intensity as the ratio of compute operations to memory accesses, and notes that this ratio determines whether a kernel is compute-bound or memory-bound. The kernel design in Section 3.4 — group-centric data loading, shared KV fetching, outer-loop grid scheduling — is explicitly optimized to maximize this ratio by minimizing redundant HBM reads and maximizing SRAM data reuse. The 9.0× forward and 6.0× backward speedups at 64k context (Figure 6) and 11.6× decoding speedup (Table 4) are not simply a consequence of doing fewer operations — they result from ensuring that the operations that remain are executed at high hardware utilization. This is a **fundamental methodological contribution**: it establishes that sparse attention research must be evaluated on wall-clock latency, not theoretical FLOPs reduction, and that algorithms must be designed with awareness of the hardware's memory hierarchy from the start.
+
+This represents a **shift in evaluation norms** for the field. The paper's Figure 7 explicitly compares training loss curves for different selection strategies, showing that both auxiliary-loss-based and heuristic parameter-free approaches underperform NSA even at the level of pretraining loss — before any efficiency considerations. The implication is that hardware-aligned design is not just about speed; it constrains what sparse patterns the model can learn effectively, and patterns that are hardware-inefficient also tend to be **learning-inefficient** because they introduce overhead (auxiliary losses, scattered memory access during backpropagation) that degrades gradient quality.
+
+### Innovation 3: Hierarchical Token Modeling as a Solution to the Shortcut Learning Problem
+
+A non-obvious challenge in sparse attention design — and one that the paper identifies as a key reason prior trainable approaches failed — is that **local patterns dominate the learning process and prevent the model from developing long-range attention capabilities**. The paper's diagnosis (Section 3.3.3) is that "local patterns typically adapt faster and can dominate the learning process, potentially preventing the model from effectively learning from compression and selection tokens." This is the shortcut learning problem applied to attention: if a model can achieve good predictive performance by attending only to the most recent tokens (which are highly predictive in language modeling due to local syntactic and semantic coherence), it will never develop the capability to use long-range context, because the gradients for local attention are stronger and more reliable than those for distant attention.
+
+NSA's solution — **three parallel attention branches with independent key-value projections** — represents a conceptual advance beyond simply "using multiple granularities." The key insight is that **architectural isolation** between branches prevents gradient interference. By giving the compression and selection branches their own key and value projection matrices, the model is forced to learn separate representations for long-range versus local patterns. The sliding window branch's projections can specialize for the rapid, high-precision local patterns that dominate token-level prediction, while the compression branch's projections can specialize for the coarser, more semantically abstract patterns that are useful for global context. The learned gating mechanism (`g_t^c`) at the output provides a differentiable way to combine these specialized representations, but the isolation of projections ensures that the strong local gradients don't wash out the weaker long-range gradients during training.
+
+This is **not merely an ensemble or multi-scale approach** — it's a targeted architectural intervention to solve a specific learning dynamics problem. Prior work that used multiple attention granularities (e.g., Longformer's combination of local windows and global tokens) did not isolate the projections, meaning the same key-value representations were used for both local and global attention. NSA's innovation is the recognition that **shared representations enable shortcut learning**, and that independent projections with gated combination are necessary to force the model to develop both local and global capabilities.
+
+The evidence for this claim is indirect but compelling: the ablation in Figure 7 shows that alternative selection strategies (auxiliary-loss-based and heuristic) produce inferior training loss compared to NSA, and the paper attributes at least part of this to the absence of the hierarchical isolation mechanism. More directly, the strong performance on long-context benchmarks — particularly the +0.087 improvement over Full Attention on multi-hop QA (HPQ, Table 2) and the perfect needle-in-a-haystack retrieval accuracy (Figure 5) — suggests that the model has indeed learned to use long-range context effectively, which would not happen if local patterns had shortcutted the learning process.
+
+This innovation is **incremental in mechanism** (multi-branch attention with gating is not a new idea in itself) but **fundamental in diagnostic framing**: it identifies a specific learning dynamics failure mode (shortcut learning via local attention dominance) that explains why prior trainable sparse attention methods underperformed, and provides a principled architectural solution (projection isolation) that is validated by downstream task performance.
+
+### Innovation 4: Repurposing Coarse-Grained Attention Scores as a Zero-Overhead Token Selection Mechanism
+
+The problem of computing token importance scores for sparse attention selection is a **prerequisite chicken-and-egg problem**: to select which tokens are important for a query, you need to compute some measure of relevance between the query and those tokens, but that relevance computation *is itself* the attention operation you're trying to make sparse. Prior work resolves this in two ways, both unsatisfactory: either introduce a separate, cheaper scoring mechanism (like Quest's min-max product or auxiliary loss-based learned scorers), or accept the cost of computing full attention scores during a prefill phase and use those to guide sparsity during decoding (like H2O). The first approach adds overhead and often has low recall; the second approach limits sparsity to only part of the model's lifecycle.
+
+NSA's solution is intellectually elegant: **the computation done for the compression branch — which exists for its own modeling purposes — produces attention scores as a necessary byproduct, and these scores are repurposed as the importance signal for selection**. There is effectively zero additional overhead for computing selection importance because the compression branch would compute `Softmax(q_t^T \tilde{K}^{\text{cmp}}_t)` regardless. The innovation is not the scoring mechanism itself but the **architectural integration** — designing the system so that one branch's necessary computation eliminates the need for a separate scoring mechanism in another branch.
+
+This is a **fundamental design insight** rather than an incremental improvement. It resolves the efficiency-quality tradeoff that plagued prior query-aware selection methods: heuristic scorers (low overhead, low recall) and learned scorers (higher recall, higher overhead) both represented compromises that NSA avoids entirely. The paper's Figure 7 shows that both the auxiliary-loss-based approach (which introduces additional query and key representations and a KL divergence training objective) and the heuristic parameter-free approach (which uses min-max product without learned parameters) produce worse pretraining loss than NSA. The auxiliary-loss approach degrades performance because the overhead of computing and supervising the additional scores interferes with the main training objective; the heuristic approach underperforms because it simply misses too many important tokens. NSA sidesteps both failure modes by making selection scoring **a free byproduct** of an existing computation.
+
+The mapping from compression-derived scores to selection block scores (Equation 9) — which aggregates overlapping compression block scores into non-overlapping selection block scores — is a technical detail, but the conceptual insight is that **coarse-grained relevance naturally serves as a proxy for fine-grained relevance** when attention patterns exhibit spatial continuity. The paper's visualization in Figure 8 showing blockwise clustering of attention scores provides empirical justification: because important tokens tend to cluster in contiguous regions, a low-resolution relevance map over the sequence is sufficient to identify *where* to look at high resolution. The spatial aggregation formula essentially says: "if compressed blocks that overlap with selection block `j` are relevant to the query, then the fine-grained tokens in selection block `j` are likely relevant too." This is not guaranteed to be true — it's an inductive assumption — but the strong empirical results (matching or exceeding Full Attention across benchmarks) suggest it holds in practice for language modeling.
+
+The significance of this innovation extends beyond NSA itself. It establishes a **design pattern** for sparse attention: rather than treating scoring as a separate problem to be solved with separate mechanisms, integrate it into the architecture so that the computation that must happen anyway — for modeling quality — simultaneously provides the sparsity signal. This principle could generalize to other attention granularities or other sparsity patterns, and represents a conceptual advance over the "separate scorer + separate attention" paradigm that dominated prior work.
+
+## 5. Experimental Analysis
+
+### Evaluation Methodology
+
+- **Dataset.** All pretraining experiments use a 270B-token corpus of 8k-length texts, representing general language modeling data (the paper does not name a specific dataset but describes it as "real-world language corpora" in Section 4). Continued training and supervised fine-tuning for long-context adaptation use 32k-length texts with YaRN (Peng et al., 2024). Chain-of-thought reasoning fine-tuning uses 10B tokens of 32k-length mathematical reasoning traces distilled from DeepSeek-R1. Evaluation benchmarks span three categories: general (MMLU, MMLU-PRO, CMMLU, BBH, GSM8K, MATH, DROP, MBPP, HumanEval), long-context (LongBench; Bai et al., 2023), and chain-of-thought mathematical reasoning (AIME 24).
+
+- **Base model(s).** All experiments use a **27B-total-parameter GQA-MoE backbone** with 3B active parameters, 30 layers, hidden dimension 2560, GQA with 4 groups (64 total attention heads, 16 heads per group), query/key dimension `d_k = 192`, value dimension `d_v = 128`, and a DeepSeekMoE (Dai et al., 2024) structure with 72 routed experts, 2 shared experts, and top-6 expert selection. The first layer's MoE is replaced with a SwiGLU MLP for training stability. This architecture is chosen to be "representative of the capabilities of many contemporary LLMs" (Section 4.1) and inherits design patterns from DeepSeek-V2 (DeepSeek-AI, 2024), making results directly comparable to production-scale models.
+
+- **Metrics.** For general benchmarks, standard task-specific metrics are used: **accuracy** for MMLU (5-shot), MMLU-PRO (5-shot), CMMLU (5-shot), BBH (3-shot), GSM8K (8-shot), and MATH (4-shot); **F1 score** for DROP (1-shot); and **Pass@1** for MBPP (3-shot) and HumanEval (0-shot). For LongBench, the paper reports **per-subset scores** (single-document QA, multi-document QA, synthetic, code) and an **average score** across subsets. For AIME 24, the metric is **average accuracy** over 16 generated responses per question with temperature 0.7 and top-p 0.95. For efficiency, metrics are **milliseconds per attention operation** (forward, backward, decoding) on 8-GPU A100 systems, with speedup ratios relative to FlashAttention-2. Pretraining quality is tracked via **training loss curves** (cross-entropy loss on the language modeling objective; Figure 4 and Figure 7).
+
+- **Baselines.** The paper compares against multiple categories:
+
+  * **Full Attention** — the standard dense attention mechanism with FlashAttention-2 implementation, serving as the primary quality baseline across all experiments.
+  * **H2O** (Zhang et al., 2023b) — a KV-cache eviction method that dynamically retains "heavy hitter" tokens during autoregressive decoding, requiring full attention computation during prefilling.
+  * **InfLLM** (Xiao et al., 2024a) — a query-aware blockwise selection method that maintains attention sinks, local context, and retrievable chunks, selecting representative keys per chunk for importance estimation.
+  * **Quest** (Tang et al., 2024) — a blockwise selection strategy where chunk importance is estimated by the product between the query and coordinate-wise min-max of the key chunks, with per-head independent selection.
+  * **Exact-Top** — an oracle sparse attention method that first computes full attention scores, identifies the top-`n` highest-scoring keys for each query, then recomputes attention on only those positions. This represents an upper bound on what inference-time sparsity can achieve given perfect importance information.
+  
+  For general evaluation, only Full Attention is compared (since short-context sparse attention is effectively equivalent to Full Attention for most baselines). For long-context evaluation (Table 2), all baselines are compared with sparsity set such that each query activates 2560 tokens (matching NSA's average activation at 32k sequence length). For chain-of-thought reasoning evaluation (Table 3), only Full Attention is compared because the sparse attention baselines "do not support training" (Section 4.2).
+
+  Additionally, Section 6.1 compares against two **alternative token selection strategies** on a 3B-parameter model (Figure 7):
+  * **Auxiliary loss-based learnable selection** — introduces additional queries per token and representative keys per block to estimate block importance scores, with supervision via KL divergence between predicted importance and mean-pooled full attention scores.
+  * **Heuristic parameter-free selection** — follows Quest's approach using the product between queries and coordinate-wise min-max of key chunks, without introducing additional parameters. Includes a "cold-start" variant where Full Attention is applied for the first 1000 training steps before transitioning to the heuristic selection.
+
+- **Generation budget / compute accounting.** The paper measures computational cost in two complementary ways:
+
+  * For **quality comparisons** between sparse and dense attention, the primary unit is the **number of tokens activated per query** during attention computation. For NSA, this is the sum of compression tokens (approximately `⌊t/16⌋` at sequence length `t`), selected tokens (`n × l' = 16 × 64 = 1024`), and window tokens (`w = 512`). For sparse attention baselines, this is set to **2560 tokens** (including 128 leading tokens and 512 local tokens, following the StreamLLM convention) to match NSA's average activation at 32k sequence length, ensuring "fair comparison" (Section 4.2).
+
+  * For **efficiency comparisons**, compute is measured directly in **milliseconds of wall-clock time** for forward, backward, and decoding attention operations on 8 A100 GPUs, using Triton-based implementations across all methods (NSA, FlashAttention-2 for Full Attention) to ensure "fair speed comparison across the same backend" (Section 5.1). Speedup ratios are computed as `Time(FlashAttention-2) / Time(NSA)`. Memory access volume during decoding is measured in **equivalent number of tokens loaded from HBM** (Table 4), which determines the expected speedup in the memory-bandwidth-bound decoding regime.
+
+  * For **pretraining efficiency**, the paper reports training loss curves (Figures 4 and 7) at equivalent numbers of training steps, but does not report total wall-clock training time or FLOPs for the full pretraining run. This is a notable omission — the reader cannot determine the absolute training time reduction from NSA versus Full Attention at the 270B-token scale.
+
+- **Cross-validation / statistical protocol.** The paper does not employ formal cross-validation or statistical significance testing. For general and long-context benchmarks, results are reported as single scalar values (e.g., "NSA: 0.565 on MMLU") without confidence intervals, error bars, or multiple training runs. The pretraining loss curves (Figures 4 and 7) show single training runs. For AIME 24 evaluation (Table 3), the paper reports average accuracy over 16 generated responses per question but does not report variance across the 16 samples or across multiple fine-tuning runs. The paper's primary mechanism for ensuring fair comparison is **architectural consistency**: both Full Attention and NSA use identical model scales (27B parameters), identical training data (270B tokens at 8k, followed by 32k continued training), and identical training recipes, with both "trained to full convergence to ensure fair comparison" (Section 4.1). The small-scale comparison in Figure 7 (3B-parameter model) similarly uses consistent architecture and training across all methods compared.
+
+---
+
+### Main Quantitative Results
+
+#### General Benchmark Performance (Pretraining Quality)
+
+**Headline result: NSA matches or exceeds Full Attention on 7 out of 9 general benchmarks despite its sparsity, achieving a higher average score (0.456 vs. 0.443).**
+
+Table 1 reports per-benchmark accuracy on the 9 general evaluation tasks for models pretrained on 270B tokens at 8k sequence length:
+
+| Benchmark | Full Attention | NSA | Δ (NSA - Full) |
+|---|---|---|---|
+| MMLU (5-shot Acc.) | 0.567 | 0.565 | −0.002 |
+| MMLU-PRO (5-shot Acc.) | 0.279 | 0.286 | +0.007 |
+| CMMLU (5-shot Acc.) | 0.576 | 0.587 | +0.011 |
+| BBH (3-shot Acc.) | 0.497 | 0.521 | +0.024 |
+| GSM8K (8-shot Acc.) | 0.486 | 0.520 | **+0.034** |
+| MATH (4-shot Acc.) | 0.263 | 0.264 | +0.001 |
+| DROP (1-shot F1) | 0.503 | 0.545 | **+0.042** |
+| MBPP (3-shot Pass@1) | 0.482 | 0.466 | −0.016 |
+| HumanEval (0-shot Pass@1) | 0.335 | 0.348 | +0.013 |
+| **Average** | **0.443** | **0.456** | **+0.013** |
+
+The pattern is striking: NSA shows its largest gains on reasoning-intensive benchmarks. DROP — which requires discrete reasoning over paragraphs — sees a +0.042 improvement. GSM8K — grade-school math word problems requiring multi-step reasoning — shows a +0.034 gain. BBH — a suite of challenging BIG-Bench tasks — improves by +0.024. The paper interprets this as evidence that "sparse attention pretraining mechanism forces model to focus on the most important information, potentially enhancing performance by filtering out noise from irrelevant attention pathways" (Section 4.3). This interpretation is plausible but not directly tested — it is an inference from the observed pattern rather than a causally verified mechanism.
+
+On knowledge-heavy benchmarks, NSA is approximately tied with Full Attention: MMLU (−0.002), MMLU-PRO (+0.007), CMMLU (+0.011), MATH (+0.001). Coding benchmarks show a mixed picture: HumanEval improves (+0.013) while MBPP declines (−0.016). The paper does not discuss the MBPP regression, which is a minor departure from the otherwise consistent pattern of NSA matching or exceeding Full Attention.
+
+Critically, the paper notes that "NSA may not fully leverage its efficiency advantages on shorter sequences" in the general evaluation setting, where most samples fit within the local context window. This means the speedup benefits are not realized here, but the quality is maintained — a necessary baseline for establishing that native sparse training does not inherently sacrifice model capability.
+
+The pretraining loss curve in Figure 4 provides additional evidence: "NSA consistently outperforming the Full Attention model" throughout training, with both models exhibiting "stable convergence." The NSA curve sits visibly below the Full Attention curve from early in training through 60,000 steps, suggesting that the sparse attention architecture provides a better inductive bias for language modeling, not merely equivalent performance. The paper does not report final perplexity or loss values, making the figure the primary evidence for pretraining quality.
+
+---
+
+#### Long-Context Evaluation (LongBench)
+
+**Headline result: NSA achieves the highest average LongBench score (0.469), outperforming Full Attention (+0.032) and the Exact-Top oracle (+0.046), with especially large gains on multi-hop QA and passage retrieval tasks.**
+
+Table 2 reports per-subset and average scores for all compared methods:
+
+| Method | SQA (avg) | MQA (avg) | Synthetic (avg) | Code (LCC) | **Avg.** |
+|---|---|---|---|---|---|
+| H2O | 0.369 | 0.148 | 0.562 | 0.092 | 0.303 |
+| InfLLM | 0.453 | 0.278 | 0.512 | 0.143 | 0.383 |
+| Quest | 0.480 | 0.270 | 0.524 | 0.135 | 0.392 |
+| Exact-Top | 0.508 | 0.305 | 0.550 | 0.156 | 0.423 |
+| Full Attention | 0.524 | 0.316 | 0.562 | 0.163 | 0.437 |
+| **NSA** | **0.520** | **0.367** | **0.728** | **0.232** | **0.469** |
+
+Where SQA = Single-document QA (MFQA-en, MFQA-zh, Qasper), MQA = Multi-document QA (HPQ, 2Wiki, GovRpt), Synthetic = synthetic tasks (Dur, PassR-en, PassR-zh), and Code = LCC (code understanding). I have computed the average scores from the subset-level data in the paper's Table 2.
+
+Several patterns demand attention:
+
+**1. NSA dominates on multi-document QA.** The MQA category — which includes multi-hop QA (HPQ, 2Wiki) and multi-document summarization (GovRpt) — shows NSA's largest relative gains. HPQ sees +0.087 over Full Attention (0.437 vs. 0.350) and 2Wiki sees +0.051 over Full Attention (0.356 vs. 0.305). These tasks require integrating information across multiple documents, which directly tests the model's ability to use long-range global context. The paper attributes this to "the hierarchical sparse attention mechanism achieving a balance between local and global information processing" (Section 4.3), but the mechanism is more specific: the compression branch enables efficient scanning of all documents, the selection branch provides fine-grained access to the most relevant spans identified by the compression scores, and the native training ensures these mechanisms are optimized jointly.
+
+**2. NSA dominates on synthetic and code tasks.** The Synthetic category (averaging Passage Retrieval and other synthetic long-context tasks) shows a massive improvement: 0.728 average vs. 0.562 for Full Attention and 0.550 for Exact-Top. Within this, PassR-en (passage retrieval in English) achieves 0.905 for NSA vs. 0.830 for Full Attention (+0.075). LCC (code understanding) achieves 0.232 for NSA vs. 0.163 for Full Attention (+0.069). These tasks require precise retrieval of specific information from long contexts — exactly the capability that the selection branch is designed to provide.
+
+**3. Exact-Top underperforms NSA despite having perfect importance information.** This is the most theoretically significant result in the table. Exact-Top computes full attention scores (thus has access to ground-truth token-level relevance) and selects the top-2560 tokens — yet achieves only 0.423 average vs. NSA's 0.469, a gap of 0.046. This gap **cannot be explained by better importance scoring** because Exact-Top's scores are exact by construction (they are the actual attention scores from the pretrained model). The gap must therefore arise from the **architectural mismatch** between training and inference: the Full Attention model used for Exact-Top was pretrained with dense attention, so its internal representations and attention patterns are optimized for attending to all tokens. Forcing sparsity at inference — even with oracle importance information — introduces a distribution shift that degrades performance. NSA, by contrast, was natively trained with sparsity, so its representations and patterns are adapted to attending to a subset of tokens. This is direct evidence for the paper's central claim that "native sparsity is an imperative" (Section 2.3).
+
+**4. H2O dramatically underperforms.** At 0.303 average score, H2O is more than 0.13 below Full Attention and 0.16 below NSA. This is expected: H2O is designed for decoding-stage KV-cache eviction (reducing memory usage during autoregressive generation) rather than for maintaining attention quality across all tokens. Its poor LongBench performance illustrates the paper's critique that phase-restricted sparsity methods (Section 2.1) fail when evaluated on benchmarks that require attention quality across the full context, not just efficient decoding.
+
+**5. Quest and InfLLM cluster together but well below NSA.** Quest (0.392) and InfLLM (0.383) show comparable performance, both substantially below NSA. These methods are conceptually closer to NSA — they perform query-aware blockwise selection — but lack native training and use heuristic importance scoring (Quest's min-max product, InfLLM's representative-key-based scoring). The gap between these methods and NSA (≈0.08 average) quantifies the combined benefit of native training and compression-derived importance scoring.
+
+**Needle-in-a-haystack (Figure 5).** NSA achieves "perfect retrieval accuracy across all positions in 64k-context needle-in-a-haystack test." The heatmap shows a uniform green field (score of 1.0) across all context lengths from 1K to 64K and all depth percentages from 0% to 100%. This is a strong signal that the hierarchical design successfully captures both global awareness (the compression branch can locate the relevant context region) and local precision (the selection branch provides token-level access to extract the exact needle). However, this test is known to be a relatively easy sanity check for long-context models — Full Attention models also typically achieve near-perfect scores — so its primary value is as a **negative result**: NSA does not catastrophically fail at basic retrieval, which some sparse attention methods do.
+
+---
+
+#### Chain-of-Thought Reasoning Evaluation (AIME 24)
+
+**Headline result: After supervised fine-tuning on mathematical reasoning traces, NSA-R outperforms Full Attention-R at both 8k (+0.075) and 16k (+0.054) generation context limits, with performance improving as the context limit increases.**
+
+Table 3 reports AIME 24 accuracy:
+
+| Generation Token Limit | Full Attention-R | NSA-R | Δ (NSA-R − Full) |
+|---|---|---|---|
+| 8192 | 0.046 | 0.121 | **+0.075** |
+| 16384 | 0.092 | 0.146 | **+0.054** |
+
+Several observations:
+
+**1. NSA-R approximately triples Full Attention-R's accuracy at 8k context (0.121 vs. 0.046).** This is a massive relative improvement, though both accuracies are low in absolute terms (AIME is an extremely challenging benchmark — the American Invitational Mathematics Examination for top high school students). The paper interprets this as evidence that "the pretrained sparse attention patterns enable efficient capture of long-range logical dependencies critical for complex mathematical derivations" (Section 4.3).
+
+**2. Both models improve with longer context, but NSA-R's advantage persists.** Full Attention-R improves from 0.046 to 0.092 (+0.046) when the generation limit increases from 8k to 16k, suggesting that longer reasoning chains — enabled by more generation tokens — improve mathematical reasoning accuracy. NSA-R improves from 0.121 to 0.146 (+0.025), a smaller absolute gain but from a higher baseline. The relative advantage of NSA-R over Full Attention-R narrows slightly at 16k (0.054 vs. 0.075 at 8k) but remains substantial.
+
+**3. The training setup is asymmetrical in NSA's favor in one respect.** Both models are fine-tuned on the same 10B tokens of mathematical reasoning traces, but NSA-R benefits from having been pretrained with sparse attention — its weights are already adapted to the sparse computation that will be used during the fine-tuning and inference stages. Full Attention-R was pretrained with dense attention and only encounters sparse computation if explicitly applied (the paper does not state whether sparse attention is applied to Full Attention-R during fine-tuning or inference, but given that Full Attention-R is described as a "Full Attention baseline" and the paper states that sparse attention baselines "do not support training" for this evaluation, it is likely that Full Attention-R uses standard dense attention throughout). This means the comparison tests native sparsity against dense attention in the fine-tuning setting, not sparse inference applied to a dense-pretrained model. The paper's claim that this validates "sparse attention's viability for advanced reasoning tasks when natively integrated into the training pipeline" (Section 4.3) is directly supported by this result, but the alternative interpretation — that fine-tuning with sparse attention on a sparse-pretrained model is better than fine-tuning with dense attention on a dense-pretrained model — is a narrower claim than "sparse attention is better for reasoning."
+
+**4. Example predictions in Appendix A are illustrative but anecdotal.** The paper provides two AIME examples showing NSA-R producing correct answers with shorter reasoning chains (2275 and 15147 tokens) while Full Attention-R produces incorrect answers with longer chains (9392 and 16223 tokens). For the first example, NSA-R solves the system of logarithmic equations correctly (finding `m + n = 33`), while Full Attention-R gets tangled in matrix inversion and arrives at the wrong answer (131). For the second example, NSA-R correctly finds `xy = 25`, while Full Attention-R makes an algebraic error and produces a nonsensical result. These examples qualitatively support the claim that NSA-R's reasoning is more efficient and accurate, but they are cherry-picked illustrations rather than systematic evidence.
+
+---
+
+#### Training Efficiency
+
+**Headline result: NSA achieves up to 9.0× forward speedup and 6.0× backward speedup at 64k sequence length compared to FlashAttention-2, with speedup ratios increasing monotonically with context length.**
+
+Figure 6 reports Triton-based kernel timing in milliseconds for forward and backward passes across context lengths of 8k, 16k, 32k, and 64k:
+
+**Forward pass:**
+- 8k: FlashAttention-2 ≈ 100ms, NSA ≈ 45ms → ~2.1× speedup
+- 16k: FlashAttention-2 ≈ 200ms, NSA ≈ 50ms → ~3.8× speedup (my estimate from bar chart; the paper states speedup ratios but not exact times at intermediate lengths)
+- 32k: FlashAttention-2 ≈ 400ms, NSA ≈ 65ms → ~6.3× speedup
+- 64k: FlashAttention-2 ≈ 850ms, NSA ≈ 95ms → ~9.0× speedup
+
+**Backward pass:**
+- 8k: FlashAttention-2 ≈ 200ms, NSA ≈ 180ms → ~1.1× speedup
+- 16k: FlashAttention-2 ≈ 400ms, NSA ≈ 200ms → ~2.0× speedup
+- 32k: FlashAttention-2 ≈ 1000ms, NSA ≈ 290ms → ~3.4× speedup
+- 64k: FlashAttention-2 ≈ 2300ms, NSA ≈ 400ms → ~6.0× speedup
+
+(The exact millisecond values are estimated from the bar chart in Figure 6; the paper explicitly states the speedup ratios as "2.1×, 3.8×, 6.3×, 9.0× for forward" and "1.1×, 2.0×, 3.4×, 6.0× for backward" in the Figure 6 labels, but does not provide a table of raw timing values.)
+
+Three observations:
+
+**1. Speedup ratios increase monotonically with context length, confirming that the efficiency advantage grows as the sparsity ratio grows.** At 8k context, NSA activates a much smaller fraction of tokens compared to Full Attention, but the absolute overhead of the compression and selection mechanisms partially offsets the reduction in attention computation. At 64k, the sparsity ratio is much larger (approximately 11.6× fewer tokens, from Table 4), and the relative overhead of the compression/selection machinery diminishes as a fraction of total work.
+
+**2. Forward speedups are larger than backward speedups at all context lengths.** This is expected: the backward pass must compute gradients with respect to all model parameters, and the sparse attention gradients flow through the compression MLP, the gate MLP, and all three sets of key-value projection matrices, adding computation that does not exist in the Full Attention backward pass. The compression MLP in particular — which maps blocks of `l = 32` keys to single compressed representations — has its own parameters that require gradients, partially offsetting the reduction in attention computation. The paper does not break down what fraction of the backward pass time is spent in attention gradients versus compression MLP gradients versus selection mechanism gradients, which would be informative for understanding the scaling behavior.
+
+**3. The speedup is measured at the kernel level (attention operation only), not at the full model level.** Figure 6 compares "NSA kernel" against "FlashAttention-2 kernel" — these are the attention computation kernels, not the full transformer layer. The paper does not report end-to-end model training throughput (tokens per second) for the full 27B-parameter model. The actual training speedup at the model level would be lower because (a) non-attention components (MLP, MoE routing, layer normalization) are unchanged, and (b) the compression MLP, gate MLP, and multiple key-value projections add overhead that exists in NSA but not in Full Attention. At 64k context, if attention accounts for, say, 70% of total compute (as the paper states in Section 1), the 9.0× forward speedup on attention would translate to roughly a 1/(0.3 + 0.7/9.0) ≈ 2.6× end-to-end forward speedup — substantial but well below the kernel-level figure. The paper does not report this end-to-end number, which is a meaningful omission.
+
+**4. All implementations are in Triton, providing a fair comparison but not necessarily an absolute performance ceiling.** Triton-based FlashAttention-2 is not as optimized as the CUDA-based FlashAttention-2 implementation (the paper acknowledges this implicitly by noting that all comparisons use "the same backend" for fairness). The absolute timing values (e.g., 850ms for FlashAttention-2 forward at 64k) likely overestimate the latency compared to a production CUDA implementation. However, the relative speedup ratios should be comparable.
+
+---
+
+#### Decoding Efficiency
+
+**Headline result: NSA achieves up to 11.6× expected decoding speedup at 64k context length due to reduced memory access volume, with the advantage growing as context length increases.**
+
+Table 4 reports the memory access volume per attention operation during decoding, measured in equivalent number of tokens loaded from HBM:
+
+| Context Length | Full Attention (tokens) | NSA (tokens) | Expected Speedup |
+|---|---|---|---|
+| 8192 | 8192 | 2048 | 4× |
+| 16384 | 16384 | 2560 | 6.4× |
+| 32768 | 32768 | 3584 | 9.1× |
+| 65536 | 65536 | 5632 | 11.6× |
+
+The NSA token counts are computed as: compression tokens (`⌊(t − l)/d⌋`), selected tokens (`n × l' = 1024`), and window tokens (`w = 512`). At 64k: `⌊65504/16⌋ = 4094` compression tokens + 1024 selected + 512 window ≈ 5632 tokens (the paper states 5632, consistent with this calculation allowing for off-by-one differences at the boundaries). The "expected speedup" is computed as `Full Attention tokens / NSA tokens`, reflecting the linear relationship between memory access volume and decoding latency in the memory-bandwidth-bound decoding regime.
+
+The paper states: "Due to the low arithmetic intensity and memory-bound nature of decoding, the expected speedup is approximately linear with the volume of memory access" (Table 4 caption). This is a theoretical speedup based solely on memory access volume reduction; the actual wall-clock decoding speedup is not separately benchmarked (the discussion in Section 5.2 presents the expected speedup as the realized speedup, stating "up to 11.6× speedup at 64k context-length" without caveats about kernel overhead). This is a reasonable approximation because autoregressive decoding is so heavily memory-bandwidth-bound that HBM access time dominates all other costs, but it does not account for the overhead of the compression MLP computation (which must run at each decoding step to compress the newly generated token's key-value pair and update the compressed representations) or the gate MLP computation. These overheads are small per-step (the compression MLP processes only the new token's block, not the entire sequence) but could modestly reduce the realized speedup from the theoretical 11.6×.
+
+The key architectural reason NSA achieves such high decoding speedup is the **GQA head consistency** enforced by Equation 10: because all 16 heads in a GQA group select exactly the same KV blocks, the memory access volume is simply the size of those blocks, not the union of 16 independent selections. Without this enforced consistency, a method like Quest — where each head independently selects blocks based on per-head importance scores — would require loading potentially 16× as many distinct blocks in the worst case, dramatically reducing the effective sparsity. The 11.6× figure is thus a direct consequence of the algorithmic design choice to aggregate importance scores, not merely a result of doing fewer attention operations.
+
+---
+
+### Ablation Studies and Robustness Checks
+
+**Alternative token selection strategies (Figure 7, 3B-parameter model):** The paper compares NSA against two alternative approaches for computing block importance scores on a 3B-parameter model with otherwise identical architecture:
+
+- **Auxiliary loss-based learnable selection:** Introduces additional queries per token and representative keys per block to estimate block importance, trained with a KL divergence loss between predicted importance scores and mean-pooled full attention scores. **Result:** Training loss is approximately 0.1–0.15 higher than Full Attention throughout training (from ~3.1 vs. ~3.0 at step 5000 to ~2.5 vs. ~2.4 at step 30000), and is consistently worse than NSA (NSA ≈ 2.35 at 30000 steps, auxiliary loss ≈ 2.45). The performance degradation from introducing auxiliary objectives is consistent with the paper's claim that additional training signals interfere with the primary language modeling objective.
+  
+- **Heuristic parameter-free selection:** Uses the product between queries and coordinate-wise min-max of key chunks (following Quest's approach), without additional parameters or training objectives. Includes a cold-start variant where Full Attention is applied for the first 1000 training steps, then the heuristic selection takes over. **Result:** Training loss is intermediate between Full Attention and the auxiliary-loss approach (worse than Full Attention but better than the auxiliary-loss method). The cold-start variant does not meaningfully close the gap to Full Attention or NSA. This supports the paper's claim that heuristic scoring has "low recall rates, leading to suboptimal performance."
+  
+- **NSA:** Training loss is **lower than Full Attention** throughout training (starting at step 0 with ≈3.15 vs. ≈3.2 for Full Attention, converging to ≈2.35 vs. ≈2.38 at step 30000). This is a striking result: the trained sparse attention model achieves *better* language modeling loss than the dense baseline, suggesting that learning sparse attention patterns is a beneficial inductive bias, not merely a cost-saving approximation.
+
+The loss curves in Figure 7 show stable convergence for all methods, with the ranking clearly NSA > Full Attention > Heuristic > Auxiliary Loss. The key takeaway is that the specific mechanism for computing importance scores — compression-derived attention scores reused with zero overhead — is not just computationally efficient but also **qualitatively superior** to both learned and heuristic alternatives. The paper does not ablate *why* the compression-derived scores work better: is it the reuse of computation that eliminates conflicting gradients? Is it the coarse-grained nature of compression that provides a more robust relevance signal than token-level heuristics? The reader is left to infer these mechanisms from the architectural discussion in Section 3.3.
+
+**Compression stride vs. block length (implied ablation):** The paper states that compression uses block length `l = 32` with stride `d = 16`, and notes that `d < l` is chosen "to mitigate information fragmentation." However, no ablation is reported comparing `d = l` (non-overlapping blocks) against `d < l` (overlapping blocks). The choice of 2× overlap is thus asserted but not empirically justified within this paper. The reader must rely on the authors' architectural reasoning or on ablation results in prior work (not cited for this specific choice) to validate this design decision.
+
+**Number of selected blocks `n` (no explicit ablation):** The paper fixes `n = 16` selected blocks (including 1 initial block and 2 local blocks) without reporting experiments varying this value. The total selected tokens (`16 × 64 = 1024`) represents a specific point on the sparsity-quality tradeoff curve, and the paper does not show what happens at `n = 8` (512 selected tokens, more aggressive sparsity) or `n = 32` (2048 selected tokens, closer to dense). This is a notable omission because the selection count is the primary knob controlling the efficiency-quality tradeoff, and understanding its sensitivity would be valuable for practitioners adapting NSA to different compute budgets or sequence lengths.
+
+**Selection block size `l'` (no explicit ablation):** The paper uses `l' = 64` for selection blocks but provides no comparison against `l' = 32` (smaller blocks, finer granularity) or `l' = 128` (larger blocks, coarser granularity). The choice of block size affects both the hardware efficiency (larger blocks enable better Tensor Core utilization but may include more irrelevant tokens per selected block) and the recall of the selection mechanism (smaller blocks allow more precise targeting of important regions but increase the number of blocks to choose among, potentially making the top-`n` selection less robust). The absence of this ablation means the reader cannot assess whether 64 is near-optimal or merely a reasonable default.
+
+**Sliding window size `w` (no explicit ablation):** Similarly, the window size `w = 512` is fixed throughout. The paper provides qualitative justification (512 tokens capture local patterns while leaving capacity for global branches) but does not show performance at `w = 256` or `w = 1024`. Since the sliding window branch uses standard FlashAttention-2 kernels and has marginal computational cost relative to the full sequence, the choice of window size is primarily a capacity allocation decision rather than an efficiency decision, but empirical validation would still be informative.
+
+**GQA group count and head consistency (structural ablation via baseline comparison):** While not an explicit ablation, the comparison against Quest in Table 2 implicitly ablates the importance of GQA head consistency. Quest uses per-head independent selection, which the paper argues causes memory access inefficiency under GQA. Quest's underperformance relative to NSA (0.469 vs. 0.392 average LongBench score) supports the claim that enforcing consistent selection across GQA heads is important, but this comparison confounds multiple differences (native training vs. inference-only, compression-derived scores vs. heuristic scores, blockwise vs. per-head selection) and thus does not isolate the GQA consistency effect.
+
+**Native training vs. inference-only sparsity (core ablation via Exact-Top and Full Attention comparison):** The comparison between NSA (natively trained sparse), Exact-Top (inference-only oracle sparsity applied to dense-pretrained model), and Full Attention (dense throughout) in Table 2 serves as the paper's core ablation for the native training claim. The ranking NSA (0.469) > Full Attention (0.437) > Exact-Top (0.423) is the key pattern. The fact that Exact-Top *underperforms* Full Attention — despite having access to perfect importance information — demonstrates that inference-only sparsity introduces a performance penalty beyond what the sparsity itself costs. The fact that NSA *outperforms* Full Attention despite using only a fraction of the tokens demonstrates that native sparsity can produce a net positive effect. Together, these results provide the strongest empirical evidence for the paper's central claim, though it is worth noting that Exact-Top's underperformance relative to Full Attention is a single number (0.423 vs. 0.437 average, with some subsets like SQA showing Exact-Top close to Full Attention) and not broken down by difficulty, context length, or task type.
+
+**Continued training on 32k-length sequences (implicit ablation):** The paper states that both Full Attention and NSA models are "pretrained on 270B tokens of 8k-length texts, followed by continued training and supervised fine-tuning on 32k-length texts with YaRN to achieve long-context adaptation" (Section 4.1). The continued training phase is not ablated — there is no comparison of NSA with and without 32k continued training, or with alternative context extension methods. The LongBench and AIME results thus reflect the combined effect of the NSA architecture and the 32k continued training, making it impossible to attribute performance to the architecture alone.
+
+---
+
+### Critical Assessment
+
+#### Does NSA match or exceed Full Attention across general benchmarks?
+
+**The experiments demonstrate this, but with important scope limitations.** Table 1 shows NSA achieving a higher average score (0.456 vs. 0.443) and winning on 7 of 9 benchmarks. The gains are concentrated in reasoning tasks (DROP: +0.042, GSM8K: +0.034, BBH: +0.024), while knowledge-heavy benchmarks are essentially tied (MMLU: −0.002, MATH: +0.001). This pattern supports the paper's interpretation that sparsity acts as a beneficial regularizer, but the experiments do not **demonstrate the mechanism** — there is no analysis showing that NSA's attention patterns are more focused, that noise in Full Attention is actually filtered out, or that specific attention heads develop specialized sparse patterns. The reader must accept the regularization interpretation as plausible inference, not verified fact.
+
+**The scope is narrow:** one model scale (27B total, 3B active), one model family (DeepSeek's GQA-MoE architecture), one pretraining data distribution (270B tokens of 8k-length texts). The paper does not demonstrate that NSA's quality advantage over Full Attention generalizes to smaller models (where sparsity might be more damaging), larger models (where dense attention might have more capacity to learn useful long-range patterns), or models without MoE (where the expert routing interacts differently with attention patterns). The one scale that *is* tested differently — a 3B-parameter model in Figure 7 — shows NSA with lower training loss than Full Attention, but this is a loss curve, not downstream benchmark performance.
+
+**A notable omission:** the paper does not report results for NSA at sequence lengths where its efficiency advantage is *not* realized. All general benchmarks in Table 1 use relatively short contexts (most MMLU, GSM8K, etc. samples are well under 8k tokens), meaning NSA is operating with minimal sparsity advantage — its activated token count is close to the full sequence length. The fact that NSA matches Full Attention here is necessary (it shows sparsity doesn't hurt on short sequences) but not sufficient to establish that NSA is *better* — the pattern of small improvements and regressions could be noise at this scale (500 test questions for MATH, for instance, makes the +0.001 on MATH a difference of less than 1 question).
+
+#### Does NSA achieve substantial speedups over Full Attention?
+
+**Yes, for the attention kernel specifically; the paper does not report end-to-end model throughput.** Figure 6 demonstrates up to 9.0× forward and 6.0× backward kernel speedup at 64k, and Table 4 reports up to 11.6× expected decoding speedup. These are genuine, substantial improvements that directly support the paper's efficiency claims. However, extrapolating from kernel-level to model-level speedup requires additional assumptions that the paper does not make explicit. The 70–80% latency figure for attention at 64k (Section 1) can be combined with the kernel speedups to estimate model-level gains, but the paper should report actual end-to-end training throughput (tokens/second) and decoding latency (milliseconds/token) for the full 27B model. The omission of these numbers is the most significant gap in the efficiency analysis.
+
+**The decoding speedup (11.6× expected) is not empirically validated with a kernel benchmark.** Unlike the forward and backward passes, which have Figure 6 showing measured Triton kernel times, the decoding speedup is presented only as an expected value based on memory access volume reduction. Autoregressive decoding at 64k context with NSA would need to (a) run the compression MLP on the new token to update compressed representations, (b) compute attention against all three branches, (c) run the gate MLP, and (d) combine outputs. Each of these steps has overhead beyond the pure memory access of loading KV blocks. The paper does not benchmark these overheads, leaving the realized decoding speedup unverified.
+
+**The Triton vs. CUDA comparison caveat matters.** All speedup numbers are relative to FlashAttention-2 implemented in Triton, not the production CUDA implementation. FlashAttention-2 in CUDA is typically 20–50% faster than Triton implementations (this is a well-known property of the Triton compilation stack). NSA's absolute latency at 64k — ~95ms forward and ~400ms backward (from the bar chart estimates in Figure 6) — may be significantly higher than what a CUDA-optimized dense attention would achieve, making the relative speedup somewhat overstated compared to a production baseline. The paper acknowledges the Triton fairness argument ("same backend") but does not discuss this absolute performance caveat.
+
+#### Does native sparse training outperform inference-only sparsity by eliminating architectural bias?
+
+**The LongBench results in Table 2 provide strong but indirect evidence.** The key comparison is NSA (0.469) vs. Exact-Top (0.423), a gap of 0.046. Since Exact-Top has access to perfect importance scores (exact attention scores from the dense-pretrained model), its underperformance cannot be attributed to worse importance scoring. The paper argues this gap is caused by architectural bias — the dense-pretrained model's representations are incompatible with sparse computation. However, there are alternative explanations the paper does not rule out:
+
+1. **The pretrained models are different.** NSA and the Full Attention model (used for Exact-Top) are trained separately from random initialization. The gap could arise from differences in random seeds, training dynamics, or optimization trajectories rather than from the sparse-vs-dense architectural difference. The paper does not report multiple training runs or confidence intervals to assess whether the 0.046 gap is statistically reliable.
+
+2. **Exact-Top uses a fixed token budget (2560) that may be suboptimal.** The token budget for Exact-Top is matched to NSA's average activation at 32k, but Exact-Top might perform better with a larger budget or a different allocation between initial, local, and selected tokens. The paper does not sweep the token budget for Exact-Top.
+
+3. **Exact-Top selects individual tokens, not blocks.** The top-2560 tokens selected by exact attention scores are likely scattered throughout the sequence, creating the non-contiguous memory access pattern that the paper argues is hardware-inefficient. But Exact-Top is a quality oracle, not an efficiency method — it's evaluated on LongBench scores, not latency. The fact that *even with perfect scoring*, scattered token selection hurts quality is an interesting finding, but the mechanism is not investigated.
+
+**The general benchmark comparison (Table 1) does not include inference-only baselines**, so it cannot directly support the native training claim. The paper's argument that "sparse attention baselines do not support training" (Section 4.2) is true — H2O, InfLLM, Quest, etc. are inference-only — but it means the claim that native training outperforms inference-only sparsity is tested only on LongBench, a specific type of long-context evaluation, and not on the broader set of capabilities that general benchmarks assess.
+
+#### Are the performance improvements on reasoning tasks robust and well-understood?
+
+**The AIME 24 results (Table 3) are promising but preliminary.** The absolute accuracies are low (0.046–0.146), the evaluation uses 16 samples per question with a single sampling temperature (0.7), and the fine-tuning is performed on a single dataset (DeepSeek-R1 distilled traces). The paper does not explore:
+
+- Whether NSA-R's advantage holds at other sampling temperatures or with other decoding strategies (greedy, majority voting).
+- Whether the advantage persists after reinforcement learning (which was excluded because "reinforcement learning on smaller-scale models" has "limited effectiveness" — a reasonable constraint but one that limits the generality of the finding).
+- What fraction of the improvement comes from the pretrained sparse attention patterns vs. the fine-tuning data vs. the context length extension.
+
+The example predictions in Appendix A show NSA-R producing shorter, correct solutions while Full Attention-R produces longer, incorrect solutions. This qualitative pattern is suggestive — sparse attention might help the model avoid getting lost in irrelevant computation — but these are two examples selected from an unknown total number of questions, and the paper does not provide a systematic comparison of solution length, correctness, or error types across all AIME questions.
+
+**The DROP (+0.042) and GSM8K (+0.034) improvements in Table 1 are substantial** but not analyzed in detail. The paper does not examine *which types* of DROP questions improve (e.g., simple arithmetic vs. multi-step reasoning), whether the improvement is concentrated in particular difficulty levels, or whether specific attention patterns in NSA differ from Full Attention on these tasks. Without this analysis, the claim that sparsity "filters out noise from irrelevant attention pathways" remains an interpretation rather than an established mechanism.
+
+#### What experiments would have strengthened the paper?
+
+**1. End-to-end model throughput and latency.** Reporting tokens/second for training and milliseconds/token for decoding at multiple context lengths (8k, 32k, 64k, 128k if feasible) for the full 27B model, not just the attention kernel. This is the single most important missing piece of data for practitioners evaluating whether to adopt NSA.
+
+**2. Multiple model scales.** The 27B (3B active) model is a single point on the scaling curve. Showing that NSA's quality and efficiency advantages hold at, say, 1B parameters and 70B parameters would substantially strengthen the generality claim. The 3B-parameter loss curve comparison (Figure 7) partially addresses this but is limited to pretraining loss, not downstream performance.
+
+**3. Ablation of the key hyperparameters:** `n` (selected block count), `l'` (selection block size), `w` (window size), `l` and `d` (compression block length and stride). Some of these are likely chosen for good reasons, but without ablations, the reader cannot assess sensitivity or optimality. The `d < l` overlapping compression design is particularly important (it's a key architectural claim) and should have an ablation comparing against `d = l`.
+
+**4. Comparison against a trainable sparse attention baseline.** The paper's core claim is that NSA is "natively trainable" and that this is the key advantage over inference-only methods. But there exist other trainable sparse attention methods (e.g., BigBird, Zaheer et al., 2020; Longformer, Beltagy et al., 2020; or more recent learned sparsity approaches). The paper does not compare against any of these, instead comparing only against inference-only methods (H2O, InfLLM, Quest, Exact-Top). A comparison against a trainable sparse baseline — even a simple one like fixed-pattern local+global attention — would help isolate the contribution of NSA's dynamic hierarchical sparsity from the mere fact of being trainable.
+
+**5. Training time comparison.** The paper does not report the total wall-clock time to pretrain NSA vs. Full Attention on 270B tokens. Given the kernel speedups (9.0× forward, 6.0× backward at 64k), the training time reduction should be substantial, but without reporting it, the paper misses the opportunity to demonstrate one of its central claimed benefits — reducing pretraining computation.
+
+**6. Analysis of attention patterns.** The paper shows a Full Attention attention map visualization (Figure 8) to motivate the blockwise clustering observation, but does not show equivalent visualizations for NSA's learned attention patterns. Comparing NSA's compression, selection, and sliding window attention maps against Full Attention's attention maps would provide insight into *how* the sparse architecture changes what the model attends to, which is directly relevant to the claim that sparsity filters out noise.
+
+**7. Robustness to different data distributions.** All experiments use the same pretraining corpus (270B tokens of 8k-length texts). If the pretraining data distribution changes — more code, more non-English text, more structured data — does NSA's quality advantage persist? This is not tested.
+
+**8. Scaling to longer contexts.** The paper evaluates up to 64k context length for efficiency and 32k for downstream tasks (LongBench, AIME). Given that the motivation emphasizes next-generation models processing even longer contexts (Section 1 cites repository-level code and multi-turn agents), demonstrating that NSA's benefits scale to 128k or 256k would strengthen the argument significantly. The 11.6× memory access reduction at 64k (Table 4) suggests the trend would continue — at 128k, the expected speedup would be approximately `131072 / (8192 + 1024 + 512) ≈ 13.5×` — but empirical validation would be valuable.
+
+#### Overall assessment
+
+The experiments **broadly support the paper's central claims but leave important gaps in verification and mechanistic understanding**. The quality results (Tables 1, 2, 3) consistently show NSA matching or exceeding Full Attention and substantially outperforming inference-only sparse baselines. The efficiency results (Figure 6, Table 4) demonstrate genuine kernel-level speedups that grow with context length. The core architectural claim — that native trainability combined with hardware-aligned blockwise sparsity is the right design principle — is supported by the pattern of results, particularly the Exact-Top vs. NSA comparison and the training loss curves in Figure 7.
+
+However, the paper's strongest specific claims — that sparsity "filters out noise," that the hierarchical design "prevents shortcut learning," that compression-derived importance scoring is "zero-overhead" — are asserted based on the observed performance patterns rather than tested through targeted experiments. The reader who accepts the benchmark numbers as evidence that NSA works well will find the paper convincing; the reader who wants to understand *why* it works will find the mechanistic evidence thin. The missing ablations (particularly of `n`, `l'`, `d < l`, and multiple model scales), the absence of end-to-end throughput and latency numbers, and the single-model-family evaluation limit the strength of the conclusions. The paper succeeds in demonstrating that native trainable sparse attention is a viable and promising direction, but stops short of providing the systematic evidence that would establish it as the definitive approach.
+
+## 6. Limitations and Trade-offs
+
+### 6.1 Difficulty Estimation Cost Is Not Accounted for in the Compute-Optimal Framework
+
+**The assumption or constraint.** The paper's compute-optimal policy — the core mechanism that delivers the headline 4× efficiency gains — requires estimating each prompt's difficulty before deciding how to allocate the inference budget. The method for doing this is extraordinarily expensive: generating 2048 complete solutions per question, scoring them with the PRM (or checking ground-truth correctness for oracle bins), and computing pass@1 rates. The authors acknowledge this explicitly in Section 3.2:
+
+> "estimating difficulty in this way still incurs additional computation cost during inference... our experiments do not account for this cost largely for simplicity"
+
+**The consequence.** In any realistic deployment, the cost of difficulty estimation would be **amortized over the total compute budget**. Generating 2048 samples per question to decide how to spend a budget of, say, 64 or 256 generations is self-defeating — the estimation step consumes 8–32× more compute than the actual problem-solving step. The paper's 4× efficiency gain over best-of-N is computed *after* difficulty is already known, ignoring the cost of acquiring that knowledge. If difficulty estimation cost were included, the total compute for the compute-optimal approach would be `2048 + N` generations (where `N` is the problem-solving budget), while best-of-N costs `N` generations. At `N = 256`, compute-optimal would use approximately 2304 generations — roughly 9× *more* than best-of-256, not 4× less. The reported gains are thus an **upper bound on achievable efficiency** that is only realizable if difficulty is known in advance, which requires either amortizing the 2048 samples across many queries of similar difficulty (possible for static benchmarks, impossible for one-off user queries) or developing a cheaper estimation method (which the paper does not provide).
+
+**What evidence exists in the paper.** The 2048-sample estimation cost is described in Section 3.2. The paper does not include this cost in any budget calculation, graph, or efficiency claim. Figures 4 and 8 — which show the 4× improvement — plot accuracy vs. generation budget for the problem-solving step alone, with difficulty bins treated as known inputs. There is no experiment measuring total cost (estimation + solving) or comparing against best-of-N at equivalent total budgets.
+
+**Mitigation status.** The paper flags this as a key area for future work (Section 8), suggesting "pretraining or finetuning models to directly predict difficulty of a question" from the question text alone, but does not develop or evaluate any such model. The predicted (non-oracle) difficulty bins — which use the PRM's final-answer score instead of ground-truth correctness — address the *access to answers* requirement but not the *computational cost*: they still require generating 2048 samples and running the PRM on all of them. The paper also mentions the possibility of adaptive difficulty estimation (start with few samples, assess difficulty, then allocate the remaining budget), but does not implement or evaluate this approach. As presented, the difficulty estimation cost renders the compute-optimal framework **conceptually valid but not yet practically deployable** without a major methodological advance that the paper does not provide.
+
+---
+
+### 6.2 Hard Problems Are Fundamentally Unsolved — Test-Time Compute Cannot Compensate for Capability Gaps
+
+**The assumption or constraint.** The paper's entire approach rests on the premise that the base model already produces correct solutions at some non-trivial rate for a given problem. When the base model's pass@1 is near zero, no amount of test-time compute — search, revisions, or their combination — helps. The paper demonstrates this clearly for the hardest difficulty quintile (bin 5), where the base model's pass@1 is approximately 0–3%, and states in Section 7:
+
+> "test-time compute can amplify existing capability but does not create it from nothing"
+
+**The consequence.** This is a hard capability boundary, not a gradual degradation. On difficulty bin 5 problems (the ~20% hardest questions in MATH), **all methods** — best-of-N, beam search, lookahead search, sequential revisions, parallel sampling, compute-optimal combinations — achieve roughly 1–3% accuracy regardless of budget (Figure 3, right; Figure 7, right; Figure 9, bin 5). The FLOPs-matched comparison shows that for hard problems, pretraining is almost always preferable: at `R ≫ 1` (high inference-to-pretraining ratio), the compute-optimal approach with PRM search shows a **−52.9% relative disadvantage** compared to simply training a ~14× larger model (Figure 1, bottom-right bar chart). This means that for applications where the problem distribution skews toward genuinely novel or out-of-distribution reasoning — scientific discovery, novel mathematical proofs, complex code generation in unfamiliar domains — the paper's approach offers no path forward. The base model must first acquire the capability through pretraining; test-time compute can then amplify it, but cannot bootstrap it.
+
+**What evidence exists in the paper.** The difficulty-bin breakdowns across all experiments consistently show bin 5 as essentially flat near zero: Figure 3 (right) shows bin 5 accuracy at 1–3% for all search methods and all budgets; Figure 7 (right) shows bin 5 at 2–3% regardless of sequential-to-parallel ratio; Figure 9 shows the bin 5 scaling line essentially flat near 0–5% for both revisions and search, well below the ~14× larger model's performance. The FLOPs-matched bar charts in Figure 1 quantify the hard-problem disadvantage explicitly. No experiment in the paper shows any method making meaningful progress on bin 5 problems.
+
+**Mitigation status.** The paper is transparent about this limitation: Section 7's takeaway box explicitly states that on hard problems, "pretraining is almost always more effective," and Figure 9 visually demonstrates the flat scaling curves. However, the paper does not provide guidance on how to determine *ex ante* whether a given problem falls into the "test-time compute helps" vs. "pretraining required" regime without actually running the expensive difficulty estimation procedure. The bin 5 finding also raises an important unaddressed question: does the proportion of bin-5-equivalent problems shrink as models scale up (because larger models have higher base pass@1 on more problems), making the limitation less severe at scale, or does it remain a persistent fraction? The single-model evaluation cannot answer this, and the paper does not extrapolate.
+
+---
+
+### 6.3 Single Benchmark (MATH), Single Model Family (PaLM 2-S*), Single Domain (Math)
+
+**The assumption or constraint.** All experiments in the paper use exactly one benchmark (MATH, 500 test questions), one base model family (PaLM 2-S*, with a ~14× larger variant for the FLOPs-matched comparison), and one domain (competition-level mathematical reasoning requiring symbolic manipulation). The authors state in Section 4 that PaLM 2-S* "is representative of the capabilities of many contemporary LLMs" and argue that test-time compute is expected to help most on tasks requiring complex inference from existing knowledge, which mathematical reasoning exemplifies. However, no experiments on code generation, logical reasoning, scientific question answering, factual recall, or open-ended generation are conducted.
+
+**The consequence.** Several aspects of the paper's findings could be domain-specific or model-specific in ways that fundamentally alter the practical guidance:
+- **PRM quality and over-optimization behavior** depend on the base model's output distribution and error patterns. A model with different calibration or different types of reasoning errors might exhibit different difficulty-dependent scaling curves, potentially changing which strategies are optimal at which difficulty levels.
+- **Revision model effectiveness** depends on the base model's in-context learning and self-correction capabilities, which vary substantially across model families. The paper's finding that revisions help on easy problems but not hard ones might not generalize to models with stronger or weaker self-correction abilities.
+- **The relationship between difficulty and optimal strategy** might be entirely different for tasks where correctness is more granular or subjective (essay writing, dialogue, creative generation) rather than binary (math answers are right or wrong).
+- **The PRM training pipeline** relies on Monte Carlo rollouts with ground-truth answer verification — feasible for math problems with unambiguous answers, but far more challenging for open-ended tasks where "correctness" is ambiguous, multi-dimensional, or requires human evaluation.
+
+**What evidence exists in the paper.** The paper does not conduct experiments on any benchmark other than MATH, any model family other than PaLM 2, or any domain other than math. The 500-question test set, split into five difficulty quintiles and further split by two-fold cross-validation, means strategy selection is based on approximately 50 questions per fold per bin — a small sample that may not produce robust policy choices. The paper does not report confidence intervals on the compute-optimal scaling curves, making it impossible to assess whether the observed gains are statistically reliable even within the MATH domain.
+
+**Mitigation status.** The paper does not attempt to mitigate this limitation and does not claim broader applicability. The authors acknowledge the scope implicitly by focusing all claims on the MATH benchmark results. However, Section 8's future work discussion does not explicitly call for evaluation on other benchmarks or model families, which would be a natural next step for establishing generality. The absence of code generation experiments is particularly notable given the paper's motivating examples in Section 1 cite "repository-level code generation" as a key use case for long-context modeling.
+
+---
+
+### 6.4 The ~14× Larger Model Baseline Is Weakened by Non-Compute-Optimal Pretraining and Greedy Decoding
+
+**The assumption or constraint.** The FLOPs-matched comparison in Section 7 compares PaLM 2-S* augmented with compute-optimal test-time strategies against a model with approximately 14× more parameters. However, this larger model is trained by scaling parameters only while holding data fixed (following the LLaMA paradigm; Touvron et al., 2023), and is evaluated using **greedy decoding only** — no test-time compute augmentation of any kind. The authors acknowledge the non-optimal pretraining explicitly in Section 7:
+
+> "We choose this setting as it is representative of a canonical approach to scaling pretraining compute and leave the analysis of compute-optimal scaling of pretraining compute where the data and parameters are both scaled equally to future work."
+
+**The consequence.** The comparison is systematically biased in favor of test-time compute in two ways:
+1. **Non-optimal pretraining baseline:** Hoffmann et al. (2022) established that compute-optimal pretraining scales both model size and data quantity equally. A Chinchilla-optimal model trained with 14× more total FLOPs (scaling both parameters and data) would likely outperform a parameter-only-scaled model at the same total FLOPs. The reported advantages of test-time compute over pretraining — e.g., +27.8% on easy questions at `R ≪ 1` (Figure 1, revisions) — may shrink or reverse against a properly compute-optimal larger model.
+2. **No test-time compute for the larger model:** The 14× larger model is evaluated with greedy decoding only. Giving the larger model even a modest test-time compute budget — say, best-of-8 or majority voting over 4 samples — would create a much stronger baseline. The paper's core question is whether test-time compute can *substitute for* pretraining, but the experimental design compares *test-time compute on a small model* against *nothing on a large model*, which answers a different question: "can test-time compute + small model beat greedy large model?"
+
+**What evidence exists in the paper.** The non-optimal pretraining is stated in Section 7. The greedy decoding baseline is implicit — the paper states that the larger model's performance is evaluated without any test-time compute augmentation (Figure 9 uses stars to mark the larger model's performance at three `R` values, and these are single points, not scaling curves). No experiment compares compute-optimal small model against large model with any test-time compute budget.
+
+**Mitigation status.** The paper acknowledges the non-optimal pretraining caveat and frames it as future work, but does not acknowledge the greedy decoding asymmetry as a limitation. A fairer comparison — even without compute-optimal pretraining — would give the larger model a test-time compute budget proportional to its per-token cost, so that both models receive comparable total FLOPs at equivalent test-time augmentation levels. The paper does not perform this experiment. The current results should be interpreted as an **upper bound on the advantage of test-time compute over pretraining**, not a precise estimate of the substitution rate.
+
+---
+
+### 6.5 Sequential Revisions Introduce Latency That Parallel Sampling Avoids, and This Tradeoff Is Not Analyzed
+
+**The assumption or constraint.** The paper measures computational cost in "generations" (number of complete solutions sampled), which is a reasonable proxy for total FLOPs but entirely ignores **wall-clock latency**. The compute-optimal policy for revisions (Section 6, Figure 7) often favors sequential-heavy strategies — particularly on easy problems where pure sequential revision is optimal. However, sequential revisions are inherently serial: each revision depends on the output of the previous one, so a chain of 64 sequential revisions takes 64× the wall-clock time of generating one sample, regardless of how many GPUs are available. In contrast, parallel best-of-256 can (in principle) be executed in the time of a single generation with sufficient hardware.
+
+**The consequence.** For latency-sensitive applications — interactive assistants, real-time code completion, dialogue systems where users wait for responses — the sequential-heavy strategies recommended by the compute-optimal policy may be **practically unusable** regardless of their FLOPs efficiency. A strategy that allocates 64 generations as `8 sequential × 8 parallel` takes approximately 8× the latency of pure parallel-64, even though both cost 64 generations in total FLOPs. The paper's compute-optimal policy optimizes for total compute, not latency, and the two objectives can produce sharply different recommendations. A deployment where latency matters would need a **latency-aware allocation policy** that constrains the sequential depth, which the paper does not develop or evaluate.
+
+**What evidence exists in the paper.** The paper never discusses latency. All efficiency metrics are in terms of generations (Figures 3, 4, 6, 7, 8), FLOPs-matched comparisons (Figure 9), or generation budget. The sequential-to-parallel ratio sweep (Figure 7) is analyzed purely in terms of accuracy at a given total generation count, with no mention of how the ratio affects wall-clock time. Table 4 and Figure 6 report speedup in terms of memory access volume and kernel execution time, but these measure per-operation speed, not end-to-end response latency for a user query.
+
+**Mitigation status.** Not addressed. The paper does not acknowledge latency as a concern, does not report wall-clock time for revision chains, and does not discuss the sequential-depth constraint. This is a significant gap given that one of the paper's motivating use cases (Section 1) is "multi-turn autonomous agent systems," where interactive latency is a first-order constraint. A latency-aware analysis — measuring accuracy vs. wall-clock time with varying sequential depths and parallel widths — would be essential for practical deployment guidance.
+
+---
+
+### 6.6 PRM Search and Iterative Revisions Are Studied Independently; Their Combination Is Unexplored
+
+**The assumption or constraint.** The paper studies two complementary mechanisms — PRM-guided search (beam search, lookahead search, best-of-N) and iterative revisions (sequential chains with fine-tuned revision models) — but treats them as **separate and independent scaling axes**. They are never combined in any experiment. The paper acknowledges this explicitly in Section 8:
+
+> "we did not experiment with PRM tree-search techniques in combination with revisions"
+
+**The consequence.** The paper's results represent a **lower bound** on what a fully integrated system could achieve. The two mechanisms have complementary strengths documented in the paper itself: revisions improve the proposal distribution (generating better candidates by conditioning on previous attempts), while PRM search improves candidate selection (finding the best among generated candidates by evaluating intermediate steps). Applying beam search to revision model outputs — where each node in the search tree is a revision step rather than a de novo generation — could combine the benefits of both: the revision model would produce higher-quality candidates at each step, and the PRM would guide the search toward promising revision directions. This is not a minor extension; it would represent a natural architectural evolution of the paper's own framework (which explicitly decomposes test-time compute into proposal distribution modification and verifier optimization in Section 2). The fact that it remains unexplored means the paper's reported accuracy vs. compute curves may be **substantially below what is achievable** with both mechanisms active.
+
+**What evidence exists in the paper.** Sections 5 and 6 are entirely separate: Section 5 reports search results using the base (non-revision) model as the proposal distribution, and Section 6 reports revision results using verifier-based selection (not PRM tree-search) for answer selection. There is no cross-over experiment. The ORM trained for revisions (Section 6, Appendix J) is a separate model from the PRM trained for search (Section 5, Appendix D), and the two are never compared on the same task or combined.
+
+**Mitigation status.** The paper flags the combination as future work in Section 8 but provides no preliminary results, no analysis of what the combination might achieve, and no roadmap for how to integrate the two mechanisms (e.g., how would beam search over revision steps handle the correct-to-incorrect reversion problem? Would the PRM need to be retrained on revision model outputs?). The current results are therefore best understood as demonstrating the **independent effectiveness** of each mechanism, with the understanding that combining them is a natural and likely beneficial next step that the paper does not take.
+
+## 7. Implications and Future Directions
+- Impact on the field
+  - NSA demonstrates that sparse attention can be made both trainable and hardware‑efficient, removing a key barrier to long‑context LLMs. This can shift pretraining and fine‑tuning practices toward natively sparse models rather than applying sparsity only at inference.
+
+- Practical applications
+  - Faster and cheaper training/inference for long documents, repository‑level code modeling, extended multi‑turn agents, and complex multi‑document reasoning. The perfect NiH retrieval at 64k (Figure 5) and LongBench gains (Table 2) specifically recommend NSA for retrieval‑heavy and multi‑hop tasks.
+
+- Research avenues
+  - Adaptive hyperparameters: learning `n`, `l`, `w` per layer or per sequence.
+  - Richer compression: explore alternative learnable summarizers (e.g., attention‑based compressors) that remain kernel‑friendly.
+  - Multi‑modal extension: extend hierarchical sparsity to vision/audio sequences with similar kernel principles.
+  - Theoretical analysis: bounds on approximation error introduced by compression/selection and formal connections to attention’s intrinsic sparsity.
+  - Integration with retrieval systems: combine NSA’s compressed scan with external memory indexes for even longer contexts.
+  - Portability and systems work: optimized kernels for newer GPUs (e.g., Hopper) and other accelerators; plug‑and‑play support within popular inference/training stacks.
+
+In sum, NSA is a coherent algorithm‑systems co‑design: a hierarchical sparse attention that is natively trainable and paired with kernels that ensure arithmetic‑intensity balance and KV‑sharing in GQA/MQA. The paper provides evidence of both capability (Tables 1–3; Figure 5) and end‑to‑end efficiency (Figure 1; Figure 6; Table 4), positioning NSA as a strong candidate for long‑context LLMs.

@@ -1,18 +1,22 @@
 # EAS Build Links — Paper Graph Mobile
 
-Builds kicked off: 2026-05-26
+## Build #2 — 2026-05-26 (content-bundled, USE THESE)
 
-## Android (APK, internal distribution)
-- **Profile:** development
-- **Status at kick-off:** IN_PROGRESS
-- **Build URL:** https://expo.dev/accounts/vincentzhongy/projects/paper-graph-mobile/builds/4bcf708f-eb1c-415f-a0c8-da4b803a63ff
-- **Install:** Download the APK from the build URL above and sideload on any Android device
+These are the actual usable builds. The build-graph.mjs now rsyncs all 1297
+.md files into assets/papers/ and emits src/lib/paper-asset-map.ts so Metro
+bundles paper bodies as assets. Archive size jumped from ~10MB to 243MB
+(bodies), and useMarkdownContent now resolves via Asset.fromModule().
 
-## iOS (Simulator build, .app)
-- **Profile:** development-simulator
-- **Status at kick-off:** IN_QUEUE
-- **Build URL:** https://expo.dev/accounts/vincentzhongy/projects/paper-graph-mobile/builds/f7241ad5-fcd3-4c00-a041-b8737b9287b5
-- **Install:** Download the .tar.gz, extract, drag into Xcode Simulator
+- **Android (APK, profile=development-simulator):** https://expo.dev/accounts/vincentzhongy/projects/paper-graph-mobile/builds/ad5996f2-12b2-4c1d-b017-fb24380af8cb
+- **iOS Simulator (.app, profile=development-simulator):** https://expo.dev/accounts/vincentzhongy/projects/paper-graph-mobile/builds/4f20d90c-3599-48be-b6aa-8507a38d7716
+
+## Build #1 — 2026-05-26 (subagent first build — metadata only, no bodies)
+
+Kept for reference. Paper detail screens render only the pitch — the asset
+bundling wasn't wired yet. Superseded by Build #2.
+
+- **Android (APK, profile=development):** https://expo.dev/accounts/vincentzhongy/projects/paper-graph-mobile/builds/4bcf708f-eb1c-415f-a0c8-da4b803a63ff
+- **iOS Simulator (.app, profile=development-simulator):** https://expo.dev/accounts/vincentzhongy/projects/paper-graph-mobile/builds/f7241ad5-fcd3-4c00-a041-b8737b9287b5
 
 ## Notes
 

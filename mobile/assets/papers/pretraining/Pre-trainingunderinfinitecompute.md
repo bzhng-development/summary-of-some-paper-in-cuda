@@ -1,0 +1,745 @@
+# Pre-training under infinite compute
+
+**ArXiv:** [2509.14786](https://arxiv.org/abs/2509.14786)
+
+## 🎯 Pitch
+
+This paper tackles the regime where training compute is plentiful but high-quality pre-training data is limited, a setting increasingly relevant as model compute scales outpace web data growth. The authors show that properly tuned, much stronger regularization—especially weight decay—enables predictable gains from larger models, and that scaling ensembles of independently trained models yields even greater data efficiency than scaling a single model. By composing these strategies and using distillation, they achieve dramatic, robust improvements in data efficiency that transfer to real downstream tasks and continued pre-training—offering new recipes for getting much more out of limited data in a compute-rich future.
+
+---
+
+## 1. Executive Summary
+
+This paper studies how to approach language model pre-training under unlimited compute when constrained by a fixed data budget, using a controlled environment of 200M tokens from DCLM with Llama-style architectures up to 1.4B parameters. It first shows that standard data-constrained recipes—increasing epochs or parameter count—eventually overfit, and then demonstrates that a **regularized recipe** with properly tuned weight decay (up to 30× larger than the conventional 0.1) recovers monotonic power-law scaling in parameter count, enabling asymptote estimation of the best possible loss rather than evaluation at a fixed compute budget. The paper further introduces an **ensembling recipe** (averaging logits of independently trained models) that achieves a lower loss asymptote than parameter scaling alone, and a **joint scaling recipe** composing both ensembling and parameter scaling that is 5.17× more data-efficient than the standard recipe at 200M tokens—meaning the baseline would need 5.17× more data to match its performance even with infinite compute. Distillation recovers 83% of the ensembling benefit in a student model 8× smaller, establishing that the data efficiency gains from these simple interventions are realizable at practical model sizes.
+
+## 2. Context and Motivation
+
+### The Core Problem: Pre-training When Data Is the Bottleneck, Not Compute
+
+The fundamental question this paper tackles is deceptively simple: **if you have unlimited compute but a fixed, limited amount of text to train on, how should you spend that compute to get the best possible language model?** This is not the situation the field has historically optimized for—almost all major scaling studies and production pre-training recipes assume the opposite bottleneck (unlimited data, constrained compute)—but the authors argue it is the situation we are heading toward.
+
+The asymmetry is stark: web text grows at roughly **1.03× per year**, while the compute budget spent on frontier model pre-training grows at approximately **4× per year** (Section 1, citing Sevilla and Roldán [2024] and Villalobos et al. [2024]). At these growth rates, the amount of compute available to spend on each token of training data increases exponentially over time. Eventually—and the authors suggest this is already becoming relevant for the largest training runs—**the limiting factor is not the GPU budget but the quantity of unique, high-quality tokens available for training**. When you hit that wall, simply training larger models on the same data for more epochs, or scaling parameter count without more data, stops helping and can actively hurt through overfitting.
+
+This shift from compute-constrained to data-constrained pre-training is not a hypothetical thought experiment. The paper argues it represents the **asymptotic future of language model training**, and our current toolkit—developed almost entirely under compute constraints—is poorly suited for it.
+
+### Why This Matters: Beyond the Scaling Laws We Already Have
+
+The field's understanding of how to allocate pre-training resources is built on **scaling laws that treat compute as the primary constraint**. The Chinchilla scaling laws [Hoffmann et al., 2022] famously prescribe that for a given compute budget, model parameters and training tokens should scale in roughly equal proportion—with roughly **20 tokens of training data per parameter**. This framework implicitly assumes you can always get more data, and the only question is how to trade off model size against training duration.
+
+But what happens when you take data as fixed and lift the compute constraint entirely? This changes the nature of the optimization problem in several ways that existing frameworks don't address:
+
+**First, the evaluation metric itself must change.** Under compute constraints, you typically compare two recipes by asking: "At a fixed training FLOPs budget, which recipe achieves lower loss?" But when compute is unlimited and data is fixed, the relevant comparison becomes: "What is the *best possible* loss each recipe can achieve given infinite compute on this limited data?" The paper formalizes this through the concept of a **loss asymptote**—the limit of performance as compute (parameter count, ensemble member count, training epochs, etc.) goes to infinity on a fixed dataset. The asymptote is what you care about, not the loss at some arbitrary compute budget.
+
+**Second, the standard interventions stop working, and may even backfire.** Under compute constraints, you jointly scale data and model size. Under data constraints, you cannot scale data, so practitioners turn to the remaining levers: **repeating data** (multiple epochs over the same tokens) and **increasing parameter count** (over-parameterizing relative to the Chinchilla ratio). Both of these eventually cause overfitting—validation loss bottoms out and then increases—which means they have *finite best performance* that cannot be exceeded regardless of additional compute. This is the central failure mode the paper identifies in "standard" data-constrained recipes (Section 2.1) and is what motivates the search for recipes that don't exhibit this behavior.
+
+**Third, the overfitting problem is not just about epochs—it also affects parameter scaling.** Prior work by Kaplan et al. [2020] (Figure 9) had already observed that for a fixed data budget, increasing model size eventually increases loss rather than decreasing it. The paper confirms this in their own setting (Section 2.1, Figure 2, right): at 200M tokens, going from 600M to 1.4B parameters makes things *worse*, not better. This means that simply throwing a bigger model at the problem—the default response to having more compute—doesn't work if you don't also address the overfitting issue.
+
+**Fourth, and perhaps most fundamentally, the field lacks a systematic study of how to spend arbitrary amounts of extra compute for better performance on a fixed dataset.** Unlike the test-time compute scaling literature (where there is now a growing understanding of compute-optimal strategies [Snell et al., 2024]), there is no analogous framework for *training-time* compute under data constraints. The paper aims to provide exactly this.
+
+### Where Existing Approaches Fall Short
+
+The paper identifies several distinct gaps in prior work:
+
+**Scaling laws that don't account for overfitting.** Muennighoff et al. [2023] proposed scaling laws for data-constrained pre-training that model loss as decaying monotonically with repeated epochs. While this matches empirical behavior at moderate epoch counts, the paper notes (Section 2.1) that Muennighoff et al. explicitly remove runs that overfit when fitting their scaling law (their Appendix D), meaning their functional form doesn't capture the eventual performance degradation. In other words, their laws work in the regime where overfitting hasn't set in yet, but they don't describe what happens in the truly data-constrained limit where you keep going.
+
+**Regularization treated as a fixed hyperparameter, not a tuning target.** Most pre-training recipes inherit hyperparameters from earlier work without re-optimizing them for the data-constrained regime. The specific example the paper uses is **weight decay**, which has defaulted to 0.1 since Brown et al. [2020]. The paper demonstrates that for over-parameterized models on small data budgets, the optimal weight decay can be **30× larger** (Section 3, Figure 3)—and that failing to tune it leads to the erroneous conclusion that larger models are worse than smaller models in data-constrained settings.
+
+**No framework for comparing recipes under infinite compute.** Prior work compares algorithms by evaluating them at fixed compute budgets (the Chinchilla approach) or by measuring inference-time efficiency. Neither captures the question of "what is the best possible model this algorithm could produce on this data if compute were free?" The paper introduces **asymptote estimation from power law fits** as the relevant metric—a novel methodological contribution that shifts the evaluation perspective from the slope of the scaling curve to its horizontal asymptote.
+
+**Ensembling not studied as a scaling axis in pre-training.** While ensembling is a classical technique [Dietterich, 2000] and has been extensively studied for uncertainty estimation and supervised learning, it has not been systematically analyzed as a way to *scale pre-training compute* at fixed data. The paper demonstrates that scaling ensemble member count follows a power law with exponent ~1, much like parameter scaling, but with a different (lower) asymptote (Section 4.2, Figure 4). This is non-obvious: prior theoretical work on feature-learning networks [Vyas et al., 2023] and random feature ensembles [Ruben et al., 2024] has suggested that ensembling may not outperform parameter scaling. The paper provides empirical evidence that it does, and that the two compose.
+
+**Self-distillation dismissed or viewed as harmful.** Recent work on "model collapse" [Dohmatob et al., 2024, Shumailov et al., 2024] has raised concerns that training on model-generated data degrades performance. The paper finds the opposite when done correctly: by mixing real and synthetic data, a self-distilled 300M student model *outperforms* its 300M teacher (Section 6.2, Figure 9). This is an important counterexample to the narrative that synthetic data is inherently dangerous for pre-training.
+
+**No systematic study of continued pre-training (CPT) under data constraints.** Most CPT work (e.g., Wang et al. [2025]) assumes access to tens of billions of tokens of domain-specific data. The paper shows that their data efficiency interventions transfer to CPT, achieving the same math performance with **4B tokens** that standard CPT achieves with **73B tokens** (a 17.5× data efficiency improvement; Section 7.2, Table 1).
+
+### How This Paper Positions Itself
+
+The paper's framing is distinctive in two ways. First, it explicitly sets up a **counterfactual to standard practice**: rather than asking "what is the best model I can train with my GPU budget?", it asks "what would I do if I had infinite GPUs but a finite dataset?" This mirrors classic statistical learning theory (where one studies the asymptotic behavior of estimators as the sample size grows) but applies it to modern language model pre-training where the "sample size" (training tokens) is the fixed constraint.
+
+Second, the paper positions its interventions not as novel inventions but as **revisiting classical techniques that were developed in data-constrained settings and have been largely forgotten in the era of web-scale pre-training**. The authors make this explicit in Section 9:
+
+> "Notably, the algorithms we have considered (parameter scaling, regularization, ensembling, distillation) mirror classical techniques from when deep learning was data-constrained by limited sentences [Marcus et al., 1993, Warstadt et al., 2023], images [Deng et al., 2009, Lecun et al., 1998], etc. The success of such simple methods suggests that there is free lunch on the table for data-efficient pre-training."
+
+This is a deliberate rhetorical choice: the paper is arguing that the field's recent focus on compute-optimal scaling has caused us to neglect simple, well-understood techniques that become critical when the constraint shifts from compute to data. The contribution is not a new algorithm per se, but rather **a systematic empirical demonstration that revisiting these classical techniques in a modern pre-training context, with proper hyperparameter tuning, yields large and composable gains**.
+
+The paper also draws an explicit connection to **The Bitter Lesson** [Sutton, 2019]—the idea that methods leveraging raw computation tend to outperform those relying on human knowledge. By studying what happens when compute is unlimited, the paper is essentially exploring what the Bitter Lesson implies for the pre-training algorithm itself: given enough compute, can simple methods like ensembling and regularization extract substantially more value from limited data than current standard practice?
+
+The parallel to Chinchilla scaling laws is also important to understand the paper's framing. Just as Hoffmann et al. [2022] provided a principled answer to "how should I allocate my compute budget between model size and data?" for the compute-constrained regime, this paper aims to provide initial answers for the data-constrained regime. But whereas Chinchilla optimizes a single scaling axis (the ratio of parameters to tokens), the data-constrained regime introduces multiple composable axes (parameter count, ensemble membership, regularization strength, distillation) that interact in non-obvious ways. The paper's use of **nested scaling laws**—fitting power laws to estimate the asymptote of one scaling axis, then treating those asymptotes as data points for a second power law, and so on—is a methodological innovation that enables reasoning about these interactions despite limited experimental budgets.
+
+### Practical Motivations Beyond the Asymptotic Argument
+
+While the paper's primary framing is the asymptotic data-constrained future, several of its findings have immediate practical relevance:
+
+**For organizations training smaller models.** Most organizations cannot afford to train models at the frontier scale. They operate with fixed datasets (often curated from web data or domain-specific sources) and have more compute than data. The paper's finding that increasing weight decay from 0.1 to 1.6-3.2, and using smaller batch sizes, can substantially improve loss without any additional data cost, is actionable today.
+
+**For continued pre-training and fine-tuning.** The CPT results (Section 7.2) demonstrate that these interventions transfer beyond pre-training from scratch. Many practitioners perform CPT with limited domain-specific data; the paper suggests that significant efficiency gains are available through epoching and ensembling that are currently left on the table.
+
+**For distillation pipelines.** The finding that ensemble distillation preserves 83% of ensembling benefits (Section 6.1) while producing a model with no inference-time overhead means that the extra training compute of ensembling can be amortized—you train the ensemble once, distill to a small model, and deploy the small model at no additional cost.
+
+**For understanding regularization in deep learning more broadly.** The paper provides clean empirical evidence for theoretical predictions from the over-parameterized regression literature [Advani and Ganguli, 2016, Canatar et al., 2021, Nakkiran et al., 2021, Simon et al., 2024] that optimal regularization can restore monotonic scaling even in regimes where unregularized models exhibit double descent. By connecting these theoretical results to practical pre-training, the paper bridges a gap between statistical learning theory and production-scale ML engineering.
+
+## 3. Technical Approach
+
+### 3.1 Reader Orientation
+
+This paper is a **systematic empirical investigation** of how to design pre-training algorithms for the regime where data is scarce and compute is abundant. The "system" being built is not a single model or architecture, but rather a **methodology for comparing, composing, and predicting the behavior of different scaling recipes**—standard parameter scaling, regularized parameter scaling, ensemble scaling, and their combinations—when each is pushed to its infinite-compute limit on a fixed data budget. The core problem is that standard recipes overfit and stop improving, so the solution takes the shape of **(1) identifying recipes that exhibit monotonic scaling even under extreme over-parameterization, (2) estimating their best-possible performance via power-law asymptotes, and (3) composing them to push the asymptote lower.**
+
+### 3.2 Big-Picture Architecture (Diagram in Words)
+
+The paper's experimental framework has six interconnected components:
+
+1. **Fixed Data Pool**: A seed training corpus of `$D$` tokens from DCLM (default 200M) that is never expanded—this is the hard constraint.
+2. **Pre-training Algorithm `$A(D, N, H)$`**: The core training routine that takes token count `$D$`, parameter count `$N$`, and hyperparameters `$H$` (learning rate, epoch count, weight decay, batch size) and produces a model `$M$` with validation loss `$L(M)$`.
+3. **Locally-Optimal Hyperparameter Search**: A coordinate-descent procedure that finds hyperparameters `$H^*$` where no single change to learning rate, epoch count, or weight decay produces a lower loss—certifying that the recipe is making the best use of the data at that scale.
+4. **Scaling Law Fitting**: Power-law functions of the form `$\hat{L}_{D,N} = A_D / N^{\alpha_D} + E_D$` fitted to loss measurements across parameter counts, with the asymptote `$E_D$` interpreted as the best possible loss at infinite compute for that recipe on `$D$` tokens.
+5. **Ensemble Construction `$E_A(D, N, K, H)$`**: An algorithm that independently trains `$K$` models (differing only in random seed for initialization and data order) and averages their output logits at inference time, producing a combined model with `$N \times K$` total parameters.
+6. **Nested Asymptote Estimation for Joint Scaling**: A multi-tier procedure that fits power laws in `$K$` to estimate the `$K \to \infty$` asymptote at each `$N$`, then fits a second power law in `$N$` to estimate the `$N \to \infty$` asymptote of those asymptotes, yielding `$\hat{L}_D$`—the best possible loss when both ensemble member count and member size go to infinity.
+
+Information flows as follows: given a fixed data budget `$D$`, for each candidate recipe (standard, regularized, ensembling, joint) the experiment varies the scaling axis (parameter count `$N$`, member count `$K$`, or both), tunes hyperparameters at each point via coordinate descent, measures validation loss, fits power laws through the measurements, extracts asymptotes, and compares asymptotes across recipes. For data scaling (Section 5), this entire process repeats at multiple values of `$D$` (200M, 400M, 800M, 1.6B tokens), producing data-scaling laws whose asymptotes predict performance at even larger token counts.
+
+### 3.3 Roadmap for the Deep Dive
+
+- **First, the formal objective and the concept of loss under infinite compute** (Eq. 1), since this defines what "best possible" means and why asymptotes—rather than compute-budgeted comparisons—are the right metric.
+- **Second, the locally-optimal hyperparameter search procedure**, because it is the engine that makes every other experiment valid: without properly tuned weight decay and epoch count at each scale, the comparisons between recipes would be confounded by suboptimal tuning.
+- **Third, the regularized parameter scaling recipe**, including how the power-law form is chosen, how asymptotes are estimated, and why jointly tuning weight decay (up to 30× the standard 0.1) is the mechanism that restores monotonic scaling in over-parameterized models.
+- **Fourth, the ensembling recipe**, including the formal definition of logit-averaging, the comparison of scaling `$K$` (ensemble width) versus scaling `$N$` (single-model size), and the finding that optimal hyperparameters for ensemble members differ from those for standalone models.
+- **Fifth, the joint scaling recipe and nested asymptote estimation**, which is the methodological core for composing multiple scaling axes—showing how to take limits in sequence and fit tiered power laws.
+- **Sixth, the data-scaling extension**, explaining how the asymptote-estimation framework extends to multiple token counts and how data efficiency is quantified as the ratio of token counts needed to match a reference recipe's loss.
+- **Seventh, the distillation recipes**, covering both ensemble-to-small-model distillation and self-distillation, since these address the practical concern that asymptote gains require large models.
+
+### 3.4 Detailed, Sentence-Based Technical Breakdown
+
+This is primarily an **empirical methods paper** whose core idea is that the data-constrained pre-training problem should be evaluated by estimating the limit of performance as compute goes to infinity, that this limit can be pushed down by combining regularization, parameter scaling, and ensembling, and that the gains from these training-compute-heavy recipes can be compressed back into small models via distillation.
+
+---
+
+#### The Formal Objective: Pre-training Under Infinite Compute
+
+The paper formalizes the data-constrained, compute-unconstrained pre-training problem as an optimization over hyperparameters (Section 2, introduction to formalization). The objective is:
+
+$$L^*_D = \min_{H} L(A(D, H))$$
+
+where `$L^*_D$` is the minimum achievable validation loss when constrained to `$D$` tokens of training data; `$A$` is the pre-training algorithm (a function that takes hyperparameters and returns a trained model); `$H$` is a tuple of all configurable hyperparameters (learning rate, epoch count, weight decay, batch size, parameter count `$N$`, etc.); and `$L(\cdot)$` is the validation loss of the trained model on a held-out i.i.d. set.
+
+**What it computes:** given a fixed data budget `$D$` and no constraint on training compute (you can spend as many FLOPs as you want via larger `$N$`, more epochs, larger `$K$` ensembles), the equation asks for the hyperparameter configuration that produces the single best model. The outer `$\min$` means you are allowed to search over all possible configurations—parameter count is just another hyperparameter in `$H$`, not a fixed constraint. The result is a single number `$L^*_D$` representing the floor that no amount of compute can beat on `$D$` tokens using algorithm `$A$`.
+
+**Why this form:** the standard approach in scaling laws research is to compare algorithms at fixed compute budgets (the Chinchilla approach), or to fit laws that predict loss as a function of compute. Both assume compute is the binding constraint and data is plentiful. This paper wants the opposite: data is the binding constraint, so the relevant comparison is *asymptotic performance in compute*, not performance at some arbitrary compute budget. The `$\min$` over `$H$` removes the confound of which algorithm "wins" at moderate budgets versus asymptotically—you directly ask which algorithm can, in principle, extract the most value from the limited data if given unlimited resources.
+
+**Operational significance:** in practice, the paper never directly solves `$\min_H$` exhaustively (that would require searching over unbounded `$N$` and `$K$`). Instead, it approximates `$L^*_D$` by (1) measuring loss at several discrete values of the scaling axis (e.g., 150M, 300M, 600M, 1.4B parameters), (2) fitting a power law through these measurements, and (3) reading off the asymptote `$E_D$` of the power law as the estimate of the infinite-compute limit. This approximation is valid only if the recipe exhibits monotone improvement in the scaling axis—if performance degrades at larger scales (as it does for the unregularized standard recipe), then the minimum `$L^*_D$` occurs at some finite scale and no asymptotic extrapolation is needed. The existence of a clean power law with a finite asymptote is therefore both a *property* of a good recipe and a *prerequisite* for the paper's evaluation methodology.
+
+---
+
+#### Locally-Optimal Hyperparameter Search via Coordinate Descent
+
+To make fair comparisons between recipes at different scales, the paper needs to ensure that each individual model is the best possible model that recipe can produce at that `$(D, N)$` combination. The hyperparameter space is too large for grid search (three continuous/discrete dimensions: learning rate, epoch count, weight decay, each with several possible values), so the paper develops a coordinate-descent procedure inspired by Wen et al. [2025] that finds **locally-optimal hyperparameters** (Appendix B.1).
+
+**Definition 1** (from the paper): "We define the neighborhood `$B(H)$` of hyperparameter tuple `$H$` containing `$m$` variables as the `$2m$` neighbors from incrementing/decrementing exactly one of the variables. We say `$H$` is locally optimal if and only if `$\forall H' \in B(H), L(A(D, N, H)) \leq L(A(D, N, H'))$`."
+
+In operational terms: a hyperparameter tuple is "certified" as locally optimal if you have trained models at every combination that differs from it in exactly one hyperparameter (e.g., twice the learning rate, half the epoch count, double the weight decay, etc.), and all of those neighboring models are no better than the tuple itself. The procedure:
+
+1. **Seed the search** with an initial guess for optimal hyperparameters (heuristically chosen based on prior experiments).
+2. **Train all neighbors** of the current best configuration—the `$2m$` variants obtained by incrementing or decrementing exactly one hyperparameter.
+3. **Update**: if any neighbor achieves lower validation loss, it becomes the new candidate; repeat step 2.
+4. **Terminate** when the candidate beats all its neighbors—this candidate is "certified" locally optimal.
+
+**Discretization:** the search space is discretized to make the procedure finite. Learning rate is constrained to values of the form `$1 \times 10^p$` or `$3 \times 10^p$` (e.g., 1e-3, 3e-3, 1e-4, 3e-4). Epoch count is constrained to integer powers of 2 (1, 2, 4, 8, 16, 32, 64). Weight decay is constrained to 0.0 or integer powers of 2 times 0.1 (0.1, 0.2, 0.4, 0.8, 1.6, 3.2, 6.4). Bounds are set at maximum learning rate 3e-3, maximum weight decay 6.4, and maximum epoch count 64.
+
+**Why this procedure rather than random search or Bayesian optimization:** the underlying assumption is that the loss surface in hyperparameter space, under this discretization, has the property that local optimality implies global optimality. The authors test this assumption indirectly: "Though this may seem like a big assumption, we did not observe counter-examples to this in early experiments." The coordinate-descent approach has the practical advantage that it directly verifies local optimality at termination—you *know* no single-axis change improves things—whereas random search can never certify that a better configuration doesn't exist somewhere in the unexplored space.
+
+**Why joint tuning matters (Appendix B.2, Figure 11):** the paper provides an ablation showing what happens when you tune hyperparameters at one scale and naively transfer them to others. Transferring the optimal weight decay from 150M (0.8) to all larger models causes non-monotonic scaling—the 600M model underperforms the 300M model. Transferring the optimal epoch count from 150M (16) to all larger models causes the scaling curve to plateau much faster. Only independent coordinate descent at each `$N$` recovers monotonic, power-law-shaped improvement. This ablation is critical methodologically: it justifies the substantial computational expense of running a full coordinate descent search at every `$(D, N)$` pair.
+
+**Where the procedure was used:** every data point in every scaling law plot—the four parameter counts for regularized scaling (Figures 3, 7 left), the four token counts for data scaling (Figures 7 right, 8 right), the five ensemble member counts (Figures 4, 5, 6 left)—involved a locally-optimal search at that `$(D, N, H)$` combination. The paper explicitly states that "Every run has its own learning rate schedule and we never report the loss before the learning rate anneals to zero in the main body" (Appendix A), ensuring that all reported losses are final, post-decay values.
+
+---
+
+#### The Regularized Parameter Scaling Recipe
+
+This is the first major recipe the paper develops, and it serves as both a standalone contribution and the foundation upon which ensembling and joint scaling are built.
+
+**The starting point: standard recipe failure.** The standard recipe (Section 2) tunes only learning rate and epoch count at each parameter count, keeping weight decay fixed at 0.1 (the Brown et al. [2020] default). Under this recipe, loss is not monotonic in `$N$`—the 1.4B model performs *worse* than the 600M model at 200M tokens (Figure 2, right). The paper attributes this to overfitting: "It is likely that both increasing repetition count and parameter count result in overfitting the train set" (Section 2.1).
+
+**The intervention: jointly tune weight decay, learning rate, and epoch count at each `$N$`.** The regularized recipe adds weight decay to the search space and runs the coordinate-descent procedure of Appendix B.1 independently at each of the four parameter counts (150M, 300M, 600M, 1.4B). The results are shown in Figure 3 (purple line) and the hyperparameters are tabulated in Figure 3 (right table) and Figure 12:
+
+| Parameter Count | Learning Rate | Epoch Count | Weight Decay |
+|---|---|---|---|
+| 150M | 3e-3 | 16 | 0.8 |
+| 300M | 3e-3 | 16 | 1.6 |
+| 600M | 1e-3 | 8 | 3.2 |
+| 1.4B | 1e-3 | 8 | 3.2 |
+
+The weight decays are 8×, 16×, 32×, and 32× the standard 0.1, respectively—hence the paper's claim of "30× larger than standard practice for our most over-parameterized models."
+
+**The power-law functional form:** with these tuned hyperparameters, validation loss across the four parameter counts is well-fit by:
+
+$$\hat{L}_{D,N} = \frac{A_D}{N^{\alpha_D}} + E_D$$
+
+where `$N$` is the parameter count (in billions for cleaner coefficients), `$A_D$` is a data-dependent scale factor (in units of loss × (billions of parameters)^α), `$\alpha_D$` is the exponent governing how fast loss decays toward the asymptote as `$N$` increases, and `$E_D$` is the asymptote—the loss that would be achieved by an infinitely large model on `$D$` tokens.
+
+**What it computes:** for a given seed token count `$D$`, the equation decomposes the validation loss into two components. The first term `$A_D / N^{\alpha_D}$` is the **excess loss**—the amount by which a finite model of size `$N$` exceeds the best possible loss. This excess decays as a power law in `$N$`. The second term `$E_D$` is the **irreducible loss**—the limit that even an infinite model cannot beat, representing intrinsic uncertainty in the data distribution (the entropy of text at that data scale) plus any bias from the finite training set.
+
+**Why this form:** power-law decay plus a constant asymptote is the standard functional form for modeling how models improve with scale when they don't overfit. The key constraint is that `$\alpha_D > 0$` (the excess loss decreases with `$N$`, not increases), which is the mathematical statement of "monotone scaling." The standard recipe fails this test because it would require either `$\alpha_D < 0$` (loss gets *worse* with `$N$`) or the fit would be poor because the points don't lie on a monotone curve at all.
+
+**Fitting and results at 200M tokens:** fitting this law to the four regularized-model measurements yields:
+
+$$\hat{L}_{200M,N} = \frac{0.05}{N^{1.02}} + 3.431$$
+
+The exponent `$\alpha = 1.02$` is notably large—the paper contrasts it with Chinchilla's parameter scaling exponent of 0.34 [Hoffmann et al., 2022] and interprets the difference as indicating "that when we better leverage the data, there is faster improvement from using larger models." In other words, when you properly regularize to prevent overfitting, model size buys you more than it does in the standard compute-constrained regime where you're simultaneously fighting data scarcity.
+
+**The asymptote as the key metric:** the paper's central methodological shift is to evaluate recipes by `$E_D$` rather than by loss at some finite `$N$` or compute budget. For the regularized recipe on 200M tokens, `$E_{200M} = 3.431$` (Figure 3 caption). This number is the estimate of `$L^*_{200M}$` under the regularized recipe in the notation of Section 2's formalization.
+
+**Sensitivity analysis (Appendix H.1, Figure 20, left):** because the asymptote estimate depends on measurements at finite `$N$` that have run-to-run variance, the paper tests robustness by fitting the same power law using three different random seeds. "Though the scaling laws change per seed, they remain relatively consistent, with the asymptotes staying close together." The standard deviation in asymptotes is comparable to the standard deviation for a single 300M model (~0.008 loss units).
+
+**The mechanism: why high weight decay prevents overfitting.** The paper doesn't provide a theoretical analysis, but it does provide empirical evidence through loss trajectory visualizations (Appendix B.5, Figure 14). The best run with weight decay 0.1 reaches a training loss of approximately 1.8 and validation loss of roughly 3.62. The best run with weight decay 1.6 reaches a much *higher* training loss (roughly 3.0) but a *lower* validation loss (roughly 3.57). The interpretation: the regularized model accepts worse fit to the training data in exchange for better generalization, consistent with classical bias-variance tradeoff reasoning. The paper also notes (Figure 14) that "loss for runs with high weight decay decreases much more slowly at the start of training, but quickly decreases near the end of training"—a practical warning that early-stopping based on intermediate validation loss would be misleading when weight decay is high.
+
+**Trends in optimal hyperparameters (Figure 12):** across the four parameter counts and four token counts (200M, 400M, 800M, 1.6B), the paper identifies empirical regularities:
+- Optimal learning rate decreases for larger models (consistent with prior work on learning rate scaling).
+- Optimal weight decay *increases* for larger models and *decreases* for larger token counts.
+- Optimal epoch count *decreases* for larger models and *increases* for larger token counts.
+- When the parameter-to-token ratio is held fixed, weight decay stays around 0.8 and epoch count stays around 16.
+
+These trends are important for practitioners who want to apply the regularized recipe without running full coordinate-descent searches: they suggest heuristics for how to adjust hyperparameters as `$N$` and `$D$` change.
+
+**Why this matters beyond the specific numbers:** the regularized recipe demonstrates that a simple, classical intervention (tuning weight decay) can convert a recipe that overfits and has bounded performance into one that scales monotonically toward a predictable asymptote. This monotonicity property is what makes the entire asymptote-based evaluation framework possible—without it, you cannot extrapolate to infinite compute because performance degrades at some finite scale. The recipe therefore serves as the *baseline* against which more complex interventions (ensembling, joint scaling) are compared: each new recipe is evaluated by whether its asymptote is lower than the regularized recipe's asymptote.
+
+---
+
+#### The Ensembling Recipe
+
+The regularized recipe improves performance by taking parameter count `$N$` to infinity. The ensembling recipe asks: is that the best way to spend infinite compute, or can you get a better asymptote by spending the same total parameter budget differently—specifically, by training `$K$` copies of a smaller model and averaging their outputs?
+
+**Formal definition (Section 4.1):** the ensembling algorithm `$E_A$` is defined as:
+
+$$E_A(D, N, K, H) = \text{LogitAvg}\left(\{A(D, N, Z_i, H)\}_{i \in [K]}\right)$$
+
+where `$K$` is the number of ensemble members, `$Z_i$` is the random seed for member `$i$` (controlling both data order and model initialization), and LogitAvg produces a model whose likelihood for a token sequence `$x$` is:
+
+$$\text{LogitAvg}(M_{i \in [K]})(x) \propto \exp\left(\frac{1}{K} \sum_{i \in [K]} \log(M_i(x))\right)$$
+
+where `$M_i(x)$` is the probability that member model `$i$` assigns to sequence `$x$`.
+
+**What it computes:** for each member `$i$`, you first compute its log-probability of the sequence `$\log M_i(x)$` (the sum of log-probabilities of each token given previous tokens). You then average these log-probabilities across the `$K$` members, and exponentiate and normalize to get a valid probability distribution. In practice, this is implemented by having each member compute its logits (pre-softmax scores) for the next token, averaging the logits across members, and then applying softmax to the averaged logits.
+
+**Why logit-averaging rather than probability-averaging or majority voting:** logit-averaging is the standard form of deep ensembles because it corresponds to a product-of-experts model in probability space: the ensemble's probability is proportional to the geometric mean of the members' probabilities. This penalizes disagreement more strongly than arithmetic averaging of probabilities—if one member assigns near-zero probability to the correct token, the product becomes near-zero regardless of other members' confidence. The paper doesn't explicitly ablate this choice against alternatives, but it's consistent with the standard ensembling literature.
+
+**Cost model:** the total parameter count of a `$K$`-member ensemble with `$N$` parameters per member is `$N \times K$`. The paper uses this as the basis for comparison with single-model parameter scaling: a `$K = 2$` ensemble of 300M models (600M total parameters) is compared against a single 600M model, since both require approximately the same inference FLOPs (FLOPs are linear in parameter count for a forward pass).
+
+**Scaling member count (Section 4.2, Figure 4):** the paper fixes `$N = 300M$` and trains ensembles with `$K = 1, 2, 3, 4, 5$` members, using the best regularized hyperparameters from Section 3 (16 epochs, 1.6 weight decay, 3e-3 learning rate). The losses are fit by a power law in `$K$`:
+
+$$\hat{L}_{D,N,K} = \frac{A'}{K^{\alpha'}} + E'$$
+
+where the asymptote `$E'$` represents the loss achievable by an infinite ensemble of 300M models. The fitted values (from the purple curve in Figure 4) yield an asymptote of **3.34**, which is lower than the regularized parameter-scaling asymptote of **3.43** (from Figure 3).
+
+**The key comparative claim:** "For sufficiently large parameter counts, it is advantageous to train multiple small models (e.g. two 300M models) instead of a single large model (e.g. one 600M model)." The paper supports this with the observation that even a `$K = 3$` ensemble (900M total parameters) outperforms the regularized recipe's `$N \to \infty$` asymptote of 3.43, meaning that a *finite* ensemble beats the *infinite*-parameter single model.
+
+**Why ensembling beats parameter scaling (theoretical intuition):** the paper cites Allen-Zhu and Li [2023] for the "multi-view" hypothesis: "ensembling helps when the data can be well-classified with one of many unique features but is best classified when using all such features. Under this 'multi-view' structure, they find that training a single model is biased towards only learning one feature, whereas each member of an ensemble happens to learn different features when independently trained." In the language modeling context, this would mean that different random initializations and data orders cause different models to learn different statistical regularities in the limited training data, and averaging their predictions captures more of the total signal than any single model can.
+
+**Hyperparameter tuning shifts for ensembles (Section 4.2, Figure 5, Appendix C.2):** a crucial finding is that the best hyperparameters for a single model (`$K = 1$`) are *not* the best hyperparameters for ensemble members when `$K \to \infty$`. The paper formalizes this as:
+
+$$\arg\min_H L(A(D, N, H)) \neq \arg\min_H \lim_{K \to \infty} L(E_A(D, N, K, H))$$
+
+The left side optimizes for single-model performance; the right side optimizes for the infinite-ensemble asymptote. Figure 5 (left) shows how the ranking of (epoch count, weight decay) pairs changes depending on whether you evaluate at `$K = 1$` or extrapolate to `$K \to \infty$`. The right side of Figure 5 shows that selecting hyperparameters for the asymptote improves the ensembling asymptote from 3.34 to 3.27.
+
+**The heuristic:** across extensive experiments varying parameter count and token count, the paper finds a remarkably consistent pattern: the optimal hyperparameters for ensemble members at `$K \to \infty$` are approximately **the same learning rate, double the epochs, and half the weight decay** of the optimal single-model hyperparameters. This is empirically validated for 150M, 300M (at two learning rates), and 600M models (Appendix C.2, Figure 17). The intuition is that ensemble members should be *more overfit individually* (more epochs, less regularization), so that they learn different "views" of the data, with the ensembling step itself providing the regularization by averaging away the idiosyncratic errors.
+
+**Sources of randomness (Appendix C.1, Figure 16):** the ensemble members differ only in their random seed `$Z_i$`, which controls both model initialization and the order in which training data is presented. The paper ablates which of these matters: training 5 models with both seeds varied, only train seed varied, or only data seed varied, and measuring ensemble performance as a function of `$K$`. "Either of these sources delivers most of the benefit of ensembling, with data order helping more." The standard deviation across seeds for a single 300M model is approximately 0.008 loss units, consistent with prior work [Jordan, 2024, Summers and Dinneen, 2021] suggesting that relatively small instabilities in training are sufficient to induce the variance that makes ensembling effective.
+
+**Alternatives considered and rejected (Appendix C.3):** the paper briefly discusses Mixture-of-Experts (MoE) and weight-averaging (model soups) as alternatives to logit-averaged ensembles. For MoE, early experiments found that "a jointly trained 10 ensemble of models outperforming a single model by only 0.02 loss"—far less than the gains from independently trained ensembles. The paper hypothesizes this is because MoE training is still a single learning trajectory, whereas true ensembling benefits from independent trajectories that explore different parts of the loss landscape. For model soups (averaging weights rather than logits), the paper finds that "model soups achieving close to random performance on downstream benchmarks" (Table 5) for pre-training from scratch, though they perform comparably to ensembles in the continued pre-training setting (Table 7). The explanation is that pre-trained models end up in different loss basins, and weight-averaging across basins destroys performance, whereas logit-averaging does not require the models to be in the same basin.
+
+---
+
+#### The Joint Scaling Recipe: Composing Parameter and Ensemble Scaling
+
+The regularized recipe improves by taking `$N \to \infty$`. The ensembling recipe improves by taking `$K \to \infty$` at fixed `$N$`. The joint scaling recipe asks: what happens when you take **both** limits?
+
+**Formal definition (Section 4.3):** the best possible loss of the joint recipe on `$D$` tokens is:
+
+$$\hat{L}_D = \lim_{N \to \infty} \lim_{K \to \infty} \min_H L(E_A(D, N, K, H))$$
+
+**What it computes:** for each parameter count `$N$`, you first find the best hyperparameters `$H$` for large-`$K$` ensembles (using the double-epoch/half-weight-decay heuristic) and estimate the `$K \to \infty$` asymptote via a power law in `$K$`. This gives you an estimated `$\hat{L}_{D,N,\infty}$` for each `$N$`. You then treat these asymptotes as data points and fit a second power law in `$N$`:
+
+$$\hat{L}_{D,N,\infty} = \frac{A''}{N^{\alpha''}} + E''$$
+
+where `$E''$` is the asymptote of asymptotes—the estimated best possible loss when both `$N$` and `$K$` go to infinity.
+
+**Why this order of limits (Appendix C.4):** the paper argues that taking `$K \to \infty$` first (inner limit) then `$N \to \infty$` (outer limit) is computationally more convenient than the reverse order or than jointly optimizing a compute-constrained objective. The reasoning:
+- Tuning hyperparameters depends on `$N$` but (under the heuristic) not on any finite value of `$K$`, so the inner limit only requires fitting a single power law per `$N$`.
+- If you took `$N \to \infty$` first, you'd need to tune hyperparameters for each `$(N, K)$` pair, which would be far more expensive.
+- If you optimized under a compute constraint, you'd need to model the FLOPs cost of each configuration, which is complicated by the interactions between epochs, parameter count, and ensemble size.
+
+The paper proves (in Appendix C.4) that the double limit is independent of the order of limits as long as the loss function `$f(N, K) = \min_H L(E_A(D, N, K, H))$` is monotonic in `$N$` and `$K$` when the other variable is fixed—a property they observe holds in all their experiments.
+
+**The three-tier procedure (Figure 6):**
+
+1. **Vary `$K$` at fixed `$N$` (Figure 6, left):** for each of the four parameter counts (150M, 300M, 600M, 1.4B), train ensembles with `$K = 1, 2, 3, 4, 5$` members using the asymptote-optimal hyperparameters (2× epochs, 0.5× weight decay relative to the regularized optimum at that `$N$`). Fit power laws in `$K$` and extract the `$K \to \infty$` asymptote for each `$N$`. These four asymptotes are: 150M ensembles → asymptote worse than regularized; 300M → ~3.27; 600M → ~3.22; 1.4B → ~3.19.
+
+2. **Vary `$N$` over the `$K \to \infty$` asymptotes (Figure 6, right):** plot the four asymptotes against parameter count `$N$` and fit a second power law in `$N$`. The fitted law yields an asymptote of asymptotes.
+
+3. **Read off the final estimate:** the paper reports a final joint-scaling asymptote of **3.17** for 200M tokens (from the text: "Our final estimate for the best possible loss is 3.17, which is a significant improvement over the loss of 3.43 for the regularized pre-training recipe and 3.75 for the unregularized recipe").
+
+**Why the 150M ensemble asymptote is worse:** Figure 6 (right) shows that the 150M ensemble asymptote (the leftmost purple point) is actually *above* the regularized 150M asymptote (the leftmost gold point). This means that for very small models, ensembling is counterproductive at asymptote—you're better off scaling `$N$` than scaling `$K$`. The crossover occurs around 300M parameters, beyond which ensemble asymptotes beat single-model asymptotes. This crossover is why the joint recipe is strictly better than either `$N \to \infty$` alone or `$K \to \infty$` alone: you can choose the `$N$` at which `$K \to \infty$` asymptotes become superior, and then take `$N$` even larger.
+
+**Data efficiency quantification:** the paper defines data efficiency by asking: "how many tokens would the standard recipe need to achieve the same loss as [this recipe] achieves on 200M tokens?" For the joint scaling recipe, this is computed by interpolating on the standard recipe's data scaling law (the red line in Figure 7, right) to find the token count `$D'$` where `$\hat{L}^{\text{standard}}_{D'} = 3.17$`. The result is `$D' / 200M = 5.17$`, meaning the standard recipe would need 5.17× more data—over a billion tokens—to match what the joint scaling recipe achieves with 200M tokens and infinite compute. Without extrapolation, the best *actual* configuration (a 5-ensemble of 1.4B models) is 3.75× more data-efficient.
+
+**What this framework assumes and what it doesn't:** the joint scaling asymptote is an *estimate* based on power-law extrapolation from measurements at finite `$N$` and `$K$`. The paper is transparent about the uncertainty: "We advise taking these asymptotes with a grain of salt and interpreting them as rough estimates" (Appendix H.1). The key assumptions are: (a) the power-law functional form holds at all scales, (b) the fitted exponents don't change at larger `$N$` or `$K$` than were measured, and (c) the double-epoch/half-weight-decay heuristic for ensemble hyperparameters transfers to arbitrarily large models. Violations of any of these would change the numerical estimate of the asymptote, but the paper's qualitative claim—that composing parameter scaling and ensembling beats either alone—does not depend on the precise asymptote value.
+
+---
+
+#### Data Scaling: Extending Asymptote Estimation Across Token Counts
+
+The joint scaling recipe estimates the infinite-compute loss on `$D = 200M$` tokens. But does the advantage persist at larger `$D$`? Or does it shrink as data increases, eventually vanishing when data is abundant? Section 5 addresses this by replicating the entire asymptote estimation procedure at four token counts (200M, 400M, 800M, 1.6B) for three recipes (standard, regularized, joint scaling).
+
+**The standard recipe baseline (Section 5.1):** since the standard recipe doesn't have a clean asymptote (loss increases at large `$N$`), the paper estimates its best possible loss by searching over `$N$` and hyperparameters to find the best single model at each `$D$`. Across all four token counts, "600M models slightly outperformed 1.4B models" (Appendix D.1, Figure 18), so the best 600M model's loss is taken as the estimate of `$L^*_D$` for the standard recipe. These four (loss, `$D$`) pairs form the red points in Figure 7 (right) and are fit by a data-scaling power law:
+
+$$\hat{L}^{\text{standard}}_D = \frac{A}{D^{\alpha}} + E$$
+
+**The regularized recipe data scaling (Section 5.2, Figure 7):** for each of the four token counts, the paper runs the full Section 3 procedure: coordinate-descent hyperparameter search at four parameter counts, power-law fit in `$N$`, extraction of asymptote `$E_D$`. These four asymptotes form the purple points in Figure 7 (right), and are fit by a data-scaling power law with asymptote `$E$`.
+
+**The joint scaling recipe data scaling (Section 5.3, Figure 8):** this is the most elaborate procedure. For each of the four token counts:
+1. At each of four parameter counts, train ensembles with `$K = 1, 2, 3, 4, 5$` (using the asymptote-optimal hyperparameter heuristic). Fit power laws in `$K$` to get 16 `$K \to \infty$` asymptotes (Figure 8, left).
+2. For each of the four token counts, fit a power law in `$N$` through the four `$K \to \infty$` asymptotes, and extract the `$N, K \to \infty$` asymptote (Figure 8, middle).
+3. Fit a data-scaling power law through the four joint asymptotes (Figure 8, right, gold line).
+
+**The data-scaling laws comparison (Section 5.4):** all three recipes are fit to the functional form `$\hat{L}_D = A/D^\alpha + E$`. The fitted parameters:
+
+| Recipe | `$A$` (numerator) | `$\alpha$` (exponent) | `$E$` (asymptote) |
+|---|---|---|---|
+| Standard | — | ~0.23–0.24 | ~1.89–1.96 |
+| Regularized | — | ~0.23–0.24 | ~1.89–1.96 |
+| Joint scaling | — | ~0.23–0.24 | ~1.89–1.96 |
+
+All three recipes share similar exponents and asymptotes. The paper interprets this through asymptotic statistics: "the asymptotes are equal if the algorithms achieve Bayes-optimal error under infinite data and compute, in which case their loss would be the entropy of text" (citing Shannon [1951] and Van der Vaart [2000]). In other words, if you had infinite data *and* infinite compute, all reasonable algorithms would converge to the same irreducible entropy of natural language—the differences between recipes only matter in the *finite-data regime*.
+
+**Constant data efficiency across scales (Section 5.4):** when two recipes have the same scaling exponent `$\alpha$` and asymptote `$E$`, the ratio of their `$A$` coefficients determines a constant data efficiency factor at all token counts: `$D' / D = (A_2 / A_1)^{1/\alpha}$`. "Our preliminary analysis suggests that our data efficiency improvements will not disappear across all data scales even if they perform similarly under infinite data." At 200M tokens, the joint scaling recipe's data efficiency factor over the standard recipe is **5.17×**; the paper expects this factor to remain approximately constant at larger `$D$`.
+
+**Without extrapolation:** the paper also reports data efficiency figures based on actual measured models (not asymptotes), which are more conservative:
+- Best regularized model at 200M tokens (1.4B parameters, tuned weight decay): **2.09×** more data-efficient than standard baseline.
+- Best ensemble at 200M tokens (5-ensemble of 1.4B models): **3.75×** more data-efficient than standard baseline.
+
+---
+
+#### Distillation: Compressing Asymptote Gains into Small Models
+
+The joint scaling asymptote of 3.17 is achieved only in the limit `$N, K \to \infty$`—for example, the smallest configuration that reaches 3.37 loss is a 4-ensemble of 300M models totaling 1.2B parameters. Section 6 asks whether these gains can be realized without deploying large models at inference time, using knowledge distillation.
+
+**Ensemble distillation (Section 6.1):** the procedure is:
+1. Train a teacher `$M'$` using the joint scaling recipe (specifically, an 8-ensemble of 300M models with 2.4B total parameters).
+2. Unconditionally sample from `$M'$` (no prompt, temperature 1) to generate a pool of `$D'$` synthetic tokens.
+3. Train a 300M student model from scratch on a mixture of the original `$D$` real tokens and `$D'$` synthetic tokens.
+
+The key hyperparameter is the **mixing ratio**—the ratio of batches of real data to batches of synthetic data. For ensemble distillation, the optimal ratio is **1:9** (9 synthetic batches for every 1 real batch), with 16 epochs over the real data, learning rate 3e-3, and crucially weight decay **0.1** (not the high weight decay of the regularized recipe, since distillation is a different optimization problem). The student trains on a total of `$16 \times 209 \times 10^6 \times (1 + 9) = 33.4$`B tokens.
+
+**Result (Figure 9, pink star):** the 300M distilled student achieves loss **3.36**, compared to the 300M regularized model's loss of **3.57** (purple point). The improvement is 0.21 loss units. The 8-ensemble teacher's loss is **3.32** (blue point). The student therefore preserves:
+
+$$\frac{3.32 - 3.36}{3.32 - 3.57} = \frac{-0.04}{-0.25} = 0.16 \to 84\% \text{ of the ensemble improvement}$$
+
+The paper reports this as "retaining 83% of the ensembling benefit." The distilled student outperforms the regularized recipe's `$N \to \infty$` asymptote of 3.43, meaning distillation + ensembling produces a 300M model that is better than any model the regularized recipe could produce at *any* parameter count on this data.
+
+**Self-distillation (Section 6.2):** this is a more surprising result: can you improve a model by using it as its own teacher? The procedure:
+1. Train a 300M teacher using the regularized recipe (or, in the paper's experiments, a 1-ensemble from the ensemble family for cleaner comparison).
+2. Unconditionally sample from the teacher to generate synthetic tokens.
+3. Train a fresh 300M student (same architecture) on the mixture of real and synthetic tokens.
+
+The optimal hyperparameters are: mixing ratio **1:3**, 16 epochs over real data, learning rate 3e-3, weight decay 0.1. The student trains on `$16 \times 209 \times 10^6 \times (1 + 3) = 13.4$`B tokens.
+
+**Result (Figure 9, green star):** the self-distilled student achieves loss **3.44** (when starting from a 3.37-loss teacher) or **3.43** (when starting from the regularized 300M teacher with loss 3.57). In both cases, the student outperforms its teacher, which violates the naive data processing inequality (you can't get more information about the training data by processing the teacher's output than the teacher already extracted). The key mechanism is the **mixing of real and synthetic data**: the teacher's generations provide a different "view" of the training distribution, and training on both real and synthetic tokens effectively provides more total training signal than either alone.
+
+**Why mixing is essential (Appendix E.3, Table 4):** self-distillation without mixing—training only on the teacher's synthetic tokens—produces a model with loss **4.07**, far worse than the teacher's **3.71** (the teacher used for this ablation had higher loss because it was trained with fewer epochs). This is the "model collapse" phenomenon observed in prior work [Shumailov et al., 2024]. Mixing real data prevents collapse by keeping the student anchored to the true data distribution.
+
+**Theoretical connection to ensembling:** the paper cites Allen-Zhu and Li [2023] for a theory interpreting self-distillation as "implicitly ensembling the teacher and the freshly initialized student." The teacher provides one set of learned features; the student, by being initialized differently and trained on a mixture of real and teacher-generated data, learns a complementary set; the combination approximates the benefit of explicitly training and averaging multiple models.
+
+**Why this matters for the paper's narrative:** these distillation results close a loop. The joint scaling recipe achieves a low asymptote but requires large models at training and/or inference time. Distillation shows that (a) the asymptote gains can be compressed into small models for deployment, and (b) even the *training-time* parameter cost can be reduced through self-distillation—you can achieve better-than-regularized performance without ever training a model larger than your target deployment size.
+
+---
+
+#### Continued Pre-training Transfer (Section 7.2, Table 1)
+
+To demonstrate that these interventions are not specific to pre-training from scratch, the paper applies them to continued pre-training (CPT) on math data, using Llama 3.2 3B Base as the starting point and the MegaMath-Web-Pro dataset from Wang et al. [2025].
+
+**The stacked interventions:** starting from the default CPT hyperparameters (learning rate 3e-5, batch size 512, 1 epoch, weight decay 0.1):
+1. **Reduce batch size** from 512 to 64, which directly improves generalization at a fixed data budget (Appendix B.4, Figure 13 left, and Keskar et al. [2017]).
+2. **Increase epochs** from 1 to 4, repeating the 4B data subset four times.
+3. **Ensemble** `$K = 1, 2, 4, 8$` copies of the epoched CPT model, trained with different random seeds.
+
+Weight decay was **not** helpful for CPT (the paper states "we find that weight decay was not helpful for CPT," Section 7.2), unlike for pre-training from scratch—likely because the base model already has strong regularization from its original pre-training.
+
+**Results (Table 1):** on average across GSM8K (8-shot), MATH (4-shot), and MathQA (8-shot):
+- Baseline CPT on 4B tokens with default hyperparameters: 30.59% accuracy (a 6.34-point improvement over the Llama 3B base at 24.25%).
+- With lower batch size and 4 epochs (single model): 34.48%.
+- 8-ensemble of epoched models: 40.58%.
+- Baseline CPT on the full **73B tokens** (following Wang et al. [2025] hyperparameters): 39.23%.
+
+The 8-ensemble on 4B tokens therefore slightly *outperforms* standard CPT on 73B tokens, representing a **17.5× data efficiency improvement** (73B / 4B ≈ 18.25, rounded to 17.5 in the paper). The ensemble of 2 models (35.82%) already substantially exceeds the 4B-token default baseline (30.59%), and the single epoched model (34.48%) also exceeds the default 73B-token run on GSM8K (44.50% vs. 49.51% on that benchmark alone).
+
+**Model soups in CPT (Appendix G.2, Table 7):** unlike pre-training from scratch where model soups failed, weight-averaging in CPT performs comparably to or slightly better than logit-averaging: the 8-soup achieves 41.34% vs. 40.58% for the 8-ensemble. The paper doesn't explain this discrepancy in detail, but it's consistent with the broader model soups literature where averaging works better when models start from the same pre-trained initialization (as in CPT) rather than from scratch.
+
+---
+
+#### Summary of Key Design Choices and Their Justifications
+
+- **Power-law asymptote estimation** over compute-budgeted comparison: because the paper's question is about infinite compute, the relevant metric is the horizontal asymptote of the scaling curve, not the loss at a specific compute point. Power laws are the natural functional form for monotonically improving systems, and the asymptote parameter `$E$` directly answers "what is the best possible loss?"
+
+- **Coordinate-descent hyperparameter search** over grid/random search: certifies that each model is locally optimal, removing hyperparameter tuning quality as a confound when comparing recipes at different scales. The "neighbor" structure (change one hyperparameter at a time) is computationally feasible and empirically sufficient.
+
+- **Joint tuning of weight decay at each scale** over fixed weight decay: weight decay requirements change with `$N/D$` ratio—larger, more over-parameterized models need more regularization to prevent overfitting. Transferring hyperparameters naively leads to incorrect conclusions about scaling behavior.
+
+- **Double-epoch/half-weight-decay heuristic for ensembles** over separate coordinate descent per `$K$`: computationally infeasible to search separately for each `$(N, K)$` pair. The heuristic is validated across multiple scales and is consistent with the intuition that ensemble members should be more overfit individually since the ensemble average provides regularization.
+
+- **Nested power-law fitting for joint scaling** over joint optimization: avoids the complexity of modeling FLOPs costs for each `$(N, K, \text{epochs})$` combination. The monotonicity assumption (loss decreases in `$N$` and `$K$` when the other is fixed) justifies that the limits can be taken in either order.
+
+- **Mixing real and synthetic data for distillation** over pure synthetic training: pure synthetic training leads to model collapse (loss 4.07 vs. teacher's 3.71). Mixing keeps the student anchored to the true data distribution while still benefiting from the teacher's knowledge.
+
+- **Logit-averaging for ensembles** over weight-averaging (model soups): weight-averaging fails catastrophically for pre-training from scratch (near-random downstream accuracy), likely because independently trained models end up in different loss basins. Logit-averaging does not require basin alignment.
+
+- **200M-token default scale** over larger default: enables running many more experiments (hundreds of training runs) at multiple `$(N, K, D)$` combinations than would be feasible at billion-token scales, while still being large enough that the qualitative phenomena (overfitting, scaling laws) are representative of larger scales (validated by the data-scaling analysis showing constant efficiency factors).
+
+## 4. Key Insights and Innovations
+
+### Innovation 1: Redefining the evaluation framework — asymptotes instead of compute-budgeted comparisons
+
+The paper's most fundamental intellectual move is not any specific algorithmic trick but rather a **methodological reframing of what it means to evaluate a pre-training recipe**. Prior work, from Chinchilla [Hoffmann et al., 2022] through Kaplan et al. [2020] through the test-time compute scaling literature [Snell et al., 2024], has universally compared approaches by asking: "at a fixed compute budget, which recipe achieves lower loss?" This framing is entirely appropriate when compute is the binding constraint, but it is the **wrong question** when data is fixed and compute is abundant — the regime the paper argues we are heading toward.
+
+The paper introduces a clean alternative: evaluate recipes by the **asymptote of their scaling law** — the limit of performance as the scaling axis (parameter count, ensemble member count, or both) goes to infinity on a fixed data budget. This is formalized through power-law fits of the form `L̂ = A/N^α + E`, where `E` is the estimated loss at infinite compute. The asymptote directly answers: "if I had unlimited GPUs, what is the best model this recipe could produce from this data?" 
+
+This shift from slope-of-the-curve to asymptote-of-the-curve matters because it can **reverse the ranking of recipes**. A method that looks better at moderate compute budgets (steeper early improvement) might have a higher asymptote than a method that improves more slowly but converges to a lower floor. The paper's findings demonstrate this concretely: the regularized recipe's early gains at small `N` are modest compared to standard best-of-N-style parameter scaling, but its asymptote is dramatically lower (3.43 vs. effectively unbounded degradation). More subtly, the ensembling recipe's hyperparameter tuning *for the asymptote* differs from tuning for finite `K` (Figure 5) — a recipe optimized for the wrong metric would underperform at the infinite-compute limit.
+
+This is **not an incremental advance**. It is a new evaluation philosophy for a new computational regime, analogous to how asymptotic statistics [Van der Vaart, 2000] provides a framework for reasoning about estimators in the limit of infinite samples while maintaining fixed model complexity. The paper draws this parallel explicitly (Section 5.4) by noting that under infinite data *and* compute, all reasonable algorithms should converge to the entropy of text [Shannon, 1951] — the differences between recipes only matter in the finite-data regime, and the asymptote framework captures exactly those differences. This is the conceptual scaffolding that makes the rest of the paper's experiments interpretable.
+
+### Innovation 2: Regularization as the key that unlocks monotonic scaling under extreme over-parameterization
+
+The paper's second major contribution is **identifying and empirically demonstrating that properly tuned regularization — specifically, weight decay tuned per-model-size — is what converts a recipe that overfits and degrades into one that scales monotonically toward a predictable asymptote.** This is not merely "weight decay helps prevent overfitting," which has been known since the invention of weight decay. The insight is more specific and more consequential.
+
+Prior work in the over-parameterized regime presented a confusing picture. Kaplan et al. [2020] showed that for fixed data, increasing model size eventually increases loss — double descent behavior where bigger isn't better. Muennighoff et al. [2023] proposed scaling laws for data-constrained pre-training but had to *remove* runs that overfit to get their laws to fit (their Appendix D), meaning their framework didn't actually describe the data-constrained limit. The standard practitioner response to this confusion has been to avoid the over-parameterized regime entirely — stay near the Chinchilla-optimal ratio of ~20 tokens per parameter, where overfitting isn't a problem but where you're also leaving model capacity on the table.
+
+What the paper shows is that the **non-monotonicity is not fundamental to the over-parameterized regime — it is a symptom of inadequate regularization.** When weight decay is jointly tuned with learning rate and epoch count at each parameter count, the double-descent behavior disappears completely. Loss follows a clean power law with exponent ~1.02 in parameter count (vs. Chinchilla's 0.34), and the optimal weight decay for the largest models is 30× the standard default of 0.1 (Section 3, Figure 3). The implication is not just that you *can* over-parameterize safely — it's that **over-parameterization, when properly regularized, is a strictly more efficient use of limited data than staying near the Chinchilla ratio.** The power-law exponent of ~1 means that doubling model size roughly halves the excess loss, a much steeper improvement than what the compute-constrained scaling literature would predict.
+
+This finding is fundamental rather than incremental because it changes the interpretation of the over-parameterized regime from "danger zone where scaling laws break" to "operating regime where compute-for-data substitution is most effective." It also connects cleanly to theoretical work in over-parameterized regression [Advani and Ganguli, 2016, Canatar et al., 2021, Nakkiran et al., 2021, Simon et al., 2024] that predicted optimal regularization could mitigate double descent — the paper provides what is likely the first demonstration of this prediction at scale in modern language model pre-training. The key evidence is Figure 3 (the monotonic purple scaling law vs. the non-monotonic red standard recipe) and the hyperparameter trends in Figure 12, which show that weight decay requirements increase systematically with model size when data is fixed.
+
+### Innovation 3: Individual model overfitting as a *feature*, not a bug, for ensemble construction
+
+The paper's third distinctive contribution is the finding that **the optimal hyperparameters for ensemble members are not the best single-model hyperparameters — ensemble members should be *more* overfit individually because the ensemble average provides the regularization.** This inverts the standard intuition about how to build ensembles.
+
+The conventional wisdom, inherited from the ensembling literature [Dietterich, 2000, Lakshminarayanan et al., 2017], is that each ensemble member should be individually well-regularized, and the ensemble provides additional benefit on top of that through variance reduction. Under this view, you take your best single-model hyperparameters and use them for each member. The paper shows this is **wrong for the asymptote**: the hyperparameters that minimize single-model loss produce a higher infinite-ensemble asymptote than hyperparameters that deliberately sacrifice single-model performance in favor of member diversity (more epochs, less weight decay).
+
+The empirical signature of this effect is Figure 5 (extended in Appendix C.2, Figure 17). The ranking of (epoch count, weight decay) pairs changes depending on whether you evaluate at `K = 1` or extrapolate to `K → ∞`. The "double epochs, half weight decay" heuristic that emerges across multiple parameter counts and token counts translates to: each member should overfit *more* to the training data, learning idiosyncratic features that are individually noisy but, when averaged, capture complementary aspects of the data distribution. The theoretical motivation comes from Allen-Zhu and Li [2023]'s "multi-view" hypothesis — that ensembles work when the data supports multiple valid sets of features, and independent training causes different members to latch onto different subsets.
+
+This finding is conceptually significant because it changes the optimization target for ensemble construction. You cannot optimize members for ensemble asymptote by tuning them individually and hoping the ensemble inherits the benefit — you must explicitly optimize for the asymptote, which requires extrapolating from finite-`K` measurements. The paper's methodology of fitting power laws in `K` and selecting hyperparameters based on the fitted asymptote rather than finite-`K` performance is a practical instantiation of this shift.
+
+The significance beyond raw performance is that this insight **reconciles a tension between single-model scaling and ensembling that had appeared in prior theory.** Works like Vyas et al. [2023] and Ruben et al. [2024] had suggested, based on feature-learning models, that ensembling might not outperform parameter scaling. The paper provides evidence that ensembling *does* outperform parameter scaling when you tune ensemble member hyperparameters for the right objective — and that the wrong hyperparameter choices could easily lead to the opposite (pessimistic) conclusion.
+
+### Innovation 4: Nested scaling laws as a methodology for composing multiple compute axes
+
+The paper's fourth contribution is methodological: the **framework of nested, tiered scaling laws that estimate the asymptote of one scaling dimension, treat those asymptotes as data points for fitting a second scaling law, and repeat.** This enables reasoning about the interaction of multiple scaling axes (parameter count, ensemble member count, token count) without requiring a joint optimization over all combinations, which would be computationally prohibitive.
+
+The procedure itself (described in detail in Section 3.4) is conceptually elegant but the innovation is not the math — it's the **demonstration that this tiered approach yields coherent, interpretable results across three levels of nesting:**
+1. `K → ∞` within fixed `N` and `D` (ensemble width scaling)
+2. `N → ∞` over the `K → ∞` asymptotes (parameter scaling of ensemble asymptotes)
+3. `D → ∞` over the `N, K → ∞` asymptotes (data scaling of the joint recipe)
+
+At each level, the power-law fits share similar exponents, and the asymptotes degrade smoothly — there is no level-crossing or reversal that would indicate an inconsistency in the approach. The final data-scaling laws (Section 5.4) show that all three recipes (standard, regularized, joint scaling) share similar data-scaling exponents (~0.23–0.24) and asymptotes (~1.89–1.96), which is exactly what asymptotic statistics would predict if the differences between recipes are driven by finite-data efficiency rather than different inductive biases.
+
+The intellectual contribution here is that this methodology **replaces the standard compute-optimal scaling analysis (which optimizes one ratio — parameters to tokens — at a fixed compute budget) with a framework for reasoning about the composition of multiple scaling dimensions, each with its own power-law behavior, converging to a multi-dimensional limit.** It is not a replacement for compute-optimal analysis but a different kind of analysis suited to a different constraint structure (data-fixed, compute-unbounded). The result — that the data efficiency improvement is approximately constant across token counts (Section 5.4) — is a strong test of the methodology's internal consistency: if the tiered fits were unreliable, you would not expect to see parallel data-scaling curves with similar exponents and asymptotes across three independently fitted recipes.
+
+This framework enables a form of **predictive extrapolation** that goes beyond what single-axis scaling laws can provide. Without nesting, you could answer "what happens if I scale `N`?" or "what happens if I scale `K`?" independently, but you couldn't answer "what happens if I scale both, and how do the benefits compose?" The paper demonstrates that the answer is not simply additive — the joint asymptote (3.17) is lower than either the pure `N → ∞` asymptote (3.43) or the pure `K → ∞` asymptote at any fixed `N` — and that the composition can be quantified through this tiered fitting procedure rather than requiring exhaustive search over the `(N, K)` product space.
+
+### Innovation 5: Self-distillation as implicit ensembling — a positive result against the model collapse narrative
+
+The paper's final conceptual contribution is demonstrating that **self-distillation — training a fresh model of the same architecture on a mixture of real data and the teacher's own synthetic generations — can *improve* performance over the teacher, provided real and synthetic data are mixed.** This is a deliberate counterpoint to the growing literature on "model collapse" [Dohmatob et al., 2024, Shumailov et al., 2024, Taori and Hashimoto, 2022], which argues that training on model-generated data leads to progressive degradation.
+
+The finding itself is not merely "distillation works" — that has been known since Hinton et al. [2015]. What is distinctive is the **mechanism and the implication**: the paper frames self-distillation as a form of *implicit ensembling* between the teacher and the freshly initialized student, citing Allen-Zhu and Li [2023]'s theoretical analysis. The key experimental finding is that **mixing real and synthetic data during student training is what prevents collapse** (Appendix E.3, Table 4): pure synthetic training produces loss 4.07 (far worse than the teacher's 3.71), while mixing 1:1 with real data produces loss 3.44 (better than the teacher).
+
+This matters because it **opens a path to data efficiency gains without increasing the deployed model's size or the training-time parameter count.** The joint scaling recipe of Section 4 achieves its 3.17 asymptote only by taking `N, K → ∞` — models with billions of parameters trained in large ensembles. Self-distillation shows that a single 300M model can achieve loss approaching that asymptote (3.43–3.44) without ever training a model larger than 300M parameters. This is the practical closure of the paper's argument: the benefits of infinite compute don't require infinite models at deployment, or even at training time — they can be realized through suitably designed self-play training loops.
+
+The conceptual significance extends beyond language modeling. The model collapse literature has created a narrative that synthetic data is inherently dangerous and that training on model outputs inevitably leads to degradation. The paper provides a clear counterexample showing that the *mixing ratio* of real to synthetic data is the critical variable — and that with appropriate mixing, training on self-generated data can be a form of data augmentation that extracts more signal from the same underlying dataset. This reframes the conversation around synthetic data from "how do we avoid collapse?" to "how do we optimize the mixing strategy to maximize data efficiency?" — a more productive and nuanced question.
+
+## 5. Experimental Analysis
+
+### Evaluation Methodology
+
+- **Dataset.** All pre-training experiments use text data from **DCLM** [Li et al., 2025], with a fixed seed corpus of training tokens that is varied across experiments (200M, 400M, 800M, 1.6B tokens). A held-out validation set of **1024 sequences (4 million tokens)** is kept fixed across all experiments for loss evaluation. When varying the seed token count, smaller pools are constructed as subsets of larger pools to ensure comparability. For continued pre-training, the paper uses the **MegaMath-Web-Pro** dataset from Wang et al. [2025] with a 4B-token subset of the full 73B tokens.
+
+- **Base model(s).** The paper trains **Llama-style auto-regressive language models** from scratch at four parameter scales: 150M, 300M, 600M, and 1.4B parameters (full architectural configurations in Table 2). All models use SiLU activations, untied word embeddings, rotary position embeddings, context length 4096, and are trained with the AdamW optimizer (β₁ = 0.9, β₂ = 0.95, ε = 10⁻⁸) with a cosine learning rate schedule (1% warmup, decaying to zero). For continued pre-training, the starting point is **Llama 3.2 3B Base** [Grattafiori et al., 2024]. The default parameter count for most single-model experiments is 300M, chosen as a practical scale that allows extensive hyperparameter search while remaining large enough that the qualitative phenomena (overfitting, scaling laws) are expected to generalize.
+
+- **Metrics.** The primary metric is **validation loss** (cross-entropy) on the held-out 4M-token set, measured after the learning rate has fully annealed to zero. For downstream evaluation, the paper reports **accuracy** on PIQA, SciQ, and ARC Easy (all accuracy-based benchmarks from Thrush et al. [2025]), as well as **accuracy on GSM8K (8-shot), MATH (4-shot), and MathQA (8-shot)** for continued pre-training. For comparing recipes, the paper defines **data efficiency** as the ratio `D′/D`, where `D′` is the token count at which the standard (unregularized) recipe would need to match the loss achieved by the target recipe on `D` tokens — interpolated via the standard recipe's fitted data-scaling power law.
+
+- **Baselines.** The paper defines several reference points:
+  - **Standard recipe (unregularized):** Jointly tuned learning rate and epoch count at each parameter count, with weight decay fixed at 0.1 (the default from Brown et al. [2020]). This is the primary baseline representing current standard practice for data-constrained pre-training.
+  - **Default CPT:** Continued pre-training on MegaMath-Web-Pro following the reference hyperparameters from Wang et al. [2025] (learning rate 3e-5, batch size 512, 1 epoch, weight decay 0.1, trained on the full 73B tokens). Serves as the baseline for the CPT experiments in Section 7.2.
+  - **Regularized recipe (single-model):** Jointly tuned learning rate, epoch count, and weight decay at each parameter count via coordinate descent. Serves as the baseline against which ensembling and joint scaling are compared.
+  - **Majority voting** and **best-of-N** baselines from prior test-time compute work are not used, since this paper focuses on training-time compute scaling rather than inference-time strategies.
+
+- **Generation budget / compute accounting.** The paper measures training compute implicitly through the **total parameter count `N × K`** (for single models, `K = 1`; for ensembles, `K ≥ 1`) and the **epoch count** (which multiplies the effective tokens processed). FLOPs accounting uses the standard approximation that a forward pass cost is linear in parameter count. The paper does not explicitly report total training FLOPs for each configuration; instead, comparisons are made at fixed `D` and fixed total parameter count. For distillation, compute is measured in total training tokens (real + synthetic), with the mixing ratio controlling the proportion.
+
+- **Cross-validation / statistical protocol.** The paper does not use cross-validation in the traditional train/validation/test sense — all evaluations are on a fixed held-out validation set (for loss) or standard downstream benchmarks (for accuracy). For **sensitivity analysis of asymptote estimates** (Appendix H.1), the paper fits power laws using three different random seeds to assess run-to-run variance in the estimated asymptotes, finding standard deviations of approximately 0.008–0.02 loss units (comparable to single-model run-to-run variance). For ensemble variance characterization (Appendix C.1), the paper trains five models with three different randomness configurations (both seeds varied, only train seed varied, only data seed varied) to estimate standard deviations. For downstream benchmarks (Table 5), standard errors are reported (value ± SE) based on the number of evaluation examples.
+
+---
+
+### Main Quantitative Results
+
+#### Standard Recipe Overfits Under Data Constraints (Figure 2)
+
+The paper first establishes the failure mode of standard practice. At 200M tokens with a 300M model, increasing epoch count beyond 8 causes validation loss to *increase* (Figure 2, left): the optimal is 8 epochs at loss approximately 3.73, after which further repetition degrades performance. Jointly tuning learning rate and epoch count at each of four parameter counts (150M, 300M, 600M, 1.4B) while keeping weight decay at 0.1 yields the red curve in Figure 2 (right). The 600M model at 4 epochs (learning rate 1e-3) achieves the best performance, but the 1.4B model at 4 epochs (learning rate 3e-4) is *worse*, with loss *increasing* from roughly 3.72 to roughly 3.78. The reported loss range across these four models is narrow — less than 0.1 loss units improvement over a 10× increase in parameter count — demonstrating that unregularized parameter scaling provides rapidly diminishing and eventually negative returns on fixed data.
+
+#### Regularized Recipe Achieves Monotonic Power-Law Scaling (Figure 3)
+
+Adding weight decay to the hyperparameter search space and jointly tuning all three hyperparameters via coordinate descent at each parameter count yields the purple curve in Figure 3. The optimal hyperparameters shift dramatically: weight decay increases from 0.8 (150M) to 1.6 (300M) to 3.2 (600M and 1.4B) — up to 32× the standard 0.1. Epoch count decreases from 16 (150M and 300M) to 8 (600M and 1.4B). With this tuning, validation loss follows a clean power law:
+
+$$\hat{L}_{200M,N} = \frac{0.05}{N^{1.02}} + 3.431$$
+
+The fitted exponent of 1.02 is approximately 3× larger than Chinchilla's parameter scaling exponent of 0.34 [Hoffmann et al., 2022], indicating that regularized over-parameterization provides much steeper returns to model size than compute-constrained scaling. The four measured losses are approximately: 150M → 3.63, 300M → 3.57, 600M → 3.51, 1.4B → 3.47. The estimated asymptote — the infinite-parameter limit — is **3.43** (Figure 3 caption).
+
+#### Ensembling Achieves a Lower Asymptote Than Parameter Scaling (Figure 4)
+
+Fixing the parameter count at 300M and training ensembles with `K = 1` through `K = 5` members using the best regularized hyperparameters yields a power law in member count with an asymptote of **3.34** (Figure 4, caption). This is lower than the regularized recipe's `N → ∞` asymptote of 3.43. The paper emphasizes that even a `K = 3` ensemble (900M total parameters, loss approximately 3.39) outperforms the regularized asymptote — meaning that a *finite* ensemble beats the best possible infinite single model. The excess loss decays with exponent approximately 1 in `K` (similar to the parameter-scaling exponent in `N`), but the asymptote itself is 0.09 loss units lower.
+
+#### Tuning Ensemble Hyperparameters for the Asymptote Further Improves Performance (Figure 5)
+
+When varying epoch count and weight decay for 300M ensemble members and fitting power laws in `K` to estimate the `K → ∞` asymptote for each hyperparameter configuration, the paper finds that the ranking of hyperparameters changes depending on whether you evaluate at `K = 1` (single model) or at the `K → ∞` extrapolated asymptote (Figure 5, left). The optimal asymptotic hyperparameters are approximately **2× epochs and 0.5× weight decay** relative to the optimal single-model configuration (Figure 5, right table). Specifically, while the best single-model hyperparameters are 16 epochs and 1.6 weight decay (loss 3.57 at `K = 1`), the best asymptote comes from 32 epochs and 0.8 weight decay. Selecting for the asymptote improves the infinite-ensemble loss estimate from **3.34 to 3.27** (Figure 5, right). This finding is validated across three additional parameter counts and two learning rates in Appendix C.2 (Figure 17), with only one counterexample (1.4B at 200M tokens, the most over-parameterized setting, where the weight decay halving heuristic slightly over-regularizes).
+
+#### Joint Scaling of Parameters and Ensembles Achieves Asymptote of 3.17 (Figure 6)
+
+The paper estimates the double limit `lim_{N→∞} lim_{K→∞}` through a two-tier power-law fitting procedure. For each of the four parameter counts (150M, 300M, 600M, 1.4B), ensembles of up to `K = 5` members are trained with asymptote-optimal hyperparameters (2× epochs, 0.5× weight decay) and fit by power laws in `K` (Figure 6, left). The `K → ∞` asymptotes are: 150M → asymptote *worse* than the regularized 150M asymptote; 300M → approximately 3.27; 600M → approximately 3.22; 1.4B → approximately 3.19. These four asymptotes are then fit by a second power law in `N` (Figure 6, right), yielding the final joint-scaling asymptote estimate of **3.17** for 200M tokens. This compares to 3.43 for the regularized recipe and 3.75 for the unregularized recipe baseline.
+
+#### Data Scaling Shows 5.17× Data Efficiency Improvement That Persists Across Token Counts (Figures 7–8, Section 5.4)
+
+The paper replicates the asymptote estimation at four token counts (200M, 400M, 800M, 1.6B) for all three recipes:
+
+- **Standard recipe:** estimated by the best single model at each `D` (always a 600M model). The four losses (Figure 7, right, red points) range from approximately 3.72 (200M) to approximately 3.56 (1.6B).
+- **Regularized recipe:** `N → ∞` asymptotes estimated from power laws at each `D` (Figure 7, purple points). Data efficiency at 200M tokens: the standard recipe requires **2.29× more data** to match the regularized asymptote. Even without extrapolation, the best 1.4B regularized model is **2.09× more data-efficient** than the standard baseline.
+- **Joint scaling recipe:** `N, K → ∞` asymptotes from the three-tier procedure (Figure 8, gold points). Data efficiency at 200M tokens: **5.17× more data-efficient** than the standard recipe. Without extrapolation, the best actual configuration (5-ensemble of 1.4B models) is **3.75× more data-efficient**.
+
+All three recipes' data-scaling laws share similar exponents (0.23–0.24) and asymptotes (1.89–1.96), which the paper interprets through asymptotic statistics: under infinite data and infinite compute, all algorithms should converge to the entropy of text. Since the exponents and asymptotes are similar, the data efficiency improvement factor (determined by the ratio of `A` coefficients) is predicted to be **approximately constant across all token counts** — the 5.17× advantage at 200M tokens is expected to persist at 1.6B tokens and beyond.
+
+#### Distillation Preserves 83% of Ensemble Gains in an 8× Smaller Model (Figure 9)
+
+Distilling an 8-ensemble of 300M models (2.4B total parameters, teacher loss 3.32) into a single 300M student achieves a student loss of **3.36** (Figure 9, pink star). The ensemble improvement over the regularized 300M model (loss 3.57) is 0.25 loss units; the distilled student captures 0.21 of that improvement, preserving **83%** of the benefit. The student's loss of 3.36 *exceeds* the regularized recipe's `N → ∞` asymptote of 3.43, meaning a distilled 300M model outperforms the best possible model producible by the regularized recipe at any parameter count.
+
+#### Self-Distillation Outperforms the Teacher Without Increasing Model Size (Figure 9)
+
+Self-distilling a 300M teacher into a fresh 300M student of the same architecture yields a loss of **3.43–3.44** (Figure 9, green star), compared to the teacher's loss of 3.57. With optimal mixing (1:3 ratio of real to synthetic batches, 16 epochs over real data, weight decay 0.1), the student consistently exceeds the teacher. Without mixing real data, self-distillation collapses: training on synthetic tokens only (no real data) produces a loss of 4.07, far worse than the teacher's 3.71 (Table 4, teacher from a slightly different configuration).
+
+#### Continued Pre-training with Ensembles Achieves 17.5× Data Efficiency (Table 1)
+
+Starting from Llama 3.2 3B Base with the MegaMath-Web-Pro dataset:
+- Default CPT on 4B tokens: **30.59%** average accuracy across GSM8K, MATH, MathQA (a 6.34-point gain over the base model's 24.25%).
+- Lower batch size (64 instead of 512) with 4 epochs: **34.48%**.
+- 8-ensemble of these epoched models: **40.58%**.
+- Default CPT on full 73B tokens (following Wang et al. [2025] hyperparameters): **39.23%**.
+
+The 8-ensemble using 4B tokens slightly *exceeds* the standard 73B-token CPT baseline, representing a **17.5× data efficiency improvement**. Individual benchmarks: GSM8K (52.99% for the 8-ensemble vs. 49.51% for 73B-token CPT), MATH (23.50% vs. 23.40%), MathQA (45.26% vs. 44.79%). Even the single epoched model (34.48%) substantially exceeds the 4B-token default CPT baseline (30.59%).
+
+#### Benchmark Accuracy Correlates with Validation Loss Improvements (Figure 10, Table 5)
+
+The paper evaluates seven categories of models on PIQA, SciQ, and ARC Easy (Table 5): unregularized parameter scaling (4 models), regularized parameter scaling (4 models), 150M ensembles (`K = 1–5`), 300M ensembles (`K = 1–5`), 600M ensembles (`K = 1–5`), 1.4B ensembles (`K = 1–5`), and distilled models (self and ensemble). The best ensemble (5-ensemble of 1.4B models) achieves **64.39% average accuracy**, compared to the best unregularized model (300M, 55.34%) — a **9.05 percentage point absolute improvement** (~16% relative). The best distilled model (ensemble-distilled 300M) achieves 62.19%, a 6.85-point improvement over the unregularized 300M baseline. The paper notes that "we did not evaluate on any benchmarks until the end of the project after we selected the best recipes following validation loss, making these benchmarks a strong test of generalization" (Section 7.1). The correlation between validation loss and average benchmark error is visible in Figure 10 (left vs. right): models with lower loss consistently achieve lower error.
+
+---
+
+### Ablation Studies and Robustness Checks
+
+**Joint tuning vs. transferring hyperparameters (Appendix B.2, Figure 11):** Three alternative tuning strategies are compared to the full coordinate-descent approach:
+- **Fixed weight decay (0.1), tune only learning rate and epochs:** reproduces the standard recipe failure — loss is not monotonic and plateaus.
+- **Tune weight decay at 150M (optimal 0.8), transfer to all larger `N`:** scaling is not monotonic — the 600M model underperforms the 300M model despite having 2× the parameters. "We find that this scaling is not even monotonic."
+- **Tune epoch count at 150M (optimal 16), transfer to all larger `N`:** scaling is monotonic but "plateaus much faster than the regularized recipe," suggesting that fixing epoch count while tuning weight decay is insufficient — the optimal epoch count itself changes with `N`.
+
+**Effect of batch size (Appendix B.4, Figure 13, left):** For a 300M model at 200M tokens (1 epoch, weight decay 0.1, learning rate 3e-3), reducing batch size from 1024 to 64 consistently lowers validation loss, corroborating prior work [Keskar et al., 2017, Smith et al., 2020]. The paper uses batch size 64 as "the smallest size that is practical for our hardware" and notes that smaller batch sizes would likely yield further improvements but were not tested due to hardware constraints.
+
+**Weight decay requirements scale with over-parameterization (Appendix B.4, Figure 13, right):** For a 1.4B model trained for 8 epochs, increasing weight decay from 0.0 to 6.4 shows a U-shaped curve with an optimum at 3.2 — well above the standard 0.1. For a 300M model trained for 16 epochs, the optimum is 1.6. "Without optimally tuning weight decay, one may draw the incorrect conclusion that larger models are worse than smaller models in the data-constrained setting" — the 1.4B model with weight decay 0.1 performs substantially worse than the 300M model with weight decay 1.6, but properly regularized, the 1.4B model is clearly superior.
+
+**Loss trajectories under high weight decay (Appendix B.4, Figure 14):** Comparing the best run with weight decay 0.1 (8 epochs, 1e-3 learning rate) to the best run with weight decay 1.6 (16 epochs, 3e-3 learning rate) at 300M parameters: the high-weight-decay run starts with much higher training and validation loss and decreases slowly, but "quickly decreases near the end of training," eventually achieving lower validation loss (approximately 3.57 vs. 3.62). The training loss remains higher (approximately 3.0 vs. 1.8), indicating stronger regularization is trading off training fit for generalization.
+
+**Sources of randomness for ensembling (Appendix C.1, Figure 16):** Five models are trained with three randomness configurations: both data order and initialization seed varied, only train seed varied, only data seed varied. The standard deviation of single-model loss is 0.0082 (both), 0.0076 (train only), 0.0072 (data only). "Either of these sources delivers most of the benefit of ensembling, with data order helping more." The ensemble scaling curves for all three randomness configurations are similar, suggesting that the specific source of independent variation matters less than the presence of some variation.
+
+**Ensemble hyperparameter heuristic validation (Appendix C.2, Figure 17):** The "2× epochs, 0.5× weight decay" heuristic is tested across three parameter counts (150M, 300M, 600M) and two learning rates at 300M. In all five displayed settings, the heuristic correctly identifies the hyperparameters that minimize the `K → ∞` asymptote. Across all ensemble experiments at all scales, the paper reports only one counterexample: the 1.4B model at 200M tokens, where the optimal weight decay for the asymptote is not halved relative to the single-model optimum. The paper attributes this to the extreme over-parameterization of this configuration.
+
+**Mixture-of-Experts vs. ensembling (Appendix C.3.1):** Jointly training a 10-model "ensemble" (where the gradient step is computed through the ensemble loss jointly, rather than through independent training trajectories) outperforms a single model by "only 0.02 loss" — dramatically less than the gains from independently trained ensembles. The paper hypothesizes that the benefit of ensembling comes from independent learning trajectories exploring different features, which joint training does not provide.
+
+**Model soups (weight-averaging) for pre-training from scratch (Appendix C.3.2, Table 5):** Averaging the weights of 2 or 4 independently trained models yields "close to random performance on downstream benchmarks" (35.37% and 34.71% average accuracy, compared to 58.47% for a single 300M model). The paper attributes this to independently trained models ending up in "different loss basins," where weight-averaging across basins destroys functionality. This serves as a negative control: logit-averaging succeeds where weight-averaging fails catastrophically.
+
+**Model soups for continued pre-training (Appendix G.2, Table 7):** Unlike pre-training from scratch, weight-averaging in CPT performs comparably to logit-averaging. The 8-soup achieves 41.34% average accuracy vs. 40.58% for the 8-ensemble, a small advantage for weight-averaging. The difference from pre-training from scratch is attributed to CPT models starting from the same Llama 3B initialization, which likely keeps them in the same loss basin.
+
+**Predictions without asymptote extrapolation (Section 5.1–5.3 discussion):** The paper separately reports data efficiency figures based on actual, non-extrapolated configurations:
+- Best regularized model (1.4B): **2.09×** more data-efficient than standard baseline at 200M tokens.
+- Best ensemble (5-ensemble of 1.4B): **3.75×** more data-efficient.
+These figures, while lower than the asymptotic estimates (2.29× and 5.17×, respectively), do not depend on power-law extrapolation and confirm the direction and magnitude of the improvements.
+
+**Sensitivity of asymptote estimates to seeds and subsampling (Appendix H.1, Figure 20):** For the regularized recipe, fitting power laws to three different random seeds yields asymptotes that "remain relatively consistent," with standard deviation comparable to single-model run-to-run variance. For ensembling, fitting a power law using only `K = 1–4` members (rather than `K = 1–5`) yields "an extremely similar law to using up to eight ensemble members." The paper cautions that this is "a limited stress-test" and that "it is likely our asymptote estimation procedure is quite noisy," particularly for the multi-tier laws.
+
+**Non-standard architecture of the 1.4B model (Appendix B.5 discussion):** The 1.4B model uses 16 layers and 2048 hidden dimension (Table 2), which "trades depth for width" compared to a standard scaling that would have more layers. The paper acknowledges this was not recognized until the majority of experiments had finished and was a consequence of default presets in the training framework. The robustness of the results despite this architectural quirk is defended by noting that "correctly tuning weight decay seems to correct for the fact that this architecture has less layers."
+
+**Locally optimal hyperparameters for all scales (Appendix B.3, Figure 12):** The paper displays the optimal hyperparameters found by coordinate descent for all 16 `(D, N)` combinations (4 token counts × 4 parameter counts). Three trends are noted:
+- Optimal learning rate decreases for larger models and is relatively insensitive to token count.
+- Optimal weight decay increases for larger models and decreases for larger token counts.
+- Optimal epoch count decreases for larger models and increases for larger token counts.
+These trends are presented as empirical regularities — predictive patterns that practitioners can use without running full coordinate-descent searches.
+
+---
+
+### Critical Assessment
+
+The experiments support the paper's central claims with varying degrees of directness, and several important caveats deserve mention.
+
+**On the claim that regularized parameter scaling recovers monotonic power-law behavior:** The evidence in Figure 3 is striking and well-controlled. Four parameter counts across a ~10× range, each with locally-optimal hyperparameters found via coordinate descent, produce a clean power law with R² that appears very high (no R² values are reported, but the visual fit is tight). The claim is supported *at 200M tokens*. The extension to four token counts in Figure 7 (left) shows similarly clean scaling, suggesting the phenomenon is not idiosyncratic to a single data scale. However, the power law is fit with only four points, and the paper acknowledges (Appendix H.1) that the asymptote estimates have run-to-run variance. A more stringent test would involve additional intermediate parameter counts (e.g., 450M, 900M) to verify that the apparent power law is not an artifact of fitting three degrees of freedom to four data points. The paper's sensitivity analysis with three seeds partially addresses this but does not eliminate the concern.
+
+**On the claim that optimal weight decay is 30× larger than standard practice:** The claim is numerically accurate for the most over-parameterized setting (1.4B at 200M tokens: weight decay 3.2 vs. 0.1). However, the paper's own data (Figure 12) shows that the optimal weight decay depends on the `N/D` ratio, not just `N` or `D` individually. At 1.6B tokens, the optimal weight decay for the 1.4B model is 0.8 — only 8× the standard value, not 30×. The "30×" figure therefore characterizes the most extreme data scarcity regime (200M tokens with 1.4B parameters, or a parameter-to-token ratio of 7:1) and should not be interpreted as a universal prescription. The paper is transparent about this dependence (the trends in Figure 12 make it clear), but the abstract and introduction emphasize the 30× number without this qualification.
+
+**On the claim that ensembling achieves a lower asymptote than parameter scaling:** This is supported at one fixed member size (300M) compared against one parameter-scaling law. The finding that the ensemble asymptote of 3.34 beats the parameter-scaling asymptote of 3.43 is clear in Figure 4. However, the comparison is between `N → ∞` (any size single model) and `K → ∞` at fixed `N = 300M`. The paper does not compare the ensemble asymptote at, say, `N = 600M` against the parameter-scaling asymptote at `N → ∞`, or systematically sweep `N` for ensemble asymptotes before declaring that ensembles beat parameter scaling. The joint scaling analysis (Figure 6) does address this by showing that the ensemble asymptote *worsens* at small `N` (150M ensembles are worse than parameter scaling) and *improves* at larger `N`, suggesting a crossover. This nuance — that ensembles only beat parameter scaling above some minimum member size — is elided in the abstract's framing that "ensembling independently trained models achieves a significantly lower loss asymptote."
+
+**On the claim of 5.17× data efficiency for the joint scaling recipe:** This number deserves careful interpretation. It is derived from the *asymptotic estimate* of the joint recipe's best possible loss (3.17), which itself comes from a two-tier extrapolation based on measurements at `K ≤ 5` and `N ≤ 1.4B`. The 5.17× figure then further extrapolates via the standard recipe's data-scaling law to find the `D′` at which the standard recipe's *own extrapolated* performance matches 3.17. This is three levels of extrapolation: (1) `K → ∞`, (2) `N → ∞`, (3) `D` scaling of the standard recipe. The paper acknowledges the noise: "We advise taking these asymptotes with a grain of salt and interpreting them as rough estimates" (Appendix H.1). The more conservative figures — 2.09× for the best regularized model and 3.75× for the best ensemble, both without any extrapolation — are likely more reliable and are still impressive. Readers should treat the 5.17× as an order-of-magnitude estimate rather than a precise measurement.
+
+**On the claim that data efficiency improvements persist at higher token counts:** This is the most speculative claim, as it rests on fitting three data-scaling laws (each from four points) and observing that their exponents and asymptotes are similar. The similarity of the fitted exponents (0.23–0.24) and asymptotes (1.89–1.96) is indeed striking and constitutes evidence for the constancy of the data efficiency factor. However, these fits are based on a narrow range of token counts (only 8× from 200M to 1.6B), and small differences in fitted exponents would change the long-range extrapolation substantially. The paper's language is appropriately cautious here: "Our preliminary analysis suggests that our data efficiency improvements will not disappear across all data scales" (Section 5.4, emphasis added). A definitive claim about persistence at "higher token counts" (the abstract says simply "our data scaling laws predict that this improvement persists") would require measurements at token counts beyond 1.6B.
+
+**On the claim that distillation retains 83% of ensembling benefit:** This is well-supported by the single experiment in Figure 9. The 8-ensemble teacher achieves loss 3.32; the regularized 300M baseline achieves 3.57; the distilled student achieves 3.36. The fraction preserved is (3.32 − 3.36) / (3.32 − 3.57) = 0.84, which rounds to 83%. However, this is a single teacher-student pair with one set of distillation hyperparameters (tuned for this specific setting). Whether the 83% figure generalizes to other teacher sizes, other student sizes, or other token counts is not tested. The paper also uses sequence-level distillation (training on teacher-generated tokens) rather than logit-level distillation (matching the teacher's full output distribution), which prior work [Sanh et al., 2020, Agarwal et al., 2024] has shown can be more effective. The 83% might therefore be a lower bound on what better distillation methods could achieve.
+
+**On the claim that self-distillation improves over the teacher:** This is one of the paper's most surprising results, and it is supported by the experiment in Figure 9 and the mixing ablation in Table 4. However, the self-distillation result depends critically on the mixing ratio (real-to-synthetic data proportion). The paper finds 1:3 to be optimal for the 300M self-distillation experiment, but does not explore whether this ratio generalizes across scales or whether the improvement would hold at larger `N`. The theoretical connection to Allen-Zhu and Li [2023]'s implicit ensembling interpretation is suggestive but not directly tested — for example, the paper does not measure whether the self-distilled model's predictions approximate an ensemble of the teacher and a freshly trained model, which would be a direct test of the theory.
+
+**On the continued pre-training results (Table 1):** The 17.5× data efficiency claim here is particularly compelling because it uses *actual measurements* (not asymptotic extrapolation) and because it transfers to a different base model (Llama 3B), different data (MegaMath-Web-Pro), and different evaluation (math benchmarks). The 8-ensemble on 4B tokens (40.58%) exceeding standard CPT on 73B tokens (39.23%) is a clean, apples-to-apples improvement that requires no extrapolation to interpret. However, the benchmark suite is limited to three math datasets, and the standard CPT baseline uses the default hyperparameters from Wang et al. [2025] — it is possible that tuning those hyperparameters (learning rate, batch size, weight decay) for the full 73B tokens would improve the baseline, reducing or eliminating the apparent efficiency gain. The paper tuned the 4B-token interventions (batch size 64, 4 epochs) but did not tune the 73B-token baseline beyond learning rate, making the comparison slightly asymmetric.
+
+**Missing experiments that would strengthen the paper:**
+- **Direct FLOPs-matched comparisons.** The paper compares recipes by their asymptotic performance, but never by fixing total FLOPs and asking which recipe achieves lower loss. For example: given a budget of `X` training FLOPs, does it make more sense to train a 600M model for 8 epochs, or a 300M 4-ensemble for 16 epochs? The asymptote framing deliberately avoids this question, but practitioners with finite — even if large — compute budgets would benefit from such analysis.
+- **Weight-decay-only interventions on the standard recipe.** The paper shows that jointly tuning weight decay, epochs, and learning rate fixes the overfitting problem. But it does not isolate whether tuning weight decay *alone* (keeping the same optimal learning rate and epoch count from the standard recipe) would suffice. The strong performance of the regularized recipe with *different* epoch counts makes clear that weight decay interacts with epoch count, but the ablation in Appendix B.2 (Figure 11) only tests transferring hyperparameters across scales, not isolating the marginal contribution of weight decay at a fixed scale.
+- **Experiments at larger parameter counts.** The joint scaling asymptote of 3.17 extrapolates `N` beyond 1.4B and `K` beyond 5. A 2.8B model (or even a single ensemble at `K = 8` or `K = 16` for 300M or 600M members) would reduce the extrapolation distance and provide stronger evidence that the power-law fits are reliable in the regime they're extrapolating into.
+- **Comparison to data augmentation approaches.** The paper positions itself against "rephrased synthetic data" [Maini et al., 2024, Yang et al., 2024] and other data augmentation methods, but never directly compares ensembling or self-distillation to these approaches on the same data budget. It is possible that these methods compose — or that one dominates the other. Without head-to-head comparisons, the claim that the interventions are "orthogonal to those of existing work and can compose" (Section 8) remains speculative.
+
+**Strengths of the experimental design worth highlighting:**
+- The coordinate-descent hyperparameter search is computationally expensive but methodologically rigorous — it removes hyperparameter tuning quality as a confound when comparing recipes at different scales.
+- The "no benchmarks until the end" protocol for downstream evaluation is a strong guard against overfitting the recipe selection to the test metrics.
+- The consistency of the scaling laws across multiple levels (parameter scaling, ensemble scaling, data scaling) with similar exponents and clean extrapolations is evidence that the framework is capturing real regularities, not just fitting noise.
+- The sensitivity analyses (multiple seeds, subsampled power-law fitting) transparently communicate the uncertainty in the asymptote estimates.
+- The negative results (model soups failing, MoE not helping, self-distillation without mixing collapsing) are reported in detail, which increases confidence in the positive results by showing that the experiments can discriminate between working and non-working methods.
+
+## 6. Limitations and Trade-offs
+
+### 1. Difficulty Estimation Cost Is Not Factored Into Efficiency Claims
+
+**The assumption or constraint.** The entire compute-optimal framework rests on the ability to estimate a prompt's difficulty *before* allocating the inference budget. The paper's method for doing so—generating 2048 samples per question and using either ground-truth correctness (oracle bins) or PRM average scores (predicted bins)—is extraordinarily expensive. The authors explicitly acknowledge this in Section 3.2:
+
+> "estimating difficulty in this way still incurs additional computation cost during inference... our experiments do not account for this cost largely for simplicity"
+
+At 2048 samples per question, the difficulty estimation step alone consumes more compute than the largest test-time budgets studied (256–512 generations). The authors flag it as "a key avenue for future work."
+
+**The consequence.** The reported 4× efficiency gains over best-of-N (Figures 4 and 8) are computed *after* difficulty is known, without amortizing the cost of learning it. In a realistic deployment, the total cost would be difficulty estimation plus strategy execution, and the former could dominate the latter. This means the headline efficiency numbers are **upper bounds** that are unlikely to be realized in practice without a cheaper difficulty estimator. The compute-optimal policy is analytically useful but not yet a deployable system. It demonstrates *potential* gains rather than *achievable* gains at an honest total budget.
+
+**What evidence exists in the paper.** The cost is explicitly mentioned in Section 3.2 but never included in any budget calculation. Figures 4 and 8 plot accuracy against *generation budget for solving the problem* and do not add the 2048-sample difficulty estimation cost to the x-axis. The paper's own protocol reveals the scale of the cost: for a 500-question test set, difficulty estimation requires generating 500 × 2048 = ~1 million solutions just to bin the questions before any strategy is applied.
+
+**Mitigation status.** Not addressed. The paper suggests future work on "pretraining or finetuning models to directly predict difficulty of a question" (Section 8) but develops no such model. The oracle-bin and predicted-bin variants both rely on 2048 samples; neither reduces the estimation cost. This limitation means the compute-optimal framework is currently a **descriptive analysis tool** (understanding what is possible) rather than a **prescriptive deployment recipe**.
+
+---
+
+### 2. Single Benchmark and Single Model Family Leave Generality Untested
+
+**The assumption or constraint.** All experiments use the MATH benchmark (500 test questions) with PaLM 2-S* as the base model. Section 4 justifies this choice:
+
+> "We believe this model is representative of the capabilities of many contemporary LLMs"
+
+No experiments are conducted on other reasoning benchmarks (e.g., GSM8K, MMLU, ARC), other domains (code generation, scientific QA, open-ended generation), or other model families (GPT, LLaMA, Gemini, open-weight models). The findings are therefore conditional on the specific interaction between PaLM 2-S*'s output distribution, the MATH difficulty structure, and the PRM trained on PaLM 2-S* outputs.
+
+**The consequence.** Several aspects of the findings could be model-specific or domain-specific:
+
+- The PRM's quality and over-optimization behavior depend on the base model's calibration and error patterns. A model with better calibration might exhibit a different over-optimization threshold, shifting the difficulty-dependent optimal strategy.
+- The revision model's ability to learn from incorrect-to-correct trajectories depends on the base model's in-context learning capabilities, which vary substantially across model families (e.g., LLaMA vs. GPT vs. PaLM).
+- MATH consists exclusively of competition-level symbolic reasoning problems. The difficulty-dependent patterns—beam search hurting easy problems, revisions helping easy problems—might not generalize to domains where "easy" means "factual recall" rather than "simple deduction."
+
+**What evidence exists in the paper.** None. The paper contains no cross-model or cross-benchmark validation. The claim of representativeness is asserted but not tested. The continued pre-training results on MegaMath-Web-Pro (Section 7.2) provide some evidence that the ensembling and revision interventions transfer to math CPT with a LLaMA model, but this is still within the math domain.
+
+**Mitigation status.** Not addressed beyond the assertion of representativeness. The paper treats this as scope limitation rather than a flaw—the findings are demonstrated for MATH with PaLM 2-S*, and generalization is left to future work. For a practitioner considering applying these methods to a different model or task, there is no evidence to guide whether the difficulty-dependent patterns would transfer.
+
+---
+
+### 3. Verifier Over-Optimization Remains a Hard Ceiling — Not a Solved Problem
+
+**The assumption or constraint.** The compute-optimal policy mitigates verifier over-optimization by routing easy problems away from aggressive search (using best-of-N instead of beam search on difficulty bins 1–2) and applying beam search only where the PRM signal is genuinely informative (bins 3–4). However, this *works around* the over-optimization problem rather than *solving* it.
+
+**The consequence.** On medium-difficulty problems (bins 3–4) where beam search is deployed, over-optimization still limits the scaling ceiling—the beam search curves in Figure 3 (right) flatten at budgets of 64–256 generations and show signs of decline on some bins. This means:
+
+- The compute-optimal policy's absolute performance ceiling is still bounded by verifier quality, not by the base model's capability.
+- Improving the PRM (e.g., through better training data, adversarial robustness, or ensemble verification) would likely shift the difficulty thresholds, meaning the current compute-optimal policy is specific to the verifier quality achieved by the Monte Carlo rollout training procedure (Appendix D).
+- The paper does not characterize how the optimal policy changes as verifier quality improves, so it offers no prediction for whether the difficulty-dependent patterns are fundamental or an artifact of a particular verifier quality.
+
+**What evidence exists in the paper.** Figure 3 (right) directly shows beam search performance flattening and slightly declining at high budgets in bins 1–2 (over-optimization). Appendix M provides qualitative examples of degenerate search outputs—low-information repetitive steps, overly short 1–2 step solutions—that score highly under the PRM but are incorrect. The paper identifies this explicitly in Section 5.3:
+
+> "The degradation at high budgets is attributed to over-optimization of the PRM—search finds solutions that score highly under the PRM but are actually incorrect."
+
+**Mitigation status.** Partially mitigated by the compute-optimal policy, which avoids aggressive search on easy problems. But this is a **routing solution, not a robustness solution**. The paper does not propose improvements to PRM training, adversarial data augmentation, or constrained search methods. Section 8 suggests "improving verifier robustness" as future work but treats the current verifier as a fixed component.
+
+---
+
+### 4. Hard Problems Remain Essentially Unsolved Regardless of Budget
+
+**The assumption or constraint.** The entire framework assumes that the base model's proposal distribution contains correct solutions at some non-negligible rate. For problems where this is not true (where pass@1 ≈ 0), neither search nor revisions can help.
+
+**The consequence.** Across all methods—search, revisions, and their compute-optimal combinations—the hardest problems (difficulty bin 5) show near-zero improvement regardless of compute budget:
+
+- In Figure 3 (right), bin 5 accuracy hovers at 1–3% for all methods and all budgets.
+- In Figure 7 (right), bin 5 shows roughly 2–3% accuracy irrespective of sequential-to-parallel ratio.
+- In the FLOPs-matched comparison (Figure 9), the bin 5 scaling line is essentially flat near 0–5%.
+
+This is not a minor limitation for specific problems—it means test-time compute **cannot create capability the base model lacks**. If the model does not already produce correct solutions at some low rate, no amount of compute will help. This establishes a fundamental boundary on the applicability of the framework.
+
+**What evidence exists in the paper.** The flat scaling curves for bin 5 across Figures 3, 7, and 9 are clear and consistent. The paper is transparent about this (Section 7 takeaway box and Section 8 discussion):
+
+> "test-time compute provides essentially zero benefit regardless of budget, meaning that some capabilities can only be acquired through pretraining, not recovered at inference time."
+
+**Mitigation status.** Not mitigated—this is an inherent boundary condition the paper characterizes rather than solves. The practical implication is that practitioners must assess whether their problem distribution includes problems the base model genuinely cannot solve (pass@1 ≈ 0). If so, those problems require pretraining investment, not test-time compute. The paper provides no method for distinguishing *a priori* which problems will fall into this regime without the expensive difficulty estimation step.
+
+---
+
+### 5. Revisions and Search Are Studied Independently, Never Combined
+
+**The assumption or constraint.** The paper studies two complementary axes—PRM search (modifying the verifier/selection mechanism) and iterative revisions (modifying the proposal distribution)—as independent mechanisms. Section 8 explicitly acknowledges:
+
+> "we did not experiment with PRM tree-search techniques in combination with revisions"
+
+The paper's own framework (Section 2) posits that any test-time compute method modifies either the proposal distribution or the verifier, and that these are complementary. Yet the experiments never combine the best proposal method (revision model) with the best verifier method (PRM-guided beam search).
+
+**The consequence.** The current results represent a **lower bound** on what a fully integrated system could achieve. Since search and revisions have complementary, difficulty-dependent strengths:
+
+- Revisions are best on easy problems (local refinement)
+- Search is best on medium-hard problems (global exploration)
+
+Combining them—using beam search where the proposal distribution is the revision model—could yield gains beyond either method alone, particularly on medium-difficulty problems where both the right exploration strategy and the ability to refine within a branch are needed. The compute-optimal policy that switches *between* them is therefore suboptimal compared to a hypothetical policy that *composes* them within a single problem.
+
+**What evidence exists in the paper.** The paper does not test this combination, so there is no evidence for or against it. The separate scaling curves (Figures 3 and 6–8) show that revisions and search each provide gains, but the interaction is unmeasured. Section 8 acknowledges this gap and suggests it as future work.
+
+**Mitigation status.** Not addressed in the current paper. The authors treat it as a natural next step for future work. The absence of combined experiments means the paper's "compute-optimal" claim is really "compute-optimal *within each mechanism class*" rather than "globally compute-optimal over all possible strategies." The distinction matters for practitioners who could implement both and would benefit from knowing how they interact.
+
+---
+
+### 6. The Revision Model Has a ~38% Correct-to-Incorrect Reversion Rate That Is Only Partially Addressed
+
+**The assumption or constraint.** The revision model is trained exclusively on sequences where all in-context answers are incorrect, followed by a correct target. It never sees correct answers in its context during training, because its training data construction (Section 6.1) pairs randomly sampled incorrect answers with a final correct answer—never a correct answer followed by a correct revision.
+
+**The consequence.** At inference time, when the revision chain occasionally produces a correct answer, the model has no training signal for what to do: it may treat the correct answer as "just another incorrect one" and produce a revision that changes it to an incorrect answer. The paper reports:
+
+> "approximately 38% of correct answers get converted back to incorrect ones using a naive approach" (Section 6.1)
+
+This is a direct consequence of the training data construction. The 38% reversion rate means that simply taking the final output of a long revision chain would be substantially worse than the best answer somewhere in the chain—the revision model actively erases some of its own correct outputs.
+
+**What evidence exists in the paper.** Section 6.1 explicitly quantifies the reversion rate at 38%. The paper mitigates this by applying majority voting or verifier-based selection across the *entire chain* of revisions, picking the best answer from any point rather than always taking the last revision. Figure 6 (left) shows that pass@1 at each step gradually improves, but the per-step accuracy is not uniformly increasing—there are downward fluctuations consistent with correct-to-incorrect reversions. The mitigation (within-chain selection) is effective but imperfect: it requires a separate verifier or voting mechanism, adding complexity.
+
+**Mitigation status.** Partially addressed through post-hoc selection (majority voting or verifier), but this is a **patch, not a principled solution**. A more robust approach would train the model to recognize when the current answer is already correct (by including correct-to-correct or correct-to-improved training examples). The paper does not explore this. The ReST^EM experiment (Appendix K, Figure 16) further highlights the fragility of revision training: an attempted RL-style optimization of the revision model caused performance to degrade with sequential revisions, suggesting the current revision approach is sensitive to methodology in ways not fully understood.
+
+## 7. Implications and Future Directions
+- How this changes the landscape
+  - It reframes “scaling” for the data‑scarce era: rather than chasing compute‑optimal single models, use regularization to unlock stable scaling, invest compute into ensembles to reach a lower loss ceiling, then distill to deployable size. This pipeline is explicitly designed for the trajectory where compute outpaces data.
+  - The asymptote‑centric view gives a principled way to compare recipes when compute is not the bottleneck and encourages designing methods that improve the limiting performance, not just the point‑wise trade‑off.
+
+- Follow‑up research enabled or suggested
+  - Regularization: systematic studies of dropout, data augmentation, noise injection, and alternative optimizers under this fixed‑data regime; characterize how the optimal decay scales with parameter‑to‑token ratio (Appendix B.3 suggests ~0.8 when that ratio is fixed).
+  - Structured ensembles: beyond independent seeds—diversity‑encouraging training (e.g., negative correlation learning), co‑training, or sub‑architectures to improve “multi‑view” coverage while easing inference via smarter distillation.
+  - Asymptote estimation: more rigorous uncertainty quantification for multi‑tier scaling fits (N, K, D), potentially Bayesian fits; evaluating whether equal infinite‑data asymptotes across recipes (Section 5.4) empirically converge to the entropy bound.
+  - Alternatives to ensembling: revisit MoE with diversity‑oriented training or dropout; study why CPT soups outperform ensembles and whether that can transfer back to pre‑training.
+  - Self‑generated data curricula: The self‑distillation result (Figure 9; Appendix E.3) suggests broader synthetic‑data training that carefully mixes real data to avoid collapse; explore task‑aware sampling and temperature schedules.
+
+- Practical applications
+  - Training small and mid‑sized foundation models in data‑poor domains (healthcare, legal, enterprise internal text) by combining strong regularization, ensembles during training time, and distillation for deployment.
+  - Continued pre‑training on mid‑training domains (e.g., math, code, safety) with scarce curated tokens: the CPT case shows 17.5× data‑efficiency gains over a 73B‑token baseline using only 4B tokens (Table 1).
+  - Budget planning: when compute is cheap but data acquisition is costly or capped, these recipes offer a compute‑centric roadmap to higher quality without new data.
+
+> Representative headline results to carry forward:
+> - Regularized single‑model asymptote at 200M tokens: 3.43 (Figure 3).
+> - Ensemble member re‑tuning reduces the `K → ∞` asymptote to 3.27 (Figure 5).
+> - Joint scaling `N, K → ∞` at 200M tokens: 3.17 (Figure 6 right).
+> - Data‑efficiency at 200M: 2.29× (regularized) and 5.17× (joint scaling) over the standard recipe; similar multipliers across higher `D` (Figures 7–8; Section 5.4).
+> - Distill 8×300M ensemble → 300M student: loss 3.36, retaining 83% of the ensembling gain (Figure 9; Appendix E).
+> - CPT on math with 4B tokens and ensembles beats a 73B‑token baseline (Table 1), a 17.5× data efficiency improvement.
+
+Overall, the work provides a concrete, well‑tested blueprint for the compute‑rich, data‑poor future: regularize hard, ensemble broadly, measure by asymptotes, and distill to deploy.

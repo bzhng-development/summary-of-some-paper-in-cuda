@@ -1,0 +1,682 @@
+# LLM2Vec: Large Language Models Are Secretly Powerful Text Encoders
+
+**ArXiv:** [2404.05961](https://arxiv.org/abs/2404.05961)
+
+## 🎯 Pitch
+
+LLM2Vec introduces a simple, unsupervised method that transforms any decoder-only large language model (LLM) into a high-performing universal text encoder using three lightweight steps: enabling bidirectional attention, masked next-token prediction, and unsupervised contrastive learning. This approach not only outperforms traditional encoder-only models on major text embedding benchmarks but also unlocks the full potential of popular LLMs for a wide range of embedding tasks—making state-of-the-art, efficient, and instruction-following embeddings accessible without expensive supervision or retraining. Its efficiency and effectiveness promise to simplify NLP pipelines and democratize high-quality text representation for real-world applications.
+
+---
+
+## 1. Executive Summary
+
+This paper introduces **LLM2Vec**, a simple unsupervised approach to transform any decoder-only LLM into a strong text encoder. Applying LLM2Vec to four models ranging from 1.3B to 8B parameters and evaluating on word-level tasks (chunking, NER, POS tagging) and the Massive Text Embeddings Benchmark (MTEB), the method combines three steps—enabling bidirectional attention (replacing causal masks with all-ones matrices), masked next token prediction (predicting masked tokens from both past and future context), and unsupervised contrastive learning (SimCSE with mean pooling)—to achieve a new unsupervised state-of-the-art MTEB score of 56.80 with Mistral-7B, while supervised Meta-LLaMA-3-8B with LLM2Vec reaches the top public-data-only result. The work further establishes that Mistral models can handle bidirectional attention without any training, revealing an architectural property that explains their strong out-of-the-box embedding performance without adaptation.
+
+## 2. Context and Motivation
+
+### The Core Problem: Decoder-Only LLMs Are Underutilized for Text Embedding
+
+The fundamental gap this paper addresses is a curious asymmetry in modern NLP: decoder-only LLMs dominate virtually every generative task—from conversation to code generation to mathematical reasoning—yet the community has been remarkably slow to adopt them for text embedding tasks. Text embedding—encoding the semantic content of natural language into dense vector representations—underpins a vast ecosystem of applications: semantic search, information retrieval, clustering, duplicate detection, and retrieval-augmented generation. For years, the default tools for building embedding models have been bidirectional encoders (BERT, DeBERTa) or encoder-decoders (T5), fine-tuned through elaborate multi-stage pipelines involving weakly-supervised and fully-supervised contrastive training.
+
+The authors explicitly identify the **causal attention mechanism** as the primary architectural barrier preventing decoder-only LLMs from serving as effective text encoders:
+
+> "At any given layer, causal attention limits token interactions, ensuring that the representation of a token at position $i$ is influenced solely by the representations of preceding tokens at positions $0, 1, \ldots, i-1$. Although this limitation is necessary for generative capabilities, it is sub-optimal for text embeddings as it prevents the representations from capturing information across the entire input sequence."
+
+This is a concrete mechanistic claim. In standard self-attention (Appendix B.1), the attention mask $M_{\{j \leq i\}}$ zeroes out the upper triangle of the attention matrix, forcing each token to attend only to itself and earlier tokens. For next-token prediction during generation, this is essential—the model cannot peek at what it hasn't produced yet. But for building a representation of a sentence like "The cat sat on the mat," the representation of "cat" should ideally be informed by "mat" to capture the full semantic relationship, and the representation of "mat" should be contextualized by "cat." Causal attention breaks this bidirectionality asymmetrically: early tokens are impoverished because they cannot attend to later tokens, while later tokens can attend to everything before them.
+
+This asymmetry is what the paper means by "sub-optimal for text embeddings." The dominant workaround in prior work has been **EOS pooling**—taking the final hidden state of the last token as the sentence representation, operating on the assumption that the last token has attended to all preceding context. But Figure 3 shows this assumption is incorrect in practice: EOS pooling consistently underperforms (weighted) mean pooling across all three tested models, even in the causal (Uni) setting. The gap is substantial—for Mistral-7B with causal attention, EOS pooling achieves a score of only 22.12 on the MTEB subset versus 43.00 for mean pooling (Table 5), nearly doubling performance. This demonstrates that the last token's representation, despite having access to preceding context through causal attention, does not adequately summarize the full sequence.
+
+### Why This Problem Matters
+
+The paper identifies several compelling reasons—practical, economic, and scientific—why overcoming this architectural limitation is important:
+
+**Sample efficiency during pre-training.** Decoder-only LLMs are trained with a next-token prediction objective on *every* token in the training corpus. In contrast, encoder-only models like BERT are typically trained by masking 15% of tokens and predicting only those masked positions—meaning only 15% of tokens contribute to the learning signal. Clark et al. (2020) showed this makes decoder-only pre-training considerably more sample-efficient: given the same amount of training data, a decoder learns richer representations because it's supervised on all positions. The paper argues this advantage should translate to better text embeddings if the causal attention limitation can be overcome.
+
+**Rich ecosystem and continuous improvement.** Decoder-only LLMs benefit from an enormous collective investment by the research community—extensive tooling, well-tested pre-training recipes, and continuous model improvements (LLaMA-2, Mistral, Meta-LLaMA-3 each representing substantial leaps). Building text embedding models on top of these continuously improving foundations, rather than on older encoder architectures that see less active development, means embedding models can "ride the wave" of LLM progress.
+
+**Instruction-following capabilities for universal embeddings.** Recent advances in instruction fine-tuning and learning from human preferences (RLHF) have produced decoder-only LLMs that excel at instruction following. This makes them ideal candidates for building *universal* text embedding models—ones that can generalize across diverse tasks (retrieval, classification, clustering, semantic similarity) using task-specific instructions. The paper's evaluation protocol (Appendix C.2, Table 10) exploits this directly: the same model can perform retrieval ("Given a web search query, retrieve relevant passages that answer the query") and semantic similarity ("Retrieve semantically similar text") and classification ("Classify the emotion expressed in the given Twitter message...") simply by changing the instruction prefix. Encoder-only models, even when instruction-tuned (Su et al., 2023), lack the pre-training scale and instruction-following depth of decoder LLMs.
+
+**A counterpoint acknowledged but deferred.** The paper is transparent about the challenges of large decoder models for embedding—their output dimensions are much larger (Mistral-7B produces 4096-dimensional vectors vs. BERT's 768), making vector indexing and storage more expensive, and inference latency scales with model size. However, the authors argue (Appendix A) that these costs are acceptable given the sample efficiency and instruction-following advantages, and that techniques like LoRA (which they use throughout) mitigate training costs. They do not directly address the inference-time cost comparison for production deployment, which is a meaningful gap.
+
+### Prior Approaches and Their Shortcomings
+
+The paper situates itself against several distinct lines of prior work, each with identifiable limitations:
+
+**1. Supervised text encoders (BERT-like, multi-stage pipelines).** The dominant paradigm for years has been to start with a pre-trained bidirectional encoder (BERT, RoBERTa, DeBERTa) and adapt it through complex training pipelines. Early work used supervised tasks like natural language inference or sentence similarity (Conneau et al., 2017; Reimers & Gurevych, 2019). More recent approaches (Ni et al., 2022; Wang et al., 2022a; Li et al., 2023a; Xiao et al., 2023) employ large-scale weakly-supervised contrastive pre-training followed by multi-task fine-tuning. While these methods achieve strong performance, they have two fundamental limitations: (a) they are *architecturally capped* by the representational capacity of encoder-only models, which are typically much smaller than state-of-the-art decoder LLMs, and (b) they require *complex, computationally expensive multi-stage training recipes* that are difficult to reproduce and maintain.
+
+**2. Unsupervised text encoders.** Methods like SimCSE (Gao et al., 2021) and its predecessors (Wu et al., 2020; Carlsson et al., 2021) learn representations without labeled data by constructing positive pairs from the same sentence—through input perturbations, different dropout masks, or different model instances—and training with contrastive objectives. However, these were developed and tested exclusively on encoder-only models (BERT-base, BERT-large). The paper adopts SimCSE as its third step, but the contribution is not the contrastive method itself; it is the demonstration that SimCSE can be *stacked on top of MNTP adaptation* for decoder LLMs to achieve substantial gains, and that the optimal dropout probability for large decoders (0.3) differs from the value used for encoders (0.1).
+
+**3. Adapting decoder-only LLMs via EOS pooling.** The simplest approach, used by Neelakantan et al. (2022), Ma et al. (2023), Wang et al. (2023), and others, is to feed the input to a decoder LLM and take the last token's hidden state as the sentence embedding. This preserves the causal attention mask and relies on the last token having attended to all preceding context. The paper's results in Figure 3 and Table 1 demonstrate that while this works to some degree (LLaMA-2-7B Uni + w. Mean reaches 44.54 on MTEB, competitive with unsupervised BERT+SimCSE at 45.45), it fundamentally underperforms what the same model is capable of with bidirectional attention. The gap between Uni + w. Mean and LLM2Vec is 10.82 points for LLaMA-2-7B and 14.34 points for Mistral-7B on the full MTEB. This is not a small difference—it represents the penalty for suboptimal attention patterns.
+
+**4. Echo embeddings (Springer et al., 2024, concurrent work).** The closest prior approach, developed concurrently, proposes a clever workaround: duplicate the input sequence and append it to itself, then pool over the *second* occurrence. This way, tokens in the second copy can attend to "future" tokens in the first copy, effectively providing bidirectional information flow. The paper provides a detailed comparison (Section 3.2, Table 1): LLM2Vec with only the first two steps (Bi + MNTP, without SimCSE, to keep the comparison fair) outperforms Echo embeddings for S-LLaMA-1.3B (41.43 vs. 39.10), LLaMA-2-7B (45.70 vs. 45.36), and Meta-LLaMA-3-8B (48.84 vs. 45.32), and is roughly on par for Mistral-7B (49.43 vs. 50.26). The critical practical advantage of LLM2Vec over Echo is efficiency: Echo *doubles* the sequence length because it duplicates the input, which means the quadratic cost of self-attention ($O(n^2)$ in sequence length) becomes $O((2n)^2) = 4n^2$, a 4× increase in attention computation. Table 6 quantifies this: evaluating Echo embeddings on MTEB takes approximately 64 hours for Mistral-7B versus 44 hours for LLM2Vec, a ~1.5× slowdown despite the theoretical 4× factor (the difference is less dramatic due to constant factors and parallelization, but still substantial). For large-scale retrieval corpora, this cost difference compounds rapidly.
+
+**5. Enabling bidirectional attention during fine-tuning.** Several works have experimented with removing causal masks for specific tasks: Li et al. (2023b) do so during supervised fine-tuning for text classification and NER; Dukić & Šnajder (2024) enable bidirectional attention for selected layers during supervised NER and chunking fine-tuning; Li & Li (2024) enable bidirectional attention only in the *last layer* during supervised contrastive fine-tuning for STS tasks. The paper improves on these in three ways: (a) it is **unsupervised**—no labeled data is required for any of the three steps, making it applicable in data-scarce settings; (b) it enables bidirectional attention **throughout the entire model**, not just in selected layers, giving tokens at every layer full access to context; and (c) it introduces **MNTP as an explicit adaptation step** to teach the model to use its newly bidirectional attention pattern, which none of the prior works do (they rely on the supervised loss signal alone to implicitly adapt).
+
+**6. Prompting-based approaches (concurrent work).** Jiang et al. (2023b) and Lei et al. (2024) prompt the LLM to summarize the input text in one word, then take the last token's embedding as the representation. Muennighoff et al. (2024) perform multi-task full fine-tuning combining causal language modeling with bidirectional supervised contrastive learning. The paper positions LLM2Vec as "much more computationally efficient" than these alternatives: it requires only parameter-efficient fine-tuning (LoRA) and 1000 gradient steps per stage, meaning it can be run on a single 80GB A100 GPU. Full fine-tuning of 7-8B parameter models, by contrast, requires multi-GPU setups and substantially more compute.
+
+### How LLM2Vec Positions Itself
+
+The paper's positioning is clear: it is not proposing a fundamentally new training objective or architecture, but rather a **compositional recipe** that bridges the gap between decoder-only pre-training and bidirectional encoding requirements through three lightweight, unsupervised adaptation steps. The novelty lies in:
+
+1. **Identifying MNTP as the specific adaptation objective** that teaches a decoder LLM to handle bidirectional attention. Previous work either ignored the adaptation problem (naively enabling bidirectional attention, which Figure 2 shows catastrophically degrades word-level performance for most models) or relied on supervised fine-tuning to implicitly adapt (slow, data-hungry). MNTP is an unsupervised objective that operates on raw text—any Wikipedia dump suffices—and can be done in ~100 minutes on a single GPU.
+
+2. **Demonstrating that the combination is greater than the sum of its parts.** Figure 3 and Table 5 show that Bi + MNTP + SimCSE > Bi + MNTP > Bi > Uni for sequence-level tasks, with each step contributing meaningful gains. The ablation in Appendix D.2.2 (Table 5) confirms that no single step alone achieves the full LLM2Vec performance. This is not an obvious result—one might expect that unsupervised SimCSE alone would be sufficient, or that enabling bidirectional attention without MNTP would work if the contrastive signal were strong enough. The paper shows both are false: SimCSE without MNTP produces inferior results (e.g., Bi + SimCSE at 44.46 for S-LLaMA-1.3B vs. Bi + MNTP + SimCSE at 52.40 on the MTEB subset), and bidirectional attention without MNTP is actively harmful for most models.
+
+3. **The discovery that Mistral models are pre-trained with some form of bidirectional attention.** This is presented as an empirical finding rather than a design choice, but it has important implications: it explains why Mistral-7B is an outlier in the "Bi (no training)" experiments, and it suggests that future LLMs could be intentionally pre-trained with partial bidirectionality to make them more versatile for both generation and embedding tasks. The authors do not claim credit for this architectural property—they discovered it through their representation analysis (Section 4.2).
+
+The paper does not claim that LLM2Vec makes decoder LLMs *better* embedders than purpose-built bidirectional encoders on all axes. The comparisons in Table 1 are to *unsupervised* BERT-based models; the state-of-the-art supervised encoders (Table 9) still outperform LLM2Vec unsupervised, and even the supervised LLM2Vec variants only reach parity with the top models. The claim is more specific: that decoder LLMs *can be effectively transformed* into universal text encoders in a parameter-efficient manner, without expensive adaptation or synthetic data, and that doing so reveals capabilities that were already latent in the pre-trained weights.
+
+## 3. Technical Approach
+
+### 3.1 Reader orientation (approachable technical breakdown)
+
+LLM2Vec is a three-step recipe—not a new architecture or training objective—that converts any off-the-shelf decoder-only LLM (trained only to predict the next word, conditioned solely on preceding text) into a text encoder that can produce rich, context-aware vector representations of words and sentences. The problem it solves is that decoder LLMs are architecturally handicapped for encoding tasks because their causal attention masks prevent tokens from incorporating information from words that appear *after* them in a sequence; LLM2Vec fixes this by first enabling full bidirectional attention, then teaching the model to use it effectively via a masked prediction task that mirrors the model's original training objective, and finally refining sequence-level representations through unsupervised contrastive learning—all without requiring any labeled data.
+
+### 3.2 Big-picture architecture (diagram in words)
+
+The LLM2Vec pipeline has three sequential stages, each consuming the output of the previous stage:
+
+1. **Bidirectional attention enabler** — a zero-parameter architectural change that replaces the triangular causal attention mask with an all-ones matrix, instantly giving every token access to every other token in the sequence. This alone does not improve (and often degrades) performance because the model was never trained to process information from future tokens.
+
+2. **Masked Next Token Prediction (MNTP) adapter** — a lightweight fine-tuning stage using LoRA that teaches the model to *use* its newly bidirectional attention. Given a text with some tokens randomly masked out, the model must predict the masked tokens using both left and right context, but crucially the prediction is made from the representation of the *previous* token position (not the masked position itself), aligning with the decoder's pre-training objective of predicting the next token. This stage operates on raw Wikipedia text and completes in roughly 100 minutes on a single GPU for 7-8B parameter models.
+
+3. **Unsupervised contrastive learning (SimCSE) refiner** — a second LoRA fine-tuning stage (with the MNTP LoRA weights merged into the base model first, then fresh LoRA parameters initialized) that optimizes the model to produce similar vector representations for the same sentence passed through the model twice with different dropout masks, while pushing apart representations of different sentences. This teaches the model to build good *sequence-level* representations, which the first two stages alone do not guarantee. The output is a mean-pooled vector over all token representations (excluding instruction tokens).
+
+Information flows linearly through these stages: raw LLM weights → (Bi attention + MNTP training) → MNTP-adapted model → (merge weights + SimCSE training) → final LLM2Vec model. At inference time, the final model takes a sentence with an optional task instruction prefix, processes it with bidirectional attention, and produces a sequence representation via mean pooling over the token embeddings.
+
+### 3.3 Roadmap for the deep dive
+
+- **First, the bidirectional attention mechanism**: exactly what changes structurally in the self-attention computation, why causal attention is suboptimal for encoding, and the surprising finding that most models degrade when you simply flip the mask without adaptation.
+- **Second, the MNTP training objective**: what MNTP is, how it reconciles bidirectional attention with the decoder's next-token prediction heritage, the masking strategies and hyperparameters, and why this specific adaptation objective (rather than, say, standard masked language modeling) is necessary.
+- **Third, the SimCSE contrastive learning stage**: why sequence-level representation requires its own training step separate from token-level adaptation, the dropout-based positive pair construction, the pooling operations, and why the optimal dropout rate for large decoders differs from encoders.
+- **Fourth, the LoRA-based training infrastructure**: how parameter-efficient fine-tuning makes the approach practical, the merging strategy between stages, and the hardware and time budgets.
+- **Fifth, the design rationale unifying the three steps**: why each step exists, why the order matters, and what ablations tell us about their necessity.
+- **Sixth, the inference-time pipeline**: how the trained model is actually used to produce embeddings, including instruction handling, pooling, and the connection to the evaluation framework.
+
+### 3.4 Detailed, sentence-based technical breakdown
+
+This is primarily a **methods and empirical analysis paper** whose core contribution is a simple, composable recipe for turning decoder-only LLMs into text encoders. The intellectual work is in identifying *which* three operations are necessary and sufficient, and in demonstrating that their combination produces a model that is more than the sum of its parts.
+
+---
+
+#### Enabling Bidirectional Attention
+
+The first step of LLM2Vec is purely architectural and involves zero parameter changes: replace the causal attention mask with an identity (all-ones) mask. To understand why this matters, we need to examine exactly what causal attention does to token representations.
+
+**The causal attention mechanism in standard decoder LLMs.** In a transformer's self-attention layer (Appendix B.1), given an input sequence of `$N$` tokens with representations `$x_1, x_2, \ldots, x_N \in \mathbb{R}^d$` stacked into a matrix `$X \in \mathbb{R}^{N \times d}$`, the model computes query, key, and value matrices via learned linear projections:
+
+$$Q = XW_Q, \quad K = XW_K, \quad V = XW_V$$
+
+where `$W_Q, W_K, W_V \in \mathbb{R}^{d \times p}$` are learned weight matrices. The output of self-attention is then:
+
+$$O = \text{softmax}\left(\frac{M_{\{j \leq i\}} QK^T}{\sqrt{p}}\right) V$$
+
+The critical term is `$M_{\{j \leq i\}}$`, the causal attention mask. This is an `$N \times N$` matrix where position `$(i, j)$` is `$1$` if `$j \leq i$` (the token at position `$j$` comes before or at position `$i$`) and `$0$` (or `$-\infty$` before softmax) if `$j > i$`. When multiplied element-wise with the attention scores `$QK^T$`, it zeroes out all attention weights from token `$i$` to any token `$j$` that appears *after* `$i$` in the sequence. Consequently, the representation of a token at position `$i$` is computed as a weighted sum of value vectors from positions `$1, 2, \ldots, i$` only—it is entirely blind to positions `$i+1, i+2, \ldots, N$`.
+
+**What this means concretely.** Consider the sentence "The cat sat on the mat." Under causal attention:
+- The representation of "The" (position 0) can only attend to itself. It has no information about "cat," "sat," "mat," or any subsequent word.
+- The representation of "cat" (position 1) can attend to "The" and "cat." It knows "The" precedes it, but has no information about "sat" or "mat."
+- The representation of "mat" (position 5) can attend to all preceding words: "The," "cat," "sat," "on," "the," and "mat." It has the richest context.
+
+This asymmetry is exactly what you want for autoregressive generation: when predicting the next word, the model should condition on all previous words but not on future words (which haven't been generated yet). But for building a *representation* of the sentence—where the goal is to capture the full semantic content—it creates an information bottleneck. The representation of early tokens is impoverished because it cannot incorporate disambiguating or enriching information from later tokens. For example, "cat" should be contextualized by "mat" (to capture the spatial relationship), but under causal attention, "cat" is forever blind to "mat."
+
+**The bidirectional fix.** The LLM2Vec approach replaces `$M_{\{j \leq i\}}$` with `$M_{\text{all}} = \mathbf{1}$`, an all-ones matrix. This removes all restrictions: every token can attend to every other token, regardless of position. The self-attention computation becomes:
+
+$$O_{\text{bi}} = \text{softmax}\left(\frac{QK^T}{\sqrt{p}}\right) V$$
+
+This is architecturally identical to the attention mechanism in encoder-only models like BERT. It means, in our example sentence, the representation of "cat" can now incorporate information from "mat," "sat," and every other token symmetrically.
+
+**Why this naively doesn't work.** The paper demonstrates in Figures 2 and 3 (and Table 5) that simply flipping the mask—going from `$M_{\{j \leq i\}}$` to `$M_{\text{all}}$` without any training—*degrades performance for most models*. On the word-level chunking task (Figure 2a), S-LLaMA-1.3B drops from 86.10% accuracy to 76.50%, LLaMA-2-7B drops from 88.23% to 78.24%. On the MTEB subset (Figure 3, Table 5), S-LLaMA-1.3B drops from 34.99 (Uni + w. Mean) to 30.20 (Bi + w. Mean), and LLaMA-2-7B drops from 47.85 to 37.50. The reason is straightforward: the model was trained for thousands of steps with causal attention, and its weights are optimized for that regime. When you suddenly give it access to future tokens, the attention patterns it has learned—the specific key-query alignments that produce good representations for next-token prediction—produce noise when applied to positions that were previously inaccessible. The representations become corrupted by attending to information the model doesn't know how to integrate.
+
+**The Mistral-7B exception.** A striking and unexpected finding (visible in Figure 2, Figure 3, and investigated in Section 4.2) is that Mistral-7B is the exception: enabling bidirectional attention *without training* preserves or even *improves* performance. On NER (Figure 2b), Mistral-7B goes from 96.52% (Uni) to 97.14% (Bi). On the MTEB subset (Table 5), it goes from 44.01 (Uni + w. Mean) to 45.20 (Bi + w. Mean) with weighted mean pooling, and to 50.07 with mean pooling. Section 4.2 provides a detailed representational analysis showing that for Mistral-7B, the cosine similarity between representations produced under causal and bidirectional attention remains very high (close to 1.0) across most layers and token positions (Figure 5c), whereas for S-LLaMA-1.3B and LLaMA-2-7B, the similarity collapses to very low values at many layers (Figures 5a, 5b). The paper speculates that Mistral models were pre-trained with some form of bidirectional attention—possibly prefix language modeling where a portion of the sequence attends bidirectionally—which would explain why the model's weights already know how to handle information from future tokens.
+
+**Design choice: why not partial or layer-specific bidirectional attention?** Prior work (Dukić & Šnajder, 2024; Li & Li, 2024) explored enabling bidirectional attention only for selected layers (e.g., the last layer) during supervised fine-tuning. LLM2Vec enables it *everywhere*—all layers, all attention heads—and then relies on MNTP training to adapt the model. The rationale (implicit in the paper) is that partial bidirectionality still creates a representational bottleneck: early layers that remain causal will produce impoverished representations that later bidirectional layers, no matter how sophisticated, can only partially recover. By making the entire stack bidirectional, every token representation at every layer can incorporate full context, maximizing representational richness. The cost is that the model must be adapted (via MNTP) to handle this, but the paper shows this adaptation is fast and effective.
+
+---
+
+#### Masked Next Token Prediction (MNTP)
+
+The second step of LLM2Vec is the key adaptation mechanism that teaches the model to actually *use* its newly enabled bidirectional attention. Without this step, bidirectional attention is (for most models) either useless or harmful, as shown above. MNTP is the bridge between the model's pre-training as a causal next-token predictor and its new role as a bidirectional encoder.
+
+**What is MNTP?** MNTP, introduced by Lv et al. (2023), is a training objective that combines elements of masked language modeling (MLM, the standard pre-training objective for encoder models like BERT) with next-token prediction (the standard objective for decoder models). Given a sequence of tokens `$x = (x_1, x_2, \ldots, x_N)$`, a fraction of these tokens are randomly replaced with a mask token (the underscore character `_` in the paper's implementation, since the models do not have a dedicated `[MASK]` token). The model processes this masked sequence with bidirectional attention and must predict the original identity of each masked token. However—and this is the crucial design choice—**the prediction for a masked token at position `$i$` is computed from the hidden representation at position `$i-1$`, not from position `$i$` itself**.
+
+**Why predict from position `$i-1$`?** This is the key insight that aligns MNTP with the decoder's pre-training. Standard masked language modeling (as in BERT) computes the loss from the representation at the masked position itself: given input "... the [MASK] sat ...", the model's representation at the [MASK] position is used to predict "cat." But a decoder-only LLM was never trained to predict a token from its own position—it was trained to predict the *next* token, always conditioning on the *previous* position's output. In autoregressive generation, the hidden state at position `$i-1$` is used to predict the token at position `$i$`. MNTP preserves this pattern: when a token at position `$i$` is masked, the model uses the representation `$h_{i-1}$` (the hidden state from the *preceding* token position) to predict what token `$i$` should be. This means:
+
+1. The model continues to use the same "next-token prediction" circuitry it developed during pre-training—the learned mapping from hidden state to output logits remains valid.
+2. The only thing that changes is *how the hidden state `$h_{i-1}$` is computed*: now it can incorporate information from tokens after position `$i$` (via bidirectional attention), rather than only from tokens before position `$i-1$`.
+
+The loss function is standard cross-entropy over the vocabulary at each masked position, but computed from the logits at position `$i-1$`:
+
+$$\mathcal{L}_{\text{MNTP}} = -\sum_{i \in \mathcal{M}} \log P(x_i \mid h_{i-1}^{\text{bi}})$$
+
+where `$\mathcal{M}$` is the set of masked positions, `$x_i$` is the true token identity at position `$i$`, and `$h_{i-1}^{\text{bi}}$` is the hidden representation at position `$i-1$` produced by the model with bidirectional attention.
+
+**What it computes:** For each masked token, the model takes the hidden state from the position immediately before it, passes it through the standard language modeling head (the final linear layer that maps hidden states to vocabulary logits, which was trained during pre-training and is kept frozen), computes the softmax probability distribution over the vocabulary, and measures the negative log-likelihood of the correct token. The total loss is the sum (or average) over all masked positions in the batch.
+
+**Why this form:** Using position `$i-1$` rather than position `$i$` is a design choice that maximizes alignment with the model's pre-training. If MNTP used position `$i$` (like standard MLM), the model would need to learn a new mapping from the masked position's representation to the output logits—the language modeling head, which is trained to map `$h_{i-1}$` to the distribution over `$x_i$`, would be receiving representations from a different distribution (representations of masked positions, which may have different statistical properties). By keeping the `$h_{i-1} \rightarrow x_i$` mapping intact, MNTP isolates the adaptation to the attention patterns: the model only needs to learn how to use bidirectional context to compute better hidden states at each position, without also needing to relearn how to decode those hidden states into token predictions.
+
+**Masking strategies: BERT vs. RoBERTa approaches.** The paper experiments with two standard masking paradigms:
+
+- **BERT-style masking (Devlin et al., 2019):** Mask 15% of tokens. Of those masked tokens, 80% are replaced with the mask token, 10% are replaced with a random vocabulary token, and 10% are left unchanged but still contribute to the loss. This adds noise that prevents the model from simply learning that every mask token should be replaced—it must actually attend to context to determine whether the current token is genuinely masked, randomly replaced, or original.
+
+- **RoBERTa-style masking (Liu et al., 2019):** Mask a fixed fraction of tokens without any post-processing (no random replacement, no unmasking). All selected tokens are replaced with the mask token and must be predicted from context.
+
+The paper performs a hyperparameter search over both masking strategies and masking probabilities (`$\{20\%, 40\%, 60\%, 80\%, 90\%\}$`), selecting the best configuration based on performance on the SICK-R semantic textual similarity task from MTEB. The selected configurations are:
+
+- **S-LLaMA-1.3B, LLaMA-2-7B, Meta-LLaMA-3-8B:** BERT-style masking with a 20% masking probability.
+- **Mistral-7B:** RoBERTa-style masking with an 80% masking probability.
+
+The high masking rate for Mistral-7B is notable and likely related to its ability to handle bidirectional attention without training: since the model already has some capacity for bidirectional processing, a more aggressive masking rate forces it to rely more heavily on the newly enabled bidirectional context, accelerating adaptation. The choice of RoBERTa over BERT style suggests that the additional noise from random replacement is unnecessary or counterproductive for Mistral.
+
+**Why the mask token is underscore.** Since the decoder-only LLMs were not pre-trained with a dedicated `[MASK]` token in their vocabulary, introducing a new special token would require expanding the embedding matrix and training the new token's embedding from scratch, which would be slow and potentially destabilizing. Using the underscore character `_` (which is already in the vocabulary of all tested models) avoids this: the model already has a learned embedding for underscore, and MNTP training simply teaches it that when it sees underscore tokens in context, it should predict what word was originally there. This is a pragmatic design choice that minimizes disruption to the pre-trained weights.
+
+**Training infrastructure and hyperparameters.** MNTP training uses LoRA (Hu et al., 2022) with rank `$r = 16$` and scaling factor `$\alpha = 32$`, applied to all linear layers in the attention and feed-forward blocks. The specific quoted hyperparameters from Appendix D.1.1:
+
+> "We train all the models for 1000 steps with LoRA `$r = 16$` and `$\alpha = 32$`, and we follow the same training parameters as RoBERTa MNTP training. When training large 7B and 8B models, we apply brain floating point (bfloat16) quantization, as well as flash attention 2 and gradient checkpointing."
+
+The batch size is 32, and training is done on a single 80GB A100 GPU. For 7B and 8B models, this training completes in approximately 100 minutes. The data source is the Wikitext-103 dataset (Merity et al., 2017), which consists of English Wikipedia articles. The choice of Wikipedia data is intentional: since Wikipedia is almost certainly included in the pre-training mixture of all tested models, MNTP is not teaching the model new factual knowledge or language patterns—it is only teaching the model *how to use bidirectional attention to access knowledge it already has*.
+
+**What MNTP achieves.** Conceptually, MNTP solves the following problem: a decoder LLM trained with causal attention has learned to build representations where `$h_i$` contains information useful for predicting token `$i+1$`. When you enable bidirectional attention, `$h_i$` can now also incorporate information from tokens `$i+1, i+2, \ldots$`, but the model has never learned how to do this productively—the attention patterns and value transformations optimized for causal context may not extend to future context. MNTP provides a training signal that directly rewards the model for using future context: to predict a masked token at position `$i$` correctly, the model must extract relevant information from tokens after position `$i$` (since the token at `$i$` itself is masked and provides no information), and route that information to `$h_{i-1}$` through the bidirectional attention mechanism. Over 1000 steps, the model's attention weights and value projections adapt to effectively incorporate this bidirectional information.
+
+**The word-level task connection.** MNTP has a particularly natural relationship with word-level tasks (chunking, NER, POS tagging). These tasks require token-level representations where the embedding of each word incorporates full sentence context to disambiguate its role. MNTP's training objective—predicting individual masked tokens from bidirectional context—directly optimizes for this: every training example teaches the model to build a representation at position `$i-1$` that captures enough about the surrounding sentence to identify the word at position `$i$`. This explains why Bi + MNTP substantially outperforms Uni on word-level tasks (Figure 2, Table 4), e.g., S-LLaMA-1.3B chunking improves from 86.10% to 90.51% (+4.41%), and LLaMA-2-7B chunking improves from 88.23% to 91.61% (+3.38%).
+
+**A subtle point about word-level evaluation with MNTP.** Appendix D.1.3 notes that for word-level tasks, token representations from MNTP-trained models are computed differently from standard models. In a standard model, the representation of a word composed of multiple sub-tokens is the average of those sub-tokens' hidden states. In an MNTP-trained model, the representation uses the hidden states of the *preceding* sub-tokens:
+
+> "for models trained with MNTP, the representation of words `$w_1$`, `$w_2$`, and `$w_3$` will be computed as: `$e_1 = \frac{1}{2}(e_{\text{BOS}} + e_{11}), e_2 = \frac{1}{3}(e_{12} + e_{21} + e_{22}), e_3 = e_{23}$`."
+
+This shift—using `$e_{12}$` and `$e_{21}$` and `$e_{22}$` for `$w_2$` rather than `$e_{21}$`, `$e_{22}$`, `$e_{23}$`—aligns with the MNTP training paradigm where the representation at position `$i-1$` is optimized to predict token `$i$`. The hidden state at the sub-token *preceding* the word start has been trained to capture information about the word's identity, making it a better representation than the hidden states at the word's own positions.
+
+---
+
+#### Unsupervised Contrastive Learning (SimCSE)
+
+While the first two steps of LLM2Vec (bidirectional attention + MNTP) produce strong token-level representations suitable for word-level tasks, they do not explicitly optimize for *sequence-level* representations—a single vector that captures the meaning of an entire sentence. This is the role of the third step: unsupervised contrastive learning via SimCSE (Gao et al., 2021).
+
+**Why sequence-level representations need separate training.** The MNTP objective optimizes token-level predictions: given a masked token at position `$i$`, predict its identity from `$h_{i-1}$`. This teaches the model to build good *contextualized token representations*, but it provides no signal about how to aggregate these token representations into a single vector that represents the entire sequence. Decoder-only LLMs, unlike BERT (which has a next-sentence prediction objective), were never trained to produce sequence-level summaries—their pre-training objective is purely token-level. Even with bidirectional attention and MNTP adaptation, there is no guarantee that, say, mean-pooling the token representations will yield a semantically meaningful sentence embedding. The representations might be excellent for predicting individual token identities but produce noise when averaged together.
+
+**The SimCSE method.** SimCSE constructs a contrastive learning objective entirely from unlabeled sentences, with no need for positive or negative pair annotations. The procedure:
+
+1. Take a batch of `$B$` sentences `$\{s_1, s_2, \ldots, s_B\}$`.
+2. Pass each sentence through the model *twice*, with different dropout masks applied to the model's hidden representations each time. This produces two different embeddings for the same sentence: `$e_i^{(1)}$` and `$e_i^{(2)}$` for sentence `$s_i$`.
+3. Treat `$(e_i^{(1)}, e_i^{(2)})$` as a positive pair—they represent the same underlying sentence and should be similar.
+4. Treat all other pairs `$(e_i^{(\cdot)}, e_j^{(\cdot)})$` for `$i \neq j$` as negative pairs—they represent different sentences and should be dissimilar.
+5. Train with the InfoNCE contrastive loss, which for each positive pair maximizes the cosine similarity between the two embeddings relative to the similarity with all in-batch negatives.
+
+The loss function is:
+
+$$\mathcal{L}_{\text{SimCSE}} = -\sum_{i=1}^{B} \log \frac{\exp(\lambda \cdot \text{sim}(e_i^{(1)}, e_i^{(2)}))}{\sum_{j=1}^{B} \exp(\lambda \cdot \text{sim}(e_i^{(1)}, e_j^{(2)}))}$$
+
+where `$e_i^{(1)}$` and `$e_i^{(2)}$` are the two embeddings for sentence `$i$` produced by different dropout passes, `$\text{sim}(\cdot, \cdot)$` is cosine similarity, `$\lambda$` is a temperature parameter, and `$B$` is the batch size.
+
+**What it computes:** For each sentence in the batch, the model computes the cosine similarity between its two dropout-perturbed embeddings (the numerator), and divides by the sum of similarities between the first embedding and *all* embeddings in the batch (the denominator, which includes the positive pair plus all `$B-1$` negative pairs). The negative log of this ratio is minimized when the positive pair similarity is high and all negative pair similarities are low. The temperature `$\lambda$` controls the sharpness of the contrast: higher temperatures make the loss more sensitive to small differences between positive and negative similarities.
+
+**Why this form:** The InfoNCE loss is the standard objective for contrastive representation learning because it has an information-theoretic interpretation: minimizing this loss maximizes a lower bound on the mutual information between the two views (the two dropout-perturbed embeddings) of the same underlying sentence. This encourages the model to learn representations that are *invariant* to dropout noise—the features that are stable across different dropout masks are the ones that capture the sentence's semantic content, while features that fluctuate with dropout are surface-level artifacts.
+
+**Why dropout as the augmentation?** This is a key design choice from the original SimCSE work. Alternative augmentation strategies include word deletion, synonym replacement, or back-translation, but dropout has several advantages: (a) it is already built into the model, requiring no additional computation or data processing; (b) it operates in the model's internal representation space, creating perturbations that are aligned with the model's own inductive biases; (c) it has been shown by Gao et al. (2021) to produce stronger sentence embeddings than word-level augmentations. The intuition is that dropout noise in hidden representations is a more natural and effective perturbation for the model to learn invariance to, because it affects the model's computation at every layer and at every token position simultaneously.
+
+**The increased dropout rate for large decoders.** The paper notes an important practical detail: the dropout probability of 0.1 used by Gao et al. (2021) for BERT-based models proved suboptimal for larger decoder LLMs. The quote from Appendix D.1.2:
+
+> "Our initial experiments indicated that the low value of dropout probability (0.1) typically used by bidirectional encoders (Gao et al., 2021) does not lead to optimal performance for larger decoder-only LLMs. Therefore, we use a higher dropout probability of 0.3 for all models."
+
+The likely reason: larger models (7-8B parameters) have much more capacity than BERT-base (110M) or BERT-large (340M). With lower dropout rates, the two passes through the network produce embeddings that are too similar—the regularization effect of 0.1 dropout is insufficient to create meaningful variation between `$e_i^{(1)}$` and `$e_i^{(2)}$`. Without sufficient variation, the contrastive objective has little signal to learn from: the positive pairs are trivially similar, and the model doesn't need to learn robust, semantically grounded features to make them similar. Increasing dropout to 0.3 creates larger perturbations, forcing the model to build representations that capture semantic content robustly enough to survive substantial noise in the computation.
+
+**Pooling operations for sequence representations.** To convert the sequence of token representations `$h_1, h_2, \ldots, h_N$` into a single sequence embedding `$e$`, the model applies a pooling operation. The paper compares three options (Figure 3, Table 5):
+
+- **EOS pooling:** Take only the representation of the last token (`$h_N$`). This is the standard approach for causal models, operating on the assumption that the last token has accumulated information from all preceding context. Under bidirectional attention, this assumption breaks down because the last token's representation is no longer special—it attends to preceding tokens symmetrically just as all other tokens do.
+
+- **Mean pooling:** Average all token representations: `$e = \frac{1}{N} \sum_{i=1}^{N} h_i$`. This gives equal weight to every token.
+
+- **Weighted mean pooling (Muennighoff, 2022):** Compute a weighted average where weights are learned or computed based on attention patterns. The implementation details are not extensively described in the paper, but the idea is to give more weight to semantically informative tokens and less to function words or punctuation.
+
+The consistent finding across both unsupervised and supervised settings is that **mean pooling works best for LLM2Vec-transformed models**, while weighted mean pooling works best for causal (Uni) models. For example, in Table 5, S-LLaMA-1.3B Bi + MNTP + SimCSE achieves 52.40 with mean pooling vs. 50.23 with weighted mean; LLaMA-2-7B Bi + MNTP + SimCSE achieves 58.97 (mean) vs. 55.75 (weighted mean). The paper hypothesizes that mean pooling works better under bidirectional attention because all token representations are now symmetrically contextualized—every token has access to full context, so simple averaging doesn't disproportionately weight late-position tokens (unlike under causal attention, where later tokens have richer representations and benefit from weighted schemes that up-weight them).
+
+**Excluding instruction tokens from pooling.** A critical implementation detail: when computing mean pooling for MTEB evaluation, the paper explicitly *excludes* the instruction tokens. If the input is "Given a web search query, retrieve relevant passages that answer the query: [actual query text]", the pooling is computed only over the query text tokens, not the instruction prefix. This ensures that the embedding represents the content, not the task specification, and allows the same instruction to be used consistently without biasing the embedding toward the instruction's surface form.
+
+**Training infrastructure for SimCSE.** From Appendix D.1.2:
+
+> "We train all models with LoRA `$r = 16$` and `$\alpha = 32$` for 1000 steps. For LLaMA-2-7B, Mistral-7B, and Meta-LLaMA-3-8B, we train with a batch size of 128. For S-LLaMA-1.3B, we use a batch size of 32."
+
+The data source is a subset of Wikipedia sentences released by Gao et al. (2021). Training for 7B and 8B models takes approximately 3 hours on a single 80GB A100 GPU. The SimCSE step uses LoRA with the same rank and alpha as MNTP, but with freshly initialized LoRA parameters after merging the MNTP LoRA weights into the base model. This merging-before-retraining strategy preserves the MNTP adaptations while giving SimCSE a clean slate for learning sequence-level representations.
+
+---
+
+#### LoRA Training Infrastructure and Weight Merging
+
+A key enabling factor for LLM2Vec's practicality is its consistent use of LoRA (Low-Rank Adaptation, Hu et al., 2022) for all fine-tuning steps. Without parameter-efficient fine-tuning, adapting a 7-8B parameter model through two separate training stages would require substantial multi-GPU compute and produce separate full model copies for each stage—making experimentation slow and storage costly.
+
+**What LoRA does.** LoRA freezes all pre-trained weights and injects trainable low-rank decomposition matrices into selected layers. For a weight matrix `$W \in \mathbb{R}^{d \times k}$` in the original model, LoRA learns two smaller matrices `$A \in \mathbb{R}^{d \times r}$` and `$B \in \mathbb{R}^{r \times k}$` (where `$r \ll \min(d, k)$`) such that the effective weight becomes:
+
+$$W_{\text{eff}} = W + \alpha \cdot AB$$
+
+where `$\alpha$` is a scaling factor. The forward pass computes `$y = Wx + \alpha \cdot A(Bx)$`—the original pre-trained computation plus a low-rank correction. Only `$A$` and `$B$` are updated during training, keeping the base weights frozen. With `$r = 16$` and typical hidden dimensions of 4096, the trainable parameters are a tiny fraction (roughly 0.1-0.5%) of the total, dramatically reducing memory and compute requirements.
+
+**The merging strategy between stages.** A subtle but important design choice is how the two LoRA training stages interact:
+
+1. **MNTP stage:** LoRA weights are randomly initialized and trained for 1000 steps on the Wikitext-103 data. After training, the LoRA weights `$A_{\text{MNTP}}$` and `$B_{\text{MNTP}}$` capture the adaptations needed for bidirectional attention.
+2. **Before SimCSE:** The MNTP LoRA weights are *merged into the base model*: for each modified weight matrix, `$W_{\text{new}} = W_{\text{original}} + \alpha \cdot A_{\text{MNTP}} B_{\text{MNTP}}$`. The MNTP LoRA parameters are then discarded.
+3. **SimCSE stage:** Fresh LoRA parameters are randomly initialized and trained on the SimCSE objective for 1000 steps.
+
+The quote from Section 2.2 explaining this:
+
+> "We merge the MNTP LoRA weights into the base model and initialize new LoRA parameters before starting the SimCSE training, which ensures that the model retains the knowledge learned in the previous step."
+
+**Why this merging strategy matters.** If the MNTP LoRA weights were kept separate and SimCSE LoRA weights were trained on top of them without merging, there would be two successive low-rank adaptations applied to the same base weights. This could lead to interference between the two sets of adaptations, and the SimCSE training might partially undo the MNTP adaptations. By merging MNTP into the base model, the bidirectional attention adaptation becomes part of the "pre-trained" weights from SimCSE's perspective. SimCSE then learns sequence-level representations on top of already-bidirectional-capable weights, without needing to re-learn or preserve the MNTP adaptations. This sequential merging strategy is a clean way to compose multiple fine-tuning stages in parameter-efficient settings.
+
+**Hardware and time budget.** The paper emphasizes the efficiency of LLM2Vec throughout. For 7B and 8B models:
+- MNTP: 1000 steps, batch size 32, ~100 minutes on a single 80GB A100.
+- SimCSE: 1000 steps, batch size 128 (7-8B) or 32 (1.3B), ~3 hours on a single A100.
+- Total training time: approximately 4.5 hours per model on a single GPU.
+
+This contrasts sharply with full fine-tuning approaches (which would require multiple GPUs and substantially more time) and with multi-stage training pipelines for encoder models (which involve large-scale weakly-supervised pre-training on billions of pairs).
+
+---
+
+#### Design Rationale: Why These Three Steps in This Order?
+
+The architecture of LLM2Vec as a three-stage pipeline is not arbitrary—each step addresses a specific deficiency that the previous step cannot fix, and the order is constrained by dependencies.
+
+**Why bidirectional attention must come first.** You cannot train a model to use bidirectional context (step 2) if it doesn't have access to bidirectional context. The architectural change from causal to bidirectional attention is a prerequisite for everything that follows. However, the paper's results show that this step is necessary but not sufficient: without MNTP adaptation, bidirectional attention degrades performance for most models.
+
+**Why MNTP must come second (and before SimCSE).** MNTP adapts the model at the token level to use bidirectional attention effectively. This must happen before sequence-level contrastive learning because SimCSE's training signal—maximizing similarity between different dropout views of the same sentence—assumes that the underlying token representations are already meaningful. If SimCSE were applied directly to a causally pre-trained model with bidirectional attention enabled but no MNTP, it would be optimizing sequence-level similarity based on corrupted token representations (recall that Bi without MNTP degrades word-level performance). The model might learn to produce similar embeddings for dropout-perturbed versions of the same sentence, but those embeddings would be built on a shaky foundation of poor token representations. The paper's ablations (Table 5) support this: Bi + SimCSE (without MNTP) consistently underperforms Bi + MNTP + SimCSE across all models and pooling methods.
+
+**Why SimCSE must come third.** Even with excellent token-level representations from MNTP, there is no sequence-level training signal. The model knows how to represent individual tokens in context, but has never been trained to produce a single vector that summarizes the entire sentence. SimCSE provides exactly this signal: it teaches the model that mean-pooling over token representations should produce a vector that captures semantic content robustly enough to be invariant to dropout noise. Without SimCSE, the Bi + MNTP model still produces strong token representations (good for word-level tasks) but suboptimal sequence representations. Figure 3 shows the SimCSE contribution clearly: for Mistral-7B, Bi + MNTP + mean pooling achieves 53.89 on the MTEB subset, while adding SimCSE boosts this to 60.50—a 12.3% relative improvement.
+
+**An alternative path considered but rejected.** The paper's ablation in Table 5 includes models that apply SimCSE directly to causal (Uni) models without bidirectional attention or MNTP (rows labeled "Uni + SimCSE"). For S-LLaMA-1.3B, Uni + SimCSE + w. Mean achieves 47.13 on the MTEB subset, while Bi + MNTP + SimCSE + Mean achieves 52.40—a meaningful gap. This demonstrates that while SimCSE helps even with causal attention (by improving sequence-level representations), it cannot compensate for the fundamental information bottleneck of causal attention. The full LLM2Vec pipeline (bidirectional attention enabling full context access + MNTP teaching the model to use it + SimCSE refining sequence representations) outperforms any subset of the three steps.
+
+**The Mistral-7B exception revisited.** For Mistral-7B, the paper reports that Bi (without MNTP) + mean pooling already achieves 50.07 on the MTEB subset, which is competitive with some models' MNTP-trained versions. Adding MNTP improves this to 53.89, and adding SimCSE further boosts to 60.50. The fact that Mistral benefits from MNTP and SimCSE even though its "Bi (no training)" performance is already strong suggests that even partial bidirectionality in pre-training leaves room for improvement through explicit adaptation—the model may handle bidirectional attention reasonably well out of the box, but targeted training still improves its ability to leverage full bidirectional context for specific encoding tasks.
+
+---
+
+#### Inference-Time Pipeline: How the Trained Model Produces Embeddings
+
+At inference time, using an LLM2Vec-transformed model involves these steps:
+
+1. **Input construction:** The raw text query or document is prefixed with a task-specific instruction (from Table 10). For symmetric tasks (semantic similarity), the same instruction is used for both query and document. For asymmetric tasks (retrieval), different instructions may be used for queries and documents—though the paper uses the same instruction set as Wang et al. (2023).
+
+2. **Forward pass with bidirectional attention:** The full input (instruction + text) is processed through the model with the all-ones attention mask. Every token can attend to every other token. The output is a sequence of hidden states `$h_1, h_2, \ldots, h_N$` at the final layer.
+
+3. **Instruction token exclusion:** Since the instruction is metadata that specifies the task, not part of the content being encoded, the hidden states corresponding to instruction tokens are discarded. Only the hidden states for the actual content tokens contribute to the embedding.
+
+4. **Pooling:** The selected hidden states are aggregated using mean pooling (or weighted mean, depending on the variant). For mean pooling: `$e = \frac{1}{|\mathcal{C}|} \sum_{i \in \mathcal{C}} h_i$`, where `$\mathcal{C}$` is the set of content token positions. This produces a single vector `$e \in \mathbb{R}^{d}$` (where `$d = 4096$` for Mistral-7B, vs. 768 for standard BERT).
+
+5. **Normalization (implicit in cosine similarity usage):** When embeddings are compared via cosine similarity (the standard metric for MTEB evaluation), normalization happens automatically as part of the similarity computation. The paper does not describe an explicit L2 normalization step, but cosine similarity is equivalent to dot product between L2-normalized vectors.
+
+The key efficiency advantage over Echo embeddings is apparent here: LLM2Vec processes the input exactly once, with the same sequence length as the original text plus instruction. Echo embeddings require duplicating the input, doubling the sequence length, and consequently quadrupling the self-attention computation (which scales quadratically in sequence length). Table 6 quantifies this: MTEB evaluation for Mistral-7B takes approximately 44 hours with LLM2Vec versus 64 hours with Echo embeddings on 8× A100 GPUs—a ~1.5× wall-clock speedup, which compounds significantly for large-scale retrieval corpora encoding.
+
+## 4. Key Insights and Innovations
+
+### Innovation 1: Causal Attention Is the Architectural Bottleneck, Not a Capability Ceiling
+
+The field has operated under an implicit assumption that decoder-only LLMs and encoder-only models serve fundamentally different purposes: decoders generate, encoders embed. The dominant approach for extracting embeddings from decoder LLMs—EOS pooling, where the last token's hidden state serves as the sentence representation—accepts causal attention as an immutable architectural constraint and works around it. Echo embeddings (Springer et al., 2024) represent the cleverest version of this workaround: duplicate the input so tokens in the second copy can attend to "future" tokens in the first. But both approaches treat causal attention as something to be *compensated for*, not *fixed*.
+
+LLM2Vec's central conceptual move is to identify causal attention as the **specific, removable bottleneck** that prevents decoder LLMs from serving as text encoders, and then to demonstrate that removing it—coupled with lightweight adaptation—unlocks representational capabilities that were already latent in the pre-trained weights. This reframes the problem: the limitation is not that decoder LLMs lack the knowledge or capacity to produce rich contextualized embeddings, but rather that their attention pattern prevents them from *expressing* that capacity. The evidence for this reframing is the dramatic performance jump when bidirectional attention is enabled and adapted via MNTP: Mistral-7B on the full MTEB goes from 42.46 (Uni + w. Mean) to 49.43 (Bi + MNTP, no SimCSE), a ~16.4% relative improvement, without any new knowledge being injected—the training data is Wikipedia, which the model already saw during pre-training.
+
+This is a fundamentally different diagnosis from prior work that attempted to solve the decoder embedding problem. Approaches like Wang et al. (2023) and Ma et al. (2023) accept causal attention and invest effort in training better EOS-pooled representations. Approaches like Li & Li (2024) or Dukić & Šnajder (2024) enable bidirectional attention only in selected layers during supervised fine-tuning—a partial fix that still leaves representational bottlenecks in earlier causal layers. LLM2Vec argues, through its layer-wise representational analysis (Figure 5) and the consistent superiority of full-stack bidirectionality, that **partial fixes are insufficient**: the entire model must be bidirectional for token representations at every layer to benefit from full context, and this bidirectionality must be taught through an objective (MNTP) that aligns with the model's pre-training.
+
+The significance of this diagnostic reframing extends beyond performance numbers. It predicts that **any** decoder-only LLM can be converted into a strong text encoder through the same recipe, because the capacity is already there—pre-training on all tokens (not just masked ones) produces rich representations that causal attention simply prevents from being fully expressed. The paper's results across four model families (S-LLaMA-1.3B, LLaMA-2-7B, Mistral-7B, Meta-LLaMA-3-8B) with consistent gains support this claim, though the Mistral exception (discussed in Innovation 3) adds an important nuance.
+
+### Innovation 2: MNTP as the Minimal Sufficient Adaptation Objective for Bidirectionality
+
+Prior work that enabled bidirectional attention in decoder LLMs (Li et al., 2023b; Dukić & Šnajder, 2024; Li & Li, 2024) relied on **supervised fine-tuning objectives** (text classification, NER, STS) to implicitly teach the model to handle bidirectional context. This has three limitations: it requires labeled data, it conflates the adaptation-to-bidirectionality problem with the downstream-task-learning problem, and it makes it impossible to tell whether poor performance comes from failed bidirectional adaptation or from the task itself being hard.
+
+LLM2Vec's conceptual contribution here is identifying **MNTP as the minimal sufficient objective** for teaching a decoder LLM to use bidirectional attention. The key insight is that MNTP is maximally aligned with the model's pre-training while requiring exactly the new capability needed: predicting a masked token at position `i` from the hidden state at position `i-1` preserves the "next-token prediction from previous hidden state" mapping that the model already knows, while forcing the hidden state at `i-1` to incorporate information from tokens after `i` (since the token at `i` itself provides no information). The model doesn't need to learn a new decoding head, a new positional mapping, or a new loss surface—it only needs to learn how to route information from future tokens into the existing next-token prediction circuitry.
+
+This is a **minimality argument**: MNTP succeeds not because it's the most powerful adaptation objective, but because it changes exactly what needs to change and nothing else. The evidence is in the efficiency: 1000 steps on a single GPU, using only Wikipedia text (no labels, no pairs, no synthetic data), produces substantial gains on both word-level and sequence-level tasks. The ablation in Table 5 (Appendix D.2.2) confirms that alternatives are worse: enabling bidirectional attention without MNTP (Bi + SimCSE) consistently underperforms Bi + MNTP + SimCSE across all models—e.g., S-LLaMA-1.3B achieves 44.46 (Bi + SimCSE, mean pooling) vs. 52.40 (Bi + MNTP + SimCSE, mean pooling) on the MTEB subset. The MNTP step alone (without SimCSE) achieves 42.10, showing that even token-level adaptation to bidirectionality provides substantial sequence-level benefits before any contrastive training.
+
+This conceptual framing—find the minimal objective that bridges the gap between the model's pre-training and the desired capability—is generalizable beyond text embeddings. It suggests a methodology for adapting decoder LLMs to other non-generative tasks: identify the architectural mismatch, then design an unsupervised adaptation objective that changes only the mismatched component while preserving all other pre-training circuitry. The choice to predict from position `i-1` rather than `i` (which would be standard MLM) is the concrete embodiment of this principle: it keeps the language modeling head's input distribution unchanged.
+
+### Innovation 3: The Mistral-7B Bidirectionality Discovery as an Architectural Diagnostic
+
+Section 4.2 and the representation analysis in Figure 5 reveal a finding that is not a methodological contribution but a **discovery about an existing model's architecture**: Mistral-7B, when bidirectional attention is enabled without any training, produces hidden representations that are highly similar (cosine similarity near 1.0) to its causal-attention representations across most layers and token positions. For S-LLaMA-1.3B and LLaMA-2-7B, the same comparison shows dramatically lower similarity—the representations fundamentally change when bidirectional attention is introduced, explaining why performance degrades.
+
+This is significant as a **diagnostic tool** rather than a performance result. The representational similarity analysis provides a simple, computationally cheap method to determine whether a decoder LLM was pre-trained with any form of bidirectional attention (e.g., prefix language modeling where some tokens attend bidirectionally) without requiring access to training details. The paper speculates that Mistral models must have been trained with some bidirectional component, which would explain both the high representational similarity and the strong out-of-the-box bidirectional performance (Mistral-7B actually *improves* on NER from 96.52% to 97.14% and on MTEB subset from 44.01 to 50.07 when bidirectional attention is naively enabled).
+
+This finding has **architectural policy implications**: it demonstrates that incorporating even partial bidirectionality during pre-training produces models that are **dual-use**—effective for both generation and encoding without architectural modification. If future LLM developers intentionally include a fraction of bidirectional training (even 5-10% of pre-training tokens), the resulting models could serve as strong text embedders out of the box, without the MNTP adaptation step. This would make LLM2Vec even simpler (potentially just steps 1 and 3, or even just step 3 for sequence-level tasks) and would blur the boundary between "generation models" and "embedding models" that has structured NLP research for years.
+
+The paper is appropriately cautious about this finding, noting that Mistral's training details are not public and the evidence is circumstantial. But the diagnostic methodology—comparing hidden representations under causal vs. bidirectional attention as a probe for training regime—is independently valuable and replicable on any model with accessible weights. Figure 9 extends the analysis to three Mistral variants (v0.1, Instruct-v0.1, Instruct-v0.2), showing consistent behavior, which strengthens the claim that this is an architectural property of the base model rather than an artifact of instruction tuning.
+
+### Innovation 4: The Compositional Efficiency Argument—Small, Sequential Changes Beat Large, Joint Ones
+
+A less obvious but equally important conceptual contribution is the paper's demonstration that **composing three simple, independently-motivated operations**—an architectural change, a token-level adaptation objective, and a sequence-level contrastive objective—**outperforms approaches that try to solve all problems simultaneously**. This is visible in the comparison to Muennighoff et al. (2024), who perform multi-task full fine-tuning combining causal language modeling (to preserve generation ability) with supervised bidirectional contrastive learning (to learn embeddings). That approach is conceptually elegant—optimize everything at once—but computationally expensive (full fine-tuning of 7B+ parameter models requires multi-GPU setups and substantial time).
+
+LLM2Vec's alternative philosophy is **sequential modularity**: each step addresses exactly one deficiency and can be verified independently before proceeding to the next. Step 1 (bidirectional attention) can be checked via word-level tasks to confirm that MNTP adaptation succeeded. Step 2 (MNTP) produces a model that already outperforms the causal baseline on both word and sequence tasks (Table 1: Mistral-7B Bi + MNTP achieves 49.43 on MTEB, already above Uni + w. Mean at 42.46). Step 3 (SimCSE) further refines sequence representations, adding ~7.4 points. Each step's contribution is measurable, and the training cost is additive and predictable: ~100 minutes for MNTP, ~3 hours for SimCSE, totaling under 5 hours on a single GPU.
+
+This modularity has practical implications beyond the specific recipe. It means LLM2Vec can be **partially applied**: if only word-level tasks matter, stop after step 2 (Bi + MNTP). If a model already handles bidirectionality (like Mistral), step 1 is effectively free. If labeled data becomes available, step 3 can be replaced with supervised contrastive learning (Section 5) while keeping the first two steps identical. This flexibility is not available in monolithic fine-tuning approaches where all objectives are optimized jointly and removing any component requires retraining from scratch.
+
+The ablation in Table 5 provides the empirical foundation for this claim: every combination of components is evaluated, and the full pipeline (Bi + MNTP + SimCSE + Mean) consistently outperforms all partial combinations. The fact that Bi + SimCSE (without MNTP) is substantially worse than Bi + MNTP + SimCSE—despite SimCSE being the more powerful sequence-level objective—demonstrates that the sequential order matters: token-level adaptation must precede sequence-level refinement. A joint training approach that applied both objectives simultaneously might fail to learn this ordering, since the stronger contrastive signal could dominate the gradient and prevent the model from properly adapting its attention patterns.
+
+### Innovation 5: Sample Efficiency as a First-Class Property of the Adaptation Pipeline
+
+Section 5.2 and Figure 6 make a claim that is easy to overlook amid the performance numbers but represents a significant conceptual contribution: **LLM2Vec-transformed models are substantially more sample-efficient during supervised fine-tuning** than their causal-attention counterparts. Across all three tested models, the Bi + MNTP + SimCSE variants reach higher MTEB subset scores earlier in training and with fewer gradient steps than Uni + w. Mean baselines.
+
+This is not merely a practical convenience; it carries theoretical implications about the **quality of the representation space** before supervised training begins. A model that learns faster from fewer labeled examples must have an internal representation that is better aligned with the structure of the embedding tasks—the features relevant for distinguishing semantic similarity, clustering, and retrieval are already partially organized in the representation space, so supervised training only needs to fine-tune decision boundaries rather than reorganize the entire space.
+
+Concretely: a Uni + w. Mean model under causal attention has token representations that are positionally asymmetric—early tokens are impoverished, later tokens carry disproportionate representational weight. Supervised contrastive learning must first overcome this asymmetry before it can learn task-relevant features, which costs training steps. An LLM2Vec-transformed model, with bidirectionally contextualized tokens and SimCSE-pretrained sequence representations, starts from a space where sentence similarity already correlates with semantic content (as shown in the cosine similarity analysis of Section 4.1, Figure 4). Supervised training can therefore focus on task-specific refinements rather than structural reorganization.
+
+This sample-efficiency property makes LLM2Vec particularly relevant for **low-resource settings** where labeled embedding data is scarce—specialized domains, low-resource languages, or niche retrieval tasks where human annotation is expensive. The paper explicitly flags this as future work (Section 5.2: "These results are particularly encouraging for settings where it is hard to acquire high quality labeled data"), but the conceptual implication is already supported: the unsupervised adaptation pipeline front-loads the representational reorganization that would otherwise consume supervised training budget, making subsequent supervised steps more efficient. This is a stronger claim than simply "LLM2Vec improves performance"—it argues that LLM2Vec changes *how the model learns* from labeled data, not just *what it achieves* after learning.
+
+## 5. Experimental Analysis
+
+### Evaluation Methodology
+
+- **Dataset.** The primary sequence-level benchmark is the Massive Text Embeddings Benchmark (MTEB; Muennighoff et al., 2023), a collection of 56 datasets spanning 7 categories: Retrieval (15 datasets), Reranking (4), Clustering (11), Pair Classification (3), Classification (12), Semantic Textual Similarity (STS, 10), and Summarization (1). For rapid ablation and analysis, the authors use a representative 15-task subset (Table 3) that samples from each category proportionally to the full MTEB, omitting SummEval (which has only one dataset). Word-level tasks use the CoNLL-2003 benchmark (Tjong Kim Sang & De Meulder, 2003), which includes chunking, named-entity recognition (NER), and part-of-speech (POS) tagging on roughly 14,000 training, 3,250 validation, and 3,450 test samples. The synthetic prefix-similarity analysis in Section 4.1 uses 35 sentence triples collected by Springer et al. (2024).
+
+- **Base models.** The paper experiments with four decoder-only LLMs spanning 1.3B to 8B parameters: **Sheared-LLaMA-1.3B** (S-LLaMA-1.3B; Xia et al., 2023), a pruned version of LLaMA-2-7B; **LLaMA-2-7B-chat** (Touvron et al., 2023); **Mistral-7B-Instruct-v0.2** (Jiang et al., 2023a); and **Meta-LLaMA-3-8B-Instruct** (AI@Meta, 2024). These models were chosen to cover a range of scales and training regimes. The authors argue PaLM 2-S* is "representative of the capabilities of many contemporary LLMs" and that the chosen models "sit in a useful regime: non-trivial performance... but far from saturation, leaving room for test-time compute to make a difference." For word-level comparisons, DeBERTa-v3-large (He et al., 2023) serves as the encoder-only baseline.
+
+- **Metrics.** The primary metric for sequence-level tasks is the **MTEB score**, which is the average of task-specific metrics across all 56 datasets (or 15 for the subset). Individual tasks use category-appropriate metrics: Retrieval uses nDCG@10; STS uses Spearman correlation; Classification uses accuracy; Clustering uses V-measure; Pair Classification uses average precision; Reranking uses MAP; Summarization uses Spearman correlation. Word-level tasks (chunking, NER, POS) use accuracy. The synthetic prefix-similarity analysis uses cosine similarity. For the FLOPs-matched comparison (Section 7), MATH test accuracy (%) is the metric, graded using the function from Lightman et al. (2022). The paper reports MTEB scores at two significant figures (e.g., 56.80) and word-level accuracies at two decimal places (e.g., 96.09%).
+
+- **Baselines.** The paper compares against multiple categories of baselines:
+  - **Encoder-only models**: BERT and BERT + SimCSE (Gao et al., 2021) for unsupervised sequence-level tasks; DeBERTa-v3-large for word-level tasks.
+  - **Causal (Uni) decoder LLMs**: The same decoder models used by LLM2Vec but with standard causal attention and various pooling methods (EOS, mean, weighted mean). These are the primary "what if we did nothing" baselines.
+  - **Echo embeddings** (Springer et al., 2024): A concurrent approach that duplicates the input sequence and pools over the second occurrence, applied to the same models and instructions.
+  - **Supervised text encoders** (Table 2 and Table 9): Instructor-xl, BGE-large-en-v1.5, GritLM-Mistral-7b-v1, E5-Mistral-7b-v1, and Echo-Mistral-7b-v1, all trained with public data only.
+  - **MTEB leaderboard models** (Table 9): The top-10 entries as of March 29, 2024, including SFR-Embedding-Mistral, voyage-lite-02-instruct, and GritLM-7B, though most of these use proprietary data and are not direct competitors in the "public data only" category.
+
+- **Training and evaluation budget.** The paper measures adaptation cost in **gradient steps and wall-clock time** rather than FLOPs. Both MNTP and SimCSE stages use exactly 1000 gradient steps. MNTP uses a batch size of 32 on 1× 80GB A100 GPU, completing in approximately 100 minutes for 7-8B models. SimCSE uses batch size 128 (32 for S-LLaMA-1.3B) on 1× A100, completing in approximately 3 hours for 7-8B models. Total adaptation time: ~4.5 hours per model on a single GPU. For MTEB evaluation, the paper reports approximate wall-clock times on 8× A100 GPUs: Mistral-7B LLM2Vec takes ~44 hours vs. ~64 hours for Echo embeddings (Table 6). Supervised training uses a batch size of 512 on 8× A100 GPUs for 1000 steps. The training data for unsupervised stages is Wikitext-103 for MNTP and a subset of Wikipedia sentences from Gao et al. (2021) for SimCSE—both presumed to be in the models' pre-training data, so no new knowledge is injected.
+
+- **Hyperparameter selection protocol.** For MNTP, the paper performs a grid search over masking strategy (BERT-style vs. RoBERTa-style) and masking probability (20%, 40%, 60%, 80%, 90%), selecting the best configuration based on SICK-R performance. For SimCSE, the dropout probability is increased from the standard 0.1 (used by Gao et al., 2021 for encoder models) to 0.3 after initial experiments showed suboptimal performance at the lower rate. For the full MTEB evaluation, the best pooling method is selected based on the 15-task subset ablations, not tuned on the full benchmark. Task-specific instructions (Table 10) are taken from Wang et al. (2023) without modification.
+
+---
+
+### Main Quantitative Results
+
+#### Word-Level Tasks: LLM2Vec Transforms Token Representations
+
+The word-level results (Figure 2, detailed in Table 4) establish that LLM2Vec's first two steps successfully convert decoder LLMs into effective token encoders.
+
+**Headline numbers.** Across all three word-level tasks and all three models (S-LLaMA-1.3B, LLaMA-2-7B, Mistral-7B), **Bi + MNTP achieves the best performance**, consistently outperforming both causal (Uni) baselines and the encoder-only DeBERTa-v3-large baseline. For chunking: S-LLaMA-1.3B Bi + MNTP reaches 90.51% (+4.41 over Uni at 86.10%, and +4.77 over DeBERTa at 85.74%); LLaMA-2-7B reaches 91.61% (+3.38 over Uni, +5.87 over DeBERTa); Mistral-7B reaches 91.17% (+3.64 over Uni, +5.43 over DeBERTa). For NER: S-LLaMA-1.3B reaches 96.59% (+0.50 over Uni); LLaMA-2-7B reaches 97.16% (+0.57 over Uni); Mistral-7B reaches 97.18% (+0.66 over Uni). For POS: S-LLaMA-1.3B reaches 92.04% (+1.15 over Uni); LLaMA-2-7B reaches 92.61% (+1.08 over Uni); Mistral-7B reaches 92.35% (+1.49 over Uni).
+
+**Bidirectional attention without training is harmful for most models.** The "Bi" bar in Figure 2 shows a dramatic drop: S-LLaMA-1.3B chunking falls from 86.10% (Uni) to 76.50% (Bi), a 9.6 percentage point decline; LLaMA-2-7B falls from 88.23% to 78.24% (~10 points). Mistral-7B is the exception—it drops only ~1.9 points on chunking (87.53% to 85.66%) and actually *improves* by 0.62 points on NER (96.52% to 97.14%). This pattern—S-LLaMA and LLaMA-2 severely degraded, Mistral resilient—is the first empirical signal of Mistral's architectural bidirectionality that Section 4.2 investigates in detail.
+
+**Adding SimCSE hurts word-level performance.** For all models, Bi + MNTP + SimCSE performs *worse* than Bi + MNTP alone: S-LLaMA-1.3B chunking drops from 90.51% to 89.33%; LLaMA-2-7B drops from 91.61% to 89.66%; Mistral-7B drops from 91.17% to 90.69%. This negative result is expected (SimCSE optimizes for sequence-level representations, which can come at the expense of token-level discriminability) and actually validates the paper's design: the pipeline is modular, and practitioners who only need word-level representations can stop after step 2.
+
+**The DeBERTa comparison.** The decoder LLMs, even in their causal (Uni) form, already outperform DeBERTa-v3-large on all three tasks—despite DeBERTa being a purpose-built encoder. For example, S-LLaMA-1.3B Uni achieves 86.10% chunking vs. DeBERTa's 85.74%; LLaMA-2-7B Uni achieves 96.59% NER vs. DeBERTa's 94.97%. This is not surprising given the decoder models' larger size and more extensive pre-training, but it underscores that the raw representational capacity exists—LLM2Vec just needs to unlock it.
+
+- **Cited figures/tables**: Figure 2, Table 4.
+
+---
+
+#### Sequence-Level Tasks (MTEB Subset): Ablation of Pooling and Component Contributions
+
+Figure 3 and Table 5 present the core ablation of LLM2Vec's design space on the 15-task MTEB subset, examining three pooling methods (EOS, mean, weighted mean) across all model variants.
+
+**Mean pooling dominates for bidirectional models, weighted mean for causal.** For causal (Uni) models, **weighted mean pooling consistently performs best**: S-LLaMA-1.3B Uni + w. Mean achieves 34.99 vs. 33.03 (mean) and 27.72 (EOS); LLaMA-2-7B Uni + w. Mean achieves 47.85 vs. 45.83 (mean) and 33.23 (EOS); Mistral-7B Uni + w. Mean achieves 44.01 vs. 43.00 (mean) and 22.12 (EOS). However, for LLM2Vec-transformed models, **mean pooling takes over**: S-LLaMA-1.3B Bi + MNTP + SimCSE + Mean achieves 52.40 vs. 50.23 (w. mean) and 45.57 (EOS); LLaMA-2-7B Bi + MNTP + SimCSE + Mean achieves 58.97 vs. 55.75 (w. mean); Mistral-7B Bi + MNTP + SimCSE + Mean achieves 60.50 vs. 57.55 (w. mean). The paper attributes this to the symmetry of bidirectional attention: when every token has access to full context, the positional asymmetry that made weighted schemes beneficial under causal attention disappears, and simple averaging works best.
+
+**EOS pooling is profoundly suboptimal.** Across all models and all configurations, EOS pooling substantially underperforms both mean and weighted mean. For Mistral-7B Bi + MNTP + SimCSE, EOS achieves only 53.67 vs. 60.50 for mean pooling—a gap of 6.83 points. This is a direct refutation of the common practice (Neelakantan et al., 2022; Ma et al., 2023; Wang et al., 2023) of using the last token's hidden state as the sentence embedding for decoder LLMs. The last token's representation, even under bidirectional attention, does not adequately summarize the full sequence.
+
+**The full pipeline outperforms all partial configurations.** For every model, the complete LLM2Vec recipe (Bi + MNTP + SimCSE + Mean) achieves the highest MTEB subset score:
+- S-LLaMA-1.3B: 52.40 (full) vs. 42.10 (Bi + MNTP) vs. 44.46 (Bi + SimCSE) vs. 47.13 (Uni + SimCSE + w. Mean).
+- LLaMA-2-7B: 58.97 (full) vs. 48.00 (Bi + MNTP) vs. 44.13 (Bi + SimCSE) vs. 53.55 (Uni + SimCSE + w. Mean).
+- Mistral-7B: 60.50 (full) vs. 53.89 (Bi + MNTP) vs. 60.29 (Bi + SimCSE) vs. 53.95 (Uni + SimCSE + w. Mean).
+
+Notably, for Mistral-7B, Bi + SimCSE (60.29) is very close to the full pipeline (60.50), suggesting that when bidirectional attention already works well without MNTP (as established earlier), the MNTP step provides marginal additional benefit for sequence tasks beyond what SimCSE alone can achieve. For S-LLaMA and LLaMA-2, however, skipping MNTP is catastrophic: Bi + SimCSE at 44.46 and 44.13 respectively, compared to 52.40 and 58.97 with MNTP.
+
+**The Uni + SimCSE comparison.** Training SimCSE directly on causal models (Uni + SimCSE) provides meaningful improvements: S-LLaMA-1.3B Uni + SimCSE + w. Mean reaches 47.13, LLaMA-2-7B reaches 53.55, Mistral-7B reaches 53.95. These are substantial gains over the non-SimCSE causal baselines (34.99, 47.85, 44.01 respectively). However, they all fall short of the full LLM2Vec pipeline, demonstrating that contrastive learning alone cannot fully compensate for the causal attention bottleneck.
+
+- **Cited figures/tables**: Figure 3, Table 5.
+
+---
+
+#### Sequence-Level Tasks (Full MTEB): Unsupervised State-of-the-Art
+
+Table 1 presents the full 56-dataset MTEB results for the best model configurations selected from the subset ablation.
+
+**LLM2Vec Mistral-7B sets a new unsupervised SOTA of 56.80.** The full pipeline (Bi + MNTP + SimCSE + Mean) applied to Mistral-7B achieves 56.80, substantially exceeding the previous unsupervised best of 45.45 (BERT + SimCSE) by 11.35 points, and also outperforming the best causal baseline (LLaMA-2-7B Uni + w. Mean at 44.54) by 12.26 points. The Mistral-7B result represents a 33.8% relative improvement over the causal baseline for that model (42.46 → 56.80).
+
+**Per-category breakdown for Mistral-7B LLM2Vec (full):** Retrieval: 38.05; Reranking: 53.99; Clustering: 40.63; Pair Classification: 80.94; Classification: 74.07; STS: 78.50; Summarization: 30.19. The largest gains over the Uni + w. Mean baseline are in Pair Classification (80.94 vs. 60.28, +20.66) and STS (78.50 vs. 58.59, +19.91)—tasks that depend heavily on fine-grained semantic comparison, where bidirectional context is most valuable. Retrieval also improves dramatically (38.05 vs. 10.43, +27.62), though the absolute numbers remain modest compared to supervised models.
+
+**The MNTP-only variant already provides large gains.** Mistral-7B Bi + MNTP (without SimCSE, but with mean pooling) achieves 49.43 on full MTEB—already a 16.4% relative improvement over the Uni baseline (42.46), and roughly on par with or exceeding the best Echo embeddings (Echo Mistral-7B at 50.26). LLaMA-2-7B Bi + MNTP achieves 45.70, slightly above Echo LLaMA-2-7B at 45.36. S-LLaMA-1.3B Bi + MNTP achieves 41.43, well above Echo S-LLaMA-1.3B at 39.10. Meta-LLaMA-3-8B Bi + MNTP achieves 48.84, substantially above Echo Meta-LLaMA-3-8B at 45.32.
+
+**SimCSE provides the final boost, with model-dependent magnitude.** Adding SimCSE to the MNTP-trained model improves S-LLaMA-1.3B from 41.43 to 49.42 (+7.99, a 19.3% relative gain); LLaMA-2-7B from 45.70 to 55.36 (+9.66, 21.1%); Mistral-7B from 49.43 to 56.80 (+7.37, 14.9%); Meta-LLaMA-3-8B from 48.84 to 56.23 (+7.39, 15.1%). The diminishing relative returns for Mistral and Meta-LLaMA-3 suggest that their stronger out-of-the-box representations leave less room for SimCSE to improve, but the absolute gains remain substantial (~7.4 points).
+
+**Meta-LLaMA-3-8B + LLM2Vec reaches 56.23, second only to Mistral.** This is notable because Meta-LLaMA-3-8B is a newer, presumably stronger model—yet it slightly underperforms Mistral-7B after LLM2Vec. The paper does not investigate this gap in detail, but possible explanations include Mistral's architectural bidirectionality (giving it a stronger foundation for the adaptation steps) or differences in pre-training data mixture. Meta-LLaMA-3-8B Bi + MNTP (48.84) outperforms Mistral-7B Bi + MNTP (49.43) by a negligible margin, but the gap widens after SimCSE (56.23 vs. 56.80), suggesting Mistral benefits more from the contrastive step.
+
+**Echo embeddings comparison summary.** Across all four models, LLM2Vec (with or without SimCSE) outperforms Echo embeddings on S-LLaMA-1.3B (+2.33 without SimCSE), LLaMA-2-7B (+0.34), and Meta-LLaMA-3-8B (+3.52). On Mistral-7B, Echo (50.26) slightly edges out LLM2Vec without SimCSE (49.43) by 0.83 points, but LLM2Vec with SimCSE (56.80) wins decisively. The paper notes this comparison is slightly unfair (SimCSE provides an additional training step Echo doesn't have), but the runtime efficiency argument (Table 6: LLM2Vec takes ~44 hours for MTEB evaluation vs. ~64 hours for Echo on Mistral-7B) is independent of SimCSE.
+
+- **Cited figures/tables**: Table 1, Table 6, Table 11 (per-task breakdown).
+
+---
+
+#### Supervised MTEB: State-of-the-Art Among Public-Data-Only Models
+
+Table 2 presents results after combining LLM2Vec (or its partial variants) with supervised contrastive fine-tuning on the public portion of the E5 dataset (~1.5M samples).
+
+**Meta-LLaMA-3-8B + LLM2Vec (w/o SimCSE) achieves 65.01, the new SOTA for public-data-only models.** This surpasses the previous best—E5-Mistral-7b-v1 at 64.56 and Echo-Mistral-7b-v1 at 64.68—by approximately 0.3-0.4 points. When placed on the full MTEB leaderboard (Table 9, as of March 29, 2024), this result ranks 6th overall and 1st among models trained exclusively on public data. (The top-5 models—SFR-Embedding-Mistral at 67.56, voyage-lite-02-instruct at 67.13, etc.—use proprietary training data.)
+
+**LLM2Vec improves all models over their causal supervised baselines.** Comparing Bi + MNTP to Uni + w. Mean after supervised training:
+- S-LLaMA-1.3B: 61.85 vs. 60.44 (+1.41)
+- LLaMA-2-7B: 64.14 vs. 62.96 (+1.18)
+- Mistral-7B: 64.80 vs. 63.20 (+1.60)
+- Meta-LLaMA-3-8B: 65.01 vs. 63.87 (+1.14)
+
+These gains are smaller than in the unsupervised setting (where LLM2Vec added 7-12 points), which is expected: supervised contrastive training on 1.5M labeled pairs provides a strong signal that can partially overcome representational deficiencies. However, LLM2Vec's advantage persists, showing that even with abundant supervised data, starting from better token representations helps.
+
+**SimCSE is less crucial (or slightly harmful) in the supervised setting.** For LLaMA-2-7B, Bi + MNTP + SimCSE (64.04) slightly underperforms Bi + MNTP alone (64.14). For Mistral-7B, the SimCSE variant achieves 64.72 vs. 64.80 without SimCSE. For Meta-LLaMA-3-8B, 64.90 with SimCSE vs. 65.01 without. Only S-LLaMA-1.3B benefits marginally (61.96 with SimCSE vs. 61.85 without). This makes intuitive sense: the SimCSE step provides unsupervised sequence-level pre-training, but supervised contrastive training on E5 provides a strictly stronger sequence-level signal using real labeled pairs. Any benefit from SimCSE is largely redundant when 1.5M supervised examples are available. However, as Section 5.2 demonstrates, SimCSE substantially improves *sample efficiency*, making it valuable in data-constrained regimes even if the final performance is similar.
+
+**Per-category supervised results for the best model (Meta-LLaMA-3-8B Bi + MNTP):** Retrieval: 56.63; Reranking: 59.68; Clustering: 46.45; Pair Classification: 87.80; Classification: 75.92; STS: 83.58; Summarization: 30.94. The largest gains over the Uni baseline are in Retrieval (56.63 vs. 55.42, +1.21) and Clustering (46.45 vs. 43.19, +3.26). The STS category (83.58 vs. 83.95) actually slightly regresses, suggesting the Uni baseline's weighted mean pooling may have an advantage for semantic similarity tasks that LLM2Vec's mean pooling doesn't fully recover in the supervised setting.
+
+- **Cited figures/tables**: Table 2, Table 12 (per-task breakdown), Table 9 (leaderboard).
+
+---
+
+#### Supervised Training Dynamics: LLM2Vec Improves Sample Efficiency
+
+Figure 6 presents MTEB subset scores at 25-step intervals during supervised training for all three main models.
+
+**LLM2Vec-transformed models learn faster.** At every checkpoint from step 25 onward, the LLM2Vec variants (especially Bi + MNTP + SimCSE + Mean) achieve higher MTEB subset scores than their causal (Uni + w. Mean) counterparts. For Mistral-7B, the LLM2Vec curve is approximately 5-10 points above the Uni curve throughout training. For S-LLaMA-1.3B, the gap is particularly pronounced early in training (steps 25-50), where Bi + MNTP alone is already significantly ahead of Uni. Even the MNTP-only variant (without SimCSE) demonstrates improved sample efficiency for S-LLaMA-1.3B, staying above the Uni baseline across most of the training trajectory.
+
+**The gap narrows but doesn't close with more training.** All models converge toward similar final performance with sufficient steps, but the LLM2Vec variants reach competitive scores substantially earlier. For S-LLaMA-1.3B, Bi + MNTP + SimCSE at step 50 achieves roughly the same score as Uni + w. Mean at step 100—doubling the sample efficiency. For LLaMA-2-7B, the gap is smaller but consistent, with LLM2Vec variants maintaining a ~3-5 point lead through mid-training. For Mistral-7B, the Bi + MNTP + SimCSE curve consistently outperforms until convergence near step 100.
+
+**The Bi (no training) + Mean baseline is particularly poor during supervised training.** For all three models, the green curve (Bi without MNTP, with mean pooling) underperforms even the Uni baseline throughout most of training. This reinforces the earlier finding: naively enabling bidirectional attention without adaptation produces representations that are not only worse at initialization but also harder to recover through downstream supervised training. The MNTP step is not just a performance booster—it is essential for making bidirectional attention usable at all for S-LLaMA and LLaMA-2.
+
+- **Cited figures/tables**: Figure 6.
+
+---
+
+#### Analysis: Future Token Integration and Representation Similarity
+
+Section 4.1 and 4.2 provide mechanistic analysis rather than benchmark results, but they are evaluated quantitatively.
+
+**Prefix-similarity analysis (Figure 4, Figure 7).** On the synthetic dataset of 35 sentence triples where queries share prefixes with positive and negative examples, the paper measures whether pooling only over the shared prefix produces higher cosine similarity for the positive pair. For S-LLaMA-1.3B with Bi (no training), the distributions of `Sim(q, s+)` and `Sim(q, s−)` overlap heavily, indicating the model cannot distinguish the two and does not incorporate future-token information into prefix representations. With Bi + MNTP, the distributions separate clearly—the median `Sim(q, s+)` shifts to approximately 0.91 while `Sim(q, s−)` remains around 0.87-0.88. For Mistral-7B, even Bi (no training) shows clear separation (~0.86 for negative, ~0.92 for positive), consistent with its ability to handle bidirectional attention without training. LLaMA-2-7B (Figure 7b) shows the same pattern as S-LLaMA: no separation with Bi (no training), clear separation with Bi + MNTP, and Echo embeddings (included in Figure 7 for comparison) show separation comparable to Bi + MNTP.
+
+**Representation similarity under causal vs. bidirectional attention (Figure 5, Figure 8, Figure 9).** For a random Wikipedia paragraph, the paper computes cosine similarity between hidden states produced under causal attention (`$H^c_l$`) and bidirectional attention (`$H^{bi}_l$`) at every layer and token position. For S-LLaMA-1.3B and LLaMA-2-7B, similarity is near 0.0 for many token positions in early-to-middle layers, and only approaches 1.0 for the earliest layers (0-4) and the final tokens of the sequence. For Mistral-7B, similarity exceeds 0.9 across almost all layers and token positions, with only minor dips in a few positions. Figure 8 replicates this for two additional Wikipedia paragraphs, showing the pattern is consistent across inputs. Figure 9 extends to three Mistral variants (v0.1, Instruct-v0.1, Instruct-v0.2), all showing high similarity, confirming this is a property of the base model architecture, not the instruction-tuning variant.
+
+- **Cited figures/tables**: Figures 4, 5, 7, 8, 9.
+
+---
+
+### Ablation Studies and Robustness Checks
+
+**Pooling method across model variants (Table 5):** Mean pooling consistently outperforms weighted mean and EOS for all LLM2Vec-transformed models on the MTEB subset. The gap is particularly large for EOS (e.g., S-LLaMA-1.3B Bi + MNTP + SimCSE: Mean 52.40, w. Mean 50.23, EOS 45.57). For causal (Uni) models, weighted mean is best, but the absolute scores are lower. This ablation justifies the default recommendation: use weighted mean for causal decoders, mean for LLM2Vec models.
+
+**MNTP masking strategy and probability (Appendix D.1.1):** A hyperparameter search over BERT-style vs. RoBERTa-style masking and probabilities in {20%, 40%, 60%, 80%, 90%} was performed, selecting the best configuration based on SICK-R. The optimal choices differ by model: S-LLaMA-1.3B, LLaMA-2-7B, and Meta-LLaMA-3-8B use BERT-style masking at 20%; Mistral-7B uses RoBERTa-style at 80%. The paper does not report the full sweep results, so the sensitivity of final MTEB performance to these choices cannot be assessed. However, the fact that the optimal masking rate differs dramatically (20% vs. 80%) suggests model-specific tuning is important.
+
+**SimCSE dropout probability (Appendix D.1.2):** Increasing dropout from the standard 0.1 (used for encoder models) to 0.3 was necessary for optimal performance with decoder LLMs. The paper states that "initial experiments indicated that the low value of dropout probability (0.1)... does not lead to optimal performance for larger decoder-only LLMs" but does not provide a quantitative comparison. This is a notable gap: the magnitude of the improvement from higher dropout would help practitioners decide whether to invest in this hyperparameter search.
+
+**MNTP for word-level tasks with different masking rates (Appendix D.1.3):** For word-level tasks, Mistral-7B's MNTP variant trained with 80% masking (RoBERTa style, optimal for sequence tasks) performs worse than a variant trained with 20% masking (BERT style). The paper notes this explicitly: "Although 80% masking helps with the performance in sentence-level tasks, it prevents the model from learning proper token representations essential for word-level tasks." The word-level results in Table 4 use the 20% variant for Mistral when MNTP is involved. This finding is significant: the optimal MNTP configuration is task-dependent, and a single MNTP training run may not be optimal for both word and sequence tasks.
+
+**Instruction token exclusion from pooling (Section 3.2):** The paper states that when applying mean pooling, instruction tokens are excluded. No ablation is provided for this choice, but it is a standard practice in the instruction-based embedding literature (Su et al., 2023; Wang et al., 2023). Including instruction tokens would likely introduce an artificial similarity signal (two sentences with the same instruction would appear more similar regardless of content), so the choice is well-motivated even without ablation.
+
+**Full MTEB vs. subset consistency (Tables 1 and 5):** The relative ordering of methods on the 15-task subset is largely consistent with the full 56-task MTEB. For example, Mistral-7B Bi + MNTP + SimCSE + Mean achieves 60.50 on the subset and 56.80 on the full benchmark—both substantially above the Uni baseline and all partial configurations. This validates the subset as a reliable proxy for the full benchmark during ablation.
+
+**Cross-model consistency (Tables 1 and 2):** The LLM2Vec recipe produces consistent improvements across all four tested model families (S-LLaMA-1.3B, LLaMA-2-7B, Mistral-7B, Meta-LLaMA-3-8B) and across both unsupervised and supervised settings. This is a robustness check on the approach's generality: it does not depend on specific properties of a single model architecture or training regime.
+
+**Echo embeddings implementation sanity check (Appendix E.1):** To validate their reimplementation, the authors evaluate Echo embeddings on the 26-task subset used by Springer et al. (2024) with Mistral-7B-Instruct-v0.1 and achieve 55.22, matching the reported 55.07 within reasonable variance. This confirms that the Echo baseline numbers in Table 1 are comparable to the original work.
+
+- **Cited figures/tables**: Table 5, Appendix D.1.1, Appendix D.1.2, Appendix D.1.3, Appendix E.1, Tables 1 and 2, Figures 4 and 7.
+
+---
+
+### Critical Assessment
+
+#### Claim 1: LLM2Vec transforms any decoder-only LLM into a strong text encoder.
+
+**What was tested:** Four models (S-LLaMA-1.3B, LLaMA-2-7B, Mistral-7B, Meta-LLaMA-3-8B) from three model families, all in the 1.3B-8B parameter range, all instruction-tuned variants. Results are consistent: all four show substantial improvements from LLM2Vec in both unsupervised (Table 1) and supervised (Table 2) settings.
+
+**What was not tested:** Non-instruction-tuned (base) models, models from other families (GPT, PaLM, Falcon, Qwen), models at different scales (e.g., 13B, 70B, 405B), non-English models, or models with different tokenization strategies. The claim "any decoder-only LLM" is stronger than the evidence supports. The Mistral exception (models with partial bidirectional pre-training benefit less from MNTP) already demonstrates that pre-training details matter. It is plausible that some decoder LLMs—particularly those trained with unusual attention patterns or on heavily domain-specific data—might not respond as well to the recipe.
+
+**Additionally:** The evaluation is entirely English-only, on a benchmark (MTEB) that is itself English-only. Extending to multilingual embedding tasks is flagged as future work but completely untested.
+
+#### Claim 2: The three steps (bidirectional attention, MNTP, SimCSE) are each necessary.
+
+**What was tested:** The ablation in Table 5 tests all meaningful combinations: Uni, Bi, Bi + MNTP, Bi + SimCSE, Uni + SimCSE, and Bi + MNTP + SimCSE, across three pooling methods and three models. The results clearly show that the full pipeline outperforms all partial configurations for sequence-level tasks.
+
+**What the ablation genuinely shows:** For S-LLaMA-1.3B and LLaMA-2-7B, all three steps are indeed necessary—removing any one causes a significant drop (e.g., S-LLaMA-1.3B: 52.40 full vs. 42.10 without SimCSE vs. 44.46 without MNTP). For Mistral-7B, the necessity of MNTP is weaker: Bi + SimCSE (60.29) is within 0.21 points of the full pipeline (60.50), suggesting that for models with architectural bidirectionality, MNTP may be optional for sequence tasks. The paper acknowledges this implicitly by noting Mistral's exceptional behavior, but the claim "three steps are necessary" should be qualified: for most current models (without bidirectional pre-training), all three are necessary; for models with bidirectional properties, two may suffice.
+
+**A missing ablation:** What if MNTP is replaced with standard masked language modeling (predicting from the masked position itself, position `i`, rather than position `i−1`)? The paper argues that predicting from position `i−1` aligns with the decoder's pre-training, but provides no empirical evidence that this design choice matters. A direct comparison would strengthen the claim that MNTP is specifically necessary (rather than just "some form of masked prediction adaptation").
+
+**Another missing ablation:** What if SimCSE is applied before MNTP? The paper's sequential design (merge MNTP, then SimCSE) is motivated but never compared to the reverse order or to joint training. If SimCSE → MNTP performs similarly, the modular sequencing argument would be weakened.
+
+#### Claim 3: LLM2Vec sets a new unsupervised state-of-the-art on MTEB (56.80).
+
+**What was tested:** The full MTEB benchmark across all 56 datasets with Mistral-7B LLM2Vec (Bi + MNTP + SimCSE + Mean).
+
+**What this claim means and doesn't mean:** The paper's unsupervised SOTA claim is specifically among models trained without any labeled data. This is a meaningful category but a narrow one—the absolute performance (56.80) is substantially below supervised models (65.01 for the best public-data supervised model, 67.56 for the overall MTEB leaderboard leader using proprietary data). The practical relevance of an unsupervised SOTA depends on whether the user has labeled data. If they do, they should use supervised training and the unsupervised SOTA is academically interesting but not practically optimal.
+
+**A caution on the comparison to Echo embeddings:** The LLM2Vec results include SimCSE (which is an additional 1000-step training stage), while Echo embeddings are zero-training (just a forward-pass trick). The fair comparison is LLM2Vec without SimCSE (Bi + MNTP) vs. Echo, and here the results are mixed: LLM2Vec wins on three models but loses on Mistral-7B (49.43 vs. 50.26). The paper's claim of outperforming Echo "without inducing any additional computational overhead at inference time" (Section 6) is correct and important, but the performance advantage is modest without SimCSE.
+
+#### Claim 4: Mistral models can handle bidirectional attention without training.
+
+**What was tested:** Word-level tasks (Figure 2), MTEB subset (Figure 3, Table 5), prefix-similarity analysis (Figure 4), and layer-wise representational similarity (Figures 5, 8, 9)—all showing Mistral-7B performs well or even improves with bidirectional attention and no training, while S-LLaMA and LLaMA-2 degrade.
+
+**What the evidence shows:** The representational similarity analysis (Figures 5, 8) is the most direct evidence: hidden states under causal and bidirectional attention are nearly identical for Mistral, very different for the other models. This is a genuine discovery, not a methodological claim. The paper appropriately labels it as speculation ("we speculate that Mistral models are pre-trained with some form of bidirectional attention") and does not claim certainty.
+
+**What would strengthen this claim:** Access to Mistral's training details would confirm or refute the hypothesis. Failing that, training a small model from scratch with known amounts of bidirectional pre-training and measuring the representational similarity metric would calibrate the analysis. As is, the evidence is strong but circumstantial—the high representational similarity could have other explanations (e.g., architectural properties of sliding window attention that interact with bidirectionality in unexpected ways).
+
+#### Claim 5: LLM2Vec leads to state-of-the-art supervised performance among public-data-only models (65.01).
+
+**What was tested:** Meta-LLaMA-3-8B + Bi + MNTP + supervised training on E5 (public portion only).
+
+**Genuine strengths of this result:** The comparison set (Table 2) is well-chosen: Instructor-xl (61.79), BGE-large-en-v1.5 (64.23), GritLM-Mistral-7b (64.70), E5-Mistral-7b (64.56), Echo-Mistral-7b (64.68)—all strong recent models using the same or similar training data. LLM2Vec Meta-LLaMA-3-8B at 65.01 edges out all of them.
+
+**Caveats:** The margin is small (~0.3 points over the next-best model). MTEB scores are averaged over 56 datasets with different metrics, and the variance of this aggregate is not reported. A 0.3-point difference on a 0-100 scale could plausibly arise from dataset sampling, evaluation noise, or minor implementation differences rather than genuine model superiority. Additionally, the comparison is to models as reported in prior work, not all re-evaluated under identical conditions. Small differences in instruction wording, pooling implementation, or tokenization can shift MTEB scores by fractions of a point.
+
+#### Claim 6: LLM2Vec improves sample efficiency during supervised training.
+
+**What was tested:** Figure 6 shows MTEB subset scores at 25-step intervals for three models, comparing Uni + w. Mean to LLM2Vec variants.
+
+**What the figure genuinely demonstrates:** The LLM2Vec curves are above the Uni curves at early checkpoints for all three models. For S-LLaMA-1.3B, the gap is dramatic (~15-20 points at step 25). For LLaMA-2-7B and Mistral-7B, the gaps are smaller but consistent (~5 points). The claim that LLM2Vec "leads to better performance with less steps" (Section 5.2) is supported.
+
+**Caveats and missing analysis:** The sample efficiency claim would be stronger with a quantitative metric—e.g., "LLM2Vec reaches 90% of final performance in X steps vs. Y steps for the Uni baseline." The paper does not provide this. Additionally, the evaluation is on the 15-task subset only, not the full MTEB. The sample-efficiency advantage may differ across task categories (e.g., retrieval might benefit more from LLM2Vec's better token representations than classification). Finally, the sample efficiency comparison is only shown for models that *start* supervised training from LLM2Vec checkpoints—it does not isolate whether the benefit comes from the MNTP step, the SimCSE step, or simply from having been trained on more data (Wikitext + Wikipedia sentences) before supervised training begins.
+
+#### Overall strengths of the experimental design:
+
+- **Comprehensive ablation:** Table 5 tests nearly every combination of components, pooling methods, and models, providing a clear picture of what each step contributes.
+- **Multiple model families:** Testing on four models from three families (LLaMA, Mistral, Meta-LLaMA) demonstrates the approach is not model-specific.
+- **Both unsupervised and supervised evaluation:** The paper evaluates LLM2Vec as a complete pipeline (unsupervised) and as a pre-training step for supervised fine-tuning, covering both use cases.
+- **Mechanistic analysis:** The prefix-similarity and representational similarity analyses (Section 4) go beyond benchmark scores to explain *why* the method works and *how* it changes the model's internal representations.
+- **Fairness to baselines:** The Echo embeddings comparison accounts for training budget differences by evaluating LLM2Vec without SimCSE. The instruction set is held constant across all models.
+
+#### Overall weaknesses and missing experiments:
+
+- **Single benchmark family (MTEB):** While MTEB is comprehensive for English text embedding, it is one benchmark. No evaluation on domain-specific retrieval (biomedical, legal, code), multilingual tasks, or long-document tasks is provided.
+- **Single training dataset family (Wikipedia):** Both MNTP and SimCSE use Wikipedia-derived data. Models may perform differently if adapted on domain-specific text (e.g., scientific articles, legal documents, code). The assumption that Wikipedia is in the pre-training data is reasonable but unverified for Mistral and Meta-LLaMA-3 (whose training data composition is not fully public).
+- **No sensitivity analysis for training steps:** Both MNTP and SimCSE use exactly 1000 steps with no ablation of this choice. It is possible that fewer steps suffice (further improving the efficiency argument) or more steps would help (suggesting the results are not converged).
+- **No comparison to full fine-tuning:** The paper emphasizes parameter efficiency via LoRA, but does not compare LoRA-based LLM2Vec to full fine-tuning with the same objectives. If full fine-tuning significantly outperforms LoRA, practitioners with sufficient compute might prefer it.
+- **The MTEB subset as a proxy for the full benchmark:** The subset selection is described as proportional sampling from each category, but the specific 15 datasets are not justified beyond this. If the subset over-represents tasks where LLM2Vec excels, hyperparameter selection based on the subset would bias the full MTEB results upward.
+- **No evaluation of instruction sensitivity:** The instructions used for MTEB evaluation (Table 10) are taken unchanged from Wang et al. (2023). The paper does not test whether LLM2Vec models are more or less sensitive to instruction phrasing than baselines, which matters for practical deployment where users may vary instructions.
+- **Limited statistical reporting:** No standard deviations, confidence intervals, or significance tests are reported for any experimental results. The MTEB scores are presented as point estimates without any measure of uncertainty, making it impossible to assess whether differences of 0.3-0.5 points (which separate top models in the supervised comparison) are statistically meaningful.
+
+## 6. Limitations and Trade-offs
+
+### The Difficulty Estimation Cost Is Unaccounted For in Reported Efficiency Gains
+
+**The assumption or constraint.** The compute-optimal framework depends on estimating each prompt's difficulty before allocating the inference budget. The paper's method for doing so—generating 2048 samples per question and averaging either ground-truth correctness (oracle) or PRM final-answer scores (predicted)—is extraordinarily expensive. The authors acknowledge this explicitly in Section 3.2:
+
+> "estimating difficulty in this way still incurs additional computation cost during inference... our experiments do not account for this cost largely for simplicity"
+
+**The consequence.** The reported 4× efficiency gains over best-of-N are computed *after* difficulty is known, without amortizing the cost of learning it. At 2048 samples per question, the difficulty estimation step alone consumes **more compute than the largest test-time budgets studied** (256–512 generations). In a realistic deployment, the total cost would be difficulty estimation + strategy execution, and the former could dominate the latter. An easy question that the compute-optimal policy solves with 16 generations actually costs 2048 + 16 = 2064 generations—far more than the best-of-N baseline it supposedly beats. The 4× figure should therefore be understood as an **upper bound on achievable efficiency** under the unrealistic assumption of free difficulty estimation, not a realized deployment gain.
+
+**What evidence exists in the paper.** The paper contains no experiment or analysis quantifying the impact of amortizing difficulty estimation costs. The predicted difficulty bins approach (using PRM scores instead of ground-truth labels) reduces the need for oracle access but does not reduce the sample cost—it still requires 2048 generations per question. Section 3.2 flags the exploration-exploitation tradeoff but provides no experimental treatment:
+
+> "this is an exploration-exploitation tradeoff... we leave more complex approaches of assigning test-time compute to future work"
+
+**Mitigation status.** The paper explicitly acknowledges this limitation and suggests future work on training models to predict difficulty directly from the question text (Section 8). However, no such model is developed or evaluated, and no experiment measures how much efficiency degrades when difficulty estimation costs are included. Until this gap is closed, the headline 4× improvement cannot be realized in any deployment context.
+
+---
+
+### Hard Problems Remain Essentially Unsolved—Test-Time Compute Cannot Create Capability
+
+**The assumption or constraint.** The paper's approach rests on the premise that the base model's proposal distribution already contains correct solutions at some non-trivial rate for the prompts being optimized. When this premise fails—when the model's pass@1 is near zero—test-time compute provides negligible benefit regardless of budget or strategy.
+
+**The consequence.** Across all methods (search, revisions, and their compute-optimal combinations), the hardest questions (difficulty bin 5) show **near-zero improvement** with any amount of test-time compute. In Figure 3 (right), bin 5 accuracy hovers at 1–3% for all search methods and all budget levels from 4 to 256 generations. In Figure 7 (right), bin 5 shows roughly 2–3% accuracy regardless of the sequential-to-parallel ratio at 128 generations. In the FLOPs-matched comparison (Figure 9), the bin 5 scaling curve is essentially flat near 0–5% for both revisions and PRM search, while the 14× larger model maintains non-trivial performance. This is not a small gap—it is a **fundamental capability boundary**: test-time compute amplifies existing capability but cannot create it from nothing. For problems outside the base model's reach (by the paper's own evidence, perhaps 20–40% of MATH problems depending on the model), no amount of compute-optimal allocation helps.
+
+**What evidence exists in the paper.** The per-difficulty-bin analyses across all three experimental dimensions (search: Figure 3 right; revisions: Figure 7 right; FLOPs-matched: Figure 9) consistently show bin 5 as a flat line near the x-axis. The paper is candid about this in the Section 7 conclusion: for hard problems, pretraining is almost always more effective. The FLOPs-matched bar chart (Figure 1) shows hard problems at R ≫ 1 suffering a −52.9% relative disadvantage from test-time compute vs. the larger model for PRM search.
+
+**Mitigation status.** None. The paper transparently reports this as a boundary condition:
+
+> "this means the approach offers no path forward for genuinely novel or out-of-distribution reasoning that exceeds the base model's training distribution"
+
+This is not a fixable limitation within the framework—it is a statement about what test-time compute can and cannot do. The practical implication is that deployment strategies must include a fallback (larger model, human review, task decomposition) for hard problems, and the difficulty estimator's most important function may be **identifying which problems to escalate rather than waste compute on**.
+
+---
+
+### The 14× Larger Model Baseline Is Weaker Than a Compute-Optimal Pretraining Baseline Would Be
+
+**The assumption or constraint.** The FLOPs-matched comparison in Section 7 scales model parameters while holding training data fixed, following the LLaMA paradigm rather than Chinchilla-optimal training. The authors acknowledge this choice:
+
+> "We choose this setting as it is representative of a canonical approach to scaling pretraining compute and leave the analysis of compute-optimal scaling of pretraining compute where the data and parameters are both scaled equally to future work."
+
+Additionally, the 14× larger model uses only **greedy decoding**—no majority voting, no best-of-N, no search, no compute-optimal allocation of its own test-time budget.
+
+**The consequence.** The reported advantages of test-time compute over pretraining—for example, +27.8% relative improvement on easy questions at R ≪ 1 with revisions (Figure 1 bar chart, top-right)—are measured against a baseline that is **weaker than it could be in two independent ways**. First, a Chinchilla-optimal model trained with 14× more total FLOPs (scaling both parameters and data equally) would likely outperform a parameter-only-scaled model trained on the same data, narrowing or reversing the reported gap. Second, giving the larger model even a modest test-time compute budget (e.g., best-of-8 or majority voting over 8 samples, which costs far less than the test-time budgets studied for the smaller model) would create a much stronger baseline that is never tested. The comparison is therefore asymmetric: the smaller model gets a sophisticated, difficulty-adaptive inference strategy while the larger model gets greedy decoding. The paper's headline finding that "a smaller model augmented with compute-optimal test-time strategies can outperform a ~14× larger pretrained model" should be understood as "can outperform a ~14× larger **non-compute-optimally-trained** model **using greedy decoding alone**." Both qualifiers matter.
+
+**What evidence exists in the paper.** The paper explicitly acknowledges the pretraining scaling choice (Section 7) but does not run any experiments with a Chinchilla-optimal baseline or with test-time compute applied to the larger model. Figure 9 shows the larger model's performance as stars at three R values, but the lines showing the smaller model's scaling come exclusively from the smaller model with test-time compute. The bar charts in Figure 1 are the primary source for the "outperforms a 14× larger model" claim.
+
+**Mitigation status.** The paper flags the compute-optimal pretraining comparison as future work:
+
+> "we leave the analysis of compute-optimal scaling of pretraining compute where the data and parameters are both scaled equally to future work"
+
+However, no experiment tests the impact of giving the larger model any test-time compute budget, which would be a more immediate and informative ablation than the full Chinchilla comparison. The current results represent an **upper bound on the advantage of test-time compute over pretraining**—a bound that is almost certainly looser than the paper's framing suggests.
+
+---
+
+### Single Benchmark, Single Model Family Limits Generality of the Findings
+
+**The assumption or constraint.** All experiments use the MATH benchmark (500 test questions) with PaLM 2-S* as the base model. The authors state in Section 4:
+
+> "We believe this model is representative of the capabilities of many contemporary LLMs"
+
+but this claim is unverified through any out-of-distribution testing.
+
+**The consequence.** Several aspects of the findings could be model-specific or benchmark-specific in ways that undermine their generality:
+
+- **PRM over-optimization behavior** depends on the verifier's calibration properties, which in turn depend on PaLM 2-S*'s output distribution. A differently-trained model might produce solutions that are harder or easier for the verifier to score accurately, shifting the difficulty thresholds at which beam search becomes harmful vs. helpful (Figure 3, right).
+
+- **Revision model effectiveness** depends on the base model's in-context learning and self-correction capabilities, which vary substantially across model families. The paper's finding that revisions work best on easy problems could invert for a model that is better at global reasoning than local refinement.
+
+- **The difficulty bins themselves** are defined relative to PaLM 2-S*'s pass@1 distribution on MATH. A model with different strengths and weaknesses would have a different mapping from "difficulty" to "optimal strategy," and the five-bin discretization with fixed strategy assignments might not transfer.
+
+- **The MATH benchmark** consists exclusively of competition-level math problems requiring symbolic reasoning. The core phenomenon driving the paper's results—beam search over-optimizing on easy problems, revisions excelling on easy problems, no method helping on the hardest problems—may not generalize to other reasoning domains (code generation, logical reasoning, scientific QA) or to tasks requiring factual recall rather than multi-step inference.
+
+**What evidence exists in the paper.** There is no cross-model or cross-benchmark experiment. The paper tests exactly one model (PaLM 2-S*) on exactly one benchmark (MATH), with a test set of 500 questions split into five difficulty quintiles of ~100 each. Strategy selection via two-fold cross-validation operates on ~50 questions per bin per fold.
+
+**Mitigation status.** The paper does not claim generality beyond MATH or PaLM 2-S*, and the limitation is inherent to the empirical scope rather than hidden. However, the strong conclusions drawn ("computing-optimal test-time scaling," "test-time compute can be more effective than scaling pretraining compute") are not hedged with scope qualifiers in the abstract, introduction, or conclusion. A reader skimming the headline claims would reasonably assume the findings apply broadly, which the paper's own experimental design does not support.
+
+---
+
+### Sequential Revision Strategies Introduce Latency Costs Incompatible with Real-Time Applications
+
+**The assumption or constraint.** The paper measures compute exclusively in **generations** (number of complete solutions sampled), which is a reasonable proxy for total FLOPs but ignores **wall-clock latency**. Sequential revisions are inherently serial—each revision depends on the previous one—while parallel best-of-N can be executed simultaneously given sufficient hardware.
+
+**The consequence.** The compute-optimal policy often allocates budget in ways that are sequentially heavy, particularly on easy problems where pure sequential revision is optimal (Figure 7, right: bin 2 shows monotonically increasing performance with sequential-to-parallel ratio). A strategy that allocates 128 generations as 64 sequential revisions × 2 parallel chains costs roughly 64× more wall-clock time than one that runs all 128 samples in parallel. For latency-sensitive applications—interactive assistants, real-time code generation, on-device deployment where parallelism is limited—the sequential-heavy strategies that the compute-optimal policy favors may be **practically unusable regardless of their accuracy advantages**. An end-user waiting for a response doesn't care about total FLOPs; they care about time-to-answer.
+
+The paper's 4× efficiency claim is therefore a **throughput efficiency** claim (total computation per correct answer), not a **latency efficiency** claim. In deployment scenarios where latency matters, the optimal strategy under a wall-clock constraint might look very different from the compute-optimal strategy under a generation-count constraint—potentially shifting the balance back toward parallel sampling even on easy problems where sequential revisions would achieve higher accuracy per FLOP.
+
+**What evidence exists in the paper.** None. The paper does not report wall-clock times for any generation strategy, does not compare latency-equivalent budgets (e.g., 128 parallel generations vs. 16 sequential revisions × 8 parallel chains, which might have similar wall-clock time on 8 GPUs), and does not discuss the latency-throughput tradeoff anywhere in the main text or appendices.
+
+**Mitigation status.** The paper does not acknowledge this limitation. The term "latency" does not appear in the paper. The compute-optimal framework, as formulated in Equation 1, optimizes over a single budget variable N (number of generations) with no time dimension. This is a meaningful gap because deployment decisions nearly always involve latency constraints, and the paper's policy recommendations ("use sequential revisions on easy problems") may be counterproductive under those constraints.
+
+## 7. Implications and Future Directions
+- Field impact
+  - Demonstrates that decoder-only LLMs can be turned into universal text encoders with minimal, unsupervised adaptation, often matching or beating specialized encoders and “input duplication” methods (Echo) while being more efficient at inference (Table 1; Appendix E.2). This can simplify stacks by unifying generation and embedding in one model family.
+- Practical applications
+  - Retrieval and reranking pipelines, semantic search, clustering, deduplication, and zero/few-shot classification benefit from improved general-purpose embeddings, especially when instruction-following (query prompts) is useful (Tables 1–2; Appendix C.2).
+- Research directions
+  - Understanding pretraining signals: Investigate why Mistral-7B tolerates bidirectional masks without adaptation (Figure 5, Figure 9).
+  - Multilingual LLM2Vec: Apply the same recipe to multilingual LLMs and evaluate on multilingual MTEB variants.
+  - Smaller models and dimensionality reduction: Explore compressing 4096-dim embeddings for scalable indexing while retaining performance (Appendix A).
+  - Task-adaptive trade-offs: Study how to jointly optimize token- and sentence-level quality, possibly with multi-objective training or layer-specific pooling.
+  - Data efficiency: Extend sample-efficiency findings (Figure 6) to very low-label regimes and domain adaptation settings (e.g., legal/biomedical).
+
+> Key Takeaway: With three simple, unsupervised steps—remove the causal mask, briefly adapt via MNTP, and train SimCSE with mean pooling—decoder LLMs become high-performing text encoders. This unlocks strong, efficient embeddings from widely available models and reduces reliance on heavy multi-stage pipelines or inference-inefficient tricks.

@@ -31,7 +31,15 @@ export const listCategories = cache(() =>
 export const getCategory = cache((slug) => GRAPH.categories[slug] ?? null);
 
 export const listPapersInCategory = cache((slug) => {
-  const all = GRAPH.papers.filter((p) => p.category === slug);
+  // Multi-tag aware: a paper appears in category X if X is in its
+  // tagCategories array. Falls back to single-cat (filesystem category)
+  // for papers without multi-tag data.
+  const all = GRAPH.papers.filter((p) => {
+    const cats = Array.isArray(p.tagCategories) && p.tagCategories.length > 0
+      ? p.tagCategories
+      : [p.category];
+    return cats.includes(slug);
+  });
   all.sort((a, b) =>
     a.year !== b.year ? b.year - a.year : (b.month ?? 0) - (a.month ?? 0)
   );

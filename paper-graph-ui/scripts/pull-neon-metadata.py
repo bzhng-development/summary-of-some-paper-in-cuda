@@ -34,7 +34,7 @@ OUT = ROOT / "src/lib/neon-metadata.generated.json"
 
 FIELDS = [
     "id", "title", "abstract", "score", "similar_paper", "score_reason",
-    "tag_category_v2", "tag_confidence", "tag_reason",
+    "tag_category_v2", "tag_categories_v2", "tag_confidence", "tag_reason",
     "authors", "affiliations", "organization", "org_fullname",
     "primary_category", "categories", "published",
     "upvotes", "github", "github_stars", "arxiv_comment",

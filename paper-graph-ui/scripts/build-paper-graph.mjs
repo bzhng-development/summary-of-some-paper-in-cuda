@@ -345,8 +345,33 @@ function main() {
       // tracked company (Qwen/DeepSeek/Moonshot/ByteDance/NVIDIA/etc.)
       // rather than picked on merit. UI filter "merit only" hides these.
       companyOnly: Boolean(meta?.is_only_important_because_of_company),
+      // Multi-tag from V4-Pro. Always a non-empty array — if Neon hasn't
+      // multi-tagged this paper yet, fall back to its filesystem category.
+      // Routes that "list papers in category X" filter where X is IN
+      // tagCategories, so a paper can show up in multiple category indexes.
+      tagCategories: (() => {
+        const raw = meta?.tag_categories_v2;
+        if (Array.isArray(raw) && raw.length > 0) {
+          // Dedup + normalise, drop empties.
+          const seen = new Set();
+          const out = [];
+          for (const c of raw) {
+            const s = String(c || '').trim().toLowerCase();
+            if (s && !seen.has(s)) { seen.add(s); out.push(s); }
+          }
+          if (out.length > 0) return out;
+        }
+        return [category];
+      })(),
     });
-    categoryCounts.set(category, (categoryCounts.get(category) ?? 0) + 1);
+    // categoryCounts is incremented once per (paper, category) pair — so a
+    // multi-tagged paper bumps each of its categories' counts. The home page
+    // + the /c/[category] page filters surface papers via tagCategories now,
+    // not the filesystem category, so the counts must match.
+    const lastPaper = papers[papers.length - 1];
+    for (const cat of lastPaper.tagCategories) {
+      categoryCounts.set(cat, (categoryCounts.get(cat) ?? 0) + 1);
+    }
   }
 
   if (Object.keys(neon).length > 0) {

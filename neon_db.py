@@ -61,12 +61,17 @@ def _load_env() -> None:
         load_dotenv(local_env)
 
     # `<...>/open_source/summary-of-some-paper-in-cuda/neon_db.py` →
-    # `<...>/open_source/company-scraper/nextjs-ui/.env`
+    # `<...>/open_source/company-scraper/nextjs-ui/.env`, or one level deeper
+    # (e.g. `<...>/open_source/mine/company-scraper/nextjs-ui/.env`).
     for parent in here.parents:
-        candidate = parent / "company-scraper" / "nextjs-ui" / ".env"
-        if candidate.exists():
-            load_dotenv(candidate, override=False)
-            return
+        candidates = [
+            parent / "company-scraper" / "nextjs-ui" / ".env",
+            *parent.glob("*/company-scraper/nextjs-ui/.env"),
+        ]
+        for candidate in candidates:
+            if candidate.exists():
+                load_dotenv(candidate, override=False)
+                return
 
 
 _load_env()
@@ -115,6 +120,7 @@ SCHEMA_COLUMNS: Final[tuple[str, ...]] = (
     "tag_reason",
     "score_source",
     "is_only_important_because_of_company",
+    "tag_categories_v2",  # text[] — multi-tag classification (paper can be in N cats)
 )
 
 # Columns the caller is allowed to pass to ``save_paper`` as kwargs. ``id`` is
@@ -271,7 +277,8 @@ class NeonDB:
                 tag_confidence    DOUBLE PRECISION,
                 tag_reason        TEXT,
                 score_source      TEXT,
-                is_only_important_because_of_company BOOLEAN NOT NULL DEFAULT FALSE
+                is_only_important_because_of_company BOOLEAN NOT NULL DEFAULT FALSE,
+                tag_categories_v2 TEXT[]
             )
         """
         with self.get_conn() as conn, conn.cursor() as cur:

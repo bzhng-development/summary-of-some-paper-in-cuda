@@ -48,10 +48,13 @@ body {
   }
 }
 
-/* Merit-only filter — when MeritOnlyToggle is ON, body gets `pg-merit-only`.
-   Any element with `data-company-only="true"` (paper cards/rows for papers
-   where interested=1 was set just because the paper is from a tracked
-   company rather than picked on merit) is hidden. */
+/* Paper-source filter — driven by the 3-way header toggle (All / Merit /
+   Company). The toggle sets one of `pg-merit-only` or `pg-company-only`
+   on <body>; "All" sets neither. CSS hides whichever side is filtered
+   out by matching the `data-company-only` attribute on every paper row. */
 .pg-merit-only [data-company-only="true"] {
+  display: none !important;
+}
+.pg-company-only [data-company-only="false"] {
   display: none !important;
 }

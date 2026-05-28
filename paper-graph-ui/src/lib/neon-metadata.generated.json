@@ -1,4 +1,57 @@
 {
+  "2107.05720": {
+    "id": "2107.05720",
+    "title": "SPLADE: Sparse Lexical and Expansion Model for First Stage Ranking and Re-ranking",
+    "abstract": "In neural Information Retrieval, ongoing research is directed towards improving the first retriever in ranking pipelines. Learning dense embeddings to conduct retrieval using efficient approximate nearest neighbors methods has proven to work well. Meanwhile, there has been a growing interest in learning sparse representations for documents and queries, that could inherit from the desirable properties of bag-of-words models such as the exact matching of terms and the efficiency of inverted indexes. In this work, we present a new first-stage ranker based on explicit sparsity regularization and a log-saturation effect on term weights, leading to highly sparse representations and competitive results with respect to state-of-the-art dense and sparse methods. Our approach is simple, trained end-to-end in a single stage. We also explore the trade-off between effectiveness and efficiency, by controlling the contribution of the sparsity regularization.",
+    "tag_category_v2": "retrieval",
+    "tag_categories_v2": [
+      "retrieval",
+      "training-methods"
+    ],
+    "authors": [
+      "Thibault Formal",
+      "Benjamin Piwowarski",
+      "Stéphane Clinchant"
+    ],
+    "primary_category": "cs.IR",
+    "categories": [
+      "cs.IR"
+    ],
+    "published": "2021-07-12T20:17:44Z",
+    "arxiv_comment": "5 pages, SIGIR'21 short paper",
+    "interested": 1,
+    "is_only_important_because_of_company": false
+  },
+  "2208.03299": {
+    "id": "2208.03299",
+    "title": "Atlas: Few-shot Learning with Retrieval Augmented Language Models",
+    "abstract": "Large language models have shown impressive few-shot results on a wide range of tasks. However, when knowledge is key for such results, as is the case for tasks such as question answering and fact checking, massive parameter counts to store knowledge seem to be needed. Retrieval augmented models are known to excel at knowledge intensive tasks without the need for as many parameters, but it is unclear whether they work in few-shot settings. In this work we present Atlas, a carefully designed and pre-trained retrieval augmented language model able to learn knowledge intensive tasks with very few training examples. We perform evaluations on a wide range of tasks, including MMLU, KILT and NaturalQuestions, and study the impact of the content of the document index, showing that it can easily be updated. Notably, Atlas reaches over 42% accuracy on Natural Questions using only 64 examples, outperforming a 540B parameters model by 3% despite having 50x fewer parameters.",
+    "tag_category_v2": "retrieval",
+    "tag_categories_v2": [
+      "retrieval",
+      "pretraining",
+      "evaluation"
+    ],
+    "authors": [
+      "Gautier Izacard",
+      "Patrick Lewis",
+      "Maria Lomeli",
+      "Lucas Hosseini",
+      "Fabio Petroni",
+      "Timo Schick",
+      "Jane Dwivedi-Yu",
+      "Armand Joulin",
+      "Sebastian Riedel",
+      "Edouard Grave"
+    ],
+    "primary_category": "cs.CL",
+    "categories": [
+      "cs.CL"
+    ],
+    "published": "2022-08-05T17:39:22Z",
+    "interested": 1,
+    "is_only_important_because_of_company": false
+  },
   "2307.03109": {
     "id": "2307.03109",
     "title": "A Survey on Evaluation of Large Language Models",
@@ -7696,6 +7749,7 @@
     "id": "2104.08691",
     "title": "Prompt Tuning: The Power of Scale for Parameter-Efficient Prompt Tuning",
     "abstract": "In this work, we explore \"prompt tuning\", a simple yet effective mechanism for learning \"soft prompts\" to condition frozen language models to perform specific downstream tasks. Unlike the discrete text prompts used by GPT-3, soft prompts are learned through backpropagation and can be tuned to incorporate signal from any number of labeled examples. Our end-to-end learned approach outperforms GPT-3's \"few-shot\" learning by a large margin. More remarkably, through ablations on model size using T5, we show that prompt tuning becomes more competitive with scale: as models exceed billions of parameters, our method \"closes the gap\" and matches the strong performance of model tuning (where all model weights are tuned). This finding is especially relevant in that large models are costly to share and serve, and the ability to reuse one frozen model for multiple downstream tasks can ease this burden. Our method can be seen as a simplification of the recently proposed \"prefix tuning\" of Li and Liang (2021), and we provide a comparison to this and other similar approaches. Finally, we show that conditioning a frozen model with soft prompts confers benefits in robustness to domain transfer, as compared to full model tuning.",
+    "tag_category_v2": "prompting",
     "tag_categories_v2": [
       "prompting",
       "training-methods"
@@ -8014,28 +8068,6 @@
     ],
     "published": "2021-07-07T17:41:24Z",
     "arxiv_comment": "corrected typos, added references, added authors, added acknowledgements",
-    "interested": 1,
-    "is_only_important_because_of_company": false
-  },
-  "2107.05720": {
-    "id": "2107.05720",
-    "title": "SPLADE: Sparse Lexical and Expansion Model for First Stage Ranking and Re-ranking",
-    "abstract": "In neural Information Retrieval, ongoing research is directed towards improving the first retriever in ranking pipelines. Learning dense embeddings to conduct retrieval using efficient approximate nearest neighbors methods has proven to work well. Meanwhile, there has been a growing interest in learning sparse representations for documents and queries, that could inherit from the desirable properties of bag-of-words models such as the exact matching of terms and the efficiency of inverted indexes. In this work, we present a new first-stage ranker based on explicit sparsity regularization and a log-saturation effect on term weights, leading to highly sparse representations and competitive results with respect to state-of-the-art dense and sparse methods. Our approach is simple, trained end-to-end in a single stage. We also explore the trade-off between effectiveness and efficiency, by controlling the contribution of the sparsity regularization.",
-    "tag_categories_v2": [
-      "retrieval",
-      "training-methods"
-    ],
-    "authors": [
-      "Thibault Formal",
-      "Benjamin Piwowarski",
-      "Stéphane Clinchant"
-    ],
-    "primary_category": "cs.IR",
-    "categories": [
-      "cs.IR"
-    ],
-    "published": "2021-07-12T20:17:44Z",
-    "arxiv_comment": "5 pages, SIGIR'21 short paper",
     "interested": 1,
     "is_only_important_because_of_company": false
   },
@@ -10899,35 +10931,6 @@
     ],
     "published": "2022-08-15T17:08:50Z",
     "arxiv_comment": "Published at NeurIPS 2022. Camera-ready version",
-    "interested": 1,
-    "is_only_important_because_of_company": false
-  },
-  "2208.03299": {
-    "id": "2208.03299",
-    "title": "Atlas: Few-shot Learning with Retrieval Augmented Language Models",
-    "abstract": "Large language models have shown impressive few-shot results on a wide range of tasks. However, when knowledge is key for such results, as is the case for tasks such as question answering and fact checking, massive parameter counts to store knowledge seem to be needed. Retrieval augmented models are known to excel at knowledge intensive tasks without the need for as many parameters, but it is unclear whether they work in few-shot settings. In this work we present Atlas, a carefully designed and pre-trained retrieval augmented language model able to learn knowledge intensive tasks with very few training examples. We perform evaluations on a wide range of tasks, including MMLU, KILT and NaturalQuestions, and study the impact of the content of the document index, showing that it can easily be updated. Notably, Atlas reaches over 42% accuracy on Natural Questions using only 64 examples, outperforming a 540B parameters model by 3% despite having 50x fewer parameters.",
-    "tag_categories_v2": [
-      "retrieval",
-      "pretraining",
-      "evaluation"
-    ],
-    "authors": [
-      "Gautier Izacard",
-      "Patrick Lewis",
-      "Maria Lomeli",
-      "Lucas Hosseini",
-      "Fabio Petroni",
-      "Timo Schick",
-      "Jane Dwivedi-Yu",
-      "Armand Joulin",
-      "Sebastian Riedel",
-      "Edouard Grave"
-    ],
-    "primary_category": "cs.CL",
-    "categories": [
-      "cs.CL"
-    ],
-    "published": "2022-08-05T17:39:22Z",
     "interested": 1,
     "is_only_important_because_of_company": false
   },
@@ -18495,6 +18498,81 @@
     "interested": 1,
     "is_only_important_because_of_company": false
   },
+  "2401.14196": {
+    "id": "2401.14196",
+    "title": "DeepSeek-Coder: When the Large Language Model Meets Programming -- The\n  Rise of Code Intelligence",
+    "abstract": "The rapid development of large language models has revolutionized code\nintelligence in software development. However, the predominance of\nclosed-source models has restricted extensive research and development. To\naddress this, we introduce the DeepSeek-Coder series, a range of open-source\ncode models with sizes from 1.3B to 33B, trained from scratch on 2 trillion\ntokens. These models are pre-trained on a high-quality project-level code\ncorpus and employ a fill-in-the-blank task with a 16K window to enhance code\ngeneration and infilling. Our extensive evaluations demonstrate that\nDeepSeek-Coder not only achieves state-of-the-art performance among open-source\ncode models across multiple benchmarks but also surpasses existing\nclosed-source models like Codex and GPT-3.5. Furthermore, DeepSeek-Coder models\nare under a permissive license that allows for both research and unrestricted\ncommercial use.",
+    "score": 10,
+    "similar_paper": "DeepSeek-Coder: When the Large Language Model Meets Programming - The Rise of Code Intelligence",
+    "score_reason": "The candidate paper is literally the same paper already in the user's reading history (listed under [pretraining]), addressing the identical problem of training open-source large language models specifically for code generation and programming tasks.",
+    "tag_category_v2": "code",
+    "tag_categories_v2": [
+      "code",
+      "pretraining"
+    ],
+    "tag_confidence": 95.0,
+    "tag_reason": "The paper introduces a new series of large language models (DeepSeek-Coder) and details their architecture, training methodology (fill-in-the-blank task, 2 trillion tokens), and evaluation metrics (benchmarks, comparison with closed-source models). While it touches on code generation capabilities, the primary contribution is the release of a model series rather than a specific technical technique or method like quantization or a novel training algorithm. Therefore, it falls under 'llm-systems'.",
+    "authors": [
+      "Daya Guo",
+      "Qihao Zhu",
+      "Dejian Yang",
+      "Zhenda Xie",
+      "Kai Dong",
+      "Wentao Zhang",
+      "Guanting Chen",
+      "Xiao Bi",
+      "Y. Wu",
+      "Y. K. Li",
+      "Fuli Luo",
+      "Yingfei Xiong",
+      "Wenfeng Liang"
+    ],
+    "organization": "deepseek-ai",
+    "org_fullname": "DeepSeek",
+    "primary_category": "cs.SE",
+    "categories": [
+      "cs.SE",
+      "cs.CL",
+      "cs.LG"
+    ],
+    "published": "2024-01-25T14:17:53Z",
+    "upvotes": 70,
+    "github": "https://github.com/deepseek-ai/DeepSeek-Coder",
+    "github_stars": 22869,
+    "interested": 1,
+    "is_only_important_because_of_company": true
+  },
+  "2502.06049": {
+    "id": "2502.06049",
+    "title": "LM2: Large Memory Models",
+    "abstract": "This paper introduces the Large Memory Model (LM2), a decoder-only Transformer architecture enhanced with an auxiliary memory module that aims to address the limitations of standard Transformers in multi-step reasoning, relational argumentation, and synthesizing information distributed over long contexts. The proposed LM2 incorporates a memory module that acts as a contextual representation repository, interacting with input tokens via cross attention and updating through gating mechanisms. To preserve the Transformers general-purpose capabilities, LM2 maintains the original information flow while integrating a complementary memory pathway. Experimental results on the BABILong benchmark demonstrate that the LM2model outperforms both the memory-augmented RMT model by 37.1% and the baseline Llama-3.2 model by 86.3% on average across tasks. LM2 exhibits exceptional capabilities in multi-hop inference, numerical reasoning, and large-context question-answering. On the MMLU dataset, it achieves a 5.0% improvement over a pre-trained vanilla model, demonstrating that its memory module does not degrade performance on general tasks. Further, in our analysis, we explore the memory interpretability, effectiveness of memory modules, and test-time behavior. Our findings emphasize the importance of explicit memory in enhancing Transformer architectures.",
+    "tag_category_v2": "architecture",
+    "tag_categories_v2": [
+      "architecture",
+      "reasoning",
+      "context-optimization"
+    ],
+    "tag_confidence": 0.95,
+    "tag_reason": "The paper introduces LM2, a new Transformer architecture that augments decoder blocks with explicit memory paths specifically designed to address long-context queries and reasoning chains. This fits squarely under context-optimization techniques like KV cache compression or sparse attention for context, as the primary contribution is enhancing model performance via architectural changes for managing long input contexts.",
+    "authors": [
+      "Jikun Kang",
+      "Wenqi Wu",
+      "Filippos Christianos",
+      "Alex J. Chan",
+      "Fraser Greenlee",
+      "George Thomas",
+      "Marvin Purtorab",
+      "Andy Toulis"
+    ],
+    "primary_category": "cs.CL",
+    "categories": [
+      "cs.CL",
+      "cs.AI"
+    ],
+    "published": "2025-02-09T22:11:42Z",
+    "interested": 1,
+    "is_only_important_because_of_company": false
+  },
   "2412.06769": {
     "id": "2412.06769",
     "title": "Training Large Language Models to Reason in a Continuous Latent Space",
@@ -18522,6 +18600,56 @@
     ],
     "published": "2024-12-09T18:55:56Z",
     "arxiv_comment": "Accepted to COLM 2025",
+    "interested": 1,
+    "is_only_important_because_of_company": false
+  },
+  "2508.02193": {
+    "id": "2508.02193",
+    "title": "Seed Diffusion: A Large-Scale Diffusion Language Model with High-Speed Inference",
+    "abstract": "We present Seed Diffusion Preview, a large-scale language model based on discrete-state diffusion, offering remarkably fast inference speed. Thanks to non-sequential, parallel generation, discrete diffusion models provide a notable speedup to mitigate the inherent latency of token-by-token decoding, as demonstrated recently (e.g., Mercury Coder, Gemini Diffusion). Seed Diffusion Preview achieves an inference speed of 2,146 token/s over H20 GPUs while maintaining competitive performance across a sweep of standard code evaluation benchmarks, significantly faster than contemporary Mercury and Gemini Diffusion, establishing new state of the art on the speed-quality Pareto frontier for code models.",
+    "score": 9,
+    "similar_paper": "Fast-dLLM: Training-free Acceleration of Diffusion LLM by Enabling KV Cache and Parallel Decoding",
+    "score_reason": "Both papers address the specific problem of improving inference speed for Diffusion Language Models by leveraging non-sequential or parallel generation techniques to overcome the latency of token-by-token decoding.",
+    "tag_category_v2": "diffusion",
+    "tag_categories_v2": [
+      "diffusion",
+      "code",
+      "inference-optimization"
+    ],
+    "tag_confidence": 0.95,
+    "tag_reason": "The paper presents a large-scale language model with high-speed inference, distributed generation (non-sequential), and benchmark evaluation. According to the rules, model tech reports and framework-based system implementations go to 'llm-systems'.'",
+    "authors": [
+      "Yuxuan Song",
+      "Zheng Zhang",
+      "Cheng Luo",
+      "Pengyang Gao",
+      "Fan Xia",
+      "Hao Luo",
+      "Zheng Li",
+      "Yuehang Yang",
+      "Hongli Yu",
+      "Xingwei Qu",
+      "Yuwei Fu",
+      "Jing Su",
+      "Ge Zhang",
+      "Wenhao Huang",
+      "Mingxuan Wang",
+      "Lin Yan",
+      "Xiaoying Jia",
+      "Jingjing Liu",
+      "Wei-Ying Ma",
+      "Ya-Qin Zhang",
+      "Yonghui Wu",
+      "Hao Zhou"
+    ],
+    "primary_category": "cs.CL",
+    "categories": [
+      "cs.CL",
+      "cs.LG"
+    ],
+    "published": "2025-08-04T08:43:01Z",
+    "upvotes": 136,
+    "arxiv_comment": "Demo is available at https://studio.seed.ai/exp/seed_diffusion/; Project page is https://seed.bytedance.com/seed_diffusion",
     "interested": 1,
     "is_only_important_because_of_company": false
   },
@@ -39983,50 +40111,6 @@
     "interested": 1,
     "is_only_important_because_of_company": false
   },
-  "2401.14196": {
-    "id": "2401.14196",
-    "title": "DeepSeek-Coder: When the Large Language Model Meets Programming -- The\n  Rise of Code Intelligence",
-    "abstract": "The rapid development of large language models has revolutionized code\nintelligence in software development. However, the predominance of\nclosed-source models has restricted extensive research and development. To\naddress this, we introduce the DeepSeek-Coder series, a range of open-source\ncode models with sizes from 1.3B to 33B, trained from scratch on 2 trillion\ntokens. These models are pre-trained on a high-quality project-level code\ncorpus and employ a fill-in-the-blank task with a 16K window to enhance code\ngeneration and infilling. Our extensive evaluations demonstrate that\nDeepSeek-Coder not only achieves state-of-the-art performance among open-source\ncode models across multiple benchmarks but also surpasses existing\nclosed-source models like Codex and GPT-3.5. Furthermore, DeepSeek-Coder models\nare under a permissive license that allows for both research and unrestricted\ncommercial use.",
-    "score": 10,
-    "similar_paper": "DeepSeek-Coder: When the Large Language Model Meets Programming - The Rise of Code Intelligence",
-    "score_reason": "The candidate paper is literally the same paper already in the user's reading history (listed under [pretraining]), addressing the identical problem of training open-source large language models specifically for code generation and programming tasks.",
-    "tag_category_v2": "llm-systems",
-    "tag_categories_v2": [
-      "code",
-      "pretraining"
-    ],
-    "tag_confidence": 95.0,
-    "tag_reason": "The paper introduces a new series of large language models (DeepSeek-Coder) and details their architecture, training methodology (fill-in-the-blank task, 2 trillion tokens), and evaluation metrics (benchmarks, comparison with closed-source models). While it touches on code generation capabilities, the primary contribution is the release of a model series rather than a specific technical technique or method like quantization or a novel training algorithm. Therefore, it falls under 'llm-systems'.",
-    "authors": [
-      "Daya Guo",
-      "Qihao Zhu",
-      "Dejian Yang",
-      "Zhenda Xie",
-      "Kai Dong",
-      "Wentao Zhang",
-      "Guanting Chen",
-      "Xiao Bi",
-      "Y. Wu",
-      "Y. K. Li",
-      "Fuli Luo",
-      "Yingfei Xiong",
-      "Wenfeng Liang"
-    ],
-    "organization": "deepseek-ai",
-    "org_fullname": "DeepSeek",
-    "primary_category": "cs.SE",
-    "categories": [
-      "cs.SE",
-      "cs.CL",
-      "cs.LG"
-    ],
-    "published": "2024-01-25T14:17:53Z",
-    "upvotes": 70,
-    "github": "https://github.com/deepseek-ai/DeepSeek-Coder",
-    "github_stars": 22869,
-    "interested": 1,
-    "is_only_important_because_of_company": true
-  },
   "2401.14112": {
     "id": "2401.14112",
     "title": "FP6-LLM: Efficiently Serving Large Language Models Through FP6-Centric\n  Algorithm-System Co-Design",
@@ -54233,37 +54317,6 @@
     "interested": 1,
     "is_only_important_because_of_company": false
   },
-  "2502.06049": {
-    "id": "2502.06049",
-    "title": "LM2: Large Memory Models",
-    "abstract": "This paper introduces the Large Memory Model (LM2), a decoder-only Transformer architecture enhanced with an auxiliary memory module that aims to address the limitations of standard Transformers in multi-step reasoning, relational argumentation, and synthesizing information distributed over long contexts. The proposed LM2 incorporates a memory module that acts as a contextual representation repository, interacting with input tokens via cross attention and updating through gating mechanisms. To preserve the Transformers general-purpose capabilities, LM2 maintains the original information flow while integrating a complementary memory pathway. Experimental results on the BABILong benchmark demonstrate that the LM2model outperforms both the memory-augmented RMT model by 37.1% and the baseline Llama-3.2 model by 86.3% on average across tasks. LM2 exhibits exceptional capabilities in multi-hop inference, numerical reasoning, and large-context question-answering. On the MMLU dataset, it achieves a 5.0% improvement over a pre-trained vanilla model, demonstrating that its memory module does not degrade performance on general tasks. Further, in our analysis, we explore the memory interpretability, effectiveness of memory modules, and test-time behavior. Our findings emphasize the importance of explicit memory in enhancing Transformer architectures.",
-    "tag_category_v2": "context-optimization",
-    "tag_categories_v2": [
-      "architecture",
-      "reasoning",
-      "context-optimization"
-    ],
-    "tag_confidence": 0.95,
-    "tag_reason": "The paper introduces LM2, a new Transformer architecture that augments decoder blocks with explicit memory paths specifically designed to address long-context queries and reasoning chains. This fits squarely under context-optimization techniques like KV cache compression or sparse attention for context, as the primary contribution is enhancing model performance via architectural changes for managing long input contexts.",
-    "authors": [
-      "Jikun Kang",
-      "Wenqi Wu",
-      "Filippos Christianos",
-      "Alex J. Chan",
-      "Fraser Greenlee",
-      "George Thomas",
-      "Marvin Purtorab",
-      "Andy Toulis"
-    ],
-    "primary_category": "cs.CL",
-    "categories": [
-      "cs.CL",
-      "cs.AI"
-    ],
-    "published": "2025-02-09T22:11:42Z",
-    "interested": 1,
-    "is_only_important_because_of_company": false
-  },
   "2502.06786": {
     "id": "2502.06786",
     "title": "Matryoshka Quantization",
@@ -59027,56 +59080,6 @@
     "interested": 1,
     "is_only_important_because_of_company": false
   },
-  "2508.02193": {
-    "id": "2508.02193",
-    "title": "Seed Diffusion: A Large-Scale Diffusion Language Model with High-Speed Inference",
-    "abstract": "We present Seed Diffusion Preview, a large-scale language model based on discrete-state diffusion, offering remarkably fast inference speed. Thanks to non-sequential, parallel generation, discrete diffusion models provide a notable speedup to mitigate the inherent latency of token-by-token decoding, as demonstrated recently (e.g., Mercury Coder, Gemini Diffusion). Seed Diffusion Preview achieves an inference speed of 2,146 token/s over H20 GPUs while maintaining competitive performance across a sweep of standard code evaluation benchmarks, significantly faster than contemporary Mercury and Gemini Diffusion, establishing new state of the art on the speed-quality Pareto frontier for code models.",
-    "score": 9,
-    "similar_paper": "Fast-dLLM: Training-free Acceleration of Diffusion LLM by Enabling KV Cache and Parallel Decoding",
-    "score_reason": "Both papers address the specific problem of improving inference speed for Diffusion Language Models by leveraging non-sequential or parallel generation techniques to overcome the latency of token-by-token decoding.",
-    "tag_category_v2": "llm-systems",
-    "tag_categories_v2": [
-      "diffusion",
-      "code",
-      "inference-optimization"
-    ],
-    "tag_confidence": 0.95,
-    "tag_reason": "The paper presents a large-scale language model with high-speed inference, distributed generation (non-sequential), and benchmark evaluation. According to the rules, model tech reports and framework-based system implementations go to 'llm-systems'.'",
-    "authors": [
-      "Yuxuan Song",
-      "Zheng Zhang",
-      "Cheng Luo",
-      "Pengyang Gao",
-      "Fan Xia",
-      "Hao Luo",
-      "Zheng Li",
-      "Yuehang Yang",
-      "Hongli Yu",
-      "Xingwei Qu",
-      "Yuwei Fu",
-      "Jing Su",
-      "Ge Zhang",
-      "Wenhao Huang",
-      "Mingxuan Wang",
-      "Lin Yan",
-      "Xiaoying Jia",
-      "Jingjing Liu",
-      "Wei-Ying Ma",
-      "Ya-Qin Zhang",
-      "Yonghui Wu",
-      "Hao Zhou"
-    ],
-    "primary_category": "cs.CL",
-    "categories": [
-      "cs.CL",
-      "cs.LG"
-    ],
-    "published": "2025-08-04T08:43:01Z",
-    "upvotes": 136,
-    "arxiv_comment": "Demo is available at https://studio.seed.ai/exp/seed_diffusion/; Project page is https://seed.bytedance.com/seed_diffusion",
-    "interested": 1,
-    "is_only_important_because_of_company": false
-  },
   "2508.05629": {
     "id": "2508.05629",
     "title": "On the Generalization of SFT: A Reinforcement Learning Perspective with Reward Rectification",
@@ -61996,6 +61999,7 @@
     "id": "2603.05451",
     "title": "FlashAttention-4: Algorithm and Kernel Pipelining Co-Design for Asymmetric Hardware Scaling",
     "abstract": "Attention, as a core layer of the ubiquitous Transformer architecture, is the bottleneck for large language models and long-context applications. While FlashAttention-3 optimized attention for Hopper GPUs through asynchronous execution and warp specialization, it primarily targets the H100 architecture. The AI industry has rapidly transitioned to deploying Blackwell-based systems such as the B200 and GB200, which exhibit fundamentally different performance characteristics due to asymmetric hardware scaling: tensor core throughput doubles while other functional units (shared memory bandwidth, exponential units) scale more slowly or remain unchanged. We develop several techniques to address these shifting bottlenecks on Blackwell GPUs: (1) redesigned pipelines that exploit fully asynchronous MMA operations and larger tile sizes, (2) software-emulated exponential and conditional softmax rescaling that reduces non-matmul operations, and (3) leveraging tensor memory and the 2-CTA MMA mode to reduce shared memory traffic and atomic adds in the backward pass. We demonstrate that our method, FlashAttention-4, achieves up to 1.3$\\times$ speedup over cuDNN 9.13 and 2.7$\\times$ over Triton on B200 GPUs with BF16, reaching up to 1613 TFLOPs/s (71% utilization). Beyond algorithmic innovations, we implement FlashAttention-4 entirely in CuTe-DSL embedded in Python, achieving 20-30$\\times$ faster compile times compared to traditional C++ template-based approaches while maintaining full expressivity.",
+    "tag_category_v2": "inference-optimization",
     "tag_categories_v2": [
       "inference-optimization",
       "architecture",

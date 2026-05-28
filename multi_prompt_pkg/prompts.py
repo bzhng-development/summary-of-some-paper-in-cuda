@@ -79,10 +79,30 @@ def _build_system_preamble() -> str:
         raise ValueError(f"Golden-sample example at {example_path} is empty. Restore it from git before running.")
     return (
         _SYSTEM_PREAMBLE_BASE
-        + "\n\n# Reference Example\n"
-        + "Below is a complete example of a high-quality paper summary. "
-        + "Match this level of depth, structure, and style.\n\n"
-        + f"<example>\n{example_text}\n</example>"
+        + "\n\n# Style Reference (NOT SUBJECT MATTER)\n"
+        + "Below is a complete summary of a DIFFERENT, UNRELATED paper. Use it for STYLE,\n"
+        + "STRUCTURE, DEPTH, and FORMATTING only. The example paper is about a particular\n"
+        + "test-time-compute / process-reward-model / Monte-Carlo-rollout topic. The input\n"
+        + "paper you will analyze is almost certainly about a completely different topic.\n\n"
+        + "STRICT CONTAMINATION RULES:\n"
+        + "- Do NOT mention 'the reference paper', 'the companion paper', 'the example paper',\n"
+        + "  or 'as in the reference paper'. There is no relationship between the example and\n"
+        + "  the input paper.\n"
+        + "- Do NOT carry over named methods from the example unless the input paper itself\n"
+        + "  uses them. Forbidden carryovers (unless the input paper actually introduces them):\n"
+        + "    * Process Reward Models / PRMs / step-level reward models\n"
+        + "    * Monte Carlo rollouts / MC value estimates / soft labels from rollouts\n"
+        + "    * Compute-optimal test-time scaling / FLOPs-matched comparisons across N\n"
+        + "    * Best-of-N / beam-search-against-a-verifier / sequential revisions\n"
+        + "    * Difficulty estimation / adaptive compute allocation by problem difficulty\n"
+        + "    * Easy/medium/hard problem stratification of MATH benchmark\n"
+        + "  These belong to the EXAMPLE paper, not yours.\n"
+        + "- Do NOT use the example's section-6 'Difficulty Estimation and Adaptive\n"
+        + "  Allocation Are Absent' framing as a default limitation. Most papers have nothing\n"
+        + "  to do with this.\n"
+        + "- Only the text inside <paper>...</paper> in the user message is the subject. The\n"
+        + "  example is a style template, period.\n\n"
+        + f"<example_for_style_only>\n{example_text}\n</example_for_style_only>"
     )
 
 
@@ -108,11 +128,17 @@ SECTION_SPECS: tuple[SectionSpec, ...] = (
 Write 2-4 sentences of dense connected prose. Cover, in order:
 - What the paper does (open with the right verb for its mode — "studies"/"analyzes" for empirical work, "introduces"/"proposes" for new methods).
 - The experimental substrate (benchmark name, model name).
-- The named mechanism(s) — name them in the paper's exact terminology. After each abstract mechanism, add a parenthetical concrete example so the reader sees what it operationalizes (e.g., "(beam search vs. best-of-N)").
-- The headline number(s), with a concrete-equivalence parenthetical when it sharpens understanding (e.g., "4× efficiency (matching the 256-generation baseline with only 64 generations)").
+- The named mechanism(s) — name them in the paper's exact terminology. After each abstract mechanism, add a parenthetical concrete example so the reader sees what it operationalizes. The parenthetical MUST come from THIS paper, not from any reference example you have seen.
+- The headline number(s), with a concrete-equivalence parenthetical when it sharpens understanding. The numbers MUST come from THIS paper.
 - A single boundary condition restated as a finding, not a caveat (use rhetorical moves like "establishing that ... only when ...", not "However, ...").
 
-Critical: when the paper introduces a NAMED CORE CONCEPT (e.g., "compute-optimal test-time scaling strategy" in this paper), reproduce that exact phrase in bold the first time you mention it. Do NOT shorten or paraphrase the named concept. If the paper calls it "compute-optimal test-time scaling", call it "compute-optimal test-time scaling" — never "compute-optimal scaling" or "compute-optimal strategy".
+Critical: when the paper introduces a NAMED CORE CONCEPT, reproduce that exact phrase in bold the first time you mention it. Do NOT shorten or paraphrase the named concept. Use the paper's own terminology verbatim — do NOT substitute names or methods from any other paper.
+
+STRICT ANTI-CONTAMINATION RULE (applies to every section below):
+- The ONLY input paper is the one inside <paper>...</paper> in this conversation.
+- Do NOT reference "the reference paper", "the companion paper", "the example paper", "the prior section's paper", or any other paper not explicitly cited inside the <paper> block.
+- Do NOT import named methods, benchmarks, or limitations from outside the input paper. If "Process Reward Models", "Monte Carlo rollouts", "compute-optimal test-time scaling", "best-of-N", "beam search against a verifier", "difficulty estimation", or "adaptive compute allocation" are NOT explicitly discussed in the input paper, do NOT mention them. They are NOT default topics — they are example phrasings used to teach style, not subject matter.
+- Every claim, named method, number, and table reference must be grounded in the <paper> text.
 
 Formatting:
 - Plain Unicode for math: write "4×", "~14×". NEVER use `\\(...\\)` or `\\[...\\]` delimiters — GitHub does not render them.
@@ -157,7 +183,7 @@ At the start, include these sub-sections with ### headings:
 - 3–6 bullets that state the order you'll explain components and why that order helps understanding.
 
 ### 3.4 Detailed, sentence-based technical breakdown
-- Use `####` sub-sections under 3.4, one per major mechanism (e.g., `#### Process Reward Model (PRM) Training and Usage`).
+- Use `####` sub-sections under 3.4, one per major mechanism. The sub-section title must name a mechanism THIS paper introduces, in this paper's terminology.
 - Each `####` sub-section is a detailed technical breakdown in full sentences (not telegraphic fragments).
 - Even when using bullets, each bullet should be a complete sentence that explains a concrete mechanism, interface, or cause→effect relation.
 
@@ -176,17 +202,17 @@ For EVERY equation in the section, in this order:
 3. **Restate what the equation COMPUTES in operational English** — name the inputs, the operation, the output, and what it enables downstream. This is NOT just "rewriting the equation"; it is explaining what physically/computationally happens.
 4. **Explain WHY this form** — what alternative would have been wrong, what property this form has that matters.
 
-Concrete example of the required pattern (binary cross-entropy):
+Style-only example of the required pattern, shown for a generic binary cross-entropy loss (this is a STYLE TEMPLATE — the input paper almost certainly is not about this loss, do NOT carry over the wording about Monte Carlo rollouts, soft targets, or process reward models unless those are explicitly in the input paper):
 
 > $$\\mathcal{L} = -\\left(y \\log(\\hat{y}) + (1 - y) \\log(1 - \\hat{y})\\right)$$
 >
-> where `$y \\in [0, 1]$` is the soft target from Monte Carlo rollouts and `$\\hat{y} \\in [0, 1]$` is the model's predicted value for the step.
+> where `$y$` is the target and `$\\hat{y}$` is the model's prediction.
 >
-> **What it computes:** the standard binary cross-entropy between the model's predicted scalar and the rollout-derived soft target. The first term `$-y\\log\\hat{y}$` penalises under-confident predictions when the true probability is high; the second term `$-(1-y)\\log(1-\\hat{y})$` penalises over-confident predictions when the true probability is low. The result is a single non-negative scalar per step.
+> **What it computes:** the binary cross-entropy between prediction and target. The first term penalises under-confident predictions when the true label is positive; the second penalises over-confident predictions when the true label is negative. The result is a single non-negative scalar.
 >
-> **Why this form:** binary cross-entropy is the maximum-likelihood objective for a Bernoulli target, which is the right calibration objective because the soft labels are themselves probabilities (empirical fractions). MSE would weight errors near 0.5 the same as errors near 0 or 1, which is the wrong inductive bias for probability calibration.
+> **Why this form:** binary cross-entropy is the maximum-likelihood objective for a Bernoulli target. MSE would weight errors near 0.5 the same as errors near 0 or 1, which is the wrong inductive bias for probability calibration.
 
-Every equation in section 3 must receive this four-part treatment. The reader should be able to skip the equation entirely and still understand what is being computed.
+Apply this four-part treatment (block-set, define-symbols, what-it-computes, why-this-form) to every equation in section 3 USING THE TERMS AND VARIABLES FROM THE INPUT PAPER. The cross-entropy template above is illustrative; do not mention it, soft targets, Monte Carlo rollouts, or process reward models in your output unless the input paper itself does.
 
 Math formatting:
 - Inline math: `$x^2$` (single dollars). Block math: `$$...$$` on its own line.
@@ -279,17 +305,19 @@ Structure each limitation as a `### <descriptive title>` sub-section. For each, 
 4. **Mitigation status** — does the paper attempt to address it? Partially? Not at all? Does it suggest future work?
 
 Selection guidelines (what to pick):
-- Capability bounds (where the method outright fails — e.g., hardest problems in this paper).
-- Practical overhead that is not accounted for in the headline numbers.
-- Assumptions about access (oracle data, specific hardware, specific model families).
-- Generalisation gaps (single benchmark, single model, single task family).
-- Methodological weaknesses that affect the strength of the claims (small test set, weak baseline, missing ablation).
-- A fundamental tradeoff the paper does not resolve (e.g., latency vs throughput).
+- Capability bounds (where the method outright fails — name the actual regime in THIS paper).
+- Practical overhead that is not accounted for in the headline numbers of THIS paper.
+- Assumptions about access (oracle data, specific hardware, specific model families) actually relied on by THIS paper.
+- Generalisation gaps (single benchmark, single model, single task family) that THIS paper actually has.
+- Methodological weaknesses that affect the strength of THIS paper's claims (small test set, weak baseline, missing ablation).
+- A fundamental tradeoff THIS paper does not resolve.
 
 Selection guidelines (what to skip):
 - Trivial observations ("the paper does not study X" when X is not directly relevant).
 - Stylistic critiques of writing or notation.
 - Duplicate limitations that are special cases of another listed limitation.
+- "Difficulty estimation and adaptive allocation are absent" — this is a stock limitation pattern that does NOT apply to most papers. Only mention adaptive-compute / difficulty-estimation as a limitation if the paper itself frames its work in terms of inference-time compute allocation. Otherwise do NOT use this framing.
+- Anything that compares this paper to "the reference paper", "the companion paper", "the example paper", or any other paper not actually inside the <paper> block. There is no reference paper. The only paper is the one in <paper>.
 
 Hard rules:
 - 4-6 limitations TOTAL. If the paper has 10 candidate limitations, pick the 4-6 most consequential and merge or omit the rest.

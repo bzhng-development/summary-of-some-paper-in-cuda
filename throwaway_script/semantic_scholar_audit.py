@@ -36,7 +36,20 @@ from neon_db import NeonDB, TABLE
 
 S2_BASE = "https://api.semanticscholar.org/graph/v1"
 HEADERS = {"x-api-key": os.environ.get("S2_API_KEY")} if os.environ.get("S2_API_KEY") else {}
-SLEEP = 0.35 if HEADERS else 1.1  # 100 req/sec with key, 1/sec without
+# S2 caps unauthenticated traffic at ~1 req/sec; bursts inside one second
+# trigger 429 with multi-minute cooldowns. Enforce a strict GLOBAL gap so
+# no two requests fire within the same second regardless of which function
+# issues them.
+_MIN_GAP = 1.05 if not HEADERS else 0.05  # tiny buffer over the spec limit
+_last_request_at: float = 0.0
+
+
+def _throttle() -> None:
+    global _last_request_at
+    elapsed = time.monotonic() - _last_request_at
+    if elapsed < _MIN_GAP:
+        time.sleep(_MIN_GAP - elapsed)
+    _last_request_at = time.monotonic()
 
 # Org -> (affiliation match patterns, list of known author names).
 # Affiliation pattern matches the strings S2 stores on author records
@@ -110,7 +123,8 @@ ORG_CONFIG: dict[str, tuple[list[re.Pattern], list[str]]] = {
 
 def s2_get(endpoint: str, params: dict | None = None) -> dict | list | None:
     url = f"{S2_BASE}/{endpoint.lstrip('/')}"
-    for attempt in range(4):
+    for attempt in range(6):
+        _throttle()
         try:
             r = httpx.get(url, params=params, headers=HEADERS, timeout=30)
         except Exception as e:
@@ -120,12 +134,14 @@ def s2_get(endpoint: str, params: dict | None = None) -> dict | list | None:
         if r.status_code == 200:
             return r.json()
         if r.status_code == 429:
-            wait = 5 * (attempt + 1)
-            logger.warning(f"  429 rate-limit, sleeping {wait}s")
+            # S2 puts a per-IP cooldown after even a small burst. Back off
+            # AGGRESSIVELY — start at 30s and grow.
+            wait = 30 * (attempt + 1)
+            logger.warning(f"  429 rate-limit, sleeping {wait}s (attempt {attempt+1}/6)")
             time.sleep(wait)
             continue
         if r.status_code in (502, 503, 504):
-            time.sleep(3)
+            time.sleep(5)
             continue
         logger.warning(f"  HTTP {r.status_code} for {endpoint} params={params}: {r.text[:120]}")
         return None
@@ -138,7 +154,6 @@ def find_author(name: str, affil_patterns: list[re.Pattern]) -> dict | None:
         "author/search",
         params={"query": name, "fields": "name,affiliations,paperCount", "limit": 20},
     )
-    time.sleep(SLEEP)
     if not data or "data" not in data:
         return None
     candidates = data["data"]
@@ -166,7 +181,6 @@ def fetch_2026_arxiv_papers(author_id: str) -> list[dict]:
                 "offset": offset,
             },
         )
-        time.sleep(SLEEP)
         if not data or "data" not in data:
             break
         for p in data["data"]:

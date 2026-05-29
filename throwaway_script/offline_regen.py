@@ -577,9 +577,24 @@ def run_online(args) -> None:
     sampling_kwargs_section = dict(temperature=1.0, top_p=1.0, extra_body=chat_kwargs)
     sampling_kwargs_structured = dict(temperature=1.0, top_p=1.0, extra_body={"chat_template_kwargs": {"thinking": False}})
 
+    only_cat = getattr(args, "only_cat", False)
+    max_section = getattr(args, "max_section", 0)
+    skip_pitch = getattr(args, "skip_pitch", False)
+    skip_cat = getattr(args, "skip_cat", False)
+    skip_assemble = getattr(args, "skip_assemble", False)
+
     async def go():
+        if only_cat:
+            print("[online] --only-cat: skipping section iteration AND pitch phase")
+        if max_section > 0:
+            print(f"[online] --max-section={max_section}: stopping after s{max_section}")
         for spec in SECTION_SPECS:
+            if only_cat:
+                break
             n = spec.number
+            if max_section > 0 and n > max_section:
+                print(f"[online] skipping s{n} (--max-section={max_section})")
+                continue
             todo = needed_per_section[n]
             if not todo:
                 print(f"[online section {n}] all cached, skipping")
@@ -621,7 +636,7 @@ def run_online(args) -> None:
             path = write_section_ckpt(papers, out_path, n, None)
             print(f"[online section {n}] {len(todo)} in {dt:.1f}s -> {path.name}")
 
-        if pitch_todo:
+        if pitch_todo and not only_cat and not skip_pitch:
             pitch_system = (
                 "Extract the exact paper title from the PDF, then write a 2-3 sentence pitch designed to make a busy reader open the full summary. "
                 "The pitch is NOT a paraphrase of the executive summary. Lead with the surprising finding. 2-3 sentences MAX. No bullets. Plain Unicode for math."
@@ -645,7 +660,7 @@ def run_online(args) -> None:
                     p["_pitch_text"] = ""
             write_pitch_ckpt(papers, out_path, None)
 
-        if cat_todo:
+        if cat_todo and not skip_cat:
             cat_system = f"Categorize the paper into one of these categories: {', '.join(CATEGORIES)}. Respond with ONLY the category name in the JSON."
             messages_batch = [
                 [
@@ -668,8 +683,13 @@ def run_online(args) -> None:
             write_cat_ckpt(papers, out_path, None)
 
     asyncio.run(go())
-    assemble_and_write(papers, out_path)
-    print(f"[online done] wrote {len(papers)} records to {out_path}")
+    if not only_cat and not skip_assemble:
+        assemble_and_write(papers, out_path)
+        print(f"[online done] wrote {len(papers)} records to {out_path}")
+    elif skip_assemble:
+        print(f"[online done] sections written, skipped pitch/cat/assemble per flags")
+    else:
+        print(f"[online done] --only-cat: wrote cat ckpt to {out_path.with_suffix('.cat.jsonl').name}")
 
 
 # ---------------------------------------------------------------------------
@@ -691,7 +711,28 @@ def main() -> None:
     ap.add_argument("--limit", type=int, default=0)
     # Online-mode-only:
     ap.add_argument("--base-url", default="http://localhost:8000/v1")
-    ap.add_argument("--model", default="deepseek-ai/DeepSeek-V4-Pro")
+    ap.add_argument("--model", default="deepseek-ai/DeepSeek-V4-Flash")
+    ap.add_argument(
+        "--only-cat",
+        action="store_true",
+        help="Skip section iteration AND pitch phase; run ONLY category classification. "
+             "Useful when sections are already done (cached) and you just want to (re)classify.",
+    )
+    ap.add_argument(
+        "--max-section",
+        type=int,
+        default=0,
+        help="If >0, run sections 1..N only and skip later sections. e.g. 4 = run s1-s4 "
+             "and skip s5/s6/s7. Combined with --skip-pitch and --skip-cat for a partial "
+             "regen that saves ~50%% GPU time vs the full 7-section pipeline.",
+    )
+    ap.add_argument("--skip-pitch", action="store_true",
+                    help="Skip the pitch generation phase (one-sentence intro per paper).")
+    ap.add_argument("--skip-cat", action="store_true",
+                    help="Skip the category classification phase.")
+    ap.add_argument("--skip-assemble", action="store_true",
+                    help="Skip the final assemble-into-summary phase. Useful for partial "
+                         "runs where you only want the per-section .jsonl outputs.")
     args = ap.parse_args()
 
     if args.mode == "online":

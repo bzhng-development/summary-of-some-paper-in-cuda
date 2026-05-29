@@ -1,7 +1,10 @@
 import React, { memo } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { CategoryMeta } from '../lib/types';
+import { colors, radii, spacing, typography } from '../lib/theme';
+import Card from './ui/Card';
+import GradientPill from './ui/GradientPill';
 
 interface Props {
   category: CategoryMeta;
@@ -11,40 +14,43 @@ interface Props {
 const CategoryCard = memo(function CategoryCard({ category, readCount = 0 }: Props) {
   const router = useRouter();
   const progress = category.count > 0 ? readCount / category.count : 0;
+  const accent = category.color;
 
   return (
-    <Pressable
-      style={({ pressed }) => [styles.card, { opacity: pressed ? 0.85 : 1 }]}
+    <Card
       onPress={() => router.push(`/c/${category.slug}` as never)}
-      accessibilityRole="button"
       accessibilityLabel={`${category.title} category, ${category.count} papers`}
+      style={styles.card}
+      padding="xl"
     >
-      {/* Gradient border top */}
-      <View style={[styles.topBar, { backgroundColor: category.color }]} />
-
-      <View style={styles.body}>
-        <Text style={[styles.title, { color: category.color }]} numberOfLines={2}>
-          {category.title}
-        </Text>
-        <Text style={styles.blurb} numberOfLines={2}>{category.blurb}</Text>
-
-        <View style={styles.footer}>
-          <Text style={styles.count}>{category.count} papers</Text>
-          {readCount > 0 && (
-            <Text style={[styles.progress, { color: category.color }]}>
-              {readCount}/{category.count}
-            </Text>
-          )}
-        </View>
-
-        {/* Progress bar */}
-        {progress > 0 && (
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${Math.round(progress * 100)}%`, backgroundColor: category.color }]} />
-          </View>
-        )}
+      <View style={styles.header}>
+        <View style={[styles.dot, { backgroundColor: accent }]} />
+        <GradientPill color={accent}>{category.count} papers</GradientPill>
       </View>
-    </Pressable>
+
+      <Text style={[styles.title, { color: colors.white }]} numberOfLines={2}>
+        {category.title}
+      </Text>
+      <Text style={styles.blurb} numberOfLines={2}>
+        {category.blurb}
+      </Text>
+
+      {progress > 0 && (
+        <View style={styles.progressRow}>
+          <View style={styles.progressBar}>
+            <View
+              style={[
+                styles.progressFill,
+                { width: `${Math.round(progress * 100)}%`, backgroundColor: accent },
+              ]}
+            />
+          </View>
+          <Text style={[styles.progressLabel, { color: accent }]}>
+            {readCount}/{category.count}
+          </Text>
+        </View>
+      )}
+    </Card>
   );
 });
 
@@ -52,48 +58,45 @@ export default CategoryCard;
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: 10,
-    overflow: 'hidden',
-    marginBottom: 10,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
   },
-  topBar: {
-    height: 3,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
-  body: {
-    padding: 14,
-    gap: 6,
+  dot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   title: {
-    fontSize: 16,
-    fontWeight: '700',
+    ...typography.h2,
   },
   blurb: {
-    fontSize: 13,
-    color: '#a0a0a0',
-    lineHeight: 18,
+    ...typography.bodySm,
+    color: colors.textBody,
   },
-  footer: {
+  progressRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 4,
-  },
-  count: {
-    fontSize: 12,
-    color: '#666666',
-  },
-  progress: {
-    fontSize: 12,
-    fontWeight: '600',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
   },
   progressBar: {
-    height: 2,
-    backgroundColor: '#2a2a2a',
-    borderRadius: 1,
-    marginTop: 6,
+    flex: 1,
+    height: 3,
+    backgroundColor: colors.borderStrong,
+    borderRadius: 2,
+    overflow: 'hidden',
   },
   progressFill: {
-    height: 2,
-    borderRadius: 1,
+    height: 3,
+    borderRadius: 2,
+  },
+  progressLabel: {
+    ...typography.caption,
+    fontWeight: '600',
   },
 });

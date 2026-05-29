@@ -16,13 +16,3 @@ export function useReadState(paperId: string) {
 
   return { read, toggle };
 }
-
-export function useStreak() {
-  const [streak] = useState(() => db.getStreak());
-  return streak;
-}
-
-export function useRecentIds() {
-  const [ids] = useState(() => db.getRecentIds());
-  return ids;
-}

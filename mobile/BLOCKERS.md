@@ -1,51 +1,59 @@
 # Open Issues / Blockers
 
-## 1. Full paper markdown bodies not yet bundled as assets
+## Resolved (kept for history)
 
-**Severity:** Medium — app is usable, but paper detail screens show only the pitch/abstract (from graph.generated.json) rather than the full 7-section markdown body.
+- **Full paper markdown bodies bundled + rendered.** 1320 `.md` files are copied into `assets/papers/` by `scripts/build-graph.mjs`, `src/lib/paper-asset-map.ts` emits `require()` per paper, and `src/hooks/useMarkdownContent.ts` resolves via `Asset.fromModule` → `expo-file-system` `File`. The detail screen (`src/app/p/[category]/[slug].tsx`) calls the hook and renders via `EnrichedMarkdownText` from `react-native-enriched-markdown`.
+- **iOS device build flow works locally.** Personal Team `937557U4CK`, paired iPhone (UDID `00008150-00124866140A401C`), trusted developer profile. Release config builds via direct `xcodebuild -allowProvisioningUpdates ...` (see note below).
+- **`runtimeVersion` switched to `sdkVersion` policy** so the missing-`expo-updates` warning is gone.
+- **`ITSAppUsesNonExemptEncryption: false`** added to `ios.infoPlist` — App Store submission will not block on it.
 
-**Root cause:** The 1282 `.md` files live in `paper-graph-ui/src/content/papers/`. Metro's bundler cannot import arbitrary file-system paths outside the project root. To bundle the full text:
+## Active
 
-**Fix (one-time, ~2 min):**
-```bash
-cd mobile
-# Copy all paper .md files into assets/papers/
-rsync -a --include="*/" --include="*.md" --exclude="*" \
-  ../paper-graph-ui/src/content/papers/ assets/papers/
+### 1. `expo run:ios --device` doesn't pass `-allowProvisioningUpdates`
 
-# Then rebuild graph to pick up the new paths
-node scripts/build-graph.mjs
-```
+**Severity:** Low — a documented Expo CLI papercut.
 
-After this, update `src/hooks/useMarkdownContent.ts` to load from the bundled asset path. Metro will bundle every `.md` under `assets/` because `assetBundlePatterns: ["**/*"]` is set in app.json.
+Expo's CLI doesn't pass `-allowProvisioningUpdates` to `xcodebuild`, so first-time provisioning (no profile cached) fails. Workarounds:
 
-## 2. iOS physical-device build requires interactive UDID setup
+- Run `xcodebuild` directly with the flag (the current path), or
+- Build once via the Xcode GUI Run button (passes the flag implicitly), then subsequent `npx expo run:ios --device` calls succeed because the profile is cached.
 
-**Severity:** Low for overnight — simulator build is available.
+### 2. `DEVELOPMENT_TEAM` is hardcoded in pbxproj
 
-**Fix:** Run `npx eas-cli@latest device:create` interactively, then rebuild with `--profile development`.
+**Severity:** Low — survives all normal builds.
 
-## 3. react-native-enriched-markdown requires a dev-client build
+`DEVELOPMENT_TEAM = 937557U4CK` lives in `ios/PaperGraph.xcodeproj/project.pbxproj`. It is **lost on `npx expo prebuild --clean`**. Either:
 
-**Severity:** Expected — not a bug. The library uses Fabric native code and cannot run in Expo Go. The EAS dev-client builds in EAS_BUILD_LINKS.md are exactly the right artifact.
+- Re-edit after every `prebuild --clean`, or
+- Add a config plugin that injects it, or
+- Configure signing through EAS Build (`eas.json` ios profile + `eas credentials`).
 
-**Workaround:** Until the dev build is installed, the paper detail screen falls back to a plain-text renderer that parses headings/paragraphs manually (see `PlainTextFallback` in `src/app/p/[category]/[slug].tsx`). All paper metadata, actions, navigation, and topic/related sections still work.
+### 3. 254 MB app bundle
 
-## 4. ITSAppUsesNonExemptEncryption missing
+**Severity:** Low for sideload / TestFlight; medium for App Store.
 
-**Severity:** Low — only matters when submitting to App Store.
+The Release `.app` weighs 254 MB because all 1320 paper `.md` bodies (~185 MB) are baked in. App Store cellular-download cap is 500 MB. If paper count grows materially:
 
-**Fix:** Add to app.json:
-```json
-"ios": {
-  "infoPlist": {
-    "ITSAppUsesNonExemptEncryption": false
-  }
-}
-```
+- Lazy-fetch markdown from a CDN at runtime, or
+- gzip-compress the bundled `.md` files pre-bundle (~3-4× shrink), or
+- Split into `expo-updates` asset bundles.
 
-## 5. runtimeVersion: appVersion requires expo-updates
+### 4. `iosMath-mathFonts` pod deployment target = 6.0
 
-**Severity:** Low — build succeeds, warning is cosmetic.
+**Severity:** Cosmetic.
 
-**Fix if needed:** Install `expo-updates` and configure OTA update URL, or switch `runtimeVersion` policy to `"sdkVersion"` in app.json.
+Transitive pod `iosMath (0.9.4)` declares `IPHONEOS_DEPLOYMENT_TARGET = 6.0`, below the supported range 12.0–26.2.99. Xcode logs a warning per build. No runtime impact; bump (or replace the dependency) only if the warning bothers you.
+
+### 5. Several build-phase scripts marked "Based on dependency analysis = unchecked"
+
+**Severity:** Cosmetic build-perf hit.
+
+Expo's own build phases run on every incremental build because they don't declare outputs:
+
+- `[Expo] Configure project`
+- `[Expo Dev Launcher] Strip Local Network Keys for Release`
+- `[CP-User] [Hermes] Replace Hermes for the right configuration, if needed`
+- `[CP-User] [Expo] Switch * XCFramework for build configuration`
+- `Bundle React Native code and images`
+
+These are Expo's intentional configuration; changing them risks breaking incremental builds. Tolerate until Expo fixes upstream.

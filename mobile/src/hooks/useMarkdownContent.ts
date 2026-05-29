@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Asset } from 'expo-asset';
-import { File } from 'expo-file-system/next';
+import { File } from 'expo-file-system';
 import { PAPER_ASSETS } from '../lib/paper-asset-map';
 
 /**

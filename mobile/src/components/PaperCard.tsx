@@ -1,7 +1,10 @@
 import React, { memo } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import type { Paper, CategoryMeta } from '../lib/types';
+import { colors, radii, spacing, typography } from '../lib/theme';
+import Card from './ui/Card';
+import GradientPill from './ui/GradientPill';
 
 interface Props {
   paper: Paper;
@@ -12,27 +15,22 @@ interface Props {
 
 const PaperCard = memo(function PaperCard({ paper, category, isRead = false, compact = false }: Props) {
   const router = useRouter();
-  const accentColor = category?.color ?? '#aa99ff';
-
-  const handlePress = () => {
-    router.push(`/p/${paper.category}/${paper.slug}` as never);
-  };
+  const accent = category?.color ?? colors.purple;
 
   return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.card,
-        { borderLeftColor: accentColor, opacity: pressed ? 0.85 : 1 },
-        isRead && styles.cardRead,
-      ]}
-      onPress={handlePress}
-      accessibilityRole="button"
+    <Card
+      onPress={() => router.push(`/p/${paper.category}/${paper.slug}` as never)}
       accessibilityLabel={paper.title}
+      style={[styles.card, isRead && styles.cardRead] as never}
+      padding="xl"
     >
       <View style={styles.header}>
-        <Text style={[styles.category, { color: accentColor }]} numberOfLines={1}>
-          {category?.title ?? paper.category}
-        </Text>
+        <View style={styles.headerLeft}>
+          <View style={[styles.dot, { backgroundColor: accent }]} />
+          <Text style={[styles.category, { color: accent }]} numberOfLines={1}>
+            {category?.title ?? paper.category}
+          </Text>
+        </View>
         <Text style={styles.year}>{paper.year}</Text>
       </View>
 
@@ -49,16 +47,16 @@ const PaperCard = memo(function PaperCard({ paper, category, isRead = false, com
       <View style={styles.footer}>
         <Text style={styles.meta}>{paper.readTimeMin} min read</Text>
         {paper.score != null && (
-          <View style={[styles.scorePill, { backgroundColor: accentColor + '22' }]}>
-            <Text style={[styles.scoreText, { color: accentColor }]}>★ {paper.score}</Text>
-          </View>
+          <GradientPill color={accent}>★ {paper.score}</GradientPill>
         )}
         {paper.upvotes != null && (
           <Text style={styles.meta}>↑ {paper.upvotes}</Text>
         )}
-        {isRead && <Text style={styles.readBadge}>✓ Read</Text>}
+        {isRead && (
+          <GradientPill color={colors.green}>✓ Read</GradientPill>
+        )}
       </View>
-    </Pressable>
+    </Card>
   );
 });
 
@@ -66,12 +64,8 @@ export default PaperCard;
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: 10,
-    borderLeftWidth: 3,
-    padding: 14,
-    marginBottom: 10,
-    gap: 6,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
   },
   cardRead: {
     opacity: 0.7,
@@ -81,54 +75,47 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flex: 1,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
   category: {
-    fontSize: 11,
-    fontWeight: '600',
+    ...typography.micro,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
     flex: 1,
   },
   year: {
-    fontSize: 12,
-    color: '#666666',
-    marginLeft: 8,
+    ...typography.caption,
+    color: colors.textMuted,
+    marginLeft: spacing.sm,
   },
   title: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#ffffff',
-    lineHeight: 21,
+    ...typography.h3,
+    color: colors.white,
   },
   titleRead: {
-    color: '#888888',
+    color: colors.textBody,
   },
   pitch: {
-    fontSize: 13,
-    color: '#a0a0a0',
-    lineHeight: 18,
+    ...typography.bodySm,
+    color: colors.textBody,
   },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.sm,
     flexWrap: 'wrap',
-    marginTop: 2,
+    marginTop: spacing.xs,
   },
   meta: {
-    fontSize: 12,
-    color: '#666666',
-  },
-  scorePill: {
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  scoreText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  readBadge: {
-    fontSize: 11,
-    color: '#00E599',
+    ...typography.caption,
+    color: colors.textMuted,
   },
 });

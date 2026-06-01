@@ -1,3 +1,44 @@
+# What this repo really is
+
+A personal arxiv-paper curation + summarization pipeline. The Python side handles ingest, scoring, tagging, and long-form summary generation; two separate frontends ride on top of the same Neon DB. Live counts: ~20k papers in Neon, ~5.7k marked `interested=1`, ~6.6k with a stored `summary`, multi-tag taxonomy via `tag_categories_v2 TEXT[]`. Some signals live in dedicated files, not the DB:
+
+- **`throwaway_script/`** — one-shot company-scrape pipelines (S2 text-trust, OpenAlex by-institution, Firecrawl arxiv search, playwright over AI-lab publications pages, HuggingFace model-card mining). Outputs land in Neon as new stub rows.
+- **`throwaway_script/substack/`** — a sibling side-project: two-pass DeepSeek-V4-Pro summaries of every Ryan Peterman ("The Peterman Post") podcast/essay. Outputs in `out/bulk/<slug>/summary.md` (160 articles). Synced to the nextjs-ui repo via `scripts/sync-peterman.mjs` over there.
+- **`multi_prompt_pkg/`** — the long-form 7-section paper-summary pipeline; `multi_prompt.py` is the shim. `throwaway_script/offline_regen.py` is the cluster-deployed batch variant (per-section streaming JSONL, resume-safe). Sections 1–4 only when the user wants the abridged version (`--max-section 4 --skip-pitch --skip-cat --skip-assemble`).
+- **`local_data/`** is gitignored — all backups + the legacy SQLite snapshot live there.
+- **Three frontends, distinct purposes:**
+  - **`svelte-ui/`** — local mark-interested triage tool (SvelteKit, talks to FastAPI `paper_server.py`).
+  - **`paper-graph-ui/`** — public reader at https://paper-graph-ui.vercel.app (Next.js 16, build-time bake from `docs/**/*.md` + Neon snapshot, no runtime DB).
+  - **`mobile/`** — Expo SDK 56 React Native app (EAS build pipeline, bundles ~1.4k paper bodies as assets). **Don't touch unless explicitly asked** — has its own `mobile/CLAUDE.md`, `mobile/BLOCKERS.md`, `mobile/EAS_BUILD_LINKS.md`.
+- **`configs/vllm/`** — YAML launch configs for vllm. V4-Pro is checked in but V4-Flash is the default for the production scoring pipeline.
+- **`prompt_iter/`** — sandbox for iterating section prompts; `iter.py` + `iter_pitch.py` plus per-paper generation diffs. Not the live pipeline.
+- **`plans/`** (dir) and `plan.md` (root) — scratch planning docs, not load-bearing.
+- **`arxiv.py/`** — vendored clone of `lukasschwab/arxiv.py` for arxiv-search experiments. Not on the import path of the live pipeline.
+- **vllm-on-remote workflow** lives in `~/.claude/skills/jsonl-remote-job/` — the resume-safe JSONL+SCP+docker-exec pattern these scripts all use.
+
+# `throwaway_script/` map (this dir got busy — here's what's what)
+
+Scrape pipelines (one-shot org/lab discovery, outputs land as Neon stubs):
+- `playwright_org_scrape.py` / `playwright_pub_scrape.py` / `playwright_extra_companies.py` / `playwright_user_specified_orgs.py` / `playwright_crack_failed.py` / `playwright_hf_probe_sweep.py` — playwright-based publication-page scrapers, one per phase of the company sweep.
+- `firecrawl/` — Firecrawl-based scrapers (largely superseded by playwright but kept).
+- `arxiv_org_search.py` — arxiv.org's HTML search via Firecrawl.
+- `openalex_2026_audit.py` — OpenAlex-by-institution sweep with hand-verified institution overrides.
+- `s2_company_scrape.py` — Semantic Scholar text-trust pattern (org-regex against title+abstract+author-names). Closed the pure-LLM-lab gap (OpenAI/Anthropic/DeepSeek etc).
+- `exa_search_missing_papers.py` / `import_exa.py` — Exa search + import.
+- `_probe_*.py` — exploratory probes (DeepMind, Eleuther). Not pipeline steps.
+
+Backfill / regeneration:
+- `offline_regen.py` — the cluster-deployed batch summary generator. Flags `--max-section N --skip-pitch --skip-cat --skip-assemble` give the abridged sections-1-to-N variant. Per-section streaming JSONL (`<output>.s1.jsonl`, `.s2.jsonl`, …) with resume-via-dedup.
+- `prepare_interested_input.py` / `prepare_everybody_input.py` / `prepare_company_input.py` / `build_regen_input_from_hf.py` / `export_for_regen.py` — build the input JSONL for `offline_regen.py`. Each scopes a different paper set.
+- `absorb_regen_output.py` — pulls the cluster's JSONL output back into Neon.
+- `add_missing_to_md.py` — backfills `docs/<cat>/*.md` files from Neon summaries.
+- `tag_via_vllm.sh` / `multi_tag_via_vllm.py` — V4-Pro multi-tag (writes `tag_categories_v2 TEXT[]`).
+- `generate_example.py` / `enrich_interested.py` — utility one-offs.
+- `V4_PRO_INFERENCE_RUNBOOK.md` — operational playbook for launching V4-Pro on the cluster.
+
+Substack side-project (independent of the paper pipeline):
+- `substack/` — `bulk_summarize.py` + `retry_failed.py` orchestrate the two-pass Peterman summary pipeline. `prompts.py` carries the iter-4-tuned P1/P2 templates; `example_adrien.md` is the style few-shot. `llm.py` points at the cluster vllm via SSH-tunneled localhost:8000. Output: `out/bulk/<slug>/summary.md` (160 articles).
+
 # TL;DR — where the papers live
 
 - **Source of truth:** Neon Postgres, table `"nextjs-ui_paper"` (via `$DATABASE_URL`, see `neon_db.py`).

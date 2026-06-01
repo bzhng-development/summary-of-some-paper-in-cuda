@@ -4,10 +4,10 @@ import { useEffect, useState } from 'react';
 
 // Header toggle that cycles paper visibility between three mutually exclusive
 // modes:
-//   all     — show every interested=1 paper (default).
 //   merit   — hide tracked-company-only picks (Qwen/DeepSeek/Moonshot/etc.).
-//             body gains class `pg-merit-only`, CSS hides
-//             `[data-company-only="true"]`.
+//             DEFAULT for new visitors. body gains class `pg-merit-only`,
+//             CSS hides `[data-company-only="true"]`.
+//   all     — show every interested=1 paper.
 //   company — hide hand-picked merit papers, show only tracked-company picks.
 //             body gains class `pg-company-only`, CSS hides
 //             `[data-company-only="false"]`.
@@ -28,7 +28,7 @@ const TITLE = {
 };
 
 const MeritOnlyToggle = () => {
-  const [mode, setMode] = useState('all');
+  const [mode, setMode] = useState('merit');
 
   useEffect(() => {
     try {

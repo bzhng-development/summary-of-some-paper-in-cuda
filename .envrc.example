@@ -1,8 +1,13 @@
 # direnv config for local/remote dev. Copy to .envrc (gitignored), then `direnv allow`.
-# Loads secrets from a gitignored .env so they never enter git.
 #
-#   cp .env.example .env   # fill in real values (rotate the old Exa key)
-#   cp .envrc.example .envrc
-#   direnv allow
+# Secrets resolve from 1Password via `op inject` over .env.op (committed pointers).
+# Sign in first: `op signin`. Fallback: gitignored .env.
 
-dotenv_if_exists .env
+loaded=0
+if command -v op >/dev/null 2>&1 && [ -f .env.op ]; then
+  if out="$(op inject -i .env.op 2>/dev/null)" && [ -n "$out" ]; then
+    eval "$out"
+    loaded=1
+  fi
+fi
+[ "$loaded" = 0 ] && [ -f .env ] && dotenv .env

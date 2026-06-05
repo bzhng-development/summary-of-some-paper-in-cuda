@@ -1,4 +1,4 @@
-/Users/vincentzed/Documents/Github/open_source/mine/company-scraper/neon-clone-mini Basically, this directory is a folder that has a really good UI/design system. What we want to do is take that UI, make a new Vercel project, hook it up, deploy it, and make sure it works.
+/Users/vincentzed/Documents/Github/open_source/mine/binutils/neon-clone-mini Basically, this directory is a folder that has a really good UI/design system. What we want to do is take that UI, make a new Vercel project, hook it up, deploy it, and make sure it works.
 
 Once we've started from that, we want to take the current pay-per-viewer. Currently, there's a ton of summaries, so we need to do two things. Number one, there are literally way too many papers to read, so we need to turn the entire thing into a graph where papers are first bucketed by year, and then within each year, it needs to be linked to the relevant papers in the same domain. For example, Toolformer will be followed by XYZ relevant papers. It will be connected somehow, not just one node, but perhaps multiple nodes in between to Gorilla, the Berkeley function calling leaderboard.
 
